@@ -2,6 +2,7 @@
 
 // Standard.
 #include <format>
+#include <atomic>
 
 // Custom.
 #if defined(WIN32)

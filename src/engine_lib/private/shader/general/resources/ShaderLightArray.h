@@ -18,6 +18,7 @@ namespace ne {
     class Renderer;
     class Pipeline;
     class ShaderLightArray;
+    class Node;
 
     /**
      * RAII-like object that frees the slot (marks it as unused) in its destructor and stores all
@@ -48,21 +49,31 @@ namespace ne {
         /**
          * Creates a new slot.
          *
-         * @param pArray                Array that allocated space for this slot.
-         * @param iIndexIntoArray       Index into array.
-         * @param startUpdateCallback   Callback that will be called by array to start copying new data
+         * @param pArray                 Array that allocated space for this slot.
+         * @param pSpawnedOwnerLightNode Spawned light node that requested the slot.
+         * @param iIndexIntoArray        Index into array.
+         * @param startUpdateCallback    Callback that will be called by array to start copying new data
          * to the GPU.
-         * @param finishUpdateCallback  Callback that will be called by array to finish copying new data
+         * @param finishUpdateCallback   Callback that will be called by array to finish copying new data
          * to the GPU.
          */
         ShaderLightArraySlot(
             ShaderLightArray* pArray,
+            Node* pSpawnedOwnerLightNode,
             size_t iIndexIntoArray,
             const std::function<void*()>& startUpdateCallback,
             const std::function<void()>& finishUpdateCallback);
 
         /** Array that allocated space for this slot. */
         ShaderLightArray* pArray = nullptr;
+
+        /**
+         * Spawned light node (point/spot/directional/etc) that requested this slot.
+         *
+         * @remark Do not delete (free) this pointer. It's safe to store a raw pointer here because when
+         * a light node despawns it destroys this slot object so this pointer is always valid.
+         */
+        Node* const pSpawnedOwnerLightNode = nullptr;
 
         /** Callback that will be called by array to start copying new data to the GPU. */
         const std::function<void*()> startUpdateCallback;
@@ -86,7 +97,35 @@ namespace ne {
         // need update.
         friend class LightingShaderResourceManager;
 
+        // Modifies lights in frustum.
+        friend class Renderer;
+
     public:
+        /** Groups resources related to light sources in active camera's frustum. */
+        struct LightsInFrustum {
+            /**
+             * Array of light nodes of the same type (if this shader light array object is used only for
+             * directional lights then only directional light nodes are stored in this array) where positions
+             * of light nodes in this array correspond to positions of their light data from
+             * @ref vGpuResources. So light data at index 0 in the array used in shaders is taken from
+             * the light node stored in this array at index 0.
+             *
+             * @remark For example, you can use indices of light nodes in this array to tell the shaders
+             * which lights to process in shaders and which to ignore.
+             */
+            std::vector<Node*> vShaderLightNodeArray;
+
+            /**
+             * Stores indices to elements from @ref vLightIndicesInFrustum that are located inside of
+             * active camera's frustum.
+             */
+            std::vector<unsigned int> vLightIndicesInFrustum;
+
+            /** GPU resources that store @ref vLightIndicesInFrustum. */
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+                vGpuResources;
+        };
+
         /** Groups used resources. */
         struct Resources {
             /**
@@ -104,9 +143,12 @@ namespace ne {
              * we need an update.
              */
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
-                vGpuResources;
+                vGpuArrayLightDataResources;
 
-            /** Slots (elements) in arrays from @ref vGpuResources that needs to be updated. */
+            /** Stores information about light sources in active camera's frustum. */
+            LightsInFrustum lightsInFrustum;
+
+            /** Slots (elements) in arrays from @ref vGpuArrayLightDataResources that needs to be updated. */
             std::array<
                 std::unordered_set<ShaderLightArraySlot*>,
                 FrameResourcesManager::getFrameResourcesCount()>
@@ -124,18 +166,23 @@ namespace ne {
         /**
          * Creates a new array.
          *
-         * @param pRenderer                Used renderer.
-         * @param sShaderLightResourceName Name of the resource (specified in shader code) that this array
-         * should bind to.
-         * @param onSizeChanged            Callback that will be called after array's size changed
+         * @param pRenderer                      Used renderer.
+         * @param sShaderLightResourceName       Name of the resource (specified in shader code) that this
+         * array should bind to.
+         * @param onSizeChanged                  Callback that will be called after array's size changed
          * with the current array size passed as the only argument.
+         * @param optionalCallbackOnLightsInCameraFrustumCulled If specified will be called after array of
+         * indices to lights in camera frustum changed (indices changed) with the current frame resource index
+         * as the only argument, otherwise (if empty) GPU resources for such array will not be created and
+         * this callback will never be called.
          *
          * @return Created array.
          */
         static std::unique_ptr<ShaderLightArray> create(
             Renderer* pRenderer,
             const std::string& sShaderLightResourceName,
-            const std::function<void(size_t)>& onSizeChanged);
+            const std::function<void(size_t)>& onSizeChanged,
+            const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled);
 
         /**
          * Reserves a new slot in the array to store some data.
@@ -148,16 +195,18 @@ namespace ne {
          * @remark If you mark your slot as "needs update" callbacks may be called multiple times
          * (this is perfectly fine, just don't rely on your callbacks being called only once).
          *
-         * @param iDataSizeInBytes     Size of the data that you want to store in the slot in bytes.
-         * @param startUpdateCallback  Callback that will be called after you mark your slot as "needs update"
-         * when the engine is ready to copy the data to the GPU. You must return a pointer which data will
-         * be copied.
-         * @param finishUpdateCallback Callback that will be called after the copying of your new data is
+         * @param pSpawnedOwnerLightNode Spawned light node that requests the slot.
+         * @param iDataSizeInBytes       Size of the data that you want to store in the slot in bytes.
+         * @param startUpdateCallback    Callback that will be called after you mark your slot as "needs
+         * update" when the engine is ready to copy the data to the GPU. You must return a pointer which data
+         * will be copied.
+         * @param finishUpdateCallback   Callback that will be called after the copying of your new data is
          * finished.
          *
          * @return Error if something went wrong, otherwise reserved slot.
          */
         std::variant<std::unique_ptr<ShaderLightArraySlot>, Error> reserveNewSlot(
+            Node* pSpawnedOwnerLightNode,
             size_t iDataSizeInBytes,
             const std::function<void*()>& startUpdateCallback,
             const std::function<void()>& finishUpdateCallback);
@@ -184,16 +233,30 @@ namespace ne {
          *
          * @warning Only used internally, prefer to use @ref create.
          *
-         * @param pRenderer                 Used renderer.
-         * @param sShaderLightResourceName  Name of the resource (specified in shader code) that this array
-         * should bind to.
-         * @param onSizeChanged             Callback that will be called after array's size changed
+         * @param pRenderer                      Used renderer.
+         * @param sShaderLightResourceName       Name of the resource (specified in shader code) that this
+         * array should bind to.
+         * @param onSizeChanged                  Callback that will be called after array's size changed
          * with the current array size passed as the only argument.
+         * @param optionalCallbackOnLightsInCameraFrustumCulled If specified will be called after array of
+         * indices to lights in camera frustum changed (indices changed) with the current frame resource index
+         * as the only argument, otherwise (if empty) GPU resources for such array will not be created and
+         * this callback will never be called.
          */
         ShaderLightArray(
             Renderer* pRenderer,
             const std::string& sShaderLightResourceName,
-            const std::function<void(size_t)>& onSizeChanged);
+            const std::function<void(size_t)>& onSizeChanged,
+            const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled);
+
+        /**
+         * Called after the renderer culls lights (so that indices of lights sources in camera's frustum
+         * change) to copy the new (modified) data to the GPU.
+         *
+         * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the next
+         * frame.
+         */
+        void onLightsInCameraFrustumCulled(size_t iCurrentFrameResourceIndex);
 
         /**
          * (Re)creates GPU resources to hold the current number of active slots and
@@ -259,6 +322,13 @@ namespace ne {
 
         /** Size of one array element in bytes. */
         size_t iElementSizeInBytes = 0;
+
+        /**
+         * If specified will be called after array of indices to lights in camera frustum changed
+         * (indices changed) with the current frame resource index as the only argument, otherwise (if empty)
+         * GPU resources for such array will not be created and this callback will never be called.
+         */
+        const std::optional<std::function<void(size_t)>> optionalCallbackOnLightsInCameraFrustumCulled;
 
         /**
          * Callback that will be called after array's size changed with the current array size passed as the

@@ -381,6 +381,17 @@ namespace ne {
             std::vector<PipelineInFrustumInfo> vTransparentPipelines;
         };
 
+        /** Groups pointers to information about light sources in frustum. */
+        struct LightsInFrustum {
+            /** Point lights in frustum of the camera. */
+            std::pair<std::recursive_mutex*, ShaderLightArray::LightsInFrustum*> mtxPointLightsInFrustum;
+
+            /** Spotlights in frustum of the camera. */
+            std::pair<std::recursive_mutex*, ShaderLightArray::LightsInFrustum*> mtxSpotlightsInFrustum;
+
+            // No directional lights here because directional lights can't be culled.
+        };
+
         /**
          * Returns the number of swap chain buffers/images that we prefer to use.
          *
@@ -431,14 +442,6 @@ namespace ne {
         updateFrameConstantsBuffer(FrameResource* pCurrentFrameResource, CameraProperties* pCameraProperties);
 
         /**
-         * Calculates some frame-related statistics.
-         *
-         * @remark Must be called by derived renderers as the last function in `drawNextFrame`
-         * to notify the renderer to calculate some frame-related statistics.
-         */
-        void calculateFrameStatistics();
-
-        /**
          * Sets `nullptr` to resource manager's unique ptr to force destroy it (if exists).
          *
          * @warning Avoid using this function. Only use it if you need a special destruction order
@@ -487,10 +490,88 @@ namespace ne {
          * @param iWidth  New width of the framebuffer (in pixels).
          * @param iHeight New height of the framebuffer (in pixels).
          */
-        virtual void onFramebufferSizeChanged(int iWidth, int iHeight) {}
+        void onFramebufferSizeChanged(int iWidth, int iHeight);
+
+        /**
+         * Called when the framebuffer size was changed.
+         *
+         * @param iWidth  New width of the framebuffer (in pixels).
+         * @param iHeight New height of the framebuffer (in pixels).
+         */
+        virtual void onFramebufferSizeChangedDerived(int iWidth, int iHeight) {}
 
         /** Submits a new frame to the GPU. */
-        virtual void drawNextFrame() = 0;
+        void drawNextFrame();
+
+        /**
+         * Called before @ref prepareForDrawingNextFrame to do early frame preparations.
+         *
+         * @remark It's expected that render target's size will not change after this function is finished
+         * and before a new frame is submitted.
+         */
+        virtual void prepareRenderTargetForNextFrame() {}
+
+        /**
+         * Setups everything for render commands to be recorded (resets command buffers and etc.).
+         *
+         * @warning Expects that render resources mutex is locked.
+         *
+         * @remark When this function is called this means that the current frame resource is no longer
+         * used by the GPU.
+         *
+         * @param pCameraProperties     Camera properties to use.
+         * @param pCurrentFrameResource Frame resource of the frame being submitted.
+         */
+        virtual void prepareForDrawingNextFrame(
+            CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) = 0;
+
+        /**
+         * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param vOpaquePipelines           Opaque pipelines (depth pipeline will be retrieved from them).
+         */
+        virtual void drawMeshesDepthPrepass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) = 0;
+
+        /**
+         * Executes compute shaders of the specified stage.
+         *
+         * @warning Expects that mutex for compute shaders is locked.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param stage                      Stage of compute shaders to execute.
+         */
+        virtual void executeComputeShadersOnGraphicsQueue(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            ComputeExecutionStage stage) = 0;
+
+        /**
+         * Submits commands to draw meshes for main (color) pass.
+         *
+         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
+         * @param vOpaquePipelines            Opaque pipelines to draw.
+         * @param vTransparentPipelines       Transparent pipelines to draw.
+         */
+        virtual void drawMeshesMainPass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) = 0;
+
+        /**
+         * Does the final frame rendering logic to present the frame on the screen.
+         *
+         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
+         */
+        virtual void present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) = 0;
 
         /**
          * Called after some render setting is changed to recreate internal resources to match the current
@@ -563,22 +644,6 @@ namespace ne {
         [[nodiscard]] std::optional<Error> clampSettingsToMaxSupported();
 
         /**
-         * Updates internal resources (frame constants, shader resources, camera's aspect ratio and etc.)
-         * for the next frame.
-         *
-         * @remark Waits before frame resource for the new frame will not be used by the GPU so it's
-         * safe to work with frame resource after calling this function.
-         *
-         * @param iRenderTargetWidth  Width (in pixels) of the image that will be used for the next frame.
-         * @param iRenderTargetHeight Height (in pixels) of the image that will be used for the next frame.
-         * @param pCameraProperties   Camera properties to use.
-         */
-        void updateResourcesForNextFrame(
-            unsigned int iRenderTargetWidth,
-            unsigned int iRenderTargetHeight,
-            CameraProperties* pCameraProperties);
-
-        /**
          * Notifies @ref pLightingShaderResourceManager to recalculate grid of frustums
          * for light culling process.
          *
@@ -599,9 +664,20 @@ namespace ne {
          *
          * @return Pipelines, material and meshes inside camera's frustum.
          */
-        MeshesInFrustum* getMeshesInFrustum(
+        MeshesInFrustum* getMeshesInCameraFrustum(
             CameraProperties* pActiveCameraProperties,
             PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines);
+
+        /**
+         * Culls all light nodes that are outside of active camera's frustum so that they will
+         * not be processed during the next submitted frame.
+         *
+         * @param pActiveCameraProperties    Properties of the currently active camera.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit
+         * the next frame.
+         */
+        void cullLightsOutsideCameraFrustum(
+            CameraProperties* pActiveCameraProperties, size_t iCurrentFrameResourceIndex);
 
         /**
          * Returns frame constants.
@@ -714,31 +790,28 @@ namespace ne {
          */
         static void nanosleep(long long iNanoseconds);
 #endif
+        /**
+         * Calculates some frame-related statistics.
+         *
+         * @remark Must be called after a frame is finished drawing.
+         */
+        void calculateFrameStatistics();
 
         /**
-         * Tests frustum culling on the specified AABB.
+         * Updates internal resources (frame constants, shader resources, camera's aspect ratio and etc.)
+         * for the next frame.
          *
-         * @warning Expects that camera's frustum is updated (contains up to date data).
+         * @remark Waits before frame resource for the new frame will not be used by the GPU so it's
+         * safe to work with frame resource after calling this function.
          *
-         * @param pActiveCameraProperties Camera properties of the active camera.
-         * @param aabb                    AABB in model space.
-         * @param worldMatrix             Matrix that transforms AABB to world space.
-         *
-         * @return `true` if this AABB is outside of camera's frustum and it the object should not be
-         * rendered, `false` otherwise.
+         * @param iRenderTargetWidth  Width (in pixels) of the image that will be used for the next frame.
+         * @param iRenderTargetHeight Height (in pixels) of the image that will be used for the next frame.
+         * @param pCameraProperties   Camera properties to use.
          */
-        inline bool isAabbOutsideCameraFrustum(
-            CameraProperties* pActiveCameraProperties, const AABB& aabb, const glm::mat4x4& worldMatrix) {
-
-            // (camera's frustum should be updated at this point)
-            const auto bIsVisible =
-                pActiveCameraProperties->getCameraFrustum()->isAabbInFrustum(aabb, worldMatrix);
-
-            // Increment culled object count.
-            iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);
-
-            return !bIsVisible;
-        }
+        void updateResourcesForNextFrame(
+            unsigned int iRenderTargetWidth,
+            unsigned int iRenderTargetHeight,
+            CameraProperties* pCameraProperties);
 
         /** Called by camera manager after active camera was changed. */
         void onActiveCameraChanged();
@@ -807,22 +880,17 @@ namespace ne {
         /** Meshes that were in camera's frustum last frame. */
         MeshesInFrustum meshesInFrustumLastFrame;
 
-        /**
-         * Time in milliseconds spent last frame on frustum culling.
-         *
-         * @remark Accumulated in @ref isAabbOutsideCameraFrustum.
-         */
+        /** Time in milliseconds spent last frame on frustum culling. */
         float accumulatedTimeSpentLastFrameOnFrustumCullingInMs = 0.0F;
 
-        /**
-         * Total number of objects (draw entries) discarded from submitting due to frustum culling.
-         *
-         * @remark Incremented in @ref isAabbOutsideCameraFrustum.
-         */
+        /** Total number of objects (draw entries) discarded from submitting due to frustum culling. */
         size_t iLastFrameCulledObjectCount = 0;
 
         /** Stores the total number of draw calls made last frame. */
         size_t iLastFrameDrawCallCount = 0;
+
+        /** `true` if framebuffer size is zero, `false` otherwise. */
+        bool bIsWindowMinimized = false;
 
         /** Spawned environment node which parameters are used in the rendering. */
         std::pair<std::mutex, EnvironmentNode*> mtxSpawnedEnvironmentNode;

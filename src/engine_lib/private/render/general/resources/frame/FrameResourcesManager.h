@@ -3,7 +3,6 @@
 // Standard.
 #include <array>
 #include <memory>
-#include <atomic>
 #include <mutex>
 #include <variant>
 
@@ -45,6 +44,12 @@ namespace ne {
      * that can be in use by the GPU because it's drawing the previous frame.
      */
     class FrameResourcesManager {
+        // Only renderer is allowed to switch to the next frame resource.
+        friend class Renderer;
+
+        // Vulkan renderer need to cycle frame resources in a very specific case.
+        friend class VulkanRenderer;
+
     public:
         /** Stores index and pointer to the current item in @ref vFrameResources. */
         struct CurrentFrameResource {
@@ -84,17 +89,6 @@ namespace ne {
         std::pair<std::recursive_mutex, CurrentFrameResource>* getCurrentFrameResource();
 
         /**
-         * Uses mutex from @ref getCurrentFrameResource to switch to the next available frame resource.
-         *
-         * @remark After this function is finished calls to @ref getCurrentFrameResource will return next
-         * frame resource.
-         *
-         * @remark Next frame resource (that we switched to) can still be used by the GPU, it's up to the
-         * caller to check whether the frame resource is used by the GPU or not.
-         */
-        void switchToNextFrameResource();
-
-        /**
          * Returns all frame resources.
          *
          * @remark Generally used to reference internal resources of all frame resources.
@@ -125,6 +119,17 @@ namespace ne {
          * @param pRenderer Renderer that owns this manager.
          */
         FrameResourcesManager(Renderer* pRenderer);
+
+        /**
+         * Uses mutex from @ref getCurrentFrameResource to switch to the next available frame resource.
+         *
+         * @remark After this function is finished calls to @ref getCurrentFrameResource will return next
+         * frame resource.
+         *
+         * @remark Next frame resource (that we switched to) can still be used by the GPU, it's up to the
+         * caller to check whether the frame resource is used by the GPU or not.
+         */
+        void switchToNextFrameResource();
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

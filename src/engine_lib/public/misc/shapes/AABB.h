@@ -22,15 +22,13 @@ namespace ne {
         static AABB createFromVertices(std::vector<MeshVertex>* pVertices);
 
         /**
-         * Tests if this AABB intersects the specified plane or lays in front of the specified plane
-         * (in the direction where plane's normal points).
+         * Tells if the AABB is fully behind (inside the negative halfspace of) a plane.
          *
          * @param plane Plane to test.
          *
-         * @return `true` if this AABB intersects the specified plane or lays in front of the specified plane,
-         * `false` otherwise.
+         * @return `true` if the AABB is fully behind the plane, `false` if intersects or in front of it.
          */
-        bool isIntersectsOrInFrontOfPlane(const Plane& plane) const;
+        bool isBehindPlane(const Plane& plane) const;
 
         /** Center of the AABB in model space. */
         glm::vec3 center = glm::vec3(0.0F, 0.0F, 0.0F);

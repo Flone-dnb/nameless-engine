@@ -5,6 +5,7 @@
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
+#include "misc/shapes/Cone.h"
 
 #include "SpotlightNode.generated.h"
 
@@ -103,6 +104,19 @@ namespace ne RNAMESPACE() {
          * @return Angle in degrees in range [@ref getLightInnerConeAngle; @ref getMaxLightConeAngle].
          */
         float getLightOuterConeAngle() const;
+
+        /**
+         * Returns shape of this light source in world space.
+         *
+         * @warning Only valid while spawned.
+         *
+         * @warning Must be used under mutex.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Shape.
+         */
+        std::pair<std::mutex, Cone>* getShape();
 
     protected:
         /**
@@ -219,8 +233,22 @@ namespace ne RNAMESPACE() {
          */
         void recalculateAndMarkShaderDataToBeCopiedToGpu();
 
+        /**
+         * Recalculates @ref mtxShaderData according to the current parameters (state).
+         *
+         * @remark Takes information from @ref mtxShaderData and expects that it's updated.
+         */
+        void recalculateShape();
+
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
+
+        /**
+         * Stores up-to-date cone shape (in world space) that represents the spotlight.
+         *
+         * @remark Only valid while spawned.
+         */
+        std::pair<std::mutex, Cone> mtxShape;
 
         /** Color of the light source. */
         RPROPERTY(Serialize)

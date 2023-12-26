@@ -291,16 +291,13 @@ namespace ne {
          */
         virtual std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const override;
 
-        /** Submits a new frame to the GPU. */
-        virtual void drawNextFrame() override;
-
         /**
          * Called when the framebuffer size was changed.
          *
          * @param iWidth  New width of the framebuffer (in pixels).
          * @param iHeight New height of the framebuffer (in pixels).
          */
-        virtual void onFramebufferSizeChanged(int iWidth, int iHeight) override;
+        virtual void onFramebufferSizeChangedDerived(int iWidth, int iHeight) override;
 
         /**
          * Called after some render setting is changed to recreate internal resources to match the current
@@ -717,18 +714,26 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createSwapChainFramebuffers();
 
         /**
-         * Setups everything for render commands to be recorded (updates frame constants, shader resources,
-         * resets command buffers and etc.).
+         * Called before @ref prepareForDrawingNextFrame to do early frame preparations.
+         *
+         * @remark It's expected that render target's size will not change after this function is finished
+         * and before a new frame is submitted.
+         */
+        virtual void prepareRenderTargetForNextFrame() override;
+
+        /**
+         * Setups everything for render commands to be recorded (resets command buffers and etc.).
          *
          * @warning Expects that render resources mutex is locked.
          *
-         * @param pCameraProperties     Camera properties to use.
-         * @param iAcquiredImageIndex   Index of the acquired swap chain image to use this frame.
+         * @remark When this function is called this means that the current frame resource is no longer
+         * used by the GPU.
          *
-         * @return Error if something went wrong.
+         * @param pCameraProperties     Camera properties to use.
+         * @param pCurrentFrameResource Frame resource of the frame being submitted.
          */
-        [[nodiscard]] std::optional<Error>
-        prepareForDrawingNextFrame(CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex);
+        virtual void prepareForDrawingNextFrame(
+            CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) override;
 
         /**
          * Adds render pass start commands to the specified command buffer with @ref pMainRenderPass.
@@ -749,14 +754,52 @@ namespace ne {
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
          *
-         * @param opaquePipelines            Opaque pipelines (depth pipeline will be retrieved from them).
-         * @param pCommandBuffer             Command buffer to use.
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param vOpaquePipelines           Opaque pipelines (depth pipeline will be retrieved from them).
          */
-        void drawMeshesDepthPrepass(
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines,
-            VkCommandBuffer pCommandBuffer,
-            size_t iCurrentFrameResourceIndex);
+        virtual void drawMeshesDepthPrepass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) override;
+
+        /**
+         * Executes compute shaders of the specified stage.
+         *
+         * @warning Expects that mutex for compute shaders is locked.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param stage                      Stage of compute shaders to execute.
+         */
+        virtual void executeComputeShadersOnGraphicsQueue(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            ComputeExecutionStage stage) override;
+
+        /**
+         * Submits commands to draw meshes for main (color) pass.
+         *
+         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
+         * @param vOpaquePipelines            Opaque pipelines to draw.
+         * @param vTransparentPipelines       Transparent pipelines to draw.
+         */
+        virtual void drawMeshesMainPass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines)
+            override;
+
+        /**
+         * Does the final frame rendering logic to present the frame on the screen.
+         *
+         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
+         */
+        virtual void
+        present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) override;
 
         /**
          * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
@@ -765,30 +808,10 @@ namespace ne {
          * @param pCommandBuffer             Command buffer to use.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        void drawMeshesMainPass(
+        void drawMeshesMainPassSpecificPipelines(
             const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
             VkCommandBuffer pCommandBuffer,
             size_t iCurrentFrameResourceIndex);
-
-        /**
-         * Does final logic in drawing next frame (ends render pass, ends command buffer, etc.).
-         *
-         * @warning Expects that render resources mutex is locked.
-         *
-         * @param pCurrentFrameResource      Current frame resource. Expects that frame resources
-         * mutex is locked and will not be unlocked until the function is finished.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         * @param iAcquiredImageIndex        Index of the acquired swap chain image to use this
-         * frame.
-         * @param pQueuedComputeShaders      Queued shaders to dispatch.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> finishDrawingNextFrame(
-            VulkanFrameResource* pCurrentFrameResource,
-            size_t iCurrentFrameResourceIndex,
-            uint32_t iAcquiredImageIndex,
-            QueuedForExecutionComputeShaders* pQueuedComputeShaders);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref msaaSampleCount.
@@ -949,6 +972,9 @@ namespace ne {
         /** The number of swap chain images that we have in @ref pSwapChain. */
         uint32_t iSwapChainImageCount = 0;
 
+        /** Index of the last acquired image from the swap chain. */
+        uint32_t iLastAcquiredImageIndex = 0;
+
         /** Tells if @ref initializeVulkan was finished successfully or not. */
         bool bIsVulkanInitialized = false;
 
@@ -960,9 +986,6 @@ namespace ne {
 
         /** Tells if MSAA is enabled or not and whether we are using multisampled render target or not. */
         bool bIsUsingMsaaRenderTarget = false;
-
-        /** Whether the window that owns the renderer is minimized or not. */
-        bool bIsWindowMinimized = false;
 
         /** Marked as `true` when entered destructor. */
         bool bIsBeingDestroyed = false;

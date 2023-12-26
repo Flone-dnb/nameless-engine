@@ -201,6 +201,10 @@ set(PROJECT_SOURCES
     public/misc/shapes/Frustum.h
     private/misc/shapes/Plane.cpp
     public/misc/shapes/Plane.h
+    private/misc/shapes/Sphere.cpp
+    public/misc/shapes/Sphere.h
+    private/misc/shapes/Cone.cpp
+    public/misc/shapes/Cone.h
     private/shader/general/ShaderPack.h
     private/shader/general/ShaderPack.cpp
     private/shader/general/ShaderMacro.h

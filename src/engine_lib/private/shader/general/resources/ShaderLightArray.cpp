@@ -15,10 +15,12 @@
 namespace ne {
     ShaderLightArraySlot::ShaderLightArraySlot(
         ShaderLightArray* pArray,
+        Node* pSpawnedOwnerLightNode,
         size_t iIndexIntoArray,
         const std::function<void*()>& startUpdateCallback,
         const std::function<void()>& finishUpdateCallback)
-        : startUpdateCallback(startUpdateCallback), finishUpdateCallback(finishUpdateCallback) {
+        : pSpawnedOwnerLightNode(pSpawnedOwnerLightNode), startUpdateCallback(startUpdateCallback),
+          finishUpdateCallback(finishUpdateCallback) {
         this->pArray = pArray;
         this->iIndexIntoArray = iIndexIntoArray;
     }
@@ -30,8 +32,10 @@ namespace ne {
     ShaderLightArray::ShaderLightArray(
         Renderer* pRenderer,
         const std::string& sShaderLightResourceName,
-        const std::function<void(size_t)>& onSizeChanged)
-        : onSizeChanged(onSizeChanged), sShaderLightResourceName(sShaderLightResourceName) {
+        const std::function<void(size_t)>& onSizeChanged,
+        const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled)
+        : optionalCallbackOnLightsInCameraFrustumCulled(optionalCallbackOnLightsInCameraFrustumCulled),
+          onSizeChanged(onSizeChanged), sShaderLightResourceName(sShaderLightResourceName) {
         this->pRenderer = pRenderer;
 
         // Initialize resources.
@@ -41,6 +45,48 @@ namespace ne {
             optionalError->showError();
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
+    }
+
+    void ShaderLightArray::onLightsInCameraFrustumCulled(size_t iCurrentFrameResourceIndex) {
+        // Self check: make sure we are expecting this.
+        if (!optionalCallbackOnLightsInCameraFrustumCulled.has_value()) [[unlikely]] {
+            Error error(std::format(
+                "lights in camera frustum were culled but this array ({}) was setup to ignore light culling",
+                sShaderLightResourceName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        std::scoped_lock guard(mtxResources.first);
+
+        // Create a short reference.
+        auto& lightsInFrustum = mtxResources.second.lightsInFrustum;
+
+        // Self check: make sure array of indices has correct size.
+        if (lightsInFrustum.vLightIndicesInFrustum.size() > lightsInFrustum.vShaderLightNodeArray.size())
+            [[unlikely]] {
+            Error error(std::format(
+                "shader light array ({}) was notified about lights culled but array of non culled indices "
+                "has incorrect size {} while there are only {} light sources",
+                sShaderLightResourceName,
+                lightsInFrustum.vLightIndicesInFrustum.size(),
+                lightsInFrustum.vShaderLightNodeArray.size()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Check if there is some data to copy to the GPU.
+        if (!lightsInFrustum.vLightIndicesInFrustum.empty()) {
+            // Copy indices.
+            lightsInFrustum.vGpuResources[iCurrentFrameResourceIndex]->copyDataToElement(
+                0,
+                lightsInFrustum.vLightIndicesInFrustum.data(),
+                sizeof(lightsInFrustum.vLightIndicesInFrustum[0]) *
+                    lightsInFrustum.vLightIndicesInFrustum.size());
+        }
+
+        // Notify manager.
+        optionalCallbackOnLightsInCameraFrustumCulled->operator()(iCurrentFrameResourceIndex);
     }
 
     ShaderLightArray::~ShaderLightArray() {
@@ -70,7 +116,7 @@ namespace ne {
         }
 
         // Make sure that resources still exist.
-        for (auto& pUploadBuffer : mtxResources.second.vGpuResources) {
+        for (auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
             if (pUploadBuffer == nullptr) [[unlikely]] {
                 Error error(std::format(
                     "shader light array \"{}\" is being destroyed but its GPU resources are already "
@@ -86,12 +132,14 @@ namespace ne {
     std::unique_ptr<ShaderLightArray> ShaderLightArray::create(
         Renderer* pRenderer,
         const std::string& sShaderLightResourceName,
-        const std::function<void(size_t)>& onSizeChanged) {
-        return std::unique_ptr<ShaderLightArray>(
-            new ShaderLightArray(pRenderer, sShaderLightResourceName, onSizeChanged));
+        const std::function<void(size_t)>& onSizeChanged,
+        const std::optional<std::function<void(size_t)>>& onLightsInCameraFrustumChanged) {
+        return std::unique_ptr<ShaderLightArray>(new ShaderLightArray(
+            pRenderer, sShaderLightResourceName, onSizeChanged, onLightsInCameraFrustumChanged));
     }
 
     std::variant<std::unique_ptr<ShaderLightArraySlot>, Error> ShaderLightArray::reserveNewSlot(
+        Node* pSpawnedOwnerLightNode,
         size_t iDataSizeInBytes,
         const std::function<void*()>& startUpdateCallback,
         const std::function<void()>& finishUpdateCallback) {
@@ -116,7 +164,11 @@ namespace ne {
 
         // Create a new slot.
         auto pNewSlot = std::unique_ptr<ShaderLightArraySlot>(new ShaderLightArraySlot(
-            this, mtxResources.second.activeSlots.size(), startUpdateCallback, finishUpdateCallback));
+            this,
+            pSpawnedOwnerLightNode,
+            mtxResources.second.activeSlots.size(),
+            startUpdateCallback,
+            finishUpdateCallback));
 
         // Add new slot to the array of active slots.
         mtxResources.second.activeSlots.insert(pNewSlot.get());
@@ -247,8 +299,8 @@ namespace ne {
                 sShaderLightResourceName));
         }
 
-        // Re-create the resource.
-        for (size_t i = 0; i < mtxResources.second.vGpuResources.size(); i++) {
+        // Re-create the light data array resource.
+        for (size_t i = 0; i < mtxResources.second.vGpuArrayLightDataResources.size(); i++) {
             // Create a new resource with the specified size.
             auto result = pResourceManager->createResourceWithCpuWriteAccess(
                 std::format("{} frame #{}", sShaderLightResourceName, i),
@@ -260,13 +312,14 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            mtxResources.second.vGpuResources[i] = std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+            mtxResources.second.vGpuArrayLightDataResources[i] =
+                std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
         }
 
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Bind SRV to the created resource.
-            for (auto& pUploadBuffer : mtxResources.second.vGpuResources) {
+            for (auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
                 // Convert to DirectX resource.
                 const auto pDirectXResource =
                     dynamic_cast<DirectXResource*>(pUploadBuffer->getInternalResource());
@@ -284,11 +337,62 @@ namespace ne {
         }
 #endif
 
+        if (optionalCallbackOnLightsInCameraFrustumCulled.has_value()) {
+            // Re-create the lights in frustum indices array resource.
+            for (size_t i = 0; i < mtxResources.second.lightsInFrustum.vGpuResources.size(); i++) {
+                // Make sure the type is uint.
+                static_assert(
+                    sizeof(mtxResources.second.lightsInFrustum.vLightIndicesInFrustum[0]) ==
+                        sizeof(unsigned int),
+                    "expecting unsigned int, otherwise change the size of element below");
+
+                // Create a new resource with the specified size.
+                auto result = pResourceManager->createResourceWithCpuWriteAccess(
+                    std::format("{} indices in frustum frame #{}", sShaderLightResourceName, i),
+                    sizeof(unsigned int),
+                    iArraySize,
+                    true);
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+                mtxResources.second.lightsInFrustum.vGpuResources[i] =
+                    std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+            }
+
+#if defined(WIN32)
+            if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
+                // Bind SRV to the created resource.
+                for (auto& pUploadBuffer : mtxResources.second.lightsInFrustum.vGpuResources) {
+                    // Convert to DirectX resource.
+                    const auto pDirectXResource =
+                        dynamic_cast<DirectXResource*>(pUploadBuffer->getInternalResource());
+                    if (pDirectXResource == nullptr) [[unlikely]] {
+                        return Error("expected a DirectX resource");
+                    }
+
+                    // Bind SRV.
+                    auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::SRV);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
+                    }
+                }
+            }
+#endif
+        }
+
         // Clear array of slots to update since they hold indices to old (deleted) array and we will anyway
         // re-copy slot data now.
         for (auto& slots : mtxResources.second.vSlotsToBeUpdated) {
             slots.clear();
         }
+
+        // Clear array of light nodes because set of active slots might have re-ordered them
+        // so that indices are now invalid.
+        mtxResources.second.lightsInFrustum.vShaderLightNodeArray.clear();
+        mtxResources.second.lightsInFrustum.vLightIndicesInFrustum.clear();
 
         // Copy slots' data into the new GPU resources.
         size_t iCurrentSlotIndex = 0;
@@ -300,15 +404,34 @@ namespace ne {
             const auto pData = pSlot->startUpdateCallback();
 
             // Copy slot data into the new GPU resource.
-            for (const auto& pUploadBuffer : mtxResources.second.vGpuResources) {
+            for (const auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
                 pUploadBuffer->copyDataToElement(iCurrentSlotIndex, pData, iElementSizeInBytes);
             }
 
             // Mark updating finished.
             pSlot->finishUpdateCallback();
 
+            // Add node to the correct (new) index in the array.
+            mtxResources.second.lightsInFrustum.vShaderLightNodeArray.push_back(
+                pSlot->pSpawnedOwnerLightNode);
+            mtxResources.second.lightsInFrustum.vLightIndicesInFrustum.push_back(
+                static_cast<unsigned int>(iCurrentSlotIndex));
+
             // Increment next slot index.
             iCurrentSlotIndex += 1;
+        }
+
+        // Copy indices of lights in frustum to the GPU resources.
+        if (optionalCallbackOnLightsInCameraFrustumCulled.has_value() &&
+            !mtxResources.second.lightsInFrustum.vLightIndicesInFrustum.empty()) {
+            // Prepare a short reference.
+            auto& vIndicesToCopy = mtxResources.second.lightsInFrustum.vLightIndicesInFrustum;
+
+            // Copy indices.
+            for (const auto& pUploadBuffer : mtxResources.second.lightsInFrustum.vGpuResources) {
+                pUploadBuffer->copyDataToElement(
+                    0, vIndicesToCopy.data(), sizeof(vIndicesToCopy[0]) * vIndicesToCopy.size());
+            }
         }
 
         // (Re)bind the (re)created resource to descriptors of all pipelines that use this resource.
@@ -336,7 +459,8 @@ namespace ne {
             const auto pData = pSlot->startUpdateCallback();
 
             // Copy slot data into the GPU resource of the current frame.
-            const auto pUploadBuffer = mtxResources.second.vGpuResources[iCurrentFrameResourceIndex].get();
+            const auto pUploadBuffer =
+                mtxResources.second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex].get();
             pUploadBuffer->copyDataToElement(pSlot->iIndexIntoArray, pData, iElementSizeInBytes);
 
             // Mark updating finished.
@@ -364,7 +488,7 @@ namespace ne {
         // and even if there are no active slots a resource is guaranteed to exist (see field docs).
 
         // Self check: make sure GPU resources are valid.
-        for (const auto& pUploadBuffer : mtxResources.second.vGpuResources) {
+        for (const auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
             if (pUploadBuffer == nullptr) [[unlikely]] {
                 return Error(std::format(
                     "shader light array \"{}\" has {} active slot(s) but array's GPU resources are not "
@@ -378,8 +502,8 @@ namespace ne {
         std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vInternalBuffers;
         for (size_t i = 0; i < vInternalBuffers.size(); i++) {
             // Convert to Vulkan resource.
-            const auto pVulkanResource =
-                dynamic_cast<VulkanResource*>(mtxResources.second.vGpuResources[i]->getInternalResource());
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
+                mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource());
             if (pVulkanResource == nullptr) [[unlikely]] {
                 return Error("expected a Vulkan resource");
             }
@@ -438,8 +562,9 @@ namespace ne {
                         VkDescriptorBufferInfo bufferInfo{};
                         bufferInfo.buffer = vInternalBuffers[i];
                         bufferInfo.offset = 0;
-                        bufferInfo.range = mtxResources.second.vGpuResources[i]->getElementCount() *
-                                           mtxResources.second.vGpuResources[i]->getElementSizeInBytes();
+                        bufferInfo.range =
+                            mtxResources.second.vGpuArrayLightDataResources[i]->getElementCount() *
+                            mtxResources.second.vGpuArrayLightDataResources[i]->getElementSizeInBytes();
 
                         // Bind reserved space to descriptor.
                         VkWriteDescriptorSet descriptorUpdateInfo{};
@@ -478,7 +603,7 @@ namespace ne {
         // and even if there are no active slots a resource is guaranteed to exist (see field docs).
 
         // Self check: make sure GPU resources are valid.
-        for (const auto& pUploadBuffer : mtxResources.second.vGpuResources) {
+        for (const auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
             if (pUploadBuffer == nullptr) [[unlikely]] {
                 return Error(std::format(
                     "shader light array \"{}\" has {} active slot(s) but array's GPU resources are not "
@@ -492,8 +617,8 @@ namespace ne {
         std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vInternalBuffers;
         for (size_t i = 0; i < vInternalBuffers.size(); i++) {
             // Convert to Vulkan resource.
-            const auto pVulkanResource =
-                dynamic_cast<VulkanResource*>(mtxResources.second.vGpuResources[i]->getInternalResource());
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
+                mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource());
             if (pVulkanResource == nullptr) [[unlikely]] {
                 return Error("expected a Vulkan resource");
             }
@@ -530,8 +655,8 @@ namespace ne {
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = vInternalBuffers[i];
             bufferInfo.offset = 0;
-            bufferInfo.range = mtxResources.second.vGpuResources[i]->getElementCount() *
-                               mtxResources.second.vGpuResources[i]->getElementSizeInBytes();
+            bufferInfo.range = mtxResources.second.vGpuArrayLightDataResources[i]->getElementCount() *
+                               mtxResources.second.vGpuArrayLightDataResources[i]->getElementSizeInBytes();
 
             // Bind reserved space to descriptor.
             VkWriteDescriptorSet descriptorUpdateInfo{};

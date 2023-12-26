@@ -38,7 +38,7 @@ TEST_CASE("resetting a slot erases it from the array's active slots") {
 
                 // Reserve a new slot.
                 auto result = pArray->reserveNewSlot(
-                    sizeof(SomeData), [&]() -> void* { return &data; }, []() {});
+                    nullptr, sizeof(SomeData), [&]() -> void* { return &data; }, []() {});
                 if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
@@ -113,11 +113,12 @@ TEST_CASE("onSizeChanged callback is called") {
                 SomeData data;
 
                 // Make sure there are point light slots.
-                REQUIRE(pMtxManagerInternalResources->second.generalData.iPointLightCount == 0);
+                REQUIRE(
+                    pMtxManagerInternalResources->second.generalData.iPointLightCountInCameraFrustum == 0);
 
                 // Reserve a new slot.
                 auto result = pArray->reserveNewSlot(
-                    sizeof(SomeData), [&]() -> void* { return &data; }, []() {});
+                    nullptr, sizeof(SomeData), [&]() -> void* { return &data; }, []() {});
                 if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
@@ -127,13 +128,15 @@ TEST_CASE("onSizeChanged callback is called") {
                 auto pSlot = std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
 
                 // Now the manager should be notified.
-                REQUIRE(pMtxManagerInternalResources->second.generalData.iPointLightCount == 1);
+                REQUIRE(
+                    pMtxManagerInternalResources->second.generalData.iPointLightCountInCameraFrustum == 1);
 
                 // Reset.
                 pSlot = nullptr;
 
                 // Again, manager should be notified.
-                REQUIRE(pMtxManagerInternalResources->second.generalData.iPointLightCount == 0);
+                REQUIRE(
+                    pMtxManagerInternalResources->second.generalData.iPointLightCountInCameraFrustum == 0);
 
                 getWindow()->close();
             });

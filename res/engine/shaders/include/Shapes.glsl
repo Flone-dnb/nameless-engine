@@ -9,7 +9,7 @@ struct Plane{
     float distanceFromOrigin;
 };
 
-/** Sphere represented by a center and a radius. */
+/** Sphere shape. */
 struct Sphere{
     /** Location of the sphere's center point. */
     vec3 center;
@@ -18,6 +18,7 @@ struct Sphere{
     float radius;
 };
 
+/** Cone shape. */
 struct Cone{
     /** Location of cone's tip. */
     vec3 location;

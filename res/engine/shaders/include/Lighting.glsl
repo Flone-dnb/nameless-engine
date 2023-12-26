@@ -17,13 +17,13 @@
     /** Light color intensity of ambient lighting. 4th component is not used. */
     vec4 ambientLight;
 
-    /** Total number of spawned point lights. */
+    /** Total number of spawned point lights in camera frustum. */
     uint iPointLightCount;
 
-    /** Total number of spawned directional lights. */
+    /** Total number of spawned directional lights in camera frustum. */
     uint iDirectionalLightCount;
 
-    /** Total number of spawned spotlights. */
+    /** Total number of spawned spotlights in camera frustum. */
     uint iSpotlightCount;
 #glsl } generalLightingData;
 #hlsl }; ConstantBuffer<GeneralLightingData> generalLightingData : register(b1, space5);

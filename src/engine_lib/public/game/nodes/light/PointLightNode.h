@@ -5,6 +5,7 @@
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
+#include "misc/shapes/Sphere.h"
 
 #include "PointLightNode.generated.h"
 
@@ -64,6 +65,19 @@ namespace ne RNAMESPACE() {
          * @return Distance.
          */
         float getLightDistance() const;
+
+        /**
+         * Returns shape of this light source in world space.
+         *
+         * @warning Only valid while spawned.
+         *
+         * @warning Must be used under mutex.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Shape.
+         */
+        std::pair<std::mutex, Sphere>* getShape();
 
     protected:
         /**
@@ -158,8 +172,22 @@ namespace ne RNAMESPACE() {
          */
         void markShaderDataToBeCopiedToGpu();
 
+        /**
+         * Recalculates @ref mtxShaderData according to the current parameters (state).
+         *
+         * @remark Takes information from @ref mtxShaderData and expects that it's updated.
+         */
+        void recalculateShape();
+
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
+
+        /**
+         * Stores up-to-date sphere shape (in world space)  that represents the point light.
+         *
+         * @remark Only valid while spawned.
+         */
+        std::pair<std::mutex, Sphere> mtxShape;
 
         /** Color of the light source. */
         RPROPERTY(Serialize)

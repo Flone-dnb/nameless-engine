@@ -93,6 +93,7 @@ namespace ne {
                                                 ->getLightingShaderResourceManager()
                                                 ->getDirectionalLightDataArray();
         auto result = pDirectionalLightArray->reserveNewSlot(
+            this,
             sizeof(DirecionalLightShaderData),
             [this]() { return onStartedUpdatingShaderData(); },
             [this]() { onFinishedUpdatingShaderData(); });

@@ -485,27 +485,25 @@ namespace ne {
 
     std::string DirectXRenderer::getCurrentlyUsedGpuName() const { return sUsedVideoAdapter; }
 
-    std::optional<Error> DirectXRenderer::prepareForDrawingNextFrame(
-        CameraProperties* pCameraProperties, DirectXFrameResource* pCurrentFrameResource) {
+    void DirectXRenderer::prepareForDrawingNextFrame(
+        CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) {
         PROFILE_FUNC;
 
-        // Waits for frame resource to be no longer used by the GPU.
-        updateResourcesForNextFrame(scissorRect.right, scissorRect.bottom, pCameraProperties);
-
         // Get command allocator.
-        const auto pCommandAllocator = pCurrentFrameResource->pCommandAllocator.Get();
+        const auto pCommandAllocator =
+            reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource)->pCommandAllocator.Get();
 
         PROFILE_SCOPE_START(ResetCommandAllocator);
 
         // Clear command allocator since the GPU is no longer using it.
         auto hResult = pCommandAllocator->Reset();
         if (FAILED(hResult)) [[unlikely]] {
-            return Error(hResult);
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         PROFILE_SCOPE_END;
-
-        return {};
     }
 
     void DirectXRenderer::resetCommandListForGraphics(DirectXFrameResource* pCurrentFrameResource) {
@@ -537,67 +535,18 @@ namespace ne {
         pCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     }
 
-    void DirectXRenderer::drawNextFrame() {
+    void DirectXRenderer::drawMeshesDepthPrepass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) {
         PROFILE_FUNC;
 
-        // Get pipeline manager and compute shaders to dispatch.
-        const auto pPipelineManager = getPipelineManager();
-        auto mtxQueuedComputeShader = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
-
-        // Get active camera.
-        const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
-
-        // Get current frame resource.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        const auto pCurrentFrameResource =
-            reinterpret_cast<DirectXFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-
-        // Lock mutexes together to minimize deadlocks.
-        std::scoped_lock renderGuard(
-            pMtxActiveCamera->first,
-            *getRenderResourcesMutex(),
-            pMtxCurrentFrameResource->first,
-            *mtxQueuedComputeShader.first);
-
-        // Get camera properties of the active camera.
-        CameraProperties* pActiveCameraProperties = nullptr;
-        if (pMtxActiveCamera->second.pCameraNode != nullptr) {
-            pActiveCameraProperties = pMtxActiveCamera->second.pCameraNode->getCameraProperties();
-        } else if (pMtxActiveCamera->second.pTransientCamera != nullptr) {
-            pActiveCameraProperties = pMtxActiveCamera->second.pTransientCamera->getCameraProperties();
-        } else {
-            // No active camera.
-            return;
-        }
-
-        // don't unlock active camera mutex until finished submitting the next frame for drawing
-
-        // Setup.
-        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, pCurrentFrameResource);
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
         // Prepare command list.
-        resetCommandListForGraphics(pCurrentFrameResource);
+        resetCommandListForGraphics(reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource));
 
-        // Get RTV/DSV handles to be used later.
-        const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
-        const auto renderTargetDescriptorHandle =
-            *pCurrentBackBufferResource->getBindedDescriptorCpuHandle(DirectXDescriptorType::RTV);
+        // Get DSV handle to be used.
         const auto depthStencilDescriptorHandle =
             *pDepthStencilBuffer->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
-
-        // Get graphics pipelines.
-        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
-        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
-
-        // Do frustum culling.
-        const auto pMeshesInFrustum =
-            getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
 
         // Transition depth buffer to write state.
         CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -606,7 +555,7 @@ namespace ne {
             D3D12_RESOURCE_STATE_DEPTH_WRITE);
         pCommandList->ResourceBarrier(1, &transition);
 
-        // Clear depth stencil for depth pass.
+        // Clear depth/stencil.
         pCommandList->ClearDepthStencilView(
             depthStencilDescriptorHandle,
             D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
@@ -618,136 +567,10 @@ namespace ne {
         // Bind only DSV for depth prepass.
         pCommandList->OMSetRenderTargets(0, nullptr, FALSE, &depthStencilDescriptorHandle);
 
-        // Draw depth prepass.
-        drawMeshesDepthPrepass(
-            pCurrentFrameResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshesInFrustum->vOpaquePipelines);
-
-        // Prepare array of depth buffer transitions that we will do slightly later.
-        std::vector<CD3DX12_RESOURCE_BARRIER> vDepthTransitions;
-
-        if (bIsUsingMsaaRenderTarget) {
-            PROFILE_SCOPE(ResolveDepthStencilBufferForShaders);
-
-            // Resolve multisampled depth buffer to a non-multisampled depth buffer for shaders.
-            const std::array<CD3DX12_RESOURCE_BARRIER, 2> vBarriersToResolve = {
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    pDepthStencilBuffer->getInternalResource(),
-                    D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    pDepthBufferNoMultisampling->getInternalResource(),
-                    D3D12_RESOURCE_STATE_GENERIC_READ,
-                    D3D12_RESOURCE_STATE_RESOLVE_DEST)};
-
-            // Record barrier.
-            pCommandList->ResourceBarrier(
-                static_cast<UINT>(vBarriersToResolve.size()), vBarriersToResolve.data());
-
-            // Resolve.
-            pCommandList->ResolveSubresource(
-                pDepthBufferNoMultisampling->getInternalResource(),
-                0,
-                pDepthStencilBuffer->getInternalResource(),
-                0,
-                depthBufferNoMultisamplingFormat);
-
-            // Transition depth buffer to depth read.
-            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
-                pDepthStencilBuffer->getInternalResource(),
-                D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
-                D3D12_RESOURCE_STATE_DEPTH_READ));
-
-            // Transition non-multisampled depth buffer to generic read.
-            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
-                pDepthBufferNoMultisampling->getInternalResource(),
-                D3D12_RESOURCE_STATE_RESOLVE_DEST,
-                D3D12_RESOURCE_STATE_GENERIC_READ));
-        } else {
-            // Copying depth buffer to non-multisampled depth buffer is not needed since the depth buffer
-            // does not use multisampling.
-            // We will just use default depth buffer in shaders.
-
-            // Transition depth buffer to depth read.
-            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
-                pDepthStencilBuffer->getInternalResource(),
-                D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                D3D12_RESOURCE_STATE_DEPTH_READ));
-        }
-
-        // Record barriers.
-        pCommandList->ResourceBarrier(static_cast<UINT>(vDepthTransitions.size()), vDepthTransitions.data());
-
-        // Execute recorded commands.
-        executeGraphicsCommandList(pCommandList.Get());
-
-        PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
-
-        // Dispatch compute shaders that need to run after depth prepass.
-        auto& computeShaderGroups =
-            mtxQueuedComputeShader.second
-                ->vGraphicsQueueStagesGroups[static_cast<size_t>(ComputeExecutionStage::AFTER_DEPTH_PREPASS)];
-        for (auto& group : computeShaderGroups) {
-            dispatchComputeShadersOnGraphicsQueue(pCurrentFrameResource->pCommandAllocator.Get(), group);
-        }
-
-        PROFILE_SCOPE_END;
-
-        // Prepare command list for main pass.
-        resetCommandListForGraphics(pCurrentFrameResource);
-
-        // Transition render target resource from "present" to "render target".
-        transition = CD3DX12_RESOURCE_BARRIER::Transition(
-            pCurrentBackBufferResource->getInternalResource(),
-            D3D12_RESOURCE_STATE_PRESENT,
-            D3D12_RESOURCE_STATE_RENDER_TARGET);
-        pCommandList->ResourceBarrier(1, &transition);
-
-        // Clear render target for main pass.
-        pCommandList->ClearRenderTargetView(renderTargetDescriptorHandle, backBufferFillColor, 0, nullptr);
-
-        // Bind both RTV and DSV for main pass.
-        pCommandList->OMSetRenderTargets(
-            1, &renderTargetDescriptorHandle, FALSE, &depthStencilDescriptorHandle);
-
-        // Draw opaque meshes.
-        drawMeshesMainPass(
-            pCurrentFrameResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshesInFrustum->vOpaquePipelines,
-            false);
-
-        // Draw transparent meshes.
-        drawMeshesMainPass(
-            pCurrentFrameResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshesInFrustum->vTransparentPipelines,
-            true);
-
-        // Do frame end logic.
-        optionalError = finishDrawingNextFrame(pCurrentFrameResource, mtxQueuedComputeShader.second);
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Switch to the next frame resource.
-        getFrameResourcesManager()->switchToNextFrameResource();
-    }
-
-    void DirectXRenderer::drawMeshesDepthPrepass(
-        DirectXFrameResource* pCurrentFrameResource,
-        size_t iCurrentFrameResourceIndex,
-        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines) {
-        PROFILE_FUNC;
-
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
-        for (const auto& pipelineInfo : opaquePipelines) {
+        for (const auto& pipelineInfo : vOpaquePipelines) {
             // Get depth only (vertex shader only) pipeline
             // (all materials that use the same opaque pipeline will use the same depth only pipeline).
             const auto pDepthOnlyPipeline = pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline();
@@ -844,9 +667,182 @@ namespace ne {
                 }
             }
         }
+
+        // Prepare array of depth buffer transitions that we will do slightly later.
+        std::vector<CD3DX12_RESOURCE_BARRIER> vDepthTransitions;
+
+        if (bIsUsingMsaaRenderTarget) {
+            PROFILE_SCOPE(ResolveDepthStencilBufferForShaders);
+
+            // Resolve multisampled depth buffer to a non-multisampled depth buffer for shaders.
+            const std::array<CD3DX12_RESOURCE_BARRIER, 2> vBarriersToResolve = {
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pDepthStencilBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pDepthBufferNoMultisampling->getInternalResource(),
+                    D3D12_RESOURCE_STATE_GENERIC_READ,
+                    D3D12_RESOURCE_STATE_RESOLVE_DEST)};
+
+            // Record barrier.
+            pCommandList->ResourceBarrier(
+                static_cast<UINT>(vBarriersToResolve.size()), vBarriersToResolve.data());
+
+            // Resolve.
+            pCommandList->ResolveSubresource(
+                pDepthBufferNoMultisampling->getInternalResource(),
+                0,
+                pDepthStencilBuffer->getInternalResource(),
+                0,
+                depthBufferNoMultisamplingFormat);
+
+            // Transition depth buffer to depth read.
+            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthStencilBuffer->getInternalResource(),
+                D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+                D3D12_RESOURCE_STATE_DEPTH_READ));
+
+            // Transition non-multisampled depth buffer to generic read.
+            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthBufferNoMultisampling->getInternalResource(),
+                D3D12_RESOURCE_STATE_RESOLVE_DEST,
+                D3D12_RESOURCE_STATE_GENERIC_READ));
+        } else {
+            // Copying depth buffer to non-multisampled depth buffer is not needed since the depth buffer
+            // does not use multisampling.
+            // We will just use default depth buffer in shaders.
+
+            // Transition depth buffer to depth read.
+            vDepthTransitions.push_back(CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthStencilBuffer->getInternalResource(),
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                D3D12_RESOURCE_STATE_DEPTH_READ));
+        }
+
+        // Record barriers.
+        pCommandList->ResourceBarrier(static_cast<UINT>(vDepthTransitions.size()), vDepthTransitions.data());
+
+        // Execute recorded commands.
+        executeGraphicsCommandList(pCommandList.Get());
+    }
+
+    void DirectXRenderer::executeComputeShadersOnGraphicsQueue(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        ComputeExecutionStage stage) {
+        // Convert frame resource.
+        const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
+
+        // Get shader groups.
+        auto& computeShaderGroups = getPipelineManager()
+                                        ->getComputeShadersForGraphicsQueueExecution()
+                                        .second->vGraphicsQueueStagesGroups[static_cast<size_t>(stage)];
+
+        // Dispatch compute shaders.
+        for (auto& group : computeShaderGroups) {
+            dispatchComputeShadersOnGraphicsQueue(pDirectXFrameResource->pCommandAllocator.Get(), group);
+        }
     }
 
     void DirectXRenderer::drawMeshesMainPass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
+        const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) {
+        // Convert frame resource.
+        const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
+
+        // Prepare command list for main pass.
+        resetCommandListForGraphics(pDirectXFrameResource);
+
+        // Get RTV/DSV handles to be used later.
+        const auto pCurrentBackBufferResource = getCurrentBackBufferResource();
+        const auto renderTargetDescriptorHandle =
+            *pCurrentBackBufferResource->getBindedDescriptorCpuHandle(DirectXDescriptorType::RTV);
+        const auto depthStencilDescriptorHandle =
+            *pDepthStencilBuffer->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
+
+        // Transition render target resource from "present" to "render target".
+        const auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+            pCurrentBackBufferResource->getInternalResource(),
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_STATE_RENDER_TARGET);
+        pCommandList->ResourceBarrier(1, &transition);
+
+        // Clear render target for main pass.
+        pCommandList->ClearRenderTargetView(renderTargetDescriptorHandle, backBufferFillColor, 0, nullptr);
+
+        // Bind both RTV and DSV for main pass.
+        pCommandList->OMSetRenderTargets(
+            1, &renderTargetDescriptorHandle, FALSE, &depthStencilDescriptorHandle);
+
+        // Draw opaque meshes.
+        drawMeshesMainPassSpecificPipelines(
+            pDirectXFrameResource, iCurrentFrameResourceIndex, vOpaquePipelines, false);
+
+        // Draw transparent meshes.
+        drawMeshesMainPassSpecificPipelines(
+            pDirectXFrameResource, iCurrentFrameResourceIndex, vTransparentPipelines, true);
+
+        if (bIsUsingMsaaRenderTarget) {
+            PROFILE_SCOPE(ResolveMsaaTarget);
+
+            // Resolve MSAA render buffer to swap chain buffer.
+            const auto pCurrentSwapChainBuffer =
+                vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()].get();
+            CD3DX12_RESOURCE_BARRIER barriersToResolve[] = {
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pMsaaRenderBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_RENDER_TARGET,
+                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pCurrentSwapChainBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_PRESENT,
+                    D3D12_RESOURCE_STATE_RESOLVE_DEST)};
+
+            // Record barriers.
+            pCommandList->ResourceBarrier(2, barriersToResolve);
+
+            // Resolve.
+            pCommandList->ResolveSubresource(
+                pCurrentSwapChainBuffer->getInternalResource(),
+                0,
+                pMsaaRenderBuffer->getInternalResource(),
+                0,
+                backBufferFormat);
+
+            // Transition to present.
+            CD3DX12_RESOURCE_BARRIER barriersToPresent[] = {
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pMsaaRenderBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+                    D3D12_RESOURCE_STATE_PRESENT),
+                CD3DX12_RESOURCE_BARRIER::Transition(
+                    pCurrentSwapChainBuffer->getInternalResource(),
+                    D3D12_RESOURCE_STATE_RESOLVE_DEST,
+                    D3D12_RESOURCE_STATE_PRESENT)};
+
+            // Record barriers.
+            pCommandList->ResourceBarrier(2, barriersToPresent);
+        } else {
+            PROFILE_SCOPE(TransitionToPresent);
+
+            // Transition render buffer from "render target" to "present".
+            auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()]->getInternalResource(),
+                D3D12_RESOURCE_STATE_RENDER_TARGET,
+                D3D12_RESOURCE_STATE_PRESENT);
+
+            // Record barriers.
+            pCommandList->ResourceBarrier(1, &transition);
+        }
+
+        // Execute recorded commands.
+        executeGraphicsCommandList(pCommandList.Get());
+    }
+
+    void DirectXRenderer::drawMeshesMainPassSpecificPipelines(
         DirectXFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
@@ -973,73 +969,20 @@ namespace ne {
         }
     }
 
-    std::optional<Error> DirectXRenderer::finishDrawingNextFrame(
-        DirectXFrameResource* pCurrentFrameResource,
-        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
+    void DirectXRenderer::present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
 
-        if (bIsUsingMsaaRenderTarget) {
-            PROFILE_SCOPE(ResolveMsaaTarget);
-
-            // Resolve MSAA render buffer to swap chain buffer.
-            const auto pCurrentSwapChainBuffer =
-                vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()].get();
-            CD3DX12_RESOURCE_BARRIER barriersToResolve[] = {
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    pMsaaRenderBuffer->getInternalResource(),
-                    D3D12_RESOURCE_STATE_RENDER_TARGET,
-                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE),
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    pCurrentSwapChainBuffer->getInternalResource(),
-                    D3D12_RESOURCE_STATE_PRESENT,
-                    D3D12_RESOURCE_STATE_RESOLVE_DEST)};
-
-            // Record barriers.
-            pCommandList->ResourceBarrier(2, barriersToResolve);
-
-            // Resolve.
-            pCommandList->ResolveSubresource(
-                pCurrentSwapChainBuffer->getInternalResource(),
-                0,
-                pMsaaRenderBuffer->getInternalResource(),
-                0,
-                backBufferFormat);
-
-            // Transition to present.
-            CD3DX12_RESOURCE_BARRIER barriersToPresent[] = {
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    pMsaaRenderBuffer->getInternalResource(),
-                    D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
-                    D3D12_RESOURCE_STATE_PRESENT),
-                CD3DX12_RESOURCE_BARRIER::Transition(
-                    pCurrentSwapChainBuffer->getInternalResource(),
-                    D3D12_RESOURCE_STATE_RESOLVE_DEST,
-                    D3D12_RESOURCE_STATE_PRESENT)};
-
-            // Record barriers.
-            pCommandList->ResourceBarrier(2, barriersToPresent);
-        } else {
-            PROFILE_SCOPE(TransitionToPresent);
-
-            // Transition render buffer from "render target" to "present".
-            auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
-                vSwapChainBuffers[pSwapChain->GetCurrentBackBufferIndex()]->getInternalResource(),
-                D3D12_RESOURCE_STATE_RENDER_TARGET,
-                D3D12_RESOURCE_STATE_PRESENT);
-
-            // Record barriers.
-            pCommandList->ResourceBarrier(1, &transition);
-        }
-
-        // Execute recorded commands.
-        executeGraphicsCommandList(pCommandList.Get());
+        // Convert frame resource.
+        const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
 
         PROFILE_SCOPE_START(Present);
 
         // Flip swap chain buffers.
         const auto hResult = pSwapChain->Present(iPresentSyncInterval, iPresentFlags);
         if (FAILED(hResult)) [[unlikely]] {
-            return Error(hResult);
+            Error error(hResult);
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         PROFILE_SCOPE_END;
@@ -1055,17 +998,12 @@ namespace ne {
         }
 
         // Save new fence value in the current frame resource.
-        pCurrentFrameResource->iFence = iNewFenceValue;
+        pDirectXFrameResource->iFence = iNewFenceValue;
 
         // Add an instruction to the command queue to set a new fence point.
         // This fence point won't be set until the GPU finishes processing all the commands prior
         // to this `Signal` call.
         pCommandQueue->Signal(pFence.Get(), iNewFenceValue);
-
-        // Calculate frame-related statistics.
-        calculateFrameStatistics();
-
-        return {};
     }
 
     std::optional<Error> DirectXRenderer::updateMsaaQualityLevelCount() {

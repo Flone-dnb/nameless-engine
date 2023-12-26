@@ -2224,21 +2224,46 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanRenderer::prepareForDrawingNextFrame(
-        CameraProperties* pCameraProperties, uint32_t& iAcquiredImageIndex) {
+    void VulkanRenderer::prepareRenderTargetForNextFrame() {
+        // See if we received `VK_SUBOPTIMAL_KHR` previously.
+        if (bNeedToRecreateSwapchain) {
+            // Log this event.
+            Logger::get().info("re-creating swapchain because received `VK_SUBOPTIMAL_KHR`");
+
+            // Make sure no resources are in use by the GPU.
+            waitForGpuToFinishWorkUpToThisPoint();
+
+            // Recreate swap chain and other window-size dependent resources.
+            auto optionalError = recreateSwapChainAndDependentResources();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
+            }
+
+            // Mark as re-created.
+            bNeedToRecreateSwapchain = false;
+        }
+    }
+
+    void VulkanRenderer::prepareForDrawingNextFrame(
+        CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) {
         PROFILE_FUNC;
 
         // Make sure swap chain extent is set.
         if (!swapChainExtent.has_value()) [[unlikely]] {
-            return Error("expected swap chain extent to be set at this point");
+            Error error("expected swap chain extent to be set at this point");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         PROFILE_SCOPE_START(WaitForFrameResourceFence);
 
-        // Make sure image semaphores are in the unsignaled state.
-        // Get frame resource that was used with current semaphores.
+        // Get all frame resources.
         auto mtxAllFrameResources = getFrameResourcesManager()->getAllFrameResources();
         std::scoped_lock allFrameResourcesGuard(*mtxAllFrameResources.first);
+
+        // Get frame resource that was used with current semaphores.
         const auto pFenceFrameResource = reinterpret_cast<VulkanFrameResource*>(
             mtxAllFrameResources.second[vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex]);
 
@@ -2261,11 +2286,13 @@ namespace ne {
             UINT64_MAX,
             vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore,
             VK_NULL_HANDLE,
-            &iAcquiredImageIndex);
+            &iLastAcquiredImageIndex);
         if (result != VK_SUCCESS) {
-            if (result != VK_SUBOPTIMAL_KHR) {
-                return Error(std::format(
+            if (result != VK_SUBOPTIMAL_KHR) [[unlikely]] {
+                Error error(std::format(
                     "failed to acquire next swap chain image, error: {}", string_VkResult(result)));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
             }
 
             // Mark swapchain as needs to be re-created.
@@ -2274,23 +2301,18 @@ namespace ne {
 
         PROFILE_SCOPE_END;
 
-        // Waits for the next frame resource to be no longer used by the GPU.
-        updateResourcesForNextFrame(swapChainExtent->width, swapChainExtent->height, pCameraProperties);
-
-        // Get command buffer to reset it.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-        std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
-
         // Convert frame resource.
         const auto pCurrentVulkanFrameResource =
-            reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
+            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
 
         PROFILE_SCOPE_START(ResetCommandBuffer);
 
         // Reset command buffer.
         result = vkResetCommandBuffer(pCurrentVulkanFrameResource->pCommandBuffer, 0);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format("failed to reset command buffer, error: {}", string_VkResult(result)));
+            Error error(std::format("failed to reset command buffer, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         PROFILE_SCOPE_END;
@@ -2304,12 +2326,12 @@ namespace ne {
         // Mark start of command recording.
         result = vkBeginCommandBuffer(pCurrentVulkanFrameResource->pCommandBuffer, &beginInfo);
         if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format(
+            Error error(std::format(
                 "failed to start recording commands into a command buffer, error: {}",
                 string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
-
-        return {};
     }
 
     void VulkanRenderer::startMainRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex) {
@@ -2698,192 +2720,18 @@ namespace ne {
         return {swapChainExtent->width, swapChainExtent->height};
     }
 
-    void VulkanRenderer::drawNextFrame() {
+    void VulkanRenderer::drawMeshesDepthPrepass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) {
         PROFILE_FUNC;
 
-        if (bIsWindowMinimized) {
-            // Framebuffer size is zero and swap chain is invalid, wait until the window is
-            // restored/maximized.
-            return;
-        }
-
-        // See if we received `VK_SUBOPTIMAL_KHR` previously.
-        if (bNeedToRecreateSwapchain) {
-            // Log this event.
-            Logger::get().info("re-creating swapchain because received `VK_SUBOPTIMAL_KHR`");
-
-            // Make sure no resources are in use by the GPU.
-            waitForGpuToFinishWorkUpToThisPoint();
-
-            // Recreate swap chain and other window-size dependent resources.
-            auto optionalError = recreateSwapChainAndDependentResources();
-            if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addCurrentLocationToErrorStack();
-                optionalError->showError();
-                throw std::runtime_error(optionalError->getFullErrorMessage());
-            }
-
-            // Mark as re-created.
-            bNeedToRecreateSwapchain = false;
-        }
-
-        // Get pipeline manager and compute shaders to dispatch.
-        const auto pPipelineManager = getPipelineManager();
-        auto mtxQueuedComputeShader = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
-
-        // Get active camera.
-        const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
-
-        // Get current frame resource.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
-
-        // Lock mutexes together to minimize deadlocks.
-        std::scoped_lock renderGuard(
-            pMtxActiveCamera->first,
-            *getRenderResourcesMutex(),
-            pMtxCurrentFrameResource->first,
-            *mtxQueuedComputeShader.first);
-
-        // Get camera properties of the active camera.
-        CameraProperties* pActiveCameraProperties = nullptr;
-        if (pMtxActiveCamera->second.pCameraNode != nullptr) {
-            pActiveCameraProperties = pMtxActiveCamera->second.pCameraNode->getCameraProperties();
-        } else if (pMtxActiveCamera->second.pTransientCamera != nullptr) {
-            pActiveCameraProperties = pMtxActiveCamera->second.pTransientCamera->getCameraProperties();
-        } else {
-            // No active camera.
-            return;
-        }
-
-        // don't unlock active camera mutex until finished submitting the next frame for drawing
-
-        // Convert frame resource.
-        const auto pVulkanCurrentFrameResource =
-            reinterpret_cast<VulkanFrameResource*>(pMtxCurrentFrameResource->second.pResource);
-
-        // Setup.
-        uint32_t iAcquiredImageIndex = 0;
-        auto optionalError = prepareForDrawingNextFrame(pActiveCameraProperties, iAcquiredImageIndex);
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
+        // Get command buffer of the current frame resource.
+        const auto pCommandBuffer =
+            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource)->pCommandBuffer;
 
         // Start depth only render pass.
-        startDepthOnlyRenderPass(pVulkanCurrentFrameResource->pCommandBuffer, iAcquiredImageIndex);
-
-        // Get graphics pipelines.
-        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
-        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
-
-        // Do frustum culling.
-        const auto pMeshPipelinesInFrustum =
-            getMeshesInFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
-
-        // Draw depth prepass.
-        drawMeshesDepthPrepass(
-            pMeshPipelinesInFrustum->vOpaquePipelines,
-            pVulkanCurrentFrameResource->pCommandBuffer,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-
-        // Finish depth only render pass.
-        vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
-
-        PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
-
-        // Check if we have compute shaders to dispatch.
-        auto& computeShaderGroups =
-            mtxQueuedComputeShader.second
-                ->vGraphicsQueueStagesGroups[static_cast<size_t>(ComputeExecutionStage::AFTER_DEPTH_PREPASS)];
-        bool bHaveComputeWorkToDispatch = false;
-        for (auto& group : computeShaderGroups) {
-            if (group.empty()) {
-                continue;
-            }
-
-            bHaveComputeWorkToDispatch = true;
-            break;
-        }
-
-        if (bHaveComputeWorkToDispatch) {
-            // Insert a synchronization barrier.
-            vkCmdPipelineBarrier(
-                pVulkanCurrentFrameResource->pCommandBuffer,
-                VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // run all graphics commands before this barrier
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // make all next compute commands to wait for this
-                                                      // barrier
-                0,
-                0,
-                nullptr,
-                0,
-                nullptr,
-                0,
-                nullptr);
-
-            // Dispatch compute shaders that need to run after depth prepass.
-            for (auto& group : computeShaderGroups) {
-                if (dispatchComputeShadersOnGraphicsQueue(
-                        pVulkanCurrentFrameResource,
-                        pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-                        group)) {
-                    // Insert a synchronization barrier.
-                    vkCmdPipelineBarrier(
-                        pVulkanCurrentFrameResource->pCommandBuffer,
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // run all compute commands before this barrier
-                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | // make all next compute/graphics commands to
-                            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // wait for this barrier
-                        0,
-                        0,
-                        nullptr,
-                        0,
-                        nullptr,
-                        0,
-                        nullptr);
-                }
-            }
-        }
-
-        PROFILE_SCOPE_END;
-
-        // Start main render pass.
-        startMainRenderPass(pVulkanCurrentFrameResource->pCommandBuffer, iAcquiredImageIndex);
-
-        // Draw opaque meshes.
-        drawMeshesMainPass(
-            pMeshPipelinesInFrustum->vOpaquePipelines,
-            pVulkanCurrentFrameResource->pCommandBuffer,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-
-        // Draw transparent meshes.
-        drawMeshesMainPass(
-            pMeshPipelinesInFrustum->vTransparentPipelines,
-            pVulkanCurrentFrameResource->pCommandBuffer,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-
-        // Do finish logic.
-        optionalError = finishDrawingNextFrame(
-            pVulkanCurrentFrameResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            iAcquiredImageIndex,
-            mtxQueuedComputeShader.second);
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Switch to the next frame resource.
-        getFrameResourcesManager()->switchToNextFrameResource();
-    }
-
-    void VulkanRenderer::drawMeshesDepthPrepass(
-        const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines,
-        VkCommandBuffer pCommandBuffer,
-        size_t iCurrentFrameResourceIndex) {
-        PROFILE_FUNC;
+        startDepthOnlyRenderPass(pCommandBuffer, iLastAcquiredImageIndex);
 
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
@@ -2893,7 +2741,7 @@ namespace ne {
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
         const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
 
-        for (const auto& pipelineInfo : opaquePipelines) {
+        for (const auto& pipelineInfo : vOpaquePipelines) {
             // Get depth only (vertex shader only) pipeline
             // (all materials that use the same opaque pipeline will use the same depth only pipeline).
             const auto pDepthOnlyPipeline = pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline();
@@ -2995,9 +2843,220 @@ namespace ne {
                 }
             }
         }
+
+        // Finish depth only render pass.
+        vkCmdEndRenderPass(pCommandBuffer);
+    }
+
+    void VulkanRenderer::executeComputeShadersOnGraphicsQueue(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        ComputeExecutionStage stage) {
+        // Get shader groups.
+        auto& computeShaderGroups = getPipelineManager()
+                                        ->getComputeShadersForGraphicsQueueExecution()
+                                        .second->vGraphicsQueueStagesGroups[static_cast<size_t>(stage)];
+
+        // Check if we have compute shaders to dispatch.
+        bool bHaveComputeWorkToDispatch = false;
+        for (auto& group : computeShaderGroups) {
+            if (group.empty()) {
+                continue;
+            }
+
+            bHaveComputeWorkToDispatch = true;
+            break;
+        }
+
+        if (!bHaveComputeWorkToDispatch) {
+            // Nothing to do.
+            return;
+        }
+
+        // Convert frame resource.
+        const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
+
+        // Insert a synchronization barrier.
+        vkCmdPipelineBarrier(
+            pVulkanFrameResource->pCommandBuffer,
+            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,   // run all graphics commands before this barrier
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, // make all next compute commands to wait for this
+                                                  // barrier
+            0,
+            0,
+            nullptr,
+            0,
+            nullptr,
+            0,
+            nullptr);
+
+        // Dispatch compute shaders.
+        for (auto& group : computeShaderGroups) {
+            if (dispatchComputeShadersOnGraphicsQueue(
+                    pVulkanFrameResource, iCurrentFrameResourceIndex, group)) {
+                // Insert a synchronization barrier.
+                vkCmdPipelineBarrier(
+                    pVulkanFrameResource->pCommandBuffer,
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,   // run all compute commands before this barrier
+                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |  // make all next compute/graphics commands to
+                        VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT, // wait for this barrier
+                    0,
+                    0,
+                    nullptr,
+                    0,
+                    nullptr,
+                    0,
+                    nullptr);
+            }
+        }
     }
 
     void VulkanRenderer::drawMeshesMainPass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
+        const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) {
+        // Convert frame resource.
+        const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
+
+        // Start main render pass.
+        startMainRenderPass(pVulkanFrameResource->pCommandBuffer, iLastAcquiredImageIndex);
+
+        // Draw opaque meshes.
+        drawMeshesMainPassSpecificPipelines(
+            vOpaquePipelines, pVulkanFrameResource->pCommandBuffer, iCurrentFrameResourceIndex);
+
+        // Draw transparent meshes.
+        drawMeshesMainPassSpecificPipelines(
+            vTransparentPipelines, pVulkanFrameResource->pCommandBuffer, iCurrentFrameResourceIndex);
+
+        // Mark render pass end.
+        vkCmdEndRenderPass(pVulkanFrameResource->pCommandBuffer);
+
+        // Mark end of command recording.
+        auto result = vkEndCommandBuffer(pVulkanFrameResource->pCommandBuffer);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(std::format(
+                "failed to finish recording commands into a command buffer, error: {}",
+                string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+    }
+
+    void VulkanRenderer::present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
+        // Convert current frame resource.
+        const auto pVulkanCurrentFrameResource =
+            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
+
+        PROFILE_SCOPE_START(WaitForAcquiredImageToBeUnused);
+
+        // Since the next acquired image might be not in the order we expect (i.e. it may be used
+        // by other frame resource - not the one we are using right now) make sure this image is not used
+        // by the GPU.
+        auto result = vkWaitForFences(
+            pLogicalDevice, 1, &vSwapChainImageFenceRefs[iLastAcquiredImageIndex].first, VK_TRUE, UINT64_MAX);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(
+                std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        PROFILE_SCOPE_END;
+
+        // Mark the image as being used by this frame resource.
+        vSwapChainImageFenceRefs[iLastAcquiredImageIndex].first = pVulkanCurrentFrameResource->pFence;
+        vSwapChainImageFenceRefs[iLastAcquiredImageIndex].second = iCurrentFrameResourceIndex;
+
+        // Prepare to submit command buffer for execution.
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        // Specify semaphores to wait for before starting execution.
+        const std::array<VkSemaphore, 1> semaphoresToWaitFor = {
+            vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore};
+        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphoresToWaitFor.size());
+        submitInfo.pWaitSemaphores = semaphoresToWaitFor.data();
+
+        // Specify which stages will wait.
+        const std::array<VkPipelineStageFlags, semaphoresToWaitFor.size()> waitStages = {
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        submitInfo.pWaitDstStageMask = waitStages.data();
+
+        // Specify which command buffers to execute.
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &pVulkanCurrentFrameResource->pCommandBuffer;
+
+        // Specify which semaphores will be signaled once the command buffer(s) have finished execution.
+        std::array<VkSemaphore, 1> vSemaphoresAfterCommandBufferFinished = {
+            vImageSemaphores[iCurrentImageSemaphore].pQueueSubmitSemaphore};
+        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
+        submitInfo.pSignalSemaphores = vSemaphoresAfterCommandBufferFinished.data();
+
+        // Make fence to be in "unsignaled" state.
+        result = vkResetFences(pLogicalDevice, 1, &pVulkanCurrentFrameResource->pFence);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(std::format("failed to reset a fence, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        PROFILE_SCOPE_START(QueueSubmit);
+
+        // Submit command buffer(s) to the queue for execution.
+        vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex = iCurrentFrameResourceIndex;
+        result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pVulkanCurrentFrameResource->pFence);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(std::format(
+                "failed to submit command buffer(s) for execution, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        PROFILE_SCOPE_END;
+
+        // Prepare for presenting.
+        VkPresentInfoKHR presentInfo{};
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.waitSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
+        presentInfo.pWaitSemaphores = vSemaphoresAfterCommandBufferFinished.data();
+
+        // Specify which swapchain/image to present.
+        std::array<VkSwapchainKHR, 1> vSwapChains = {pSwapChain};
+        presentInfo.swapchainCount = static_cast<uint32_t>(vSwapChains.size());
+        presentInfo.pSwapchains = vSwapChains.data();
+        presentInfo.pImageIndices = &iLastAcquiredImageIndex;
+
+        // No using multiple swapchains so leave `pResults` empty as we will get result for our single
+        // swapchain from `vkQueuePresentKHR`.
+        presentInfo.pResults = nullptr;
+
+        PROFILE_SCOPE_START(Present);
+
+        // Present.
+        result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
+        if (result != VK_SUCCESS) {
+            if (result != VK_SUBOPTIMAL_KHR) [[unlikely]] {
+                Error error(
+                    std::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Mark swapchain as needs to be re-created.
+            bNeedToRecreateSwapchain = true;
+        }
+
+        PROFILE_SCOPE_END;
+
+        // Switch to the next semaphores index.
+        iCurrentImageSemaphore = (iCurrentImageSemaphore + 1) % vImageSemaphores.size();
+    }
+
+    void VulkanRenderer::drawMeshesMainPassSpecificPipelines(
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
         VkCommandBuffer pCommandBuffer,
         size_t iCurrentFrameResourceIndex) {
@@ -3120,7 +3179,7 @@ namespace ne {
         }
     }
 
-    void VulkanRenderer::onFramebufferSizeChanged(int iWidth, int iHeight) {
+    void VulkanRenderer::onFramebufferSizeChangedDerived(int iWidth, int iHeight) {
         // Make sure the logical device is valid.
         if (pLogicalDevice == nullptr) {
             return;
@@ -3128,18 +3187,8 @@ namespace ne {
 
         if (iWidth == 0 && iHeight == 0) {
             // Don't draw anything as frame buffer size is zero.
-            bIsWindowMinimized = true;
-            const auto result = vkDeviceWaitIdle(pLogicalDevice);
-            if (result != VK_SUCCESS) [[unlikely]] {
-                Error error(
-                    std::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
             return;
         }
-
-        bIsWindowMinimized = false;
 
         if (pSwapChain == nullptr) {
             // Nothing to do.
@@ -3153,130 +3202,6 @@ namespace ne {
             optionalError->showError();
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
-    }
-
-    std::optional<Error> VulkanRenderer::finishDrawingNextFrame(
-        VulkanFrameResource* pCurrentFrameResource,
-        size_t iCurrentFrameResourceIndex,
-        uint32_t iAcquiredImageIndex,
-        QueuedForExecutionComputeShaders* pQueuedComputeShaders) {
-        PROFILE_FUNC;
-
-        // Convert current frame resource.
-        const auto pVulkanCurrentFrameResource =
-            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
-
-        // Mark render pass end.
-        vkCmdEndRenderPass(pVulkanCurrentFrameResource->pCommandBuffer);
-
-        // Mark end of command recording.
-        auto result = vkEndCommandBuffer(pVulkanCurrentFrameResource->pCommandBuffer);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format(
-                "failed to finish recording commands into a command buffer, error: {}",
-                string_VkResult(result)));
-        }
-
-        PROFILE_SCOPE_START(WaitForAcquiredImageToBeUnused);
-
-        // Since the next acquired image might be not in the order we expect (i.e. it may be used
-        // by other frame resource - not the one we are using right now) make sure this image is not used
-        // by the GPU.
-        result = vkWaitForFences(
-            pLogicalDevice, 1, &vSwapChainImageFenceRefs[iAcquiredImageIndex].first, VK_TRUE, UINT64_MAX);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(
-                std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
-        }
-
-        PROFILE_SCOPE_END;
-
-        // Mark the image as being used by this frame resource.
-        vSwapChainImageFenceRefs[iAcquiredImageIndex].first = pVulkanCurrentFrameResource->pFence;
-        vSwapChainImageFenceRefs[iAcquiredImageIndex].second = iCurrentFrameResourceIndex;
-
-        // Prepare to submit command buffer for execution.
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        // Specify semaphores to wait for before starting execution.
-        const std::array<VkSemaphore, 1> semaphoresToWaitFor = {
-            vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore};
-        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphoresToWaitFor.size());
-        submitInfo.pWaitSemaphores = semaphoresToWaitFor.data();
-
-        // Specify which stages will wait.
-        const std::array<VkPipelineStageFlags, semaphoresToWaitFor.size()> waitStages = {
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        submitInfo.pWaitDstStageMask = waitStages.data();
-
-        // Specify which command buffers to execute.
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &pVulkanCurrentFrameResource->pCommandBuffer;
-
-        // Specify which semaphores will be signaled once the command buffer(s) have finished execution.
-        std::array<VkSemaphore, 1> vSemaphoresAfterCommandBufferFinished = {
-            vImageSemaphores[iCurrentImageSemaphore].pQueueSubmitSemaphore};
-        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
-        submitInfo.pSignalSemaphores = vSemaphoresAfterCommandBufferFinished.data();
-
-        // Make fence to be in "unsignaled" state.
-        result = vkResetFences(pLogicalDevice, 1, &pVulkanCurrentFrameResource->pFence);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format("failed to reset a fence, error: {}", string_VkResult(result)));
-        }
-
-        PROFILE_SCOPE_START(QueueSubmit);
-
-        // Submit command buffer(s) to the queue for execution.
-        vImageSemaphores[iCurrentImageSemaphore].iUsedFrameResourceIndex = iCurrentFrameResourceIndex;
-        result = vkQueueSubmit(pGraphicsQueue, 1, &submitInfo, pVulkanCurrentFrameResource->pFence);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format(
-                "failed to submit command buffer(s) for execution, error: {}", string_VkResult(result)));
-        }
-
-        PROFILE_SCOPE_END;
-
-        // Prepare for presenting.
-        VkPresentInfoKHR presentInfo{};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
-        presentInfo.pWaitSemaphores = vSemaphoresAfterCommandBufferFinished.data();
-
-        // Specify which swapchain/image to present.
-        std::array<VkSwapchainKHR, 1> vSwapChains = {pSwapChain};
-        presentInfo.swapchainCount = static_cast<uint32_t>(vSwapChains.size());
-        presentInfo.pSwapchains = vSwapChains.data();
-        presentInfo.pImageIndices = &iAcquiredImageIndex;
-
-        // No using multiple swapchains so leave `pResults` empty as we will get result for our single
-        // swapchain from `vkQueuePresentKHR`.
-        presentInfo.pResults = nullptr;
-
-        PROFILE_SCOPE_START(Present);
-
-        // Present.
-        result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
-        if (result != VK_SUCCESS) {
-            if (result != VK_SUBOPTIMAL_KHR) {
-                return Error(
-                    std::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
-            }
-
-            // Mark swapchain as needs to be re-created.
-            bNeedToRecreateSwapchain = true;
-        }
-
-        PROFILE_SCOPE_END;
-
-        // Switch to the next semaphores index.
-        iCurrentImageSemaphore = (iCurrentImageSemaphore + 1) % vImageSemaphores.size();
-
-        // Calculate frame-related statistics.
-        calculateFrameStatistics();
-
-        return {};
     }
 
     std::optional<Error> VulkanRenderer::updateMsaaSampleCount() {

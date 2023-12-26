@@ -18,9 +18,9 @@
 #include "game/nodes/MeshNode.h"
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"
-#include "game/camera/TransientCamera.h"
-#include "game/nodes/CameraNode.h"
 #include "shader/general/EngineShaders.hpp"
+#include "game/nodes/light/PointLightNode.h"
+#include "game/nodes/light/SpotlightNode.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -267,6 +267,106 @@ namespace ne {
         pLightingShaderResourceManager = nullptr;
     }
 
+    void Renderer::onFramebufferSizeChanged(int iWidth, int iHeight) {
+        if (iWidth == 0 && iHeight == 0) {
+            // Don't draw anything as frame buffer size is zero.
+            bIsWindowMinimized = true;
+            waitForGpuToFinishWorkUpToThisPoint();
+            return;
+        }
+
+        bIsWindowMinimized = false;
+
+        onFramebufferSizeChangedDerived(iWidth, iHeight);
+    }
+
+    void Renderer::drawNextFrame() {
+        PROFILE_FUNC;
+
+        if (bIsWindowMinimized) {
+            // Framebuffer size is zero, don't draw anything.
+            return;
+        }
+
+        // Get pipeline manager and compute shaders to dispatch.
+        const auto pPipelineManager = getPipelineManager();
+        auto mtxQueuedComputeShader = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
+
+        // Get active camera.
+        const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
+
+        // Get current frame resource.
+        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+
+        // Lock mutexes together to minimize deadlocks.
+        std::scoped_lock renderGuard(
+            pMtxActiveCamera->first,
+            *getRenderResourcesMutex(),
+            pMtxCurrentFrameResource->first,
+            *mtxQueuedComputeShader.first);
+
+        // Get camera properties of the active camera.
+        const auto pActiveCameraProperties = pMtxActiveCamera->second.getCameraProperties();
+        if (pActiveCameraProperties == nullptr) {
+            // No active camera.
+            return;
+        }
+
+        // don't unlock active camera mutex until finished submitting the next frame for drawing
+
+        // Prepare render target because we will need its size now.
+        prepareRenderTargetForNextFrame();
+
+        // Wait for the next frame resource to be no longer used by the GPU.
+        const auto renderTargetSize = getRenderTargetSize();
+        updateResourcesForNextFrame(renderTargetSize.first, renderTargetSize.second, pActiveCameraProperties);
+
+        // Prepare for drawing a new frame.
+        prepareForDrawingNextFrame(pActiveCameraProperties, pMtxCurrentFrameResource->second.pResource);
+
+        // Get graphics pipelines.
+        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
+
+        // Cull meshes.
+        const auto pMeshPipelinesInFrustum =
+            getMeshesInCameraFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
+
+        // Draw depth prepass.
+        drawMeshesDepthPrepass(
+            pMtxCurrentFrameResource->second.pResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            pMeshPipelinesInFrustum->vOpaquePipelines);
+
+        PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
+
+        // Run compute shaders after depth prepass.
+        executeComputeShadersOnGraphicsQueue(
+            pMtxCurrentFrameResource->second.pResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            ComputeExecutionStage::AFTER_DEPTH_PREPASS);
+
+        PROFILE_SCOPE_END;
+
+        // Draw main pass.
+        drawMeshesMainPass(
+            pMtxCurrentFrameResource->second.pResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            pMeshPipelinesInFrustum->vOpaquePipelines,
+            pMeshPipelinesInFrustum->vTransparentPipelines);
+
+        // Present the frame on the screen, flip swapchain images, etc.
+        present(
+            pMtxCurrentFrameResource->second.pResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+
+        // Update frame stats.
+        calculateFrameStatistics();
+
+        // Switch to the next frame resource.
+        getFrameResourcesManager()->switchToNextFrameResource();
+    }
+
     std::optional<Error> Renderer::onRenderSettingsChanged(bool bShadowMapSizeChanged) {
         Logger::get().info(
             "waiting for GPU to finish work up to this point in order to apply changed render settings...");
@@ -313,13 +413,9 @@ namespace ne {
         // Lock camera.
         std::scoped_lock guard(pMtxActiveCamera->first);
 
-        // Get active camera properties.
-        CameraProperties* pActiveCameraProperties = nullptr;
-        if (pMtxActiveCamera->second.pCameraNode != nullptr) {
-            pActiveCameraProperties = pMtxActiveCamera->second.pCameraNode->getCameraProperties();
-        } else if (pMtxActiveCamera->second.pTransientCamera != nullptr) {
-            pActiveCameraProperties = pMtxActiveCamera->second.pTransientCamera->getCameraProperties();
-        } else {
+        // Get camera properties of the active camera.
+        const auto pActiveCameraProperties = pMtxActiveCamera->second.getCameraProperties();
+        if (pActiveCameraProperties == nullptr) {
             // No active camera, no need to notify lighting manager.
             return {};
         }
@@ -850,7 +946,7 @@ namespace ne {
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
     }
 
-    Renderer::MeshesInFrustum* Renderer::getMeshesInFrustum(
+    Renderer::MeshesInFrustum* Renderer::getMeshesInCameraFrustum(
         CameraProperties* pActiveCameraProperties,
         PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
@@ -868,11 +964,15 @@ namespace ne {
         static_assert(sizeof(MeshesInFrustum::PipelineInFrustumInfo) == 32, "clear new arrays"); // NOLINT
 #endif
 
+        // Get camera frustum (camera should be updated at this point).
+        const auto pCameraFrustum = pActiveCameraProperties->getCameraFrustum();
+
         // Prepare lambda to cull pipelines.
         const auto frustumCullPipelines =
-            [this, pActiveCameraProperties](
+            [this, pCameraFrustum](
                 const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToScan,
                 std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vPipelinesInFrustum) {
+                // Iterate over all specified pipelines.
                 for (const auto& [sShaderNames, pipelines] : pipelinesToScan) {
                     for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
                         // Get materials.
@@ -902,10 +1002,14 @@ namespace ne {
                                 const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
                                 std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
 
-                                if (isAabbOutsideCameraFrustum(
-                                        pActiveCameraProperties,
-                                        *pMeshNode->getAABB(),
-                                        pMtxMeshShaderConstants->second.world)) {
+                                // (camera's frustum should be updated at this point)
+                                const auto bIsVisible = pCameraFrustum->isAabbInFrustum(
+                                    *pMeshNode->getAABB(), pMtxMeshShaderConstants->second.world);
+
+                                // Increment culled object count.
+                                iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);
+
+                                if (!bIsVisible) {
                                     // This mesh is outside of camera's frustum.
                                     continue;
                                 }
@@ -954,6 +1058,110 @@ namespace ne {
             duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
 
         return &meshesInFrustumLastFrame;
+    }
+
+    void Renderer::cullLightsOutsideCameraFrustum(
+        CameraProperties* pActiveCameraProperties, size_t iCurrentFrameResourceIndex) {
+        // Get camera frustum.
+        const auto pCameraFrustum = pActiveCameraProperties->getCameraFrustum();
+
+        // Prepare a short reference to light arrays.
+        auto& lightArrays = pLightingShaderResourceManager->lightArrays;
+
+        {
+            // Get lights in frustum.
+            std::scoped_lock guardLights(lightArrays.pPointLightDataArray->mtxResources.first);
+
+            // Create a short reference.
+            auto& pointLightsInFrustum =
+                lightArrays.pPointLightDataArray->mtxResources.second.lightsInFrustum;
+
+            // Make sure there is at least one light.
+            if (!pointLightsInFrustum.vShaderLightNodeArray.empty()) {
+#if defined(DEBUG)
+                // Make sure it indeed stores point lights.
+                const auto pFirstNode = pointLightsInFrustum.vShaderLightNodeArray[0];
+                if (dynamic_cast<PointLightNode*>(pFirstNode) == nullptr) [[unlikely]] {
+                    Error error(std::format(
+                        "expected an array of point lights, got node of different type with name \"{}\"",
+                        pFirstNode->getNodeName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+#endif
+
+                // Clear indices to lights in frustum because we will rebuilt this array now.
+                pointLightsInFrustum.vLightIndicesInFrustum.clear();
+
+                for (size_t i = 0; i < pointLightsInFrustum.vShaderLightNodeArray.size(); i++) {
+                    // Convert type.
+                    const auto pPointLightNode =
+                        reinterpret_cast<PointLightNode*>(pointLightsInFrustum.vShaderLightNodeArray[i]);
+
+                    // Get light source shape.
+                    const auto pMtxShape = pPointLightNode->getShape();
+                    std::scoped_lock shapeGuard(pMtxShape->first);
+
+                    // Make sure shape is is frustum.
+                    if (!pCameraFrustum->isSphereInFrustum(pMtxShape->second)) {
+                        continue;
+                    }
+
+                    // Add light index.
+                    pointLightsInFrustum.vLightIndicesInFrustum.push_back(static_cast<unsigned int>(i));
+                }
+
+                // Notify array.
+                lightArrays.pPointLightDataArray->onLightsInCameraFrustumCulled(iCurrentFrameResourceIndex);
+            }
+        }
+
+        {
+            // Get lights in frustum.
+            std::scoped_lock guardLights(lightArrays.pSpotlightDataArray->mtxResources.first);
+
+            // Create a short reference.
+            auto& spotlightsInFrustum = lightArrays.pSpotlightDataArray->mtxResources.second.lightsInFrustum;
+
+            // Make sure there is at least one light.
+            if (!spotlightsInFrustum.vShaderLightNodeArray.empty()) {
+#if defined(DEBUG)
+                // Make sure it indeed stores spotlights.
+                const auto pFirstNode = spotlightsInFrustum.vShaderLightNodeArray[0];
+                if (dynamic_cast<SpotlightNode*>(pFirstNode) == nullptr) [[unlikely]] {
+                    Error error(std::format(
+                        "expected an array of spotlights, got node of different type with name \"{}\"",
+                        pFirstNode->getNodeName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+#endif
+
+                // Clear indices to lights in frustum because we will rebuilt this array now.
+                spotlightsInFrustum.vLightIndicesInFrustum.clear();
+
+                for (size_t i = 0; i < spotlightsInFrustum.vShaderLightNodeArray.size(); i++) {
+                    // Convert type.
+                    const auto pSpotlightNode =
+                        reinterpret_cast<SpotlightNode*>(spotlightsInFrustum.vShaderLightNodeArray[i]);
+
+                    // Get light source shape.
+                    const auto pMtxShape = pSpotlightNode->getShape();
+                    std::scoped_lock shapeGuard(pMtxShape->first);
+
+                    // Make sure shape is is frustum.
+                    if (!pCameraFrustum->isConeInFrustum(pMtxShape->second)) {
+                        continue;
+                    }
+
+                    // Add light index.
+                    spotlightsInFrustum.vLightIndicesInFrustum.push_back(static_cast<unsigned int>(i));
+                }
+
+                // Notify array.
+                lightArrays.pSpotlightDataArray->onLightsInCameraFrustumCulled(iCurrentFrameResourceIndex);
+            }
+        }
     }
 
 } // namespace ne

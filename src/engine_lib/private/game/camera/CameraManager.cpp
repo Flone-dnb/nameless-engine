@@ -134,4 +134,17 @@ namespace ne {
         }
     }
 
+    CameraProperties* CameraManager::ActiveCamera::getCameraProperties() {
+        if (pCameraNode != nullptr) {
+            return pCameraNode->getCameraProperties();
+        }
+
+        if (pTransientCamera != nullptr) {
+            return pTransientCamera->getCameraProperties();
+        }
+
+        // No active camera.
+        return nullptr;
+    }
+
 } // namespace ne

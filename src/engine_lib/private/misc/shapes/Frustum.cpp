@@ -51,9 +51,21 @@ namespace ne {
             std::abs(glm::dot(obbScaledUp, glm::vec3(0.0F, 0.0F, 1.0F)));       // project OBB Z on world Z
 
         // Test each AABB face against the frustum.
-        return aabb.isIntersectsOrInFrontOfPlane(leftFace) && aabb.isIntersectsOrInFrontOfPlane(rightFace) &&
-               aabb.isIntersectsOrInFrontOfPlane(topFace) && aabb.isIntersectsOrInFrontOfPlane(bottomFace) &&
-               aabb.isIntersectsOrInFrontOfPlane(nearFace) && aabb.isIntersectsOrInFrontOfPlane(farFace);
+        return !aabb.isBehindPlane(leftFace) && !aabb.isBehindPlane(rightFace) &&
+               !aabb.isBehindPlane(topFace) && !aabb.isBehindPlane(bottomFace) &&
+               !aabb.isBehindPlane(nearFace) && !aabb.isBehindPlane(farFace);
+    }
+
+    bool Frustum::isSphereInFrustum(const Sphere& sphere) const {
+        return !sphere.isBehindPlane(leftFace) && !sphere.isBehindPlane(rightFace) &&
+               !sphere.isBehindPlane(topFace) && !sphere.isBehindPlane(bottomFace) &&
+               !sphere.isBehindPlane(nearFace) && !sphere.isBehindPlane(farFace);
+    }
+
+    bool Frustum::isConeInFrustum(const Cone& cone) const {
+        return !cone.isBehindPlane(leftFace) && !cone.isBehindPlane(rightFace) &&
+               !cone.isBehindPlane(topFace) && !cone.isBehindPlane(bottomFace) &&
+               !cone.isBehindPlane(nearFace) && !cone.isBehindPlane(farFace);
     }
 
 }

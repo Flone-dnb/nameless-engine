@@ -200,20 +200,55 @@ namespace ne {
          */
         DirectXRenderer(GameManager* pGameManager);
 
-        /** Submits a new frame to the GPU. */
-        virtual void drawNextFrame() override;
-
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
          *
          * @param pCurrentFrameResource      Frame resource of the frame being submitted.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         * @param opaquePipelines            Opaque pipelines (depth pipeline will be retrieved from them).
+         * @param vOpaquePipelines           Opaque pipelines (depth pipeline will be retrieved from them).
          */
-        void drawMeshesDepthPrepass(
-            DirectXFrameResource* pCurrentFrameResource,
+        virtual void drawMeshesDepthPrepass(
+            FrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& opaquePipelines);
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) override;
+
+        /**
+         * Executes compute shaders of the specified stage.
+         *
+         * @warning Expects that mutex for compute shaders is locked.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param stage                      Stage of compute shaders to execute.
+         */
+        virtual void executeComputeShadersOnGraphicsQueue(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            ComputeExecutionStage stage) override;
+
+        /**
+         * Submits commands to draw meshes for main (color) pass.
+         *
+         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
+         * @param vOpaquePipelines            Opaque pipelines to draw.
+         * @param vTransparentPipelines       Transparent pipelines to draw.
+         */
+        virtual void drawMeshesMainPass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
+            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines)
+            override;
+
+        /**
+         * Does the final frame rendering logic to present the frame on the screen.
+         *
+         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
+         */
+        virtual void
+        present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) override;
 
         /**
          * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
@@ -223,7 +258,7 @@ namespace ne {
          * @param pipelinesOfSpecificType     Pipelines to use.
          * @param bIsDrawingTransparentMeshes `true` if transparent pipelines are used, `false` otherwise.
          */
-        void drawMeshesMainPass(
+        void drawMeshesMainPassSpecificPipelines(
             DirectXFrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
             const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
@@ -371,18 +406,18 @@ namespace ne {
         initializeDirectX(const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
-         * Setups everything for render commands to be recorded (updates frame constants, shader resources,
-         * resets lists, binds RTV/DSV, etc.).
+         * Setups everything for render commands to be recorded (resets command buffers and etc.).
          *
          * @warning Expects that render resources mutex is locked.
          *
-         * @param pCameraProperties     Camera properties to use.
-         * @param pCurrentFrameResource Current frame resource.
+         * @remark When this function is called this means that the current frame resource is no longer
+         * used by the GPU.
          *
-         * @return Error if something went wrong.
+         * @param pCameraProperties     Camera properties to use.
+         * @param pCurrentFrameResource Frame resource of the frame being submitted.
          */
-        [[nodiscard]] std::optional<Error> prepareForDrawingNextFrame(
-            CameraProperties* pCameraProperties, DirectXFrameResource* pCurrentFrameResource);
+        virtual void prepareForDrawingNextFrame(
+            CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) override;
 
         /**
          * Resets @ref pCommandList and adds initial commands like set descriptor heaps for graphics commands.
@@ -397,20 +432,6 @@ namespace ne {
          * @param pCommandListToExecute Command list to execute.
          */
         void executeGraphicsCommandList(ID3D12GraphicsCommandList* pCommandListToExecute);
-
-        /**
-         * Does final logic in drawing next frame (closes lists, executes lists, etc.).
-         *
-         * @warning Expects that render resources mutex is locked.
-         *
-         * @param pCurrentFrameResource Current frame resource.
-         * @param pQueuedComputeShaders Queued shaders to dispatch.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> finishDrawingNextFrame(
-            DirectXFrameResource* pCurrentFrameResource,
-            QueuedForExecutionComputeShaders* pQueuedComputeShaders);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref iMsaaQualityLevelsCount.

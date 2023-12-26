@@ -26,6 +26,7 @@ namespace ne {
                                              ->getLightingShaderResourceManager()
                                              ->getSpotlightDataArray();
         auto result = pSpotlightDataArray->reserveNewSlot(
+            this,
             sizeof(SpotlightShaderData),
             [this]() { return onStartedUpdatingShaderData(); },
             [this]() { onFinishedUpdatingShaderData(); });
@@ -75,7 +76,7 @@ namespace ne {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Save new parameter.
-        this->distance = distance;
+        this->distance = glm::max(distance, 0.0F);
 
         // Update shader data.
         recalculateAndMarkShaderDataToBeCopiedToGpu();
@@ -113,6 +114,7 @@ namespace ne {
         // Make sure our cutoff angle is in valid range.
         innerConeAngle = std::clamp(innerConeAngle, 0.0F, maxConeAngle);
         outerConeAngle = std::clamp(outerConeAngle, innerConeAngle, maxConeAngle);
+        distance = glm::max(distance, 0.0F);
 
 #if defined(DEBUG)
         static_assert(sizeof(SpotlightShaderData) == 80, "consider clamping new parameters here");
@@ -159,6 +161,9 @@ namespace ne {
 
         // Mark as "needs update".
         mtxShaderData.second.pSpotlightArraySlot->markAsNeedsUpdate();
+
+        // Recalculate sphere shape.
+        recalculateShape();
     }
 
     glm::vec3 SpotlightNode::getLightColor() const { return color; }
@@ -177,5 +182,16 @@ namespace ne {
     float SpotlightNode::getLightInnerConeAngle() const { return innerConeAngle; }
 
     float SpotlightNode::getLightOuterConeAngle() const { return outerConeAngle; }
+
+    std::pair<std::mutex, Cone>* SpotlightNode::getShape() { return &mtxShape; }
+
+    void SpotlightNode::recalculateShape() {
+        std::scoped_lock guard(mtxShaderData.first, mtxShape.first);
+
+        mtxShape.second.location = mtxShaderData.second.shaderData.position;
+        mtxShape.second.direction = mtxShaderData.second.shaderData.direction;
+        mtxShape.second.height = mtxShaderData.second.shaderData.distance;
+        mtxShape.second.bottomRadius = mtxShaderData.second.shaderData.coneBottomRadius;
+    }
 
 }

@@ -48,14 +48,14 @@ namespace ne {
             /** Light color intensity of ambient lighting. 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 ambientLight = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
-            /** Total number of spawned point lights. */
-            alignas(iVkScalarAlignment) unsigned int iPointLightCount = 0;
+            /** Total number of spawned point lights in camera frustum. */
+            alignas(iVkScalarAlignment) unsigned int iPointLightCountInCameraFrustum = 0;
 
-            /** Total number of spawned directional lights. */
-            alignas(iVkScalarAlignment) unsigned int iDirectionalLightCount = 0;
+            /** Total number of spawned directional lights in camera frustum. */
+            alignas(iVkScalarAlignment) unsigned int iDirectionalLightCountInCameraFrustum = 0;
 
-            /** Total number of spawned spotlights. */
-            alignas(iVkScalarAlignment) unsigned int iSpotlightCount = 0;
+            /** Total number of spawned spotlights in camera frustum. */
+            alignas(iVkScalarAlignment) unsigned int iSpotLightCountInCameraFrustum = 0;
         };
 
         /** Groups GPU related data. */
@@ -148,7 +148,7 @@ namespace ne {
             pCommandList->SetGraphicsRootShaderResourceView(
                 iArrayRootParameterIndex,
                 reinterpret_cast<DirectXResource*>(
-                    pArray->mtxResources.second.vGpuResources[iCurrentFrameResourceIndex]
+                    pArray->mtxResources.second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
                         ->getInternalResource())
                     ->getInternalResource()
                     ->GetGPUVirtualAddress());
@@ -908,6 +908,14 @@ namespace ne {
         void onPointLightArraySizeChanged(size_t iNewSize);
 
         /**
+         * Called after array of indices to point lights in frustum was changed (indices changed).
+         *
+         * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the
+         * next frame.
+         */
+        void onPointLightsInFrustumCulled(size_t iCurrentFrameResourceIndex);
+
+        /**
          * Called after array of directional light sources changed its size.
          *
          * @param iNewSize New size of the array that stores GPU data for spawned directional lights.
@@ -920,6 +928,14 @@ namespace ne {
          * @param iNewSize New size of the array that stores GPU data for spawned spotlights.
          */
         void onSpotlightArraySizeChanged(size_t iNewSize);
+
+        /**
+         * Called after array of indices to spotlights in frustum was changed (indices changed).
+         *
+         * @param iCurrentFrameResourceIndex Index of the frame resource that will be used to submit the
+         * next frame.
+         */
+        void onSpotlightsInFrustumCulled(size_t iCurrentFrameResourceIndex);
 
         /**
          * Copies data from @ref mtxGpuData to the GPU resource of the current frame resource.

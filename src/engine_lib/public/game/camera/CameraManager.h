@@ -11,6 +11,7 @@ namespace ne {
     class CameraNode;
     class TransientCamera;
     class Renderer;
+    class CameraProperties;
 
     /** Determines what camera is used to draw on the screen. */
     class CameraManager {
@@ -23,6 +24,13 @@ namespace ne {
     public:
         /** Stores active camera. It's either a transient camera or a camera node (never both). */
         struct ActiveCamera {
+            /**
+             * Returns properties of this camera.
+             *
+             * @return `nullptr` if no active camera, otherwise active camera properties.
+             */
+            CameraProperties* getCameraProperties();
+
             /** Transient camera. */
             std::shared_ptr<TransientCamera> pTransientCamera;
 

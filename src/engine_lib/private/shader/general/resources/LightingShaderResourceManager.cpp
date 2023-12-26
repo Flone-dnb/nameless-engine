@@ -129,15 +129,17 @@ namespace ne {
 
         // Get point light arrays (we don't really need to lock mutexes here since we are inside
         // `drawNextFrame`).
-        const auto pPointLightArrayResource = lightArrays.pPointLightDataArray->getInternalResources()
-                                                  ->second.vGpuResources[iCurrentFrameResourceIndex]
-                                                  ->getInternalResource();
-        const auto pSpotlightArrayResource = lightArrays.pSpotlightDataArray->getInternalResources()
-                                                 ->second.vGpuResources[iCurrentFrameResourceIndex]
-                                                 ->getInternalResource();
+        const auto pPointLightArrayResource =
+            lightArrays.pPointLightDataArray->getInternalResources()
+                ->second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
+                ->getInternalResource();
+        const auto pSpotlightArrayResource =
+            lightArrays.pSpotlightDataArray->getInternalResources()
+                ->second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
+                ->getInternalResource();
         const auto pDirectionalLightArrayResource =
             lightArrays.pDirectionalLightDataArray->getInternalResources()
-                ->second.vGpuResources[iCurrentFrameResourceIndex]
+                ->second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
                 ->getInternalResource();
 
         // Queue shader that will reset global counters for light culling (should be called every frame).
@@ -176,12 +178,37 @@ namespace ne {
         }
 
         // Update total point light count.
-        mtxGpuData.second.generalData.iPointLightCount = static_cast<unsigned int>(iNewSize);
+        mtxGpuData.second.generalData.iPointLightCountInCameraFrustum = static_cast<unsigned int>(iNewSize);
 
         // Copy updated data to the GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
             copyDataToGpu(i);
         }
+    }
+
+    void LightingShaderResourceManager::onPointLightsInFrustumCulled(size_t iCurrentFrameResourceIndex) {
+        // Prepare a short reference.
+        auto& lightArrayData = lightArrays.pPointLightDataArray->mtxResources;
+
+        // Lock both general and specified light array data.
+        std::scoped_lock guard(mtxGpuData.first, lightArrayData.first);
+
+        // Make sure we don't hit type limit.
+        if (lightArrayData.second.lightsInFrustum.vLightIndicesInFrustum.size() >
+            std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format(
+                "point light index array size {} exceed type limit",
+                lightArrayData.second.lightsInFrustum.vLightIndicesInFrustum.size()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Copy new array size to general data.
+        mtxGpuData.second.generalData.iPointLightCountInCameraFrustum =
+            static_cast<unsigned int>(lightArrayData.second.lightsInFrustum.vLightIndicesInFrustum.size());
+
+        // Copy general data to GPU resource of the current frame resource.
+        copyDataToGpu(iCurrentFrameResourceIndex);
     }
 
     void LightingShaderResourceManager::onDirectionalLightArraySizeChanged(size_t iNewSize) {
@@ -201,7 +228,8 @@ namespace ne {
         }
 
         // Update total directional light count.
-        mtxGpuData.second.generalData.iDirectionalLightCount = static_cast<unsigned int>(iNewSize);
+        mtxGpuData.second.generalData.iDirectionalLightCountInCameraFrustum =
+            static_cast<unsigned int>(iNewSize);
 
         // Copy updated data to the GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
@@ -225,12 +253,37 @@ namespace ne {
         }
 
         // Update total spotlight count.
-        mtxGpuData.second.generalData.iSpotlightCount = static_cast<unsigned int>(iNewSize);
+        mtxGpuData.second.generalData.iSpotLightCountInCameraFrustum = static_cast<unsigned int>(iNewSize);
 
         // Copy updated data to the GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
             copyDataToGpu(i);
         }
+    }
+
+    void LightingShaderResourceManager::onSpotlightsInFrustumCulled(size_t iCurrentFrameResourceIndex) {
+        // Prepare a short reference.
+        auto& lightArrayData = lightArrays.pSpotlightDataArray->mtxResources;
+
+        // Lock both general and specified light array data.
+        std::scoped_lock guard(mtxGpuData.first, lightArrayData.first);
+
+        // Make sure we don't hit type limit.
+        if (lightArrayData.second.lightsInFrustum.vLightIndicesInFrustum.size() >
+            std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format(
+                "spotlight index array size {} exceed type limit",
+                lightArrayData.second.lightsInFrustum.vLightIndicesInFrustum.size()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Copy new array size to general data.
+        mtxGpuData.second.generalData.iSpotLightCountInCameraFrustum =
+            static_cast<unsigned int>(lightArrayData.second.lightsInFrustum.vLightIndicesInFrustum.size());
+
+        // Copy general data to GPU resource of the current frame resource.
+        copyDataToGpu(iCurrentFrameResourceIndex);
     }
 
     void LightingShaderResourceManager::copyDataToGpu(size_t iCurrentFrameResourceIndex) {
@@ -679,21 +732,28 @@ namespace ne {
         }
 
         // Create point light array.
-        lightArrays.pPointLightDataArray =
-            ShaderLightArray::create(pRenderer, sPointLightsShaderResourceName, [this](size_t iNewSize) {
-                onPointLightArraySizeChanged(iNewSize);
+        lightArrays.pPointLightDataArray = ShaderLightArray::create(
+            pRenderer,
+            sPointLightsShaderResourceName,
+            [this](size_t iNewSize) { onPointLightArraySizeChanged(iNewSize); },
+            [this](size_t iCurrentFrameResourceIndex) {
+                onPointLightsInFrustumCulled(iCurrentFrameResourceIndex);
             });
 
         // Create directional light array.
         lightArrays.pDirectionalLightDataArray = ShaderLightArray::create(
-            pRenderer, sDirectionalLightsShaderResourceName, [this](size_t iNewSize) {
-                onDirectionalLightArraySizeChanged(iNewSize);
-            });
+            pRenderer,
+            sDirectionalLightsShaderResourceName,
+            [this](size_t iNewSize) { onDirectionalLightArraySizeChanged(iNewSize); },
+            {});
 
         // Create spotlight array.
-        lightArrays.pSpotlightDataArray =
-            ShaderLightArray::create(pRenderer, sSpotlightsShaderResourceName, [this](size_t iNewSize) {
-                onSpotlightArraySizeChanged(iNewSize);
+        lightArrays.pSpotlightDataArray = ShaderLightArray::create(
+            pRenderer,
+            sSpotlightsShaderResourceName,
+            [this](size_t iNewSize) { onSpotlightArraySizeChanged(iNewSize); },
+            [this](size_t iCurrentFrameResourceIndex) {
+                onSpotlightsInFrustumCulled(iCurrentFrameResourceIndex);
             });
 
 #if defined(DEBUG) && defined(WIN32)

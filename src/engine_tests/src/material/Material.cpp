@@ -705,7 +705,7 @@ TEST_CASE("change texture while spawned") {
 
             if (iFramesSpentWaiting >= iFramesToWait) {
                 // Make sure something was rendered (in case we forgot the camera).
-                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() > 0);
+                REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
 
                 if (!bChangedTexture) {
                     // Change texture.

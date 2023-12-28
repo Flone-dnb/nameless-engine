@@ -2515,20 +2515,18 @@ addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) func
 });
 ```
 
-# Frame statistics
+# Render statistics
 
-If you want to know your game's FPS you can use `Renderer::getFramesPerSecond`. For example, you can display the FPS on your game's UI for debugging purposes:
+If you want to know your game's FPS or other similar statistics you can use `Renderer::getRenderStatistics`. For example, you can display the FPS on your game's UI for debugging purposes:
 
 ```Cpp
-void MyUiNode::onBeforeNewFrame(float timeSincePrevCallInSec) {
+void MyUiNode::onLoopingTimerTimeout() {
 #if defined(DEBUG)
-    const auto iFps = getWindow()->getRenderer()->getFramesPerSecond();
+    const auto iFps = getWindow()->getRenderer()->getRenderStatistics()->getFramesPerSecond();
     // ... display on UI ...
 #endif
 }
 ```
-
-You can also use `Renderer::getTimeSpentLastFrameWaitingForGpu` to determine if you are CPU or GPU bound.
 
 # Using profiler
 

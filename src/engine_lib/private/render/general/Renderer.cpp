@@ -20,6 +20,7 @@
 #include "game/camera/CameraProperties.h"
 #include "shader/general/EngineShaders.hpp"
 #include "game/nodes/light/PointLightNode.h"
+#include "misc/shapes/AABB.h"
 #include "game/nodes/light/SpotlightNode.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
@@ -166,65 +167,86 @@ namespace ne {
 
         using namespace std::chrono;
 
-        // Save time spent on frustum culling.
-        frameStats.timeSpentLastFrameOnFrustumCullingInMs = accumulatedTimeSpentLastFrameOnFrustumCullingInMs;
-        accumulatedTimeSpentLastFrameOnFrustumCullingInMs = 0.0F; // reset accumulated time
+        // Update frame stats.
+        {
+            // Create a short reference.
+            auto& frameStats = renderStats.frameTemporaryStatistics;
 
-        // Save culled object count.
-        frameStats.iLastFrameCulledObjectCount = iLastFrameCulledObjectCount;
-        iLastFrameCulledObjectCount = 0;
+            // Save time spent on frustum culling.
+            {
+                std::scoped_lock floatGuard(frameStats.mtxFrustumCullingTimeInMs.first);
 
-        // Save draw call count.
-        frameStats.iLastFrameDrawCallCount = iLastFrameDrawCallCount;
-        iLastFrameDrawCallCount = 0;
+                renderStats.taskTimeInfo.timeSpentLastFrameOnFrustumCullingInMs =
+                    frameStats.mtxFrustumCullingTimeInMs.second;
+            }
 
-        // Get elapsed time.
-        const auto iTimeSinceFpsUpdateInSec =
-            duration_cast<seconds>(steady_clock::now() - frameStats.timeAtLastFpsUpdate).count();
+            // Save culled object count.
+            renderStats.counters.iLastFrameCulledObjectCount = frameStats.iCulledObjectCount.load();
 
-        // Count the new present call.
-        frameStats.iPresentCountSinceFpsUpdate += 1;
+            // Save draw call count.
+            renderStats.counters.iLastFrameDrawCallCount = frameStats.iDrawCallCount.load();
 
-        // See if 1 second has passed.
-        if (iTimeSinceFpsUpdateInSec >= 1) {
-            // Save FPS.
-            frameStats.iFramesPerSecond = frameStats.iPresentCountSinceFpsUpdate;
-
-            // Reset present count.
-            frameStats.iPresentCountSinceFpsUpdate = 0;
-
-            // Restart time.
-            frameStats.timeAtLastFpsUpdate = steady_clock::now();
+            // Reset frame stats.
+            frameStats.reset();
         }
 
-        // Check if FPS limit is set.
-        if (frameStats.timeToRenderFrameInNs.has_value()) {
-            // Get frame time.
-            const auto frameTimeInNs =
-                duration<double, nanoseconds::period>(steady_clock::now() - frameStats.frameStartTime)
-                    .count();
+        // Update FPS stats.
+        {
+            // Get elapsed time.
+            const auto iTimeSinceFpsUpdateInSec =
+                duration_cast<seconds>(steady_clock::now() - renderStats.fpsInfo.timeAtLastFpsUpdate).count();
 
-            // Check if the last frame was rendered too fast.
-            if (*frameStats.timeToRenderFrameInNs > frameTimeInNs) {
-                // Calculate time to wait.
-                const auto timeToWaitInNs = *frameStats.timeToRenderFrameInNs - frameTimeInNs;
+            // Count the new present call.
+            renderStats.fpsInfo.iPresentCountSinceFpsUpdate += 1;
 
-#if defined(WIN32)
-                timeBeginPeriod(1);
-                nanosleep(static_cast<long long>(std::floor(timeToWaitInNs * 0.98))); // NOLINT
-                timeEndPeriod(1);
-#else
-                struct timespec tim;
-                struct timespec tim2;
-                tim.tv_sec = 0;
-                tim.tv_nsec = static_cast<long>(timeToWaitInNs);
-                nanosleep(&tim, &tim2);
-#endif
+            // See if 1 second has passed.
+            if (iTimeSinceFpsUpdateInSec >= 1) {
+                // Save FPS.
+                renderStats.fpsInfo.iFramesPerSecond = renderStats.fpsInfo.iPresentCountSinceFpsUpdate;
+
+                // Reset present count.
+                renderStats.fpsInfo.iPresentCountSinceFpsUpdate = 0;
+
+                // Restart time.
+                renderStats.fpsInfo.timeAtLastFpsUpdate = steady_clock::now();
             }
         }
 
-        // Update frame start/end time.
-        frameStats.frameStartTime = steady_clock::now();
+        // Update FPS limit stats.
+        {
+            // Check if FPS limit is set.
+            if (renderStats.fpsLimitInfo.optionalTargetTimeToRenderFrameInNs.has_value()) {
+                // Get time that we should keep.
+                const auto targetTimeToRenderFrameInNs =
+                    renderStats.fpsLimitInfo.optionalTargetTimeToRenderFrameInNs.value();
+
+                // Get time spent on last frame.
+                const auto frameTimeInNs = duration<double, nanoseconds::period>(
+                                               steady_clock::now() - renderStats.fpsLimitInfo.frameStartTime)
+                                               .count();
+
+                // Check if the last frame was rendered too fast.
+                if (targetTimeToRenderFrameInNs > frameTimeInNs) {
+                    // Calculate time to wait.
+                    const auto timeToWaitInNs = targetTimeToRenderFrameInNs - frameTimeInNs;
+
+#if defined(WIN32)
+                    timeBeginPeriod(1);
+                    nanosleep(static_cast<long long>(std::floor(timeToWaitInNs * 0.98))); // NOLINT
+                    timeEndPeriod(1);
+#else
+                    struct timespec tim;
+                    struct timespec tim2;
+                    tim.tv_sec = 0;
+                    tim.tv_nsec = static_cast<long>(timeToWaitInNs);
+                    nanosleep(&tim, &tim2);
+#endif
+                }
+            }
+
+            // Update frame start/end time.
+            renderStats.fpsLimitInfo.frameStartTime = steady_clock::now();
+        }
     }
 
     void Renderer::resetGpuResourceManager() {
@@ -379,8 +401,8 @@ namespace ne {
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
 
-        // Update FPS cap.
-        updateFpsLimitSetting();
+        // Update target FPS.
+        updateTargetTimeToRenderFrame();
 
         if (bShadowMapSizeChanged) {
             // Notify shadow map manager.
@@ -570,7 +592,7 @@ namespace ne {
         return VulkanRenderer::create(pGameManager, vBlacklistedGpuNames);
     }
 
-    void Renderer::updateFpsLimitSetting() {
+    void Renderer::updateTargetTimeToRenderFrame() {
         // Get render setting.
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock guard(pMtxRenderSettings->first);
@@ -578,9 +600,10 @@ namespace ne {
         // Update time to render a frame.
         const auto iFpsLimit = pMtxRenderSettings->second->getFpsLimit();
         if (iFpsLimit == 0) {
-            frameStats.timeToRenderFrameInNs = {};
+            renderStats.fpsLimitInfo.optionalTargetTimeToRenderFrameInNs = {};
         } else {
-            frameStats.timeToRenderFrameInNs = 1000000000.0 / static_cast<double>(iFpsLimit); // NOLINT
+            renderStats.fpsLimitInfo.optionalTargetTimeToRenderFrameInNs =
+                1000000000.0 / static_cast<double>(iFpsLimit); // NOLINT
         }
     }
 
@@ -651,28 +674,16 @@ namespace ne {
         }
 
         // Setup frame statistics.
-        pCreatedRenderer->setupFrameStats();
+        pCreatedRenderer->setupRenderStats();
 
         return pCreatedRenderer;
     }
 
-    size_t Renderer::getFramesPerSecond() const { return frameStats.iFramesPerSecond; }
-
-    size_t Renderer::getLastFrameDrawCallCount() const { return frameStats.iLastFrameDrawCallCount; }
-
-    float Renderer::getTimeSpentLastFrameWaitingForGpu() const {
-        return frameStats.timeSpentLastFrameWaitingForGpuInMs;
-    }
-
-    float Renderer::getTimeSpentLastFrameOnFrustumCulling() const {
-        return frameStats.timeSpentLastFrameOnFrustumCullingInMs;
-    }
-
-    size_t Renderer::getLastFrameCulledObjectCount() const { return frameStats.iLastFrameCulledObjectCount; }
-
     std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {
         return &mtxRenderSettings;
     }
+
+    RenderStatistics* Renderer::getRenderStatistics() { return &renderStats; }
 
     size_t Renderer::getTotalVideoMemoryInMb() const {
         return getResourceManager()->getTotalVideoMemoryInMb();
@@ -738,9 +749,9 @@ namespace ne {
         }
     }
 
-    void Renderer::setupFrameStats() {
-        frameStats.timeAtLastFpsUpdate = std::chrono::steady_clock::now();
-        frameStats.frameStartTime = std::chrono::steady_clock::now();
+    void Renderer::setupRenderStats() {
+        renderStats.fpsInfo.timeAtLastFpsUpdate = std::chrono::steady_clock::now();
+        renderStats.fpsLimitInfo.frameStartTime = std::chrono::steady_clock::now();
     }
 
 #if defined(WIN32)
@@ -815,7 +826,7 @@ namespace ne {
         mtxRenderSettings.second->notifyRendererAboutChangedSettings();
 
         // Apply initial FPS limit setting.
-        updateFpsLimitSetting();
+        updateTargetTimeToRenderFrame();
 
         return {};
     }
@@ -900,7 +911,7 @@ namespace ne {
 
             // Measure the time it took to wait.
             const auto endTime = std::chrono::steady_clock::now();
-            frameStats.timeSpentLastFrameWaitingForGpuInMs =
+            renderStats.taskTimeInfo.timeSpentLastFrameWaitingForGpuInMs =
                 std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
         }
 
@@ -971,7 +982,7 @@ namespace ne {
         // Get camera frustum (camera should be updated at this point).
         const auto pCameraFrustum = pActiveCameraProperties->getCameraFrustum();
 
-        // Prepare lambda to cull pipelines.
+        // Prepare lambda to cull meshes by pipelines.
         const auto frustumCullPipelines =
             [this, pCameraFrustum](
                 const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToScan,
@@ -1011,7 +1022,8 @@ namespace ne {
                                     *pMeshNode->getAABB(), pMtxMeshShaderConstants->second.world);
 
                                 // Increment culled object count.
-                                iLastFrameCulledObjectCount += static_cast<size_t>(!bIsVisible);
+                                renderStats.frameTemporaryStatistics.iCulledObjectCount.fetch_add(
+                                    static_cast<size_t>(!bIsVisible));
 
                                 if (!bIsVisible) {
                                     // This mesh is outside of camera's frustum.
@@ -1058,8 +1070,12 @@ namespace ne {
         frustumCullPipelines(transparentPipelines, meshesInFrustumLastFrame.vTransparentPipelines);
 
         // Increment total time spent in frustum culling.
-        accumulatedTimeSpentLastFrameOnFrustumCullingInMs +=
-            duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
+        {
+            std::scoped_lock floatGuard(renderStats.frameTemporaryStatistics.mtxFrustumCullingTimeInMs.first);
+
+            renderStats.frameTemporaryStatistics.mtxFrustumCullingTimeInMs.second +=
+                duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
+        }
 
         return &meshesInFrustumLastFrame;
     }

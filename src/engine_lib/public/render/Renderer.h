@@ -16,9 +16,9 @@
 #include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
-#include "misc/shapes/AABB.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "material/Material.h"
+#include "render/RenderStatistics.h"
 
 namespace ne {
     class GameManager;
@@ -82,44 +82,6 @@ namespace ne {
         create(GameManager* pGameManager, std::optional<RendererType> preferredRenderer);
 
         /**
-         * Returns the number of frames that the renderer produced in the last second.
-         *
-         * @return Zero if not calculated yet (wait at least 1 second), otherwise FPS.
-         */
-        size_t getFramesPerSecond() const;
-
-        /**
-         * Returns the total number of draw calls made last frame.
-         *
-         * @return Draw call count.
-         */
-        size_t getLastFrameDrawCallCount() const;
-
-        /**
-         * Returns time in milliseconds that was spent last frame waiting for GPU to catch up.
-         * If returned value is constantly bigger than zero then this might mean that you are GPU bound,
-         * if constantly zero (0.0F) then this might mean that you are CPU bound.
-         *
-         * @return Time in milliseconds.
-         */
-        float getTimeSpentLastFrameWaitingForGpu() const;
-
-        /**
-         * Returns time in milliseconds that was spent last frame doing frustum culling.
-         *
-         * @return Time in milliseconds.
-         */
-        float getTimeSpentLastFrameOnFrustumCulling() const;
-
-        /**
-         * Returns the total number of objects (draw entities) that were discarded from submitting to
-         * rendering during the last frame.
-         *
-         * @return Object count.
-         */
-        size_t getLastFrameCulledObjectCount() const;
-
-        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @remark Note that returned array might differ depending on the used renderer.
@@ -176,6 +138,15 @@ namespace ne {
          * @return Non-owning pointer to render settings.
          */
         std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* getRenderSettings();
+
+        /**
+         * Returns various statistics about rendering (such as FPS).
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return Statistics.
+         */
+        RenderStatistics* getRenderStatistics();
 
         /**
          * Returns the name of the GPU that is being currently used.
@@ -695,59 +666,11 @@ namespace ne {
          *
          * @return Draw call counter.
          */
-        inline size_t* getDrawCallCounter() { return &iLastFrameDrawCallCount; }
+        inline std::atomic<size_t>* getDrawCallCounter() {
+            return &renderStats.frameTemporaryStatistics.iDrawCallCount;
+        }
 
     private:
-        /** Groups variables used to calculate frame-related statistics. */
-        struct FrameStatsData {
-            /**
-             * Time when the renderer has finished initializing or when
-             * @ref iFramesPerSecond was updated.
-             */
-            std::chrono::steady_clock::time_point timeAtLastFpsUpdate;
-
-            /**
-             * The number of times the renderer presented a new image since the last time we updated
-             * @ref iFramesPerSecond.
-             */
-            size_t iPresentCountSinceFpsUpdate = 0;
-
-            /** The number of frames that the renderer produced in the last second. */
-            size_t iFramesPerSecond = 0;
-
-            /** Time when last frame was started to be processed. */
-            std::chrono::steady_clock::time_point frameStartTime;
-
-            /** Not empty if FPS limit is set, defines time in nanoseconds that one frame should take. */
-            std::optional<double> timeToRenderFrameInNs = {};
-
-            /**
-             * Time (in milliseconds) that was spent last frame waiting for the GPU to finish using
-             * the new frame resource.
-             *
-             * @remark If constantly bigger than zero then this might mean that you are GPU bound,
-             * if constantly zero then this might mean that you are CPU bound.
-             */
-            float timeSpentLastFrameWaitingForGpuInMs = 0.0F;
-
-            /**
-             * Total time that was spent last frame doing frustum culling.
-             *
-             * @remark Updated only after a frame is submitted.
-             */
-            float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
-
-            /**
-             * Total number of objects (draw entries) discarded from submitting due to frustum culling.
-             *
-             * @remark Updated only after a frame is submitted.
-             */
-            size_t iLastFrameCulledObjectCount = 0;
-
-            /** The total number of draw calls made during the last frame. */
-            size_t iLastFrameDrawCallCount = 0;
-        };
-
         /**
          * Creates a new renderer and nothing else.
          *
@@ -816,8 +739,11 @@ namespace ne {
         /** Called by camera manager after active camera was changed. */
         void onActiveCameraChanged();
 
-        /** Looks for FPS limit setting in RenderSettings and update renderer's state. */
-        void updateFpsLimitSetting();
+        /**
+         * Looks for FPS limit setting in RenderSettings and updates renderer's target time to render a
+         * frame.
+         */
+        void updateTargetTimeToRenderFrame();
 
         /**
          * Updates the current shader configuration (settings) based on the current value
@@ -828,8 +754,8 @@ namespace ne {
          */
         void updateShaderConfiguration();
 
-        /** Initializes @ref frameStats to be used. */
-        void setupFrameStats();
+        /** Initializes @ref renderStats to be used. */
+        void setupRenderStats();
 
         /**
          * Initializes @ref mtxRenderSettings.
@@ -880,15 +806,6 @@ namespace ne {
         /** Meshes that were in camera's frustum last frame. */
         MeshesInFrustum meshesInFrustumLastFrame;
 
-        /** Time in milliseconds spent last frame on frustum culling. */
-        float accumulatedTimeSpentLastFrameOnFrustumCullingInMs = 0.0F;
-
-        /** Total number of objects (draw entries) discarded from submitting due to frustum culling. */
-        size_t iLastFrameCulledObjectCount = 0;
-
-        /** Stores the total number of draw calls made last frame. */
-        size_t iLastFrameDrawCallCount = 0;
-
         /** `true` if framebuffer size is zero, `false` otherwise. */
         bool bIsWindowMinimized = false;
 
@@ -898,8 +815,8 @@ namespace ne {
         /** Up to date frame-global constant data. */
         std::pair<std::mutex, FrameConstants> mtxFrameConstants;
 
-        /** Frame-related statistics. */
-        FrameStatsData frameStats;
+        /** Various statistics about rendering. */
+        RenderStatistics renderStats;
 
         /** Do not delete (free) this pointer. Game manager object that owns this renderer. */
         GameManager* pGameManager = nullptr;

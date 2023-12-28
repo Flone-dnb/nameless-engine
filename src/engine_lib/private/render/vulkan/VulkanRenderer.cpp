@@ -2838,7 +2838,7 @@ namespace ne {
                         vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
 
                         // Increment draw call counter.
-                        *pDrawCallCounter += 1;
+                        pDrawCallCounter->fetch_add(1);
                     }
                 }
             }
@@ -3172,7 +3172,7 @@ namespace ne {
                         vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
 
                         // Increment draw call counter.
-                        *pDrawCallCounter += 1;
+                        pDrawCallCounter->fetch_add(1);
                     }
                 }
             }

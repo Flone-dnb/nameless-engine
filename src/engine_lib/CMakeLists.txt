@@ -87,6 +87,8 @@ set(PROJECT_SOURCES
     private/render/general/Renderer.cpp
     public/render/RenderSettings.h
     private/render/general/RenderSettings.cpp
+    public/render/RenderStatistics.h
+    private/render/general/RenderStatistics.cpp
     private/render/general/pipeline/PipelineManager.h
     private/render/general/pipeline/PipelineManager.cpp
     private/render/general/pipeline/Pipeline.h

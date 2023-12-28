@@ -76,21 +76,22 @@ namespace ne {
         // Get window and renderer.
         const auto pWindow = getWindow();
         const auto pRenderer = pWindow->getRenderer();
+        const auto pRenderStats = pRenderer->getRenderStatistics();
 
         // Show window title.
         pWindow->setTitle(std::format(
             "{} FPS: {} | draw calls: {} | VRAM used: {} MB | frustum culled: {} took {:.1F} ms (~{}% of "
             "frame time) | waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
-            pRenderer->getFramesPerSecond(),
-            pRenderer->getLastFrameDrawCallCount(),
+            pRenderStats->getFramesPerSecond(),
+            pRenderStats->getLastFrameDrawCallCount(),
             pRenderer->getResourceManager()->getUsedVideoMemoryInMb(),
-            pRenderer->getLastFrameCulledObjectCount(),
-            pRenderer->getTimeSpentLastFrameOnFrustumCulling(),
+            pRenderStats->getLastFrameCulledObjectCount(),
+            pRenderStats->getTimeSpentLastFrameOnFrustumCulling(),
             static_cast<size_t>(
-                pRenderer->getTimeSpentLastFrameOnFrustumCulling() /
-                (1000.0F / static_cast<float>(pRenderer->getFramesPerSecond())) * 100.0F), // NOLINT
-            pRenderer->getTimeSpentLastFrameWaitingForGpu()));
+                pRenderStats->getTimeSpentLastFrameOnFrustumCulling() /
+                (1000.0F / static_cast<float>(pRenderStats->getFramesPerSecond())) * 100.0F), // NOLINT
+            pRenderStats->getTimeSpentLastFrameWaitingForGpu()));
     }
 
     void EditorGameInstance::bindCameraInput() {

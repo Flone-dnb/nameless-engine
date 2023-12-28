@@ -585,7 +585,7 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
 
             if (iFrameCount == 2) {
                 // Make sure something was rendered (in case we forgot the camera).
-                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() > 0);
+                REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
 
                 // Use mesh with just 1 material slot.
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
@@ -858,7 +858,7 @@ TEST_CASE("check draw call count with invisibility") {
             iFrameCount += 1;
 
             if (iFrameCount == 3) {
-                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() >= 1);
+                REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() >= 1);
 
                 // Spawn another sample mesh.
                 pSomeMeshNode = gc_new<MeshNode>();
@@ -868,14 +868,14 @@ TEST_CASE("check draw call count with invisibility") {
             }
 
             if (iFrameCount == 5) {
-                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() >= 2);
+                REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() >= 2);
 
                 // Make one mesh invisible.
                 pSomeMeshNode->setIsVisible(false);
             }
 
             if (iFrameCount == 7) {
-                REQUIRE(getWindow()->getRenderer()->getLastFrameDrawCallCount() >= 1);
+                REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() >= 1);
                 getWindow()->close();
             }
         }
@@ -940,16 +940,16 @@ TEST_CASE("check draw call count with frustum culling") {
             const auto pRenderer = getWindow()->getRenderer();
 
             if (iFrameCount == 2) {
-                REQUIRE(pRenderer->getLastFrameDrawCallCount() > 0);
-                REQUIRE(pRenderer->getLastFrameCulledObjectCount() == 0);
+                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
+                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledObjectCount() == 0);
 
                 // Rotate the camera 180 degrees.
                 pCamera->setFreeCameraRotation(glm::vec3(0.0F, 0.0F, 180.0F));
             }
 
             if (iFrameCount == 3) {
-                REQUIRE(pRenderer->getLastFrameDrawCallCount() == 0);
-                REQUIRE(pRenderer->getLastFrameCulledObjectCount() == 1);
+                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameDrawCallCount() == 0);
+                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledObjectCount() == 1);
 
                 getWindow()->close();
             }

@@ -51,8 +51,8 @@ namespace ne {
             /** Total number of spawned point lights in camera frustum. */
             alignas(iVkScalarAlignment) unsigned int iPointLightCountInCameraFrustum = 0;
 
-            /** Total number of spawned directional lights in camera frustum. */
-            alignas(iVkScalarAlignment) unsigned int iDirectionalLightCountInCameraFrustum = 0;
+            /** Total number of spawned directional lights. */
+            alignas(iVkScalarAlignment) unsigned int iDirectionalLightCount = 0;
 
             /** Total number of spawned spotlights in camera frustum. */
             alignas(iVkScalarAlignment) unsigned int iSpotLightCountInCameraFrustum = 0;
@@ -104,11 +104,27 @@ namespace ne {
          */
         static std::string getSpotlightsShaderResourceName();
 
+        /**
+         * Return name of the shader resource that stores indices of point lights in camera's frustum (name
+         * from shader code).
+         *
+         * @return Name of the shader resource.
+         */
+        static std::string getPointLightsInCameraFrustumIndicesShaderResourceName();
+
+        /**
+         * Return name of the shader resource that stores indices of spotlights in camera's frustum (name
+         * from shader code).
+         *
+         * @return Name of the shader resource.
+         */
+        static std::string getSpotlightsInCameraFrustumIndicesShaderResourceName();
+
 #if defined(WIN32)
         /**
          * Sets resource view of the specified lighting array to the specified command list.
          *
-         * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
+         * @warning Expects that the specified pipeline's shaders indeed uses lighting resources.
          *
          * @warning Expects that the specified pipeline's internal resources mutex is locked.
          *
@@ -747,7 +763,10 @@ namespace ne {
                      * information.
                      * @param pPointLightArray           Array that stores all spawned point lights.
                      * @param pSpotlightArray            Array that stores all spawned spotlights.
-                     * @param pDirectionalLightArray     Array that stores all spawned directional lights.
+                     * @param pNonCulledPointLightsIndicesArray Array that stores indices of point lights
+                     * in camera's frustum.
+                     * @param pNonCulledSpotlightsIndicesArray  Array that stores indices of spotlights in
+                     * camera's frustum.
                      *
                      * @return Error if something went wrong.
                      */
@@ -758,7 +777,8 @@ namespace ne {
                         GpuResource* pGeneralLightingData,
                         GpuResource* pPointLightArray,
                         GpuResource* pSpotlightArray,
-                        GpuResource* pDirectionalLightArray);
+                        GpuResource* pNonCulledPointLightsIndicesArray,
+                        GpuResource* pNonCulledSpotlightsIndicesArray);
 
                     /** Compute interface. */
                     std::unique_ptr<ComputeShaderInterface> pComputeInterface;
@@ -999,6 +1019,14 @@ namespace ne {
 
         /** Name of the resource that stores array of spotlights. */
         static inline const std::string sSpotlightsShaderResourceName = "spotlights";
+
+        /** Name of the resources that stores indices of point lights in camera's frustum. */
+        static inline const std::string sPointLightsInCameraFrustumIndicesShaderResourceName =
+            "pointLightsInCameraFrustumIndices";
+
+        /** Name of the resources that stores indices of spotlights in camera's frustum. */
+        static inline const std::string sSpotlightsInCameraFrustumIndicesShaderResourceName =
+            "spotlightsInCameraFrustumIndices";
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

@@ -33,10 +33,15 @@ namespace ne {
         Renderer* pRenderer,
         const std::string& sShaderLightResourceName,
         const std::function<void(size_t)>& onSizeChanged,
-        const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled)
+        const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled,
+        const std::string& sIndicesLightsInFrustumShaderResourceName)
         : optionalCallbackOnLightsInCameraFrustumCulled(optionalCallbackOnLightsInCameraFrustumCulled),
           onSizeChanged(onSizeChanged), sShaderLightResourceName(sShaderLightResourceName) {
+        // Save renderer.
         this->pRenderer = pRenderer;
+
+        // Save indices array name.
+        mtxResources.second.lightsInFrustum.sShaderResourceName = sIndicesLightsInFrustumShaderResourceName;
 
         // Initialize resources.
         auto optionalError = recreateArray(true);
@@ -133,9 +138,22 @@ namespace ne {
         Renderer* pRenderer,
         const std::string& sShaderLightResourceName,
         const std::function<void(size_t)>& onSizeChanged,
-        const std::optional<std::function<void(size_t)>>& onLightsInCameraFrustumChanged) {
+        const std::optional<std::pair<std::function<void(size_t)>, std::string>>&
+            optionalOnLightsInCameraFrustumCulled) {
+        std::optional<std::function<void(size_t)>> optionalCallback;
+        std::string sIndicesArrayShaderResourceName;
+
+        if (optionalOnLightsInCameraFrustumCulled.has_value()) {
+            optionalCallback = optionalOnLightsInCameraFrustumCulled->first;
+            sIndicesArrayShaderResourceName = optionalOnLightsInCameraFrustumCulled->second;
+        }
+
         return std::unique_ptr<ShaderLightArray>(new ShaderLightArray(
-            pRenderer, sShaderLightResourceName, onSizeChanged, onLightsInCameraFrustumChanged));
+            pRenderer,
+            sShaderLightResourceName,
+            onSizeChanged,
+            optionalCallback,
+            sIndicesArrayShaderResourceName));
     }
 
     std::variant<std::unique_ptr<ShaderLightArraySlot>, Error> ShaderLightArray::reserveNewSlot(
@@ -287,7 +305,8 @@ namespace ne {
         // Get resource manager.
         const auto pResourceManager = pRenderer->getResourceManager();
 
-        // Prepare array size.
+        // Prepare array size (use a dummy size of no active slots because GPU resources here should
+        // be always valid, see field docs).
         const size_t iArraySize = bIsInitialization ? 1 : mtxResources.second.activeSlots.size();
         const size_t iArrayElementSize = bIsInitialization ? 4 : iElementSizeInBytes; // NOLINT: dummy size
 
@@ -299,7 +318,8 @@ namespace ne {
                 sShaderLightResourceName));
         }
 
-        // Re-create the light data array resource.
+        // Re-create the light data array resource
+        // (it needs to be always valid).
         for (size_t i = 0; i < mtxResources.second.vGpuArrayLightDataResources.size(); i++) {
             // Create a new resource with the specified size.
             auto result = pResourceManager->createResourceWithCpuWriteAccess(
@@ -339,6 +359,7 @@ namespace ne {
 
         if (optionalCallbackOnLightsInCameraFrustumCulled.has_value()) {
             // Re-create the lights in frustum indices array resource.
+            // (it needs to be always valid if callback is specified).
             for (size_t i = 0; i < mtxResources.second.lightsInFrustum.vGpuResources.size(); i++) {
                 // Make sure the type is uint.
                 static_assert(
@@ -498,9 +519,9 @@ namespace ne {
             }
         }
 
-        // Get internal GPU resources.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vInternalBuffers;
-        for (size_t i = 0; i < vInternalBuffers.size(); i++) {
+        // Get light array GPU resources.
+        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vLightArrayBuffers;
+        for (size_t i = 0; i < vLightArrayBuffers.size(); i++) {
             // Convert to Vulkan resource.
             const auto pVulkanResource = dynamic_cast<VulkanResource*>(
                 mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource());
@@ -509,7 +530,7 @@ namespace ne {
             }
 
             // Save buffer resource.
-            vInternalBuffers[i] = pVulkanResource->getInternalBufferResource();
+            vLightArrayBuffers[i] = pVulkanResource->getInternalBufferResource();
         }
 
         // Get logical device to be used later.
@@ -549,18 +570,18 @@ namespace ne {
                     const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
                     std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
 
-                    // See if this pipeline uses the resource we are handling.
+                    // See if this pipeline uses the light array we are handling.
                     auto it =
                         pMtxPipelineInternalResources->second.resourceBindings.find(sShaderLightResourceName);
                     if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-                        continue;
+                        return {};
                     }
 
                     // Update one descriptor in set per frame resource.
                     for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
                         // Prepare info to bind storage buffer slot to descriptor.
                         VkDescriptorBufferInfo bufferInfo{};
-                        bufferInfo.buffer = vInternalBuffers[i];
+                        bufferInfo.buffer = vLightArrayBuffers[i];
                         bufferInfo.offset = 0;
                         bufferInfo.range =
                             mtxResources.second.vGpuArrayLightDataResources[i]->getElementCount() *
@@ -614,8 +635,8 @@ namespace ne {
         }
 
         // Get internal GPU resources.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vInternalBuffers;
-        for (size_t i = 0; i < vInternalBuffers.size(); i++) {
+        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vLightsArrayBuffers;
+        for (size_t i = 0; i < vLightsArrayBuffers.size(); i++) {
             // Convert to Vulkan resource.
             const auto pVulkanResource = dynamic_cast<VulkanResource*>(
                 mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource());
@@ -624,7 +645,7 @@ namespace ne {
             }
 
             // Save buffer resource.
-            vInternalBuffers[i] = pVulkanResource->getInternalBufferResource();
+            vLightsArrayBuffers[i] = pVulkanResource->getInternalBufferResource();
         }
 
         // Get logical device to be used later.
@@ -653,7 +674,7 @@ namespace ne {
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             // Prepare info to bind storage buffer slot to descriptor.
             VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = vInternalBuffers[i];
+            bufferInfo.buffer = vLightsArrayBuffers[i];
             bufferInfo.offset = 0;
             bufferInfo.range = mtxResources.second.vGpuArrayLightDataResources[i]->getElementCount() *
                                mtxResources.second.vGpuArrayLightDataResources[i]->getElementSizeInBytes();

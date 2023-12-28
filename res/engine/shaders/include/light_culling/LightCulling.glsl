@@ -456,11 +456,16 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
     // thread 1 processes lights: 1, LIGHT_GRID_TILE_SIZE_IN_PIXELS^2 + 1, etc.
 
     // Cull point lights.
-    for (uint i = iThreadIdInGroup; i < generalLightingData.iPointLightCount; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
+    for (uint i = iThreadIdInGroup; i < generalLightingData.iPointLightCountsInCameraFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
+        // Get point light index.
+        const uint iPointLightIndex =
+#hlsl         pointLightsInCameraFrustumIndices[i];
+#glsl         pointLightsInCameraFrustumIndices.array[i];
+        
         // Get point light.
         PointLight pointLight =
-#hlsl         pointLights[i];
-#glsl         pointLights.array[i];
+#hlsl         pointLights[iPointLightIndex];
+#glsl         pointLights.array[iPointLightIndex];
 
         // Calculate light view space position.
         vec3 lightViewSpacePosition = 
@@ -478,7 +483,7 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
         }
 
         // Append this light to transparent geometry.
-        addPointLightToTileTransparentLightIndexList(i);
+        addPointLightToTileTransparentLightIndexList(iPointLightIndex);
 
         // Now we know that the light is inside frustum for transparent objects, frustum for opaque objects is
         // the same expect it has smaller Z range so it's enough to just test sphere/plane.
@@ -487,15 +492,20 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
         }
 
         // Append this light to opaque geometry.
-        addPointLightToTileOpaqueLightIndexList(i);
+        addPointLightToTileOpaqueLightIndexList(iPointLightIndex);
     }
 
     // Cull spot lights.
-    for (uint i = iThreadIdInGroup; i < generalLightingData.iSpotlightCount; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
-        // Get spot light.
+    for (uint i = iThreadIdInGroup; i < generalLightingData.iSpotlightCountsInCameraFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
+        // Get spotlight index.
+        const uint iSpotlightIndex =
+#hlsl         spotlightsInCameraFrustumIndices[i];
+#glsl         spotlightsInCameraFrustumIndices.array[i];
+        
+        // Get spotlight.
         Spotlight spotlight =
-#hlsl         spotlights[i];
-#glsl         spotlights.array[i];
+#hlsl         spotlights[iSpotlightIndex];
+#glsl         spotlights.array[iSpotlightIndex];
 
         // Calculate light view space position.
         vec3 lightViewSpacePosition = 
@@ -520,7 +530,7 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
         }
   
         // Append this light to transparent geometry.
-        addSpotLightToTileTransparentLightIndexList(i);
+        addSpotLightToTileTransparentLightIndexList(iSpotlightIndex);
 
         // Now we know that the light is inside frustum for transparent objects, frustum for opaque objects is
         // the same expect it has smaller Z range so it's enough to just test cone/plane.
@@ -529,7 +539,7 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
         }
 
         // Append this light to opaque geometry.
-        addSpotLightToTileOpaqueLightIndexList(i);
+        addSpotLightToTileOpaqueLightIndexList(iSpotlightIndex);
     }
 
     // Cull directional lights.

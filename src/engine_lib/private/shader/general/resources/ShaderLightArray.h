@@ -121,9 +121,24 @@ namespace ne {
              */
             std::vector<unsigned int> vLightIndicesInFrustum;
 
-            /** GPU resources that store @ref vLightIndicesInFrustum. */
+            /**
+             * GPU resources that store @ref vLightIndicesInFrustum.
+             *
+             * @remark Resources in this array are always valid if you specified that you need an index array
+             * for this light array (when creating shader light array object) and always have space for at
+             * least one item (even if there are no lights spawned) to avoid hitting `nullptr` or have
+             * branching when binding resources (when there are no active lights these resources will not be
+             * used since counter for light sources will be zero but we will have a valid binding).
+             */
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
                 vGpuResources;
+
+            /**
+             * Name of the shader resource that stores indices to lights in camera's frustum.
+             *
+             * @remark Empty if array of indices is not used.
+             */
+            std::string sShaderResourceName;
         };
 
         /** Groups used resources. */
@@ -171,10 +186,11 @@ namespace ne {
          * array should bind to.
          * @param onSizeChanged                  Callback that will be called after array's size changed
          * with the current array size passed as the only argument.
-         * @param optionalCallbackOnLightsInCameraFrustumCulled If specified will be called after array of
-         * indices to lights in camera frustum changed (indices changed) with the current frame resource index
-         * as the only argument, otherwise (if empty) GPU resources for such array will not be created and
-         * this callback will never be called.
+         * @param optionalOnLightsInCameraFrustumCulled A pair of callback and shader resource name that are
+         * used for array that stores indices of light sources in camera's frustum. If specified the callback
+         * will be called after array of indices to lights in camera frustum changed (indices changed) with
+         * the current frame resource index as the only argument, otherwise (if empty) GPU resources for such
+         * array will not be created and this callback will never be called.
          *
          * @return Created array.
          */
@@ -182,7 +198,8 @@ namespace ne {
             Renderer* pRenderer,
             const std::string& sShaderLightResourceName,
             const std::function<void(size_t)>& onSizeChanged,
-            const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled);
+            const std::optional<std::pair<std::function<void(size_t)>, std::string>>&
+                optionalOnLightsInCameraFrustumCulled);
 
         /**
          * Reserves a new slot in the array to store some data.
@@ -242,12 +259,15 @@ namespace ne {
          * indices to lights in camera frustum changed (indices changed) with the current frame resource index
          * as the only argument, otherwise (if empty) GPU resources for such array will not be created and
          * this callback will never be called.
+         * @param sIndicesLightsInFrustumShaderResourceName If callback for culled lights in camera frustum
+         * is specified stores name of the shader resource used for the array of indices of non-culled lights.
          */
         ShaderLightArray(
             Renderer* pRenderer,
             const std::string& sShaderLightResourceName,
             const std::function<void(size_t)>& onSizeChanged,
-            const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled);
+            const std::optional<std::function<void(size_t)>>& optionalCallbackOnLightsInCameraFrustumCulled,
+            const std::string& sIndicesLightsInFrustumShaderResourceName = "");
 
         /**
          * Called after the renderer culls lights (so that indices of lights sources in camera's frustum

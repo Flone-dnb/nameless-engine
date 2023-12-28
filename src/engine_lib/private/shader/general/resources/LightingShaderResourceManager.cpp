@@ -129,17 +129,26 @@ namespace ne {
 
         // Get point light arrays (we don't really need to lock mutexes here since we are inside
         // `drawNextFrame`).
+        auto& pointLightArrayData = lightArrays.pPointLightDataArray->getInternalResources()->second;
+        auto& spotlightArrayData = lightArrays.pSpotlightDataArray->getInternalResources()->second;
+
+        // Get point lights.
         const auto pPointLightArrayResource =
-            lightArrays.pPointLightDataArray->getInternalResources()
-                ->second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
+            pointLightArrayData.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
                 ->getInternalResource();
+
+        // Get spot lights.
         const auto pSpotlightArrayResource =
-            lightArrays.pSpotlightDataArray->getInternalResources()
-                ->second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
+            spotlightArrayData.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]->getInternalResource();
+
+        // Get indices to non-culled point lights.
+        const auto pNonCulledPointLightsIndicesArrayResource =
+            pointLightArrayData.lightsInFrustum.vGpuResources[iCurrentFrameResourceIndex]
                 ->getInternalResource();
-        const auto pDirectionalLightArrayResource =
-            lightArrays.pDirectionalLightDataArray->getInternalResources()
-                ->second.vGpuArrayLightDataResources[iCurrentFrameResourceIndex]
+
+        // Get indices to non-culled spotlights.
+        const auto pNonCulledSpotlightsIndicesArrayResource =
+            spotlightArrayData.lightsInFrustum.vGpuResources[iCurrentFrameResourceIndex]
                 ->getInternalResource();
 
         // Queue shader that will reset global counters for light culling (should be called every frame).
@@ -154,7 +163,8 @@ namespace ne {
             mtxGpuData.second.vGeneralDataGpuResources[iCurrentFrameResourceIndex]->getInternalResource(),
             pPointLightArrayResource,
             pSpotlightArrayResource,
-            pDirectionalLightArrayResource);
+            pNonCulledPointLightsIndicesArrayResource,
+            pNonCulledSpotlightsIndicesArrayResource);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             optionalError->showError();
@@ -228,8 +238,7 @@ namespace ne {
         }
 
         // Update total directional light count.
-        mtxGpuData.second.generalData.iDirectionalLightCountInCameraFrustum =
-            static_cast<unsigned int>(iNewSize);
+        mtxGpuData.second.generalData.iDirectionalLightCount = static_cast<unsigned int>(iNewSize);
 
         // Copy updated data to the GPU resources.
         for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
@@ -736,9 +745,11 @@ namespace ne {
             pRenderer,
             sPointLightsShaderResourceName,
             [this](size_t iNewSize) { onPointLightArraySizeChanged(iNewSize); },
-            [this](size_t iCurrentFrameResourceIndex) {
-                onPointLightsInFrustumCulled(iCurrentFrameResourceIndex);
-            });
+            std::pair<std::function<void(size_t)>, std::string>{
+                [this](size_t iCurrentFrameResourceIndex) {
+                    onPointLightsInFrustumCulled(iCurrentFrameResourceIndex);
+                },
+                sPointLightsInCameraFrustumIndicesShaderResourceName});
 
         // Create directional light array.
         lightArrays.pDirectionalLightDataArray = ShaderLightArray::create(
@@ -752,9 +763,11 @@ namespace ne {
             pRenderer,
             sSpotlightsShaderResourceName,
             [this](size_t iNewSize) { onSpotlightArraySizeChanged(iNewSize); },
-            [this](size_t iCurrentFrameResourceIndex) {
-                onSpotlightsInFrustumCulled(iCurrentFrameResourceIndex);
-            });
+            std::pair<std::function<void(size_t)>, std::string>{
+                [this](size_t iCurrentFrameResourceIndex) {
+                    onSpotlightsInFrustumCulled(iCurrentFrameResourceIndex);
+                },
+                sSpotlightsInCameraFrustumIndicesShaderResourceName});
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here"); // NOLINT
@@ -1200,7 +1213,8 @@ namespace ne {
             GpuResource* pGeneralLightingData,
             GpuResource* pPointLightArray,
             GpuResource* pSpotlightArray,
-            GpuResource* pDirectionalLightArray) {
+            GpuResource* pNonCulledPointLightsIndicesArray,
+            GpuResource* pNonCulledSpotlightsIndicesArray) {
         PROFILE_FUNC;
 
         // Resources that store:
@@ -1279,6 +1293,28 @@ namespace ne {
 
         // No need to bind directional lights array because it's not used (we just accept all directional
         // lights since there does not seem to be a reliable way to cull them).
+
+        // (Re)bind non-culled indices to point lights array (because the resource will change every frame).
+        optionalError = pComputeInterface->bindResource(
+            pNonCulledPointLightsIndicesArray,
+            LightingShaderResourceManager::getPointLightsInCameraFrustumIndicesShaderResourceName(),
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER,
+            true);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        // (Re)bind non-culled indices to spotlights array (because the resource will change every frame).
+        optionalError = pComputeInterface->bindResource(
+            pNonCulledSpotlightsIndicesArray,
+            LightingShaderResourceManager::getSpotlightsInCameraFrustumIndicesShaderResourceName(),
+            ComputeResourceUsage::READ_ONLY_ARRAY_BUFFER,
+            true);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
 
         // Queue shader execution (we need to dispatch 1 thread group per tile).
         pComputeInterface->submitForExecution(
@@ -1441,6 +1477,14 @@ namespace ne {
 
     std::string LightingShaderResourceManager::getSpotlightsShaderResourceName() {
         return sSpotlightsShaderResourceName;
+    }
+
+    std::string LightingShaderResourceManager::getPointLightsInCameraFrustumIndicesShaderResourceName() {
+        return sPointLightsInCameraFrustumIndicesShaderResourceName;
+    }
+
+    std::string LightingShaderResourceManager::getSpotlightsInCameraFrustumIndicesShaderResourceName() {
+        return sSpotlightsInCameraFrustumIndicesShaderResourceName;
     }
 
     std::unique_ptr<LightingShaderResourceManager>

@@ -328,6 +328,10 @@ namespace ne {
         const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
+        // Cull lights.
+        cullLightsOutsideCameraFrustum(
+            pActiveCameraProperties, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+
         // Cull meshes.
         const auto pMeshPipelinesInFrustum =
             getMeshesInCameraFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);

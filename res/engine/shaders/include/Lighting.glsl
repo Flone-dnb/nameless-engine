@@ -18,15 +18,15 @@
     vec4 ambientLight;
 
     /** Total number of spawned point lights in camera frustum. */
-    uint iPointLightCount;
+    uint iPointLightCountsInCameraFrustum;
 
-    /** Total number of spawned directional lights in camera frustum. */
+    /** Total number of spawned directional lights. */
     uint iDirectionalLightCount;
 
     /** Total number of spawned spotlights in camera frustum. */
-    uint iSpotlightCount;
+    uint iSpotlightCountsInCameraFrustum;
 #glsl } generalLightingData;
-#hlsl }; ConstantBuffer<GeneralLightingData> generalLightingData : register(b1, space5);
+#hlsl }; ConstantBuffer<GeneralLightingData> generalLightingData : register(b0, space7);
 
 /** Point light parameters. */
 struct PointLight{
@@ -51,7 +51,15 @@ layout(std140, binding = 51) readonly buffer PointLightsBuffer{
     PointLight array[];
 } pointLights;
 }
-#hlsl StructuredBuffer<PointLight> pointLights : register(t0, space5);
+#hlsl StructuredBuffer<PointLight> pointLights : register(t0, space7);
+
+/** Indices to point lights that are in camera's frustum. */
+#glsl{
+layout(std430, binding = 52) readonly buffer PointLightsInCameraFrustumBuffer{
+    uint array[];
+} pointLightsInCameraFrustumIndices;
+}
+#hlsl StructuredBuffer<uint> pointLightsInCameraFrustumIndices : register(t1, space7);
 
 /** Directional light parameters. */
 struct DirectionalLight{
@@ -72,15 +80,15 @@ struct DirectionalLight{
 
 /** All spawned directional lights. */
 #glsl{
-layout(std140, binding = 52) readonly buffer DirectionalLightsBuffer{
+layout(std140, binding = 53) readonly buffer DirectionalLightsBuffer{
     DirectionalLight array[];
 } directionalLights;
 }
-#hlsl StructuredBuffer<DirectionalLight> directionalLights : register(t1, space5);
+#hlsl StructuredBuffer<DirectionalLight> directionalLights : register(t2, space7);
 
 /** Array of shadow maps for all directional light sources. */
-#glsl layout(binding = 53) uniform sampler2DShadow directionalShadowMaps[];
-#hlsl Texture2D directionalShadowMaps[] : register(t2, space5);
+#glsl layout(binding = 54) uniform sampler2DShadow directionalShadowMaps[];
+#hlsl Texture2D directionalShadowMaps[] : register(t3, space7);
 
 /** Spotlight parameters. */
 struct Spotlight{
@@ -121,11 +129,19 @@ struct Spotlight{
 
 /** All spawned spotlights. */
 #glsl{
-layout(std140, binding = 54) readonly buffer SpotlightsBuffer{
+layout(std140, binding = 55) readonly buffer SpotlightsBuffer{
     Spotlight array[];
 } spotlights;
 }
-#hlsl StructuredBuffer<Spotlight> spotlights : register(t3, space5);
+#hlsl StructuredBuffer<Spotlight> spotlights : register(t4, space7);
+
+/** Indices to spotlights that are in camera's frustum. */
+#glsl{
+layout(std430, binding = 56) readonly buffer SpotlightsInCameraFrustumBuffer{
+    uint array[];
+} spotlightsInCameraFrustumIndices;
+}
+#hlsl StructuredBuffer<uint> spotlightsInCameraFrustumIndices : register(t5, space7);
 
 #ifdef INCLUDE_LIGHTING_FUNCTIONS
 

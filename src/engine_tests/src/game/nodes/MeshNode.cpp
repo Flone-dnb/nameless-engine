@@ -941,7 +941,7 @@ TEST_CASE("check draw call count with frustum culling") {
 
             if (iFrameCount == 2) {
                 REQUIRE(pRenderer->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
-                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledObjectCount() == 0);
+                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledMeshCount() == 0);
 
                 // Rotate the camera 180 degrees.
                 pCamera->setFreeCameraRotation(glm::vec3(0.0F, 0.0F, 180.0F));
@@ -949,7 +949,7 @@ TEST_CASE("check draw call count with frustum culling") {
 
             if (iFrameCount == 3) {
                 REQUIRE(pRenderer->getRenderStatistics()->getLastFrameDrawCallCount() == 0);
-                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledObjectCount() == 1);
+                REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledMeshCount() == 1);
 
                 getWindow()->close();
             }

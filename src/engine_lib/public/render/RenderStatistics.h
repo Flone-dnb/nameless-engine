@@ -33,12 +33,20 @@ namespace ne {
         size_t getLastFrameDrawCallCount() const;
 
         /**
-         * Returns the total number of objects (draw entities) that were discarded from submitting to
+         * Returns the total number of meshes that were discarded from submitting to the
          * rendering during the last frame.
          *
-         * @return Object count.
+         * @return Mesh count.
          */
-        size_t getLastFrameCulledObjectCount() const;
+        size_t getLastFrameCulledMeshCount() const;
+
+        /**
+         * Returns the total number of lights that were discarded from submitting to the
+         * rendering during the last frame.
+         *
+         * @return Mesh count.
+         */
+        size_t getLastFrameCulledLightCount() const;
 
         /**
          * Returns time in milliseconds that was spent last frame waiting for GPU to catch up to the CPU.
@@ -51,11 +59,18 @@ namespace ne {
         float getTimeSpentLastFrameWaitingForGpu() const;
 
         /**
-         * Returns time in milliseconds that was spent last frame doing frustum culling.
+         * Returns time in milliseconds that was spent last frame doing frustum culling for meshes.
          *
          * @return Time in milliseconds.
          */
-        float getTimeSpentLastFrameOnFrustumCulling() const;
+        float getTimeSpentLastFrameOnFrustumCullingMeshes() const;
+
+        /**
+         * Returns time in milliseconds that was spent last frame doing frustum culling for lights.
+         *
+         * @return Time in milliseconds.
+         */
+        float getTimeSpentLastFrameOnFrustumCullingLights() const;
 
     private:
         /** Groups info related to measuring frame count per second. */
@@ -97,21 +112,35 @@ namespace ne {
             float timeSpentLastFrameWaitingForGpuInMs = 0.0F;
 
             /**
-             * Total time that was spent last frame doing frustum culling.
+             * Total time that was spent last frame doing frustum culling for meshes.
              *
              * @remark Updated only after a frame is submitted.
              */
-            float timeSpentLastFrameOnFrustumCullingInMs = 0.0F;
+            float timeSpentLastFrameOnFrustumCullingMeshesInMs = 0.0F;
+
+            /**
+             * Total time that was spent last frame doing frustum culling for lights.
+             *
+             * @remark Updated only after a frame is submitted.
+             */
+            float timeSpentLastFrameOnFrustumCullingLightsInMs = 0.0F;
         };
 
         /** Groups counters for various tasks. */
         struct Counters {
             /**
-             * Total number of objects (draw entries) discarded from submitting due to frustum culling.
+             * Total number of meshes discarded from submitting to the rendering due to frustum culling.
              *
              * @remark Updated only after a frame is submitted.
              */
-            size_t iLastFrameCulledObjectCount = 0;
+            size_t iLastFrameCulledMeshesCount = 0;
+
+            /**
+             * Total number of lights discarded from submitting to the rendering due to frustum culling.
+             *
+             * @remark Updated only after a frame is submitted.
+             */
+            size_t iLastFrameCulledLightsCount = 0;
 
             /** The total number of draw calls made during the last frame. */
             size_t iLastFrameDrawCallCount = 0;
@@ -125,22 +154,35 @@ namespace ne {
         struct FrameTemporaryStatistics {
             FrameTemporaryStatistics();
 
-            /** Resets all temporary statistics (variables in this struct). */
-            void reset();
-
             /**
-             * Time in milliseconds spent last frame on frustum culling.
+             * Time in milliseconds spent last frame on frustum culling meshes.
              *
              * @remark Use mutex to update/read the value.
              */
-            std::pair<std::mutex, float> mtxFrustumCullingTimeInMs;
+            std::pair<std::mutex, float> mtxFrustumCullingMeshesTimeInMs;
 
-            /** Total number of objects (draw entries) discarded from submitting due to frustum culling. */
-            std::atomic<size_t> iCulledObjectCount{0};
+            /**
+             * Time in milliseconds spent last frame on frustum culling lights.
+             *
+             * @remark Use mutex to update/read the value.
+             */
+            std::pair<std::mutex, float> mtxFrustumCullingLightsTimeInMs;
+
+            /** Total number of meshes discarded from submitting due to frustum culling. */
+            std::atomic<size_t> iCulledMeshCount{0};
+
+            /** Total number of lights discarded from submitting due to frustum culling. */
+            std::atomic<size_t> iCulledLightCount{0};
 
             /** Stores the total number of draw calls made last frame. */
             std::atomic<size_t> iDrawCallCount{0};
         };
+
+        /**
+         * Saves all temporary frame statistics as resulting values in non-temporary structs
+         * and resets all temporary statistics (variables in this struct).
+         */
+        void saveAndResetTemporaryFrameStatistics();
 
         /** Info related to measuring frame count per second. */
         FramesPerSecondInfo fpsInfo;

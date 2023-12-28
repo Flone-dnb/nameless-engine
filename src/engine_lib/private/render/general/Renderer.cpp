@@ -168,27 +168,7 @@ namespace ne {
         using namespace std::chrono;
 
         // Update frame stats.
-        {
-            // Create a short reference.
-            auto& frameStats = renderStats.frameTemporaryStatistics;
-
-            // Save time spent on frustum culling.
-            {
-                std::scoped_lock floatGuard(frameStats.mtxFrustumCullingTimeInMs.first);
-
-                renderStats.taskTimeInfo.timeSpentLastFrameOnFrustumCullingInMs =
-                    frameStats.mtxFrustumCullingTimeInMs.second;
-            }
-
-            // Save culled object count.
-            renderStats.counters.iLastFrameCulledObjectCount = frameStats.iCulledObjectCount.load();
-
-            // Save draw call count.
-            renderStats.counters.iLastFrameDrawCallCount = frameStats.iDrawCallCount.load();
-
-            // Reset frame stats.
-            frameStats.reset();
-        }
+        renderStats.saveAndResetTemporaryFrameStatistics();
 
         // Update FPS stats.
         {
@@ -1013,20 +993,14 @@ namespace ne {
                             std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
                             for (const auto& [pMeshNode, vIndexBuffers] :
                                  pMtxMeshNodes->second.visibleMeshNodes) {
-                                // Do frustum culling.
+                                // Get mesh data.
                                 const auto pMtxMeshShaderConstants = pMeshNode->getMeshShaderConstants();
                                 std::scoped_lock meshConstantsGuard(pMtxMeshShaderConstants->first);
 
-                                // (camera's frustum should be updated at this point)
-                                const auto bIsVisible = pCameraFrustum->isAabbInFrustum(
-                                    *pMeshNode->getAABB(), pMtxMeshShaderConstants->second.world);
-
-                                // Increment culled object count.
-                                renderStats.frameTemporaryStatistics.iCulledObjectCount.fetch_add(
-                                    static_cast<size_t>(!bIsVisible));
-
-                                if (!bIsVisible) {
-                                    // This mesh is outside of camera's frustum.
+                                // Make sure mesh is in frustum.
+                                if (!pCameraFrustum->isAabbInFrustum(
+                                        *pMeshNode->getAABB(), pMtxMeshShaderConstants->second.world)) {
+                                    renderStats.frameTemporaryStatistics.iCulledMeshCount.fetch_add(1);
                                     continue;
                                 }
 
@@ -1071,9 +1045,10 @@ namespace ne {
 
         // Increment total time spent in frustum culling.
         {
-            std::scoped_lock floatGuard(renderStats.frameTemporaryStatistics.mtxFrustumCullingTimeInMs.first);
+            std::scoped_lock floatGuard(
+                renderStats.frameTemporaryStatistics.mtxFrustumCullingMeshesTimeInMs.first);
 
-            renderStats.frameTemporaryStatistics.mtxFrustumCullingTimeInMs.second +=
+            renderStats.frameTemporaryStatistics.mtxFrustumCullingMeshesTimeInMs.second +=
                 duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
         }
 
@@ -1082,6 +1057,12 @@ namespace ne {
 
     void Renderer::cullLightsOutsideCameraFrustum(
         CameraProperties* pActiveCameraProperties, size_t iCurrentFrameResourceIndex) {
+        PROFILE_FUNC;
+
+        // Record start time.
+        using namespace std::chrono;
+        const auto startFrustumCullingTime = steady_clock::now();
+
         // Get camera frustum.
         const auto pCameraFrustum = pActiveCameraProperties->getCameraFrustum();
 
@@ -1124,6 +1105,7 @@ namespace ne {
 
                     // Make sure shape is is frustum.
                     if (!pCameraFrustum->isSphereInFrustum(pMtxShape->second)) {
+                        renderStats.frameTemporaryStatistics.iCulledLightCount.fetch_add(1);
                         continue;
                     }
 
@@ -1171,6 +1153,7 @@ namespace ne {
 
                     // Make sure shape is is frustum.
                     if (!pCameraFrustum->isConeInFrustum(pMtxShape->second)) {
+                        renderStats.frameTemporaryStatistics.iCulledLightCount.fetch_add(1);
                         continue;
                     }
 
@@ -1181,6 +1164,15 @@ namespace ne {
                 // Notify array.
                 lightArrays.pSpotlightDataArray->onLightsInCameraFrustumCulled(iCurrentFrameResourceIndex);
             }
+        }
+
+        // Increment total time spent in frustum culling.
+        {
+            std::scoped_lock floatGuard(
+                renderStats.frameTemporaryStatistics.mtxFrustumCullingLightsTimeInMs.first);
+
+            renderStats.frameTemporaryStatistics.mtxFrustumCullingLightsTimeInMs.second +=
+                duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
         }
     }
 

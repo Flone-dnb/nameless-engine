@@ -78,19 +78,31 @@ namespace ne {
         const auto pRenderer = pWindow->getRenderer();
         const auto pRenderStats = pRenderer->getRenderStatistics();
 
+        // Prepare variables to display frustum culling stats.
+        const auto frameTime = 1000.0F / static_cast<float>(pRenderStats->getFramesPerSecond());
+        const auto iFrustumCullingMeshesFrameTimePercent = static_cast<size_t>(
+            pRenderStats->getTimeSpentLastFrameOnFrustumCullingMeshes() / frameTime * 100.0F); // NOLINT
+        const auto iFrustumCullingLightsFrameTimePercent = static_cast<size_t>(
+            pRenderStats->getTimeSpentLastFrameOnFrustumCullingLights() / frameTime * 100.0F); // NOLINT
+
+        // Prepare frustum culling stats to display.
+        const std::string sFrustumCullingStats = std::format(
+            "frustum culled: meshes: {} (took {:.1F} ms), lights: {} (took {:.1F} ms), (~{}% "
+            "of frame time)",
+            pRenderStats->getLastFrameCulledMeshCount(),
+            pRenderStats->getTimeSpentLastFrameOnFrustumCullingMeshes(),
+            pRenderStats->getLastFrameCulledLightCount(),
+            pRenderStats->getTimeSpentLastFrameOnFrustumCullingLights(),
+            iFrustumCullingMeshesFrameTimePercent + iFrustumCullingLightsFrameTimePercent);
+
         // Show window title.
         pWindow->setTitle(std::format(
-            "{} FPS: {} | draw calls: {} | VRAM used: {} MB | frustum culled: {} took {:.1F} ms (~{}% of "
-            "frame time) | waiting GPU: {:.1F} ms",
+            "{} | FPS: {} | draw calls: {} | VRAM used: {} MB | {} | waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
             pRenderStats->getFramesPerSecond(),
             pRenderStats->getLastFrameDrawCallCount(),
             pRenderer->getResourceManager()->getUsedVideoMemoryInMb(),
-            pRenderStats->getLastFrameCulledObjectCount(),
-            pRenderStats->getTimeSpentLastFrameOnFrustumCulling(),
-            static_cast<size_t>(
-                pRenderStats->getTimeSpentLastFrameOnFrustumCulling() /
-                (1000.0F / static_cast<float>(pRenderStats->getFramesPerSecond())) * 100.0F), // NOLINT
+            sFrustumCullingStats,
             pRenderStats->getTimeSpentLastFrameWaitingForGpu()));
     }
 

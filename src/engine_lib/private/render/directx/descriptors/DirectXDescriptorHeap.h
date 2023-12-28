@@ -340,6 +340,15 @@ namespace ne {
          */
         inline ID3D12DescriptorHeap* getInternalHeap() const { return mtxInternalData.second.pHeap.Get(); }
 
+        /**
+         * Returns internal data of the object.
+         *
+         * @warning Only used for read-only purposes of automated-tests.
+         *
+         * @return Internal data.
+         */
+        std::pair<std::recursive_mutex, InternalData>* getInternalData() { return &mtxInternalData; }
+
     protected:
         /**
          * Converts heap type to string.

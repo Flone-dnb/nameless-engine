@@ -1271,7 +1271,26 @@ TEST_CASE("descriptor ranges have correct index offset") {
                 iLowRangeStart = pCbvDescriptor2->getDescriptorOffsetInDescriptors();
                 iHighRangeStart = pCbvDescriptor1->getDescriptorOffsetInDescriptors();
             }
-            REQUIRE(iHighRangeStart - iLowRangeStart == ContinuousDirectXDescriptorRange::getRangeGrowSize());
+
+            {
+                // Get heap internal data.
+                const auto pMtxHeapInternalData = pCbvHeap->getInternalData();
+                std::scoped_lock heapDataGuard(pMtxHeapInternalData->first);
+
+                // Make sure range count is correct.
+                REQUIRE(pMtxHeapInternalData->second.continuousDescriptorRanges.size() >= 2);
+
+                if (pMtxHeapInternalData->second.continuousDescriptorRanges.size() == 2) {
+                    REQUIRE(
+                        iHighRangeStart - iLowRangeStart ==
+                        ContinuousDirectXDescriptorRange::getRangeGrowSize());
+                } else {
+                    // use `>=` because there might be other ranges between our test ranges
+                    REQUIRE(
+                        iHighRangeStart - iLowRangeStart >=
+                        ContinuousDirectXDescriptorRange::getRangeGrowSize());
+                }
+            }
 
             // Destroy resources before ranges.
             pResource1 = nullptr;

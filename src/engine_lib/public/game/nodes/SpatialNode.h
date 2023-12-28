@@ -63,8 +63,8 @@ namespace ne RNAMESPACE() {
         void setWorldLocation(const glm::vec3& location);
 
         /**
-         * Sets relative rotation in the way that the resulting node's rotation in the world
-         * would match the specified rotation.
+         * Sets relative rotation (roll, pitch, yaw in degrees) in the way that the resulting node's rotation
+         * in the world would match the specified rotation.
          *
          * @remark If the node is not spawned just sets node's relative rotation.
          *

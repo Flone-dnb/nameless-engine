@@ -42,7 +42,7 @@ struct PointLight{
     /** Lit distance. */
     float distance;
 
-#hlsl float2 pad1; // to pack as in Vulkan
+#hlsl float2 pad1; // padding to match C++ struct padding
 };
 
 /** All spawned point lights. */
@@ -75,7 +75,7 @@ struct DirectionalLight{
     /** Index in the directional shadow map array where shadow map of this light source is stored. */
     uint iShadowMapIndex;
 
-#hlsl float3 pad1; // to pack as in Vulkan
+#hlsl float2 pad1; // padding to match C++ struct padding
 };
 
 /** All spawned directional lights. */
@@ -125,6 +125,8 @@ struct Spotlight{
 
     /** Radius of cone's bottom part. */
     float coneBottomRadius;
+
+#hlsl float3 pad1; // padding to match C++ struct padding
 };
 
 /** All spawned spotlights. */

@@ -18,13 +18,20 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::string& sPixelShaderName,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros,
         const std::string& sComputeShaderName,
+        bool bEnableDepthBias,
         bool bUsePixelBlending)
         : ShaderUser(pRenderer->getShaderManager()), sVertexShaderName(sVertexShaderName),
           sPixelShaderName(sPixelShaderName), sComputeShaderName(sComputeShaderName) {
         this->pRenderer = pRenderer;
         this->pPipelineManager = pPipelineManager;
+        this->bEnableDepthBias = bEnableDepthBias;
+
+        this->additionalVertexShaderMacros = additionalVertexShaderMacros;
+        this->additionalPixelShaderMacros = additionalPixelShaderMacros;
 
         bIsUsingPixelBlending = bUsePixelBlending;
     }
@@ -37,6 +44,7 @@ namespace ne {
     std::string
     Pipeline::combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
         if (sPixelShaderName.empty()) {
+            // Just return vertex shader name if pixel shader is not used.
             return sVertexShaderName;
         }
         return sVertexShaderName + " / " + sPixelShaderName;
@@ -45,6 +53,8 @@ namespace ne {
     std::string Pipeline::getVertexShaderName() { return sVertexShaderName; }
 
     std::string Pipeline::getPixelShaderName() { return sPixelShaderName; }
+
+    std::string Pipeline::getComputeShaderName() { return sComputeShaderName; }
 
     std::optional<std::set<ShaderMacro>> Pipeline::getCurrentShaderConfiguration(ShaderType shaderType) {
         auto it = usedShaderConfiguration.find(shaderType);
@@ -57,6 +67,8 @@ namespace ne {
 
     bool Pipeline::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
 
+    bool Pipeline::isDepthBiasEnabled() const { return bEnableDepthBias; }
+
     std::pair<std::mutex, std::unordered_set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
         return &mtxMaterialsThatUseThisPipeline;
     }
@@ -65,11 +77,11 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
-        const std::string& sPixelShaderName,
-        bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros) {
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
+        // Prepare resulting pipeline pointer.
         std::shared_ptr<Pipeline> pCreatedPipeline = nullptr;
+
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Create DirectX PSO.
@@ -77,10 +89,8 @@ namespace ne {
                 pRenderer,
                 pPipelineManager,
                 sVertexShaderName,
-                sPixelShaderName,
-                bUsePixelBlending,
                 additionalVertexShaderMacros,
-                additionalPixelShaderMacros);
+                std::move(pPipelineCreationSettings));
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -98,10 +108,8 @@ namespace ne {
                 pRenderer,
                 pPipelineManager,
                 sVertexShaderName,
-                sPixelShaderName,
-                bUsePixelBlending,
                 additionalVertexShaderMacros,
-                additionalPixelShaderMacros);
+                std::move(pPipelineCreationSettings));
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -118,10 +126,6 @@ namespace ne {
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
         }
-
-        // Save additional macros that were specified.
-        pCreatedPipeline->additionalVertexShaderMacros = additionalVertexShaderMacros;
-        pCreatedPipeline->additionalPixelShaderMacros = additionalPixelShaderMacros;
 
         return pCreatedPipeline;
     }

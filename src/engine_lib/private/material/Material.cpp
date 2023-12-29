@@ -75,16 +75,11 @@ namespace ne {
                 iMeshNodeCount));
         }
 
-        // Make sure pipelines were cleared.
+        // Make sure pipeline was cleared.
         if (mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
-            Logger::get().error(std::format(
-                "material \"{}\" is being destroyed but used pipeline was not cleared", sMaterialName));
-            mtxInternalResources.second.pUsedPipeline.clear();
-        }
-        if (mtxInternalResources.second.pDepthOnlyPipeline.isInitialized()) [[unlikely]] {
-            Logger::get().error(std::format(
-                "material \"{}\" is being destroyed but its depth pipeline was not cleared", sMaterialName));
-            mtxInternalResources.second.pDepthOnlyPipeline.clear();
+            Error error("expected pipeline to be deinitialized at this point");
+            error.showError();
+            return; // don't throw in destructor
         }
 
         // Make sure shader resources were deallocated.
@@ -196,41 +191,15 @@ namespace ne {
 
         // Initialize pipeline if needed.
         if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
-            // Get pipeline.
-            auto result = pPipelineManager->getGraphicsPipelineForMaterial(
-                sVertexShaderName,
-                sPixelShaderName,
-                bUseTransparency,
-                mtxInternalResources.second.materialVertexShaderMacros,
-                mtxInternalResources.second.materialPixelShaderMacros,
-                this);
-            if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-            mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
-
-            if (!bUseTransparency) {
-                // Get depth only pipeline for depth passes.
-                result = pPipelineManager->getGraphicsPipelineForMaterial(
-                    sVertexShaderName,
-                    "",
-                    bUseTransparency,
-                    mtxInternalResources.second.materialVertexShaderMacros,
-                    mtxInternalResources.second.materialPixelShaderMacros,
-                    this);
-                if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                    auto error = std::get<Error>(std::move(result));
-                    error.addCurrentLocationToErrorStack();
-                    error.showError();
-                    throw std::runtime_error(error.getFullErrorMessage());
-                }
-                mtxInternalResources.second.pDepthOnlyPipeline =
-                    std::get<PipelineSharedPtr>(std::move(result));
+            // Initialize pipeline.
+            auto optionalError = initializePipelines();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
             }
 
+            // Initialize shader resources.
             allocateShaderResources();
         }
     }
@@ -307,8 +276,7 @@ namespace ne {
             deallocateShaderResources();
 
             // Don't reference our pipelines anymore since we don't need them (so they may be freed).
-            mtxInternalResources.second.pUsedPipeline.clear();
-            mtxInternalResources.second.pDepthOnlyPipeline.clear();
+            resetPipelines();
         }
     }
 
@@ -725,43 +693,15 @@ namespace ne {
         // shader resources reference pipeline resources.
         deallocateShaderResources();
 
-        // Don't reference the current pipeline anymore. This might cause the pipeline to be
-        // destroyed.
-        mtxInternalResources.second.pUsedPipeline.clear();
-        mtxInternalResources.second.pDepthOnlyPipeline.clear();
+        // Don't reference the current pipeline anymore. This might cause the pipeline to be destroyed.
+        resetPipelines();
 
         // Get us a new pipeline.
-        auto result = pPipelineManager->getGraphicsPipelineForMaterial(
-            sVertexShaderName,
-            sPixelShaderName,
-            bUseTransparency,
-            mtxInternalResources.second.materialVertexShaderMacros,
-            mtxInternalResources.second.materialPixelShaderMacros,
-            this);
-        if (std::holds_alternative<Error>(result)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(result));
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-        mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
-
-        if (!bUseTransparency) {
-            // Get depth only pipeline.
-            result = pPipelineManager->getGraphicsPipelineForMaterial(
-                sVertexShaderName,
-                "",
-                bUseTransparency,
-                mtxInternalResources.second.materialVertexShaderMacros,
-                mtxInternalResources.second.materialPixelShaderMacros,
-                this);
-            if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-            mtxInternalResources.second.pDepthOnlyPipeline = std::get<PipelineSharedPtr>(std::move(result));
+        auto optionalError = initializePipelines();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            optionalError->showError();
+            throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
         // Create our shader resources.
@@ -1022,5 +962,54 @@ namespace ne {
     float Material::getRoughness() const { return roughness; }
 
     glm::vec3 Material::getSpecularColor() const { return specularColor; }
+
+    std::optional<Error> Material::initializePipelines() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // Make sure pipeline was not initialized yet.
+        if (mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+            return Error("pipeline is already initialized");
+        }
+
+        // Get color pipeline.
+        auto result = pPipelineManager->getGraphicsPipelineForMaterial(
+            sVertexShaderName,
+            mtxInternalResources.second.materialVertexShaderMacros,
+            std::unique_ptr<ColorPipelineCreationSettings>(new ColorPipelineCreationSettings(
+                sPixelShaderName, mtxInternalResources.second.materialPixelShaderMacros, bUseTransparency)),
+            this);
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
+
+        if (!bUseTransparency) {
+            // Get depth only pipeline for depth passes.
+            result = pPipelineManager->getGraphicsPipelineForMaterial(
+                sVertexShaderName,
+                mtxInternalResources.second.materialVertexShaderMacros,
+                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(false)),
+                this);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            mtxInternalResources.second.pDepthOnlyPipeline = std::get<PipelineSharedPtr>(std::move(result));
+        }
+
+        return {};
+    }
+
+    void Material::resetPipelines() {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // don't check if pipelines are initialized, some pipelines may be not initialized
+
+        mtxInternalResources.second.pUsedPipeline.clear();
+        mtxInternalResources.second.pDepthOnlyPipeline.clear();
+    }
 
 } // namespace ne

@@ -458,6 +458,18 @@ namespace ne RNAMESPACE() {
             MeshNode* pMeshNode, const std::pair<GpuResource*, unsigned int>& indexBufferDisplayed);
 
         /**
+         * Initializes pipelines that the material needs.
+         *
+         * @remark Expects that pipelines are not initialized.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> initializePipelines();
+
+        /** Clears (sets to `nullptr`) all used pipelines. */
+        void resetPipelines();
+
+        /**
          * Creates shader resources such as material's constant buffer.
          *
          * @remark Should be called after pipeline was initialized.

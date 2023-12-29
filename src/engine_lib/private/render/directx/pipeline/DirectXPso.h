@@ -53,12 +53,8 @@ namespace ne {
          * @param pRenderer              Used renderer.
          * @param pPipelineManager       Pipeline manager that owns this PSO.
          * @param sVertexShaderName      Name of the compiled vertex shader.
-         * @param sPixelShaderName       Name of the compiled pixel shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending      Whether the pixels of the mesh that uses this PSO should blend with
-         * existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
+         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate PSO,
          * otherwise created PSO.
@@ -67,10 +63,8 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros);
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
 
         /**
          * Assigns compute shader to create a compute PSO.
@@ -124,9 +118,12 @@ namespace ne {
          *
          * @param pRenderer          Used renderer.
          * @param pPipelineManager   Pipeline manager that owns this PSO.
-         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if compute pipeline).
-         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if compute pipeline).
-         * @param sComputeShaderName Name of the compiled compute shader to use (empty if graphics pipeline).
+         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if not used).
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if not used).
+         * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
+         * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
+         * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
          * @param bUsePixelBlending  Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
          */
@@ -134,45 +131,34 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             const std::string& sPixelShaderName,
-            const std::string& sComputeShaderName,
+            const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
+            const std::string& sComputeShaderName = "",
+            bool bEnableDepthBias = false,
             bool bUsePixelBlending = false);
 
         /**
-         * (Re)generates DirectX graphics pipeline state object for the specified shaders.
+         * (Re)generates DirectX graphics pipeline state object.
          *
          * @warning If a shader of some type was already added it will be replaced with the new one.
          * When shader is replaced the old shader gets freed from the memory and
          * a new PSO is immediately generated. Make sure the GPU is not using old shader/PSO.
          *
-         * @param sVertexShaderName      Name of the compiled vertex shader.
-         * @param sPixelShaderName       Name of the compiled pixel shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending      Whether the PSO should use blending or not (for transparency).
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader.
-         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader.
-         *
          * @return Error if failed to generate PSO.
          */
-        [[nodiscard]] std::optional<Error> generateGraphicsPsoForShaders(
-            const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros);
+        [[nodiscard]] std::optional<Error> generateGraphicsPso();
 
         /**
-         * (Re)generates DirectX compute pipeline state object for the specified shader.
+         * (Re)generates DirectX compute pipeline state object.
          *
          * @warning If a shader of some type was already added it will be replaced with the new one.
          * When shader is replaced the old shader gets freed from the memory and
          * a new PSO is immediately generated. Make sure the GPU is not using old shader/PSO.
          *
-         * @param sComputeShaderName Name of the compiled compute shader (see ShaderManager::compileShaders).
-         *
          * @return Error if failed to generate PSO.
          */
-        [[nodiscard]] std::optional<Error> generateComputePsoForShader(const std::string& sComputeShaderName);
+        [[nodiscard]] std::optional<Error> generateComputePso();
 
         /**
          * Internal resources.

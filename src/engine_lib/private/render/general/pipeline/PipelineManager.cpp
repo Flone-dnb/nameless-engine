@@ -18,10 +18,8 @@ namespace ne {
         const std::string& sKeyToLookFor,
         const std::set<ShaderMacro>& macrosToLookFor,
         const std::string& sVertexShaderName,
-        const std::string& sPixelShaderName,
-        bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros,
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
         Material* pMaterial) {
         // Find pipeline for the specified shader(s).
         const auto foundPipelineIt = pipelines.find(sKeyToLookFor);
@@ -32,10 +30,8 @@ namespace ne {
                 sKeyToLookFor,
                 macrosToLookFor,
                 sVertexShaderName,
-                sPixelShaderName,
-                bUsePixelBlending,
                 additionalVertexShaderMacros,
-                additionalPixelShaderMacros,
+                std::move(pPipelineCreationSettings),
                 pMaterial);
         }
 
@@ -48,10 +44,8 @@ namespace ne {
                 sKeyToLookFor,
                 macrosToLookFor,
                 sVertexShaderName,
-                sPixelShaderName,
-                bUsePixelBlending,
                 additionalVertexShaderMacros,
-                additionalPixelShaderMacros,
+                std::move(pPipelineCreationSettings),
                 pMaterial);
         }
 
@@ -61,11 +55,15 @@ namespace ne {
 
     std::variant<PipelineSharedPtr, Error> PipelineManager::getGraphicsPipelineForMaterial(
         const std::string& sVertexShaderName,
-        const std::string& sPixelShaderName,
-        bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros,
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
         Material* pMaterial) {
+        // Self check: make sure settings are not `nullptr`.
+        if (pPipelineCreationSettings == nullptr) [[unlikely]] {
+            return Error("settings cannot be `nullptr`");
+        }
+
+        const auto additionalPixelShaderMacros = pPipelineCreationSettings->getAdditionalPixelShaderMacros();
         {
             // Self check: make sure vertex macros have "VS_" prefix and pixel macros "PS_" prefix.
             const auto vVertexMacros = convertShaderMacrosToText(additionalVertexShaderMacros);
@@ -93,54 +91,18 @@ namespace ne {
 
         std::scoped_lock guard(mtxGraphicsPipelines.first);
 
-        // See if we need to create a new pipeline.
-        if (!bUsePixelBlending) {
-            if (sPixelShaderName.empty()) {
-                // Depth only pipeline.
-                return findOrCreatePipeline(
-                    mtxGraphicsPipelines.second
-                        .vPipelineTypes[static_cast<size_t>(PipelineType::PT_DEPTH_ONLY)],
-                    sVertexShaderName,
-                    additionalVertexShaderMacros, // only vertex macros here since there's no pixel shader
-                    sVertexShaderName,
-                    "",
-                    false,
-                    additionalVertexShaderMacros,
-                    {},
-                    pMaterial);
-            }
+        const auto iPipelineTypeIndex = static_cast<size_t>(pPipelineCreationSettings->getType());
+        const auto sKeyToLookFor =
+            Pipeline::combineShaderNames(sVertexShaderName, pPipelineCreationSettings->getPixelShaderName());
 
-            // Opaque pipeline.
-            return findOrCreatePipeline(
-                mtxGraphicsPipelines.second.vPipelineTypes[static_cast<size_t>(PipelineType::PT_OPAQUE)],
-                Pipeline::combineShaderNames(sVertexShaderName, sPixelShaderName),
-                additionalVertexAndPixelShaderMacros,
-                sVertexShaderName,
-                sPixelShaderName,
-                bUsePixelBlending,
-                additionalVertexShaderMacros,
-                additionalPixelShaderMacros,
-                pMaterial);
-        }
-
-        // Make sure pixel shader is specified.
-        if (sPixelShaderName.empty()) [[unlikely]] {
-            return Error(std::format(
-                "expected pixel shader to be set when pixel blending is enabled for material that uses "
-                "vertex shader \"{}\"",
-                sVertexShaderName));
-        }
-
-        // Transparent pipeline.
+        // Find existing or create a new pipeline.
         return findOrCreatePipeline(
-            mtxGraphicsPipelines.second.vPipelineTypes[static_cast<size_t>(PipelineType::PT_TRANSPARENT)],
-            Pipeline::combineShaderNames(sVertexShaderName, sPixelShaderName),
+            mtxGraphicsPipelines.second.vPipelineTypes[iPipelineTypeIndex],
+            sKeyToLookFor,
             additionalVertexAndPixelShaderMacros,
             sVertexShaderName,
-            sPixelShaderName,
-            bUsePixelBlending,
             additionalVertexShaderMacros,
-            additionalPixelShaderMacros,
+            std::move(pPipelineCreationSettings),
             pMaterial);
     }
 
@@ -201,20 +163,16 @@ namespace ne {
         const std::string& sShaderNames,
         const std::set<ShaderMacro>& macrosToUse,
         const std::string& sVertexShaderName,
-        const std::string& sPixelShaderName,
-        bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros,
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
         Material* pMaterial) {
         // Create pipeline.
         auto result = Pipeline::createGraphicsPipeline(
             pRenderer,
             this,
             sVertexShaderName,
-            sPixelShaderName,
-            bUsePixelBlending,
             additionalVertexShaderMacros,
-            additionalPixelShaderMacros);
+            std::move(pPipelineCreationSettings));
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

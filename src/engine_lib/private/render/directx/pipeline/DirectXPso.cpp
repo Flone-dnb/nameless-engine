@@ -12,15 +12,21 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::string& sPixelShaderName,
+        const std::set<ShaderMacro>& additionalPixelShaderMacros,
         const std::string& sComputeShaderName,
+        bool bEnableDepthBias,
         bool bUsePixelBlending)
         : Pipeline(
               pRenderer,
               pPipelineManager,
               sVertexShaderName,
+              additionalVertexShaderMacros,
               sPixelShaderName,
+              additionalPixelShaderMacros,
               sComputeShaderName,
+              bEnableDepthBias,
               bUsePixelBlending) {}
 
     DirectXPso::~DirectXPso() {
@@ -42,22 +48,23 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
-        const std::string& sPixelShaderName,
-        bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros) {
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(new DirectXPso(
-            pRenderer, pPipelineManager, sVertexShaderName, sPixelShaderName, "", bUsePixelBlending));
-
-        // Generate DirectX PSO.
-        auto optionalError = pPso->generateGraphicsPsoForShaders(
+            pRenderer,
+            pPipelineManager,
             sVertexShaderName,
-            sPixelShaderName,
-            bUsePixelBlending,
             additionalVertexShaderMacros,
-            additionalPixelShaderMacros);
-        if (optionalError.has_value()) {
+            pPipelineCreationSettings->getPixelShaderName(),
+            pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
+            "", // no compute shader
+            pPipelineCreationSettings->isDepthBiasEnabled(),
+            pPipelineCreationSettings->isPixelBlendingEnabled()));
+
+        // Generate graphics PSO.
+        auto optionalError = pPso->generateGraphicsPso();
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
@@ -69,11 +76,11 @@ namespace ne {
         Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName) {
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(
-            new DirectXPso(pRenderer, pPipelineManager, "", "", sComputeShaderName));
+            new DirectXPso(pRenderer, pPipelineManager, "", {}, "", {}, sComputeShaderName));
 
-        // Generate DirectX PSO.
-        auto optionalError = pPso->generateComputePsoForShader(sComputeShaderName);
-        if (optionalError.has_value()) {
+        // Generate compute PSO.
+        auto optionalError = pPso->generateComputePso();
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
@@ -133,13 +140,8 @@ namespace ne {
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
         // Recreate internal PSO and root signature.
-        auto optionalError = generateGraphicsPsoForShaders(
-            getVertexShaderName(),
-            getPixelShaderName(),
-            isUsingPixelBlending(),
-            getAdditionalVertexShaderMacros(),
-            getAdditionalPixelShaderMacros());
-        if (optionalError.has_value()) {
+        auto optionalError = generateGraphicsPso();
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             return error;
@@ -148,22 +150,17 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXPso::generateGraphicsPsoForShaders(
-        const std::string& sVertexShaderName,
-        const std::string& sPixelShaderName,
-        bool bUsePixelBlending,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros) {
+    std::optional<Error> DirectXPso::generateGraphicsPso() {
+        // Prepare pipeline type.
+        const auto bDepthOnlyPipeline = getPixelShaderName().empty();
+
         // Make sure pixel shader is specified when blending is enabled.
-        if (bUsePixelBlending && sPixelShaderName.empty()) [[unlikely]] {
+        if (isUsingPixelBlending() && bDepthOnlyPipeline) [[unlikely]] {
             return Error(std::format(
                 "unable to create a pipeline with pixel blending because pixel shader is not specified "
                 "(vertex shader \"{}\")",
-                sVertexShaderName));
+                getVertexShaderName()));
         }
-
-        // Prepare pipeline type.
-        const auto bDepthOnlyPipeline = sPixelShaderName.empty();
 
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
@@ -182,14 +179,14 @@ namespace ne {
         }
 
         // Assign vertex shader.
-        if (addShader(sVertexShaderName)) [[unlikely]] {
-            return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
+        if (addShader(getVertexShaderName())) [[unlikely]] {
+            return Error(std::format("unable to find a shader named \"{}\"", getVertexShaderName()));
         }
 
         // Assign pixel shader.
         if (!bDepthOnlyPipeline) {
-            if (addShader(sPixelShaderName)) [[unlikely]] {
-                return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
+            if (addShader(getPixelShaderName())) [[unlikely]] {
+                return Error(std::format("unable to find a shader named \"{}\"", getPixelShaderName()));
             }
         }
 
@@ -197,7 +194,7 @@ namespace ne {
         const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
         std::set<ShaderMacro> fullVertexShaderConfiguration;
         auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(
-            pVertexShaderPack->getShader(additionalVertexShaderMacros, fullVertexShaderConfiguration));
+            pVertexShaderPack->getShader(getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
 
         // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBlob();
@@ -216,7 +213,7 @@ namespace ne {
             // Get assigned pixel shader.
             const auto pPixelShaderPack = getShader(ShaderType::FRAGMENT_SHADER).value();
             pPixelShader = std::dynamic_pointer_cast<HlslShader>(
-                pPixelShaderPack->getShader(additionalPixelShaderMacros, fullPixelShaderConfiguration));
+                pPixelShaderPack->getShader(getAdditionalPixelShaderMacros(), fullPixelShaderConfiguration));
 
             // Get pixel shader bytecode and generate its root signature.
             shaderBytecode = pPixelShader->getCompiledBlob();
@@ -261,14 +258,14 @@ namespace ne {
 
         // Setup rasterizer description.
         CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
-        rasterizerDesc.CullMode = bUsePixelBlending ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
+        rasterizerDesc.CullMode = isUsingPixelBlending() ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
         rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
         rasterizerDesc.MultisampleEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
         psoDesc.RasterizerState = rasterizerDesc;
 
         // Setup pixel blend description (if needed).
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-        if (bUsePixelBlending) {
+        if (isUsingPixelBlending()) {
             D3D12_RENDER_TARGET_BLEND_DESC blendDesc;
             blendDesc.BlendEnable = 1;
             blendDesc.LogicOpEnable = 0;
@@ -329,7 +326,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> DirectXPso::generateComputePsoForShader(const std::string& sComputeShaderName) {
+    std::optional<Error> DirectXPso::generateComputePso() {
         // Make sure the pipeline is not initialized yet.
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
@@ -339,11 +336,12 @@ namespace ne {
         }
 
         // Assign new shaders.
-        const bool bComputeShaderNotFound = addShader(sComputeShaderName);
+        const bool bComputeShaderNotFound = addShader(getComputeShaderName());
 
         // Make sure that shader was found.
         if (bComputeShaderNotFound) [[unlikely]] {
-            return Error(std::format("shader \"{}\" was not found in Shader Manager", sComputeShaderName));
+            return Error(
+                std::format("shader \"{}\" was not found in Shader Manager", getComputeShaderName()));
         }
 
         // Get assigned shader pack.

@@ -6,6 +6,7 @@
 
 // Custom.
 #include "shader/general/ShaderUser.h"
+#include "render/general/pipeline/PipelineCreationSettings.h"
 
 namespace ne {
     class Renderer;
@@ -35,7 +36,8 @@ namespace ne {
          * formatting.
          *
          * @param sVertexShaderName  Name of the vertex shader that pipeline is using.
-         * @param sPixelShaderName   Name of the pixel shader that pipeline is using.
+         * @param sPixelShaderName   Name of the pixel shader that pipeline is using. If empty only
+         * vertex shader name will be returned.
          *
          * @return A (not unique) pipeline identifier.
          */
@@ -43,18 +45,25 @@ namespace ne {
         combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName);
 
         /**
-         * Returns name of the vertex shader that this Pipeline is using.
+         * Returns name of the vertex shader that this pipeline is using.
          *
          * @return Empty if not using vertex shader, otherwise name of the used vertex shader.
          */
         std::string getVertexShaderName();
 
         /**
-         * Returns name of the pixel shader that this Pipeline is using.
+         * Returns name of the pixel shader that this pipeline is using.
          *
          * @return Empty if not using pixel shader, otherwise name of the used pixel shader.
          */
         std::string getPixelShaderName();
+
+        /**
+         * Returns name of the compute shader that this pipeline is using.
+         *
+         * @return Empty if not using compute shader, otherwise name of the used compute shader.
+         */
+        std::string getComputeShaderName();
 
         /**
          * Returns a shader configuration of the currently used shader.
@@ -67,11 +76,18 @@ namespace ne {
         std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
 
         /**
-         * Tells whether this Pipeline is using pixel blending or not.
+         * Tells whether this pipeline is using pixel blending or not.
          *
-         * @return Whether this Pipeline is using pixel blending or not.
+         * @return Whether this pipeline is using pixel blending or not.
          */
         bool isUsingPixelBlending() const;
+
+        /**
+         * Tells whether this pipeline has depth bias (offset) enabled.
+         *
+         * @return Whether depth bias is enabled or not.
+         */
+        bool isDepthBiasEnabled() const;
 
         /**
          * Returns an array of materials that currently reference this Pipeline.
@@ -97,13 +113,16 @@ namespace ne {
 
     protected:
         /**
-         * Creates a new uninitialized Pipeline.
+         * Creates a new empty (no internal GPU resource is created) pipeline.
          *
          * @param pRenderer          Current renderer.
-         * @param pPipelineManager   Pipeline manager that owns this Pipeline.
-         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if compute pipeline).
-         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if compute pipeline).
-         * @param sComputeShaderName Name of the compiled compute shader to use (empty if graphics pipeline).
+         * @param pPipelineManager   Pipeline manager that owns this pipeline.
+         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if not used).
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if not used).
+         * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
+         * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
+         * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
          * @param bUsePixelBlending  Whether the pixels of the mesh that uses this Pipeline should blend
          * with existing pixels on back buffer or not (for transparency).
          */
@@ -111,8 +130,11 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            const std::string& sComputeShaderName,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            const std::string& sPixelShaderName = "",
+            const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
+            const std::string& sComputeShaderName = "",
+            bool bEnableDepthBias = false,
             bool bUsePixelBlending = false);
 
         /**
@@ -174,12 +196,8 @@ namespace ne {
          * @param pRenderer            Parent renderer that owns this pipeline.
          * @param pPipelineManager     Pipeline manager that owns this pipeline.
          * @param sVertexShaderName    Name of the compiled vertex shader.
-         * @param sPixelShaderName     Name of the compiled pixel shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this Pipeline should
-         * blend with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
+         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate Pipeline,
          * otherwise created Pipeline.
@@ -188,10 +206,8 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros);
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
 
         /**
          * Assigns compute shader to create a render specific compute pipeline.
@@ -302,5 +318,8 @@ namespace ne {
 
         /** Whether this Pipeline is using pixel blending or not. */
         bool bIsUsingPixelBlending = false;
+
+        /** Whether depth bias (offset) should be used or not (generally used for shadow map pipelines). */
+        bool bEnableDepthBias = false;
     };
 } // namespace ne

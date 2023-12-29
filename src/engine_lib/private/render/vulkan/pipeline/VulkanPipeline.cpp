@@ -59,21 +59,22 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
-        const std::string& sFragmentShaderName,
-        bool bUsePixelBlending,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalFragmentShaderMacros) {
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
         // Create pipeline.
         auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
-            pRenderer, pPipelineManager, sVertexShaderName, sFragmentShaderName, "", bUsePixelBlending));
+            pRenderer,
+            pPipelineManager,
+            sVertexShaderName,
+            additionalVertexShaderMacros,
+            pPipelineCreationSettings->getPixelShaderName(),
+            pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
+            "", // no compute shader
+            pPipelineCreationSettings->isDepthBiasEnabled(),
+            pPipelineCreationSettings->isPixelBlendingEnabled()));
 
         // Generate Vulkan pipeline.
-        auto optionalError = pPipeline->generateGraphicsPipelineForShaders(
-            sVertexShaderName,
-            sFragmentShaderName,
-            bUsePixelBlending,
-            additionalVertexShaderMacros,
-            additionalFragmentShaderMacros);
+        auto optionalError = pPipeline->generateGraphicsPipeline();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
@@ -86,7 +87,7 @@ namespace ne {
         Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName) {
         // Create pipeline.
         auto pPipeline = std::shared_ptr<VulkanPipeline>(
-            new VulkanPipeline(pRenderer, pPipelineManager, "", "", sComputeShaderName, false));
+            new VulkanPipeline(pRenderer, pPipelineManager, "", {}, "", {}, sComputeShaderName));
 
         // Generate Vulkan pipeline.
         auto optionalError = pPipeline->generateComputePipelineForShader(sComputeShaderName);
@@ -161,12 +162,7 @@ namespace ne {
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
         // Recreate internal pipeline and other resources.
-        auto optionalError = generateGraphicsPipelineForShaders(
-            getVertexShaderName(),
-            getPixelShaderName(),
-            isUsingPixelBlending(),
-            getAdditionalVertexShaderMacros(),
-            getAdditionalPixelShaderMacros());
+        auto optionalError = generateGraphicsPipeline();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
@@ -234,33 +230,34 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         const std::string& sVertexShaderName,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::string& sFragmentShaderName,
+        const std::set<ShaderMacro>& additionalFragmentShaderMacros,
         const std::string& sComputeShaderName,
+        bool bEnableDepthBias,
         bool bUsePixelBlending)
         : Pipeline(
               pRenderer,
               pPipelineManager,
               sVertexShaderName,
+              additionalVertexShaderMacros,
               sFragmentShaderName,
+              additionalFragmentShaderMacros,
               sComputeShaderName,
+              bEnableDepthBias,
               bUsePixelBlending) {}
 
-    std::optional<Error> VulkanPipeline::generateGraphicsPipelineForShaders(
-        const std::string& sVertexShaderName,
-        const std::string& sFragmentShaderName,
-        bool bUsePixelBlending,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::set<ShaderMacro>& additionalFragmentShaderMacros) {
+    std::optional<Error> VulkanPipeline::generateGraphicsPipeline() {
+        // Prepare pipeline type.
+        const auto bDepthOnlyPipeline = getPixelShaderName().empty();
+
         // Make sure pixel shader is specified when blending is enabled.
-        if (bUsePixelBlending && sFragmentShaderName.empty()) [[unlikely]] {
+        if (isUsingPixelBlending() && bDepthOnlyPipeline) [[unlikely]] {
             return Error(std::format(
                 "unable to create a pipeline with pixel blending because fragment shader is not specified "
                 "(vertex shader \"{}\")",
-                sVertexShaderName));
+                getVertexShaderName()));
         }
-
-        // Prepare pipeline type.
-        const auto bDepthOnlyPipeline = sFragmentShaderName.empty();
 
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
@@ -273,13 +270,13 @@ namespace ne {
         }
 
         // Assign vertex shader.
-        if (addShader(sVertexShaderName)) {
-            return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
+        if (addShader(getVertexShaderName())) {
+            return Error(std::format("unable to find a shader named \"{}\"", getVertexShaderName()));
         }
 
         if (!bDepthOnlyPipeline) {
-            if (addShader(sFragmentShaderName)) {
-                return Error(std::format("unable to find a shader named \"{}\"", sVertexShaderName));
+            if (addShader(getPixelShaderName())) {
+                return Error(std::format("unable to find a shader named \"{}\"", getPixelShaderName()));
             }
         }
 
@@ -290,13 +287,13 @@ namespace ne {
         // Get vertex shader.
         const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
         auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(
-            pVertexShaderPack->getShader(additionalVertexShaderMacros, fullVertexShaderConfiguration));
+            pVertexShaderPack->getShader(getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
 
         std::shared_ptr<GlslShader> pFragmentShader;
         if (!bDepthOnlyPipeline) {
             const auto pFragmentShaderPack = getShader(ShaderType::FRAGMENT_SHADER).value();
             pFragmentShader = std::dynamic_pointer_cast<GlslShader>(pFragmentShaderPack->getShader(
-                additionalFragmentShaderMacros, fullFragmentShaderConfiguration));
+                getAdditionalPixelShaderMacros(), fullFragmentShaderConfiguration));
         }
 
         // Get Vulkan renderer.
@@ -307,7 +304,7 @@ namespace ne {
 
         // Create graphics pipeline.
         auto optionalError = createGraphicsPipeline(
-            pVulkanRenderer, pVertexShader.get(), pFragmentShader.get(), bUsePixelBlending);
+            pVulkanRenderer, pVertexShader.get(), pFragmentShader.get(), isUsingPixelBlending());
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();

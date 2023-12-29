@@ -45,6 +45,14 @@ namespace ne {
         ~ShadowMapManager();
 
         /**
+         * Constant depth bias (offset) to apply when rendering depth to shadow maps to avoid an
+         * effect known as "shadow acne" (stair-stepping).
+         *
+         * @return Constant depth bias.
+         */
+        static constexpr int getShadowMappingDepthBias() { return iShadowMappingDepthBias; }
+
+        /**
          * Creates a new shadow map manager.
          *
          * @param pResourceManager Resource manager that owns this object.
@@ -170,6 +178,12 @@ namespace ne {
 
         /** Do not delete (free) this pointer. GPU resource manager that owns this object. */
         GpuResourceManager* pResourceManager = nullptr;
+
+        /**
+         * Constant depth bias (offset) to apply when rendering depth to shadow maps to avoid an
+         * effect known as "shadow acne" (stair-stepping).
+         */
+        static constexpr int iShadowMappingDepthBias = 100000; // NOLINT
 
         /** Name of the shader resource (from shader code) that stores all directional shadow maps. */
         static constexpr auto pDirectionalShadowMapsShaderResourceName = "directionalShadowMaps";

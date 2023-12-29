@@ -117,12 +117,8 @@ namespace ne {
          * @param pRenderer              Used renderer.
          * @param pPipelineManager       Pipeline manager that owns this pipeline.
          * @param sVertexShaderName      Name of the compiled vertex shader.
-         * @param sFragmentShaderName    Name of the compiled fragment shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending      Whether the pixels of the mesh that uses this pipeline should
-         * blend with existing pixels on back buffer or not (for transparency).
-         * @param additionalVertexShaderMacros   Additional macros to enable for vertex shader configuration.
-         * @param additionalFragmentShaderMacros Additional macros to enable for fragment shader
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
          * configuration.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate pipeline,
@@ -132,10 +128,8 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
-            const std::string& sFragmentShaderName,
-            bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalFragmentShaderMacros);
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
 
         /**
          * Assigns compute shader to create a compute pipeline.
@@ -189,9 +183,13 @@ namespace ne {
          *
          * @param pRenderer           Used renderer.
          * @param pPipelineManager    Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName   Name of the compiled vertex shader to use (empty if compute pipeline).
-         * @param sFragmentShaderName Name of the compiled pixel shader to use (empty if compute pipeline).
-         * @param sComputeShaderName  Name of the compiled compute shader to use (empty if graphics pipeline).
+         * @param sVertexShaderName   Name of the compiled vertex shader to use (empty if not used).
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param sFragmentShaderName Name of the compiled pixel shader to use (empty if not used).
+         * @param additionalFragmentShaderMacros Additional macros to enable for fragment shader
+         * configuration.
+         * @param sComputeShaderName  Name of the compiled compute shader to use (empty if not used).
+         * @param bEnableDepthBias    Whether depth bias (offset) is enabled or not.
          * @param bUsePixelBlending   Whether the pixels of the mesh that uses this pipeline should blend with
          * existing pixels on back buffer or not (for transparency).
          */
@@ -199,32 +197,23 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             const std::string& sFragmentShaderName,
-            const std::string& sComputeShaderName,
-            bool bUsePixelBlending);
+            const std::set<ShaderMacro>& additionalFragmentShaderMacros = {},
+            const std::string& sComputeShaderName = "",
+            bool bEnableDepthBias = false,
+            bool bUsePixelBlending = false);
 
         /**
-         * (Re)generates Vulkan pipeline and pipeline layout for the specified shaders.
+         * (Re)generates Vulkan pipeline and pipeline layout.
          *
          * @warning If a shader of some type was already added it will be replaced with the new one.
          * When shader is replaced the old shader gets freed from the memory and
          * a new pipeline is immediately generated. Make sure the GPU is not using old shader/pipeline.
          *
-         * @param sVertexShaderName      Name of the compiled vertex shader.
-         * @param sFragmentShaderName    Name of the compiled fragment shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending      Whether the pipeline should use blending or not (for transparency).
-         * @param additionalVertexShaderMacros   Additional macros to enable for vertex shader.
-         * @param additionalFragmentShaderMacros Additional macros to enable for fragment shader.
-         *
          * @return Error if failed to generate pipeline.
          */
-        [[nodiscard]] std::optional<Error> generateGraphicsPipelineForShaders(
-            const std::string& sVertexShaderName,
-            const std::string& sFragmentShaderName,
-            bool bUsePixelBlending,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalFragmentShaderMacros);
+        [[nodiscard]] std::optional<Error> generateGraphicsPipeline();
 
         /**
          * (Re)generates Vulkan compute pipeline and pipeline layout for the specified shader.

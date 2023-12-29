@@ -13,22 +13,14 @@
 #include "shader/general/ShaderMacro.h"
 #include "render/general/pipeline/PipelineSharedPtr.h"
 #include "shader/ComputeShaderInterface.h"
+#include "render/general/pipeline/PipelineType.hpp"
+#include "render/general/pipeline/PipelineCreationSettings.h"
 
 namespace ne {
     class Renderer;
     class Material;
     class MeshNode;
     class ComputeShaderInterface;
-
-    enum class PipelineType : size_t {
-        PT_OPAQUE = 0,  // OPAQUE is a Windows macro, thus adding a prefix
-        PT_TRANSPARENT, // TRANSPARENT is a Windows macro, thus adding a prefix
-        PT_DEPTH_ONLY,  // vertex shader only
-
-        // !!! new Pipeline types go here !!!
-
-        SIZE ///< marks the size of this enum, should be the last entry
-    };
 
     /**
      * RAII class that once acquired waits for the GPU to finish work up to this point, pauses the rendering,
@@ -160,24 +152,18 @@ namespace ne {
          * they will be released from the memory once the pipeline object is destroyed (not the shared
          * pointer) and no other object is using them.
          *
-         * @param sVertexShaderName    Name of the compiled vertex shader.
-         * @param sPixelShaderName     Name of the compiled pixel shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this pipeline should blend
-         * with existing pixels on back buffer or not (for transparency).
+         * @param sVertexShaderName         Name of the compiled vertex shader.
+         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
-         * @param pMaterial            Material that requests the pipeline.
+         * @param pMaterial                 Material that requests the pipeline.
          *
          * @return Error if one or both shaders were not found in ShaderManager or if failed to generate
          * pipeline, otherwise created pipeline.
          */
         std::variant<PipelineSharedPtr, Error> getGraphicsPipelineForMaterial(
             const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros,
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
             Material* pMaterial);
 
         /**
@@ -363,13 +349,9 @@ namespace ne {
          * @param sShaderNames         Shader or shaders (map key value) for target pipeline.
          * @param macrosToUse          Macros that are set (can be only vertex or combined).
          * @param sVertexShaderName    Name of the compiled vertex shader.
-         * @param sPixelShaderName     Name of the compiled pixel shader to use. Specify empty string if
-         * you want to create a depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending    Whether the pixels of the mesh that uses this pipeline should blend
-         * with existing pixels on back buffer or not (for transparency).
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader
          * configuration.
-         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
+         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
          * @param pMaterial            Material that requests the pipeline.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate pipeline,
@@ -380,10 +362,8 @@ namespace ne {
             const std::string& sShaderNames,
             const std::set<ShaderMacro>& macrosToUse,
             const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros,
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
             Material* pMaterial);
 
         /**
@@ -410,10 +390,8 @@ namespace ne {
          * @param sKeyToLookFor                Shader or shaders (map key value) for target pipeline.
          * @param macrosToLookFor              Macros that are set (can be only vertex or combined).
          * @param sVertexShaderName            Pipeline's vertex shader.
-         * @param sPixelShaderName             Pipeline's pixel shader (can be empty).
-         * @param bUsePixelBlending            Whether pixel blending is enabled or not.
          * @param additionalVertexShaderMacros Vertex shader macros to define.
-         * @param additionalPixelShaderMacros  Pixel shader macros to define.
+         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
          * @param pMaterial                    Material that requests the pipeline.
          *
          * @return Error if something went wrong, otherwise valid pipeline pointer.
@@ -423,10 +401,8 @@ namespace ne {
             const std::string& sKeyToLookFor,
             const std::set<ShaderMacro>& macrosToLookFor,
             const std::string& sVertexShaderName,
-            const std::string& sPixelShaderName,
-            bool bUsePixelBlending,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros,
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
             Material* pMaterial);
 
         /** Groups all graphics pipelines. */

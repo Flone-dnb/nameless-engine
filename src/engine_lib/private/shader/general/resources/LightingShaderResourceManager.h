@@ -695,15 +695,6 @@ namespace ne {
                     std::unique_ptr<GpuResource> pTransparentDirectionalLightGrid;
 
                     /**
-                     * Renderer's depth texture that we binded the last time.
-                     *
-                     * @remark Used to check if renderer's returned depth texture pointer is different
-                     * from the one we binded the last time to rebind changed pointer to the shader,
-                     * otherwise (if not changed) we will skip rebinding logic.
-                     */
-                    GpuResource* pLastBindedDepthTexture = nullptr;
-
-                    /**
                      * The number of tiles in the X direction of the light grid that were set the last time we
                      * (re)created light index lists or light grid resources.
                      */

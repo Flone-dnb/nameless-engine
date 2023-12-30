@@ -300,20 +300,24 @@ namespace ne {
 #if defined(DEBUG)
     void SpatialNode::warnIfExceedingWorldBounds() {
         std::scoped_lock guard(*getSpawnDespawnMutex(), mtxWorldMatrix.first);
+        // Make sure we are spawned.
         if (!isSpawned()) {
             return;
         }
 
+        // Get game instance.
         const auto pGameInstance = getGameInstance();
         if (pGameInstance == nullptr) [[unlikely]] {
             return;
         }
 
-        const float worldSizeOneDimention = static_cast<float>(pGameInstance->getWorldSize()) / 2.0F;
+        // Get half of the world size.
+        const float worldHalfSize = static_cast<float>(pGameInstance->getWorldSize()) / 2.0F;
 
-        if (std::abs(mtxWorldMatrix.second.worldLocation.x) > worldSizeOneDimention ||
-            std::abs(mtxWorldMatrix.second.worldLocation.y) > worldSizeOneDimention ||
-            std::abs(mtxWorldMatrix.second.worldLocation.z) > worldSizeOneDimention) {
+        // Make sure we are not exceeding world bounds.
+        if (std::abs(mtxWorldMatrix.second.worldLocation.x) > worldHalfSize ||
+            std::abs(mtxWorldMatrix.second.worldLocation.y) > worldHalfSize ||
+            std::abs(mtxWorldMatrix.second.worldLocation.z) > worldHalfSize) {
             Logger::get().warn(std::format(
                 "[{}] spatial node \"{}\" is exceeding world bounds, node's world location: "
                 "({}, {}, {}), world size: {}",

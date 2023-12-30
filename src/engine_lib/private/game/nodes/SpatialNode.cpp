@@ -309,11 +309,11 @@ namespace ne {
             return;
         }
 
-        const float iWorldSizeOneDimention = static_cast<float>(pGameInstance->getWorldSize()) / 2;
+        const float worldSizeOneDimention = static_cast<float>(pGameInstance->getWorldSize()) / 2.0F;
 
-        if (std::abs(mtxWorldMatrix.second.worldLocation.x) > iWorldSizeOneDimention ||
-            std::abs(mtxWorldMatrix.second.worldLocation.y) > iWorldSizeOneDimention ||
-            std::abs(mtxWorldMatrix.second.worldLocation.z) > iWorldSizeOneDimention) {
+        if (std::abs(mtxWorldMatrix.second.worldLocation.x) > worldSizeOneDimention ||
+            std::abs(mtxWorldMatrix.second.worldLocation.y) > worldSizeOneDimention ||
+            std::abs(mtxWorldMatrix.second.worldLocation.z) > worldSizeOneDimention) {
             Logger::get().warn(std::format(
                 "[{}] spatial node \"{}\" is exceeding world bounds, node's world location: "
                 "({}, {}, {}), world size: {}",

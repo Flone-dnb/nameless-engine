@@ -11,6 +11,7 @@
 #include "input/InputManager.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/nodes/EnvironmentNode.h"
+#include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/PointLightNode.h"
 
 namespace ne {
@@ -25,7 +26,7 @@ namespace ne {
     void EditorGameInstance::onGameStarted() {
         // Create and setup camera.
         pEditorCamera = std::make_shared<TransientCamera>();
-        pEditorCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+        pEditorCamera->setLocation(glm::vec3(-2.0F, -1.0F, 1.0F));
         updateCameraSpeed();
 
         // Make it active.
@@ -45,19 +46,34 @@ namespace ne {
 
             // Spawn environment node.
             const auto pEnvironmentNode = gc_new<EnvironmentNode>();
-            pEnvironmentNode->setAmbientLight(glm::vec3(0.05F, 0.05F, 0.05F)); // NOLINT: magic numbers
+            pEnvironmentNode->setAmbientLight(glm::vec3(0.1F, 0.1F, 0.1F)); // NOLINT
             getWorldRootNode()->addChildNode(pEnvironmentNode);
+
+            // Spawn directional light.
+            const auto pDirectionalLightNode = gc_new<DirectionalLightNode>();
+            getWorldRootNode()->addChildNode(pDirectionalLightNode);
+            pDirectionalLightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
+                glm::normalize(glm::vec3(0.5F, -1.0F, -1.0F)))); // NOLINT
+            pDirectionalLightNode->setLightIntensity(0.7F);      // NOLINT
 
             // Spawn point light.
             const auto pPointLightNode = gc_new<PointLightNode>();
             getWorldRootNode()->addChildNode(pPointLightNode);
-            pPointLightNode->setWorldLocation(glm::vec3(-1.0F, 5.0F, 5.0F)); // NOLINT: magic numbers
+            pPointLightNode->setLightColor(glm::vec3(1.0F, 0.0F, 0.0F));
+            pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 4.0F));
 
-            // Spawn sample mesh.
-            const auto pMeshNode = gc_new<MeshNode>();
-            pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
-            getWorldRootNode()->addChildNode(pMeshNode);
-            pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
+            // Spawn floor.
+            const auto pFloorNode = gc_new<MeshNode>();
+            pFloorNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+            getWorldRootNode()->addChildNode(pFloorNode);
+            pFloorNode->setWorldScale(glm::vec3(100.0F, 100.0F, 1.0F)); // NOLINT
+            pFloorNode->getMaterial()->setRoughness(0.9F);
+
+            // Spawn cube.
+            const auto pCubeNode = gc_new<MeshNode>();
+            pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+            getWorldRootNode()->addChildNode(pCubeNode);
+            pCubeNode->setWorldLocation(glm::vec3(0.0F, 0.0F, 1.0F)); // NOLINT
         });
     }
 

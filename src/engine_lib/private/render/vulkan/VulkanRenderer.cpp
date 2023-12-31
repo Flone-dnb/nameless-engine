@@ -2852,6 +2852,8 @@ namespace ne {
         FrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
         ComputeExecutionStage stage) {
+        PROFILE_FUNC;
+
         // Get shader groups.
         auto& computeShaderGroups = getPipelineManager()
                                         ->getComputeShadersForGraphicsQueueExecution()

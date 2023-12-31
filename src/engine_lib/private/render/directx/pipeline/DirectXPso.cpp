@@ -257,11 +257,18 @@ namespace ne {
         }
 
         // Setup rasterizer description.
-        CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
-        rasterizerDesc.CullMode = isUsingPixelBlending() ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
-        rasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-        rasterizerDesc.MultisampleEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
-        psoDesc.RasterizerState = rasterizerDesc;
+        psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+        psoDesc.RasterizerState.CullMode =
+            isUsingPixelBlending() ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
+        psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+        psoDesc.RasterizerState.MultisampleEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
+
+        // Specify depth bias settings.
+        if (isDepthBiasEnabled()) {
+            psoDesc.RasterizerState.DepthBias = ShadowMapManager::getShadowMappingDepthBias();
+            psoDesc.RasterizerState.DepthBiasClamp = 0.0F;
+            psoDesc.RasterizerState.SlopeScaledDepthBias = 1.0F;
+        }
 
         // Setup pixel blend description (if needed).
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);

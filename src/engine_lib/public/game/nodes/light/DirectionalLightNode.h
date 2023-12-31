@@ -101,6 +101,18 @@ namespace ne RNAMESPACE() {
     private:
         /** Data that will be directly copied into shaders. */
         struct DirecionalLightShaderData {
+            /**
+             * Matrix that transforms data (such as positions) to clip (projection) space of the light
+             * source.
+             */
+            alignas(iVkMat4Alignment) glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
+
+            /**
+             * Matrix that transforms data (such as positions) to texture space (shadow map space) of the
+             * light source.
+             */
+            alignas(iVkMat4Alignment) glm::mat4 viewProjectionTextureMatrix = glm::identity<glm::mat4>();
+
             /** Light forward unit vector (direction). 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 direction = glm::vec4(0.0F, 0.0F, 0.0F, 0.0F);
 
@@ -151,6 +163,13 @@ namespace ne RNAMESPACE() {
          * @param iNewIndexIntoArray New index to use.
          */
         void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
+
+        /**
+         * (Re)calculates view, projection and texture matrices used for shadow mapping.
+         *
+         * @remark Does not call @ref markShaderDataToBeCopiedToGpu.
+         */
+        void recalculateMatricesForShadowMapping();
 
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;

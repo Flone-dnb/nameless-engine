@@ -7,7 +7,7 @@ VertexOut vsMeshNode(VertexIn vertexIn)
     // Prepare output variable.
     VertexOut vertexOut;
 
-    // Calculate world position and normal.
+    // Calculate world coordinates.
     vertexOut.worldPosition = mul(meshData.worldMatrix, float4(vertexIn.localPosition, 1.0F));
     vertexOut.worldNormal = normalize(mul((float3x3)meshData.normalMatrix, vertexIn.localNormal));
 

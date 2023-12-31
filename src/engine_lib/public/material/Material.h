@@ -274,6 +274,16 @@ namespace ne RNAMESPACE() {
         Pipeline* getDepthOnlyPipeline() const;
 
         /**
+         * Returns pipeline that only has vertex shader and depth bias enabled (used for shadow passes).
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return `nullptr` if pipeline was not initialized yet or if @ref isUsingTransparency is enabled,
+         * otherwise used pipeline.
+         */
+        Pipeline* getShadowMappingPipeline() const;
+
+        /**
          * Returns GPU resources that this material uses.
          *
          * @return GPU resources.
@@ -310,14 +320,15 @@ namespace ne RNAMESPACE() {
         /** Groups internal data. */
         struct InternalResources {
             /**
-             * Used pipeline.
+             * Used pipeline with pixel/fragment shader enabled.
              *
+             * @remark This pipeline is considered to be the main pipeline while others might be optional.
              * @remark Only valid when the mesh that is using this material is spawned.
              */
-            PipelineSharedPtr pUsedPipeline;
+            PipelineSharedPtr pColorPipeline;
 
             /**
-             * @ref pUsedPipeline but with only vertex shader (used for depth only passes).
+             * @ref pColorPipeline but with only vertex shader (used for depth only passes).
              *
              * @remark Only valid when the mesh that is using this material is spawned.
              * @remark Only valid when material does not use transparency.
@@ -325,16 +336,13 @@ namespace ne RNAMESPACE() {
             PipelineSharedPtr pDepthOnlyPipeline;
 
             /**
-             * Vertex shader macros that this material enables (i.e. DIFFUSE_TEXTURE if using a diffuse
-             * texture).
+             * @ref pColorPipeline but with only vertex shader and depth bias enabled (used for shadow
+             * passes).
+             *
+             * @remark Only valid when the mesh that is using this material is spawned.
+             * @remark Only valid when material does not use transparency.
              */
-            std::set<ShaderMacro> materialVertexShaderMacros;
-
-            /**
-             * Pixel shader macros that this material enables (i.e. DIFFUSE_TEXTURE if using a diffuse
-             * texture).
-             */
-            std::set<ShaderMacro> materialPixelShaderMacros;
+            PipelineSharedPtr pShadowMappingPipeline;
         };
 
         /**
@@ -350,7 +358,7 @@ namespace ne RNAMESPACE() {
             alignas(iVkVec4Alignment) glm::vec4 specularColor = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
 
             /** Defines how much specular light will be reflected. */
-            alignas(iVkScalarAlignment) float roughness = 0.5F;
+            alignas(iVkScalarAlignment) float roughness = 0.0F;
         };
 
         /**
@@ -567,6 +575,22 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingShaderMeshConstants();
 
         /**
+         * Analyzes @ref mtxInternalResources and returns vertex shader macros that should
+         * be enabled to support the material's features.
+         *
+         * @return Macros.
+         */
+        std::set<ShaderMacro> getVertexShaderMacrosForCurrentState();
+
+        /**
+         * Analyzes @ref mtxInternalResources and returns pixel/fragment shader macros that should
+         * be enabled to support the material's features.
+         *
+         * @return Macros.
+         */
+        std::set<ShaderMacro> getPixelShaderMacrosForCurrentState();
+
+        /**
          * Array of spawned mesh nodes that use this material.
          * Must be used with mutex.
          */
@@ -613,7 +637,7 @@ namespace ne RNAMESPACE() {
 
         /** Defines how much specular light will be reflected. Value in range [0.0F; 1.0F]. */
         RPROPERTY(Serialize)
-        float roughness = 0.4F;
+        float roughness = 1.0F;
 
         /**
          * Opacity in range [0.0; 1.0].
@@ -621,7 +645,7 @@ namespace ne RNAMESPACE() {
          * @remark Only used when @ref bUseTransparency is enabled.
          */
         RPROPERTY(Serialize)
-        float opacity = 1.0F;
+        float opacity = 0.6F;
 
         /** Whether this material will use transparency or not. */
         RPROPERTY(Serialize)

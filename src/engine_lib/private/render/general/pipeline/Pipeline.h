@@ -111,6 +111,22 @@ namespace ne {
          */
         Renderer* getRenderer() const;
 
+        /**
+         * Returns additional macros that were specified during pipeline creation to be enabled for
+         * vertex shader configuration.
+         *
+         * @return Additional macros to enable for vertex shader.
+         */
+        std::set<ShaderMacro> getAdditionalVertexShaderMacros() const;
+
+        /**
+         * Returns additional macros that were specified during pipeline creation to be enabled for
+         * pixel/fragment shader configuration.
+         *
+         * @return Additional macros to enable for pixel/fragment shader.
+         */
+        std::set<ShaderMacro> getAdditionalPixelShaderMacros() const;
+
     protected:
         /**
          * Creates a new empty (no internal GPU resource is created) pipeline.
@@ -146,22 +162,6 @@ namespace ne {
          * @param fullConfiguration Shader's full (might include renderer's configuration) configuration.
          */
         void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
-
-        /**
-         * Returns additional macros that were specified during pipeline creation to be enabled for
-         * vertex shader configuration.
-         *
-         * @return Additional macros to enable for vertex shader.
-         */
-        std::set<ShaderMacro> getAdditionalVertexShaderMacros() const;
-
-        /**
-         * Returns additional macros that were specified during pipeline creation to be enabled for
-         * pixel/fragment shader configuration.
-         *
-         * @return Additional macros to enable for pixel/fragment shader.
-         */
-        std::set<ShaderMacro> getAdditionalPixelShaderMacros() const;
 
         /**
          * Releases internal resources such as root signature, internal Pipeline, etc.

@@ -53,6 +53,16 @@ namespace ne {
         static constexpr int getShadowMappingDepthBias() { return iShadowMappingDepthBias; }
 
         /**
+         * Returns constant used to convert visible (non-clipped) distance to near clip plane for shadow
+         * mapping.
+         *
+         * @return Far to near Z ratio.
+         */
+        static constexpr float getVisibleDistanceToNearClipPlaneRatio() {
+            return visibleDistanceToNearClipPlaneRatio;
+        }
+
+        /**
          * Creates a new shadow map manager.
          *
          * @param pResourceManager Resource manager that owns this object.
@@ -184,6 +194,9 @@ namespace ne {
          * effect known as "shadow acne" (stair-stepping).
          */
         static constexpr int iShadowMappingDepthBias = 100000; // NOLINT
+
+        /** Constant used to convert visible (non-clipped) distance to near clip plane for shadow mapping. */
+        static constexpr float visibleDistanceToNearClipPlaneRatio = 0.004F; // NOLINT
 
         /** Name of the shader resource (from shader code) that stores all directional shadow maps. */
         static constexpr auto pDirectionalShadowMapsShaderResourceName = "directionalShadowMaps";

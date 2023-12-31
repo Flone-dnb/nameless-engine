@@ -579,6 +579,15 @@ namespace ne {
         rasterizerStateInfo.depthBiasClamp = 0.0F;
         rasterizerStateInfo.depthBiasSlopeFactor = 0.0F;
 
+        // Specify depth bias settings.
+        if (isDepthBiasEnabled()) {
+            rasterizerStateInfo.depthBiasEnable = VK_TRUE;
+            rasterizerStateInfo.depthBiasConstantFactor =
+                static_cast<float>(ShadowMapManager::getShadowMappingDepthBias());
+            rasterizerStateInfo.depthBiasClamp = 0.0F;
+            rasterizerStateInfo.depthBiasSlopeFactor = 1.0F;
+        }
+
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
         std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);

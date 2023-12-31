@@ -20,7 +20,7 @@ namespace ne {
         intensity = std::clamp(intensity, 0.0F, 1.0F);
 
 #if defined(DEBUG)
-        static_assert(sizeof(DirecionalLightShaderData) == 48, "consider clamping new parameters here");
+        static_assert(sizeof(DirecionalLightShaderData) == 176, "consider clamping new parameters here");
 #endif
     }
 
@@ -81,8 +81,9 @@ namespace ne {
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
         mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
+        recalculateMatricesForShadowMapping();
 #if defined(DEBUG)
-        static_assert(sizeof(DirecionalLightShaderData) == 48, "consider copying new parameters here");
+        static_assert(sizeof(DirecionalLightShaderData) == 176, "consider copying new parameters here");
 #endif
 
         // Reserve a slot in the directional light shader data array
@@ -144,8 +145,11 @@ namespace ne {
 
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Update shader data.
+        // Update direction for shaders.
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
+
+        // Update matrices for shaders.
+        recalculateMatricesForShadowMapping();
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
@@ -154,20 +158,68 @@ namespace ne {
     void DirectionalLightNode::onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray) {
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Self check: make sure shadow map handle is valid.
-        if (pShadowMapHandle == nullptr) [[unlikely]] {
+        // Self check: make sure we are spawned.
+        if (!isSpawned()) [[unlikely]] {
             Error error(std::format(
-                "node \"{}\" shadow map handle is cleared but shadow map index callback was triggered",
+                "shadow map array index callback is triggered on node \"{}\" while it's not spawned",
                 getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Shadow map handle will be invalid the first time this function is called
+        // (we will receive initial index into the array).
 
         // Update shader data.
         mtxShaderData.second.shaderData.iShadowMapIndex = iNewIndexIntoArray;
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
+    }
+
+    void DirectionalLightNode::recalculateMatricesForShadowMapping() {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Prepare some constants.
+        const auto worldHalfSize = static_cast<float>(getGameInstance()->getWorldSize()) / 2.0F;
+        const auto lookAtWorldPosition = glm::vec3(0.0F, 0.0F, 0.0F);
+
+        // Calculate position for shadow capture
+        // (move light to `worldHalfSize * 2` to make near Z pretty far from view space origin,
+        // see below how we set near/far clip planes according to world bounds).
+        const auto shadowMappingLightWorldPosition =
+            -getWorldForwardDirection() * glm::vec3(worldHalfSize * 2.0F);
+
+        // Calculate view matrix for shadow mapping.
+        const auto viewMatrix =
+            glm::lookAtLH(shadowMappingLightWorldPosition, lookAtWorldPosition, Globals::WorldDirection::up);
+
+        // Transform world look at position to light's view space.
+        const auto lookAtViewPosition = viewMatrix * glm::vec4(lookAtWorldPosition, 1.0F);
+
+        // Calculate orthographic frustum planes (bounds) in light's view space.
+        const auto frustumLeft = lookAtViewPosition.x - worldHalfSize;
+        const auto frustumRight = lookAtViewPosition.x + worldHalfSize;
+        const auto frustumBottom = lookAtViewPosition.y - worldHalfSize;
+        const auto frustumTop = lookAtViewPosition.y + worldHalfSize;
+        const auto frustumNear = lookAtViewPosition.z - worldHalfSize;
+        const auto frustumFar = lookAtViewPosition.z + worldHalfSize;
+
+        // Calculate projection matrix.
+        const auto viewProjectionMatrix =
+            glm::orthoLH(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNear, frustumFar) *
+            viewMatrix;
+
+        // Construct matrix to convert coordinates from NDC space [-1; +1] to shadow map space [0; 1].
+        const auto textureMatrix = glm::mat4(
+            glm::vec4(0.5F, 0.0F, 0.0F, 0.5F),
+            glm::vec4(0.0F, -0.5F, 0.0F, 0.5F), // minus to flip Y due to difference in Y in NDC/UV space
+            glm::vec4(0.0F, 0.0F, 1.0F, 0.0F),
+            glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
+
+        // Save to shaders.
+        mtxShaderData.second.shaderData.viewProjectionMatrix = viewProjectionMatrix;
+        mtxShaderData.second.shaderData.viewProjectionTextureMatrix = textureMatrix * viewProjectionMatrix;
     }
 
 }

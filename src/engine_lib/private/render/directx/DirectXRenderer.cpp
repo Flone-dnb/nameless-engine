@@ -731,6 +731,8 @@ namespace ne {
         FrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
         ComputeExecutionStage stage) {
+        PROFILE_FUNC;
+
         // Convert frame resource.
         const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
 

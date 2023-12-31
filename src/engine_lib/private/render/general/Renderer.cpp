@@ -344,15 +344,11 @@ namespace ne {
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             pMeshPipelinesInFrustum->vOpaquePipelines);
 
-        PROFILE_SCOPE_START(DispatchComputeShadersAfterDepthPrepass);
-
         // Run compute shaders after depth prepass.
         executeComputeShadersOnGraphicsQueue(
             pMtxCurrentFrameResource->second.pResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             ComputeExecutionStage::AFTER_DEPTH_PREPASS);
-
-        PROFILE_SCOPE_END;
 
         // Draw main pass.
         drawMeshesMainPass(

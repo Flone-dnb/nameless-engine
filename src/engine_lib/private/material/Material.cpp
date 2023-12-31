@@ -55,11 +55,6 @@ namespace ne {
         this->bUseTransparency = bUseTransparency;
         this->pPipelineManager = pPipelineManager;
         this->sMaterialName = sMaterialName;
-
-        if (bUseTransparency) {
-            mtxInternalResources.second.materialPixelShaderMacros.insert(
-                ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
-        }
     }
 
     Material::~Material() {
@@ -76,7 +71,7 @@ namespace ne {
         }
 
         // Make sure pipeline was cleared.
-        if (mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             Error error("expected pipeline to be deinitialized at this point");
             error.showError();
             return; // don't throw in destructor
@@ -190,7 +185,7 @@ namespace ne {
         }
 
         // Initialize pipeline if needed.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) {
             // Initialize pipeline.
             auto optionalError = initializePipelines();
             if (optionalError.has_value()) [[unlikely]] {
@@ -263,7 +258,7 @@ namespace ne {
         // Check if need to free pipeline.
         if (mtxSpawnedMeshNodesThatUseThisMaterial.second.getTotalSize() == 0) {
             // Self check: make sure our pipeline is initialized.
-            if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+            if (!mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
                 Error error(std::format(
                     "no mesh is now referencing the material \"{}\" but material's pipeline pointer was not "
                     "initialized previously",
@@ -370,15 +365,20 @@ namespace ne {
     }
 
     Pipeline* Material::getUsedPipeline() const {
-        return mtxInternalResources.second.pUsedPipeline.getPipeline();
+        return mtxInternalResources.second.pColorPipeline.getPipeline();
     }
 
     Pipeline* Material::getDepthOnlyPipeline() const {
         return mtxInternalResources.second.pDepthOnlyPipeline.getPipeline();
     }
 
+    Pipeline* Material::getShadowMappingPipeline() const {
+        return mtxInternalResources.second.pShadowMappingPipeline.getPipeline();
+    }
+
     void Material::allocateShaderResources() {
-        std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
+        std::scoped_lock guard(
+            mtxInternalResources.first, mtxGpuResources.first, mtxShaderMaterialDataConstants.first);
 
         // Make sure resources were not allocated before.
         if (bIsShaderResourcesAllocated) [[unlikely]] {
@@ -391,13 +391,23 @@ namespace ne {
         }
 
         // Make sure pipeline is initialized.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             Error error(std::format(
                 "material \"{}\" was requested to allocate shader resources but pipeline is not initialized",
                 sMaterialName));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        // Copy up to date data to shaders.
+        mtxShaderMaterialDataConstants.second.diffuseColor = glm::vec4(diffuseColor, opacity);
+        mtxShaderMaterialDataConstants.second.roughness = roughness;
+        mtxShaderMaterialDataConstants.second.specularColor = glm::vec4(specularColor, 0.0F);
+#if defined(WIN32) && defined(DEBUG)
+        static_assert(
+            sizeof(MaterialShaderConstants) == 48,
+            "consider copying new data to shaders here"); // NOLINT: current size
+#endif
 
         // Set flag before adding binding data.
         bIsShaderResourcesAllocated = true;
@@ -430,7 +440,7 @@ namespace ne {
         }
 
         // Make sure pipeline is initialized.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             Error error(std::format(
                 "material \"{}\" was requested to deallocate shader resources but pipeline is not "
                 "initialized",
@@ -469,7 +479,7 @@ namespace ne {
         }
 
         // Make sure pipeline is initialized.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             Error error(std::format(
                 "material \"{}\" requested to set shader resources binding data but pipeline is not "
                 "initialized",
@@ -496,7 +506,7 @@ namespace ne {
             sShaderResourceName,
             std::format("material \"{}\"", sMaterialName),
             iResourceSizeInBytes,
-            {mtxInternalResources.second.pUsedPipeline.getPipeline()},
+            {mtxInternalResources.second.pColorPipeline.getPipeline()},
             onStartedUpdatingResource,
             onFinishedUpdatingResource);
         if (std::holds_alternative<Error>(result)) {
@@ -526,7 +536,7 @@ namespace ne {
         }
 
         // Make sure pipeline is initialized.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             Error error(std::format(
                 "material \"{}\" requested to set shader resources binding data but pipeline is not "
                 "initialized",
@@ -547,7 +557,7 @@ namespace ne {
         }
 
         // Get texture manager.
-        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+        const auto pRenderer = mtxInternalResources.second.pColorPipeline->getRenderer();
         const auto pTextureManager = pRenderer->getResourceManager()->getTextureManager();
 
         // Get texture handle.
@@ -567,7 +577,7 @@ namespace ne {
         auto shaderResourceResult = pShaderResourceManager->createShaderTextureResource(
             sShaderResourceName,
             std::format("material \"{}\"", sMaterialName),
-            {mtxInternalResources.second.pUsedPipeline.getPipeline()},
+            {mtxInternalResources.second.pColorPipeline.getPipeline()},
             std::move(pTextureHandle));
         if (std::holds_alternative<Error>(shaderResourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(shaderResourceResult));
@@ -590,7 +600,7 @@ namespace ne {
         }
 
         // Make sure pipeline is initialized.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) {
             return; // silently exit, this is not an error
         }
 
@@ -671,7 +681,7 @@ namespace ne {
         std::scoped_lock guard(mtxInternalResources.first);
 
         // Self check: make sure current pipeline is initialized.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             Error error(
                 std::format("expected the pipeline to be initialized on material \"{}\"", sMaterialName));
             error.showError();
@@ -679,7 +689,7 @@ namespace ne {
         }
 
         // Get renderer.
-        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+        const auto pRenderer = mtxInternalResources.second.pColorPipeline->getRenderer();
 
         // Make sure no rendering happens during the following process
         // (since we might delete some resources and also want to avoid deleting resources in the
@@ -732,25 +742,17 @@ namespace ne {
             return;
         }
 
-        // Update our macros.
-        auto& pixelShaderMacros = mtxInternalResources.second.materialPixelShaderMacros;
-        if (bEnable) {
-            pixelShaderMacros.insert(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
-        } else {
-            pixelShaderMacros.erase(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
-        }
-
         // Save new transparency option.
         bUseTransparency = bEnable;
 
         // See if we need to re-request a pipeline.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) {
             // No more things to do here.
             return;
         }
 
         // Get renderer.
-        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+        const auto pRenderer = mtxInternalResources.second.pColorPipeline->getRenderer();
 
         // Make sure no rendering happens during the following process
         // (since we might delete some resources and also want to avoid deleting resources in the
@@ -780,41 +782,36 @@ namespace ne {
         // Set new diffuse texture path.
         sDiffuseTexturePathRelativeRes = sTextureResourcePathRelativeRes;
 
-        // Update our macros.
-        auto& pixelShaderMacros = mtxInternalResources.second.materialPixelShaderMacros;
-        const auto diffuseTextureMacroIt = pixelShaderMacros.find(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
-
-        bool bNeedNewPipeline = false;
-
-        if (!sTextureResourcePathRelativeRes.empty() && diffuseTextureMacroIt == pixelShaderMacros.end()) {
-            // Our current pipeline does not use diffuse textures, we need a new pipeline that
-            // uses diffuse textures.
-
-            // Add diffuse texture macro to our pixel/fragment shader macros.
-            pixelShaderMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
-
-            // Mark that we need a new pipeline.
-            bNeedNewPipeline = true;
-        } else if (
-            sTextureResourcePathRelativeRes.empty() && diffuseTextureMacroIt != pixelShaderMacros.end()) {
-            // Our current pipeline uses diffuse textures but we no longer need that, we need
-            // a new pipeline that does not use diffuse textures.
-
-            // Remove diffuse texture macro from our pixel/fragment shader macros.
-            pixelShaderMacros.erase(diffuseTextureMacroIt);
-
-            // Mark that we need a new pipeline.
-            bNeedNewPipeline = true;
-        }
-
-        // See if we need to re-request a pipeline.
-        if (!mtxInternalResources.second.pUsedPipeline.isInitialized()) {
+        // See if we need to maybe re-request a new color.
+        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) {
             // No more things to do here.
             return;
         }
+        bool bNeedNewPipeline = false;
+
+        // Get pipeline macros.
+        const auto currentAdditionalPixelMacros =
+            mtxInternalResources.second.pColorPipeline.getPipeline()->getAdditionalPixelShaderMacros();
+        const auto bPipelineDefinedDiffuseTextureMacro =
+            currentAdditionalPixelMacros.find(ShaderMacro::PS_USE_DIFFUSE_TEXTURE) !=
+            currentAdditionalPixelMacros.end();
+
+        if (!sTextureResourcePathRelativeRes.empty() && !bPipelineDefinedDiffuseTextureMacro) {
+            // Our current pipeline does not use diffuse textures, we need a new pipeline that
+            // uses diffuse textures.
+
+            // Mark that we need a new pipeline.
+            bNeedNewPipeline = true;
+        } else if (sTextureResourcePathRelativeRes.empty() && bPipelineDefinedDiffuseTextureMacro) {
+            // Our current pipeline uses diffuse textures but we no longer need that, we need
+            // a new pipeline that does not use diffuse textures.
+
+            // Mark that we need a new pipeline.
+            bNeedNewPipeline = true;
+        }
 
         // Get renderer.
-        const auto pRenderer = mtxInternalResources.second.pUsedPipeline->getRenderer();
+        const auto pRenderer = mtxInternalResources.second.pColorPipeline->getRenderer();
 
         // Make sure no rendering happens during the following process
         // (since we might delete some resources and also want to avoid deleting resources in the
@@ -897,23 +894,6 @@ namespace ne {
             sizeof(MaterialShaderConstants) == 48,
             "consider copying new data to shaders here"); // NOLINT: current size
 #endif
-
-        // Define diffuse texture macro (if texture is set).
-        if (!sDiffuseTexturePathRelativeRes.empty()) {
-            mtxInternalResources.second.materialPixelShaderMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
-        }
-
-        // Define transparency macro (if enabled).
-        if (bUseTransparency) {
-            mtxInternalResources.second.materialPixelShaderMacros.insert(
-                ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
-        }
-
-#if defined(WIN32) && defined(DEBUG)
-        static_assert(sizeof(Material) == 1104, "consider checking new macros here"); // NOLINT: current size
-#elif defined(DEBUG)
-        static_assert(sizeof(Material) == 864, "consider checking new macros here"); // NOLINT: current size
-#endif
     }
 
     bool Material::isTransparencyEnabled() {
@@ -967,29 +947,33 @@ namespace ne {
         std::scoped_lock guard(mtxInternalResources.first);
 
         // Make sure pipeline was not initialized yet.
-        if (mtxInternalResources.second.pUsedPipeline.isInitialized()) [[unlikely]] {
+        if (mtxInternalResources.second.pColorPipeline.isInitialized()) [[unlikely]] {
             return Error("pipeline is already initialized");
         }
+
+        // Get macros that we need to be defined.
+        const auto materialVertexMacros = getVertexShaderMacrosForCurrentState();
+        const auto materialPixelMacros = getPixelShaderMacrosForCurrentState();
 
         // Get color pipeline.
         auto result = pPipelineManager->getGraphicsPipelineForMaterial(
             sVertexShaderName,
-            mtxInternalResources.second.materialVertexShaderMacros,
-            std::unique_ptr<ColorPipelineCreationSettings>(new ColorPipelineCreationSettings(
-                sPixelShaderName, mtxInternalResources.second.materialPixelShaderMacros, bUseTransparency)),
+            materialVertexMacros,
+            std::unique_ptr<ColorPipelineCreationSettings>(
+                new ColorPipelineCreationSettings(sPixelShaderName, materialPixelMacros, bUseTransparency)),
             this);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        mtxInternalResources.second.pUsedPipeline = std::get<PipelineSharedPtr>(std::move(result));
+        mtxInternalResources.second.pColorPipeline = std::get<PipelineSharedPtr>(std::move(result));
 
         if (!bUseTransparency) {
-            // Get depth only pipeline for depth passes.
+            // Get depth only pipeline.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
                 sVertexShaderName,
-                mtxInternalResources.second.materialVertexShaderMacros,
+                materialVertexMacros,
                 std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(false)),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
@@ -998,7 +982,25 @@ namespace ne {
                 return error;
             }
             mtxInternalResources.second.pDepthOnlyPipeline = std::get<PipelineSharedPtr>(std::move(result));
+
+            // Get shadow mapping pipeline.
+            result = pPipelineManager->getGraphicsPipelineForMaterial(
+                sVertexShaderName,
+                materialVertexMacros,
+                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(true)),
+                this);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            mtxInternalResources.second.pShadowMappingPipeline =
+                std::get<PipelineSharedPtr>(std::move(result));
         }
+
+#if defined(DEBUG)
+        static_assert(sizeof(InternalResources) == 96, "consider adding new pipelines here"); // NOLINT
+#endif
 
         return {};
     }
@@ -1008,8 +1010,31 @@ namespace ne {
 
         // don't check if pipelines are initialized, some pipelines may be not initialized
 
-        mtxInternalResources.second.pUsedPipeline.clear();
+        mtxInternalResources.second.pColorPipeline.clear();
         mtxInternalResources.second.pDepthOnlyPipeline.clear();
+        mtxInternalResources.second.pShadowMappingPipeline.clear();
+
+#if defined(DEBUG)
+        static_assert(sizeof(InternalResources) == 96, "consider adding new pipelines here"); // NOLINT
+#endif
     }
+
+    std::set<ShaderMacro> Material::getPixelShaderMacrosForCurrentState() {
+        std::set<ShaderMacro> pixelMacros;
+
+        // Define diffuse texture macro (if texture is set).
+        if (!sDiffuseTexturePathRelativeRes.empty()) {
+            pixelMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
+        }
+
+        // Define transparency macro (if enabled).
+        if (bUseTransparency) {
+            pixelMacros.insert(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
+        }
+
+        return pixelMacros;
+    }
+
+    std::set<ShaderMacro> Material::getVertexShaderMacrosForCurrentState() { return {}; }
 
 } // namespace ne

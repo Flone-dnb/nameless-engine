@@ -17,7 +17,7 @@ void vsMeshNode(){
     // Prepare a short macro to access mesh data.
 #define MESH_DATA meshData.array[arrayIndices.meshData]
 
-    // Calculate world position and normal.
+    // Calculate world coordinates.
     fragmentWorldPosition = MESH_DATA.worldMatrix * vec4(localPosition, 1.0F);
     fragmentWorldNormal = normalize(mat3(MESH_DATA.normalMatrix) * localNormal);
 

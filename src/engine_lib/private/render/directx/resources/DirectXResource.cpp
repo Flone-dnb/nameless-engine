@@ -99,10 +99,8 @@ namespace ne {
         // Get descriptor.
         const auto& pDescriptor = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
-        // Make sure it was binded previously.
-        if (pDescriptor == nullptr) [[unlikely]] {
-            Logger::get().error(
-                std::format("requested descriptor of resource \"{}\" was not set", getResourceName()));
+        // Quit if no such descriptor was binded.
+        if (pDescriptor == nullptr) {
             return {};
         }
 
@@ -123,10 +121,8 @@ namespace ne {
         // Get descriptor.
         const auto& pDescriptor = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
-        // Make sure it was binded previously.
-        if (pDescriptor == nullptr) [[unlikely]] {
-            Logger::get().error(
-                std::format("requested descriptor of resource \"{}\" was not set", getResourceName()));
+        // Quit if no such descriptor was binded.
+        if (pDescriptor == nullptr) {
             return {};
         }
 
@@ -145,13 +141,6 @@ namespace ne {
 
         // Get descriptor.
         const auto& pDescriptor = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
-
-        // Make sure it was binded previously.
-        if (pDescriptor == nullptr) [[unlikely]] {
-            Logger::get().error(
-                std::format("requested descriptor of resource \"{}\" was not set", getResourceName()));
-            return nullptr;
-        }
 
         return pDescriptor.get();
     }

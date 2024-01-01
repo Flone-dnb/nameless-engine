@@ -152,7 +152,7 @@ TEST_CASE("create engine default materials") {
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
                 REQUIRE(
                     getWindow()->getRenderer()->getPipelineManager()->getCurrentGraphicsPipelineCount() ==
-                    3); // 1 opaque PSO + 1 depth only PSO + 1 transparent PSO
+                    4); // 1 opaque PSO + 1 depth only PSO + 1 shadow mapping PSO + 1 transparent PSO
 
                 // Despawn one node.
                 pMeshNodeOpaque->detachFromParentAndDespawn();
@@ -499,9 +499,9 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                     pMeshNode1->getMaterial()->getPathToDiffuseTextureResource() !=
                     pMeshNode2->getMaterial()->getPathToDiffuseTextureResource());
 
-                // Only 2 pipelines should exist (1 opaque + 1 depth only pipeline) (2 materials with
-                // different textures).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
+                // Only 3 pipelines should exist (1 opaque + 1 depth only + 1 shadow mapping pipeline) (2
+                // materials with different textures).
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
 
                 // Remove diffuse texture from one mesh.
                 pMeshNode1->getMaterial()->setDiffuseTexture("");
@@ -509,15 +509,15 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 // Make sure texture is removed.
                 REQUIRE(pMeshNode1->getMaterial()->getPathToDiffuseTextureResource().empty());
 
-                // There should now be 3 pipelines (1 opaque no diffuse + 1 opaque with diffuse + 1 depth only
-                // pipeline) (2 materials one with diffuse texture and one without).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
+                // There should now be 4 pipelines (1 opaque no diffuse + 1 opaque with diffuse + 1 depth only
+                // pipeline + 1 shadow mapping) (2 materials one with diffuse texture and one without).
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
 
                 // Now despawn 1 mesh.
                 pMeshNode1->detachFromParentAndDespawn();
 
-                // There should now be just 2 pipelines (1 opaque + 1 depth only).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 2);
+                // There should now be just 3 pipelines (1 opaque + 1 depth only + 1 shadow mapping).
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
 
                 // Despawn second mesh.
                 pMeshNode2->detachFromParentAndDespawn();
@@ -605,9 +605,10 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 getWorldRootNode()->addChildNode(pMeshNode2);
                 pMeshNode2->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
-                // There should now be 3 pipelines (2 materials one with transparency and one without)
-                // (1 opaque pipeline + 1 depth only pipeline + 1 transparent pipeline).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
+                // There should now be 4 pipelines (2 materials one with transparency and one without)
+                // (1 opaque pipeline + 1 depth only pipeline + 1 shadow mapping pipeline + 1 transparent
+                // pipeline).
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
 
                 {
                     const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
@@ -867,8 +868,8 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                     REQUIRE(
                         pRenderer->getResourceManager()->getTextureManager()->getTextureInMemoryCount() == 2);
 
-                    // Make sure there's only 2 pipelines (1 opaque + 1 depth only).
-                    REQUIRE(pRenderer->getPipelineManager()->getCurrentGraphicsPipelineCount() == 2);
+                    // Make sure there's only 3 pipelines (1 opaque + 1 depth only + 1 shadow mapping).
+                    REQUIRE(pRenderer->getPipelineManager()->getCurrentGraphicsPipelineCount() == 3);
 
                     getWindow()->close();
                 });

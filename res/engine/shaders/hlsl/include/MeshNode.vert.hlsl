@@ -1,5 +1,9 @@
 #include "../../include/Base.glsl"
 #include "../../include/MeshData.glsl"
+#ifdef VS_SHADOW_MAPPING_PASS
+#include "../../include/Lighting.glsl"
+#include "../../include/shader_constants/LightingConstants.glsl"
+#endif
 
 /** Vertex shader. */
 VertexOut vsMeshNode(VertexIn vertexIn)
@@ -12,7 +16,11 @@ VertexOut vsMeshNode(VertexIn vertexIn)
     vertexOut.worldNormal = normalize(mul((float3x3)meshData.normalMatrix, vertexIn.localNormal));
 
     // Transform position to homogeneous clip space.
+#ifdef VS_SHADOW_MAPPING_PASS
+    vertexOut.position = mul(lightViewProjectionMatrices[constants.iLightViewProjectionMatrixIndex], vertexOut.worldPosition);
+#else
     vertexOut.position = mul(frameData.viewProjectionMatrix, vertexOut.worldPosition);
+#endif
 
     // Copy UV.
     vertexOut.uv = vertexIn.uv;

@@ -9,9 +9,7 @@
 
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
-#include "render/vulkan/resources/VulkanResource.h"
-#include "render/general/resources/UploadBuffer.h"
-#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
+#include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
 
@@ -42,7 +40,7 @@ namespace ne {
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         inline void copyResourceIndexOfOnlyPipelineToPushConstants(
-            VulkanPushConstantsManager* pPushConstantsManager, size_t iCurrentFrameResourceIndex) {
+            PipelineShaderConstantsManager* pPushConstantsManager, size_t iCurrentFrameResourceIndex) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
             // we don't need to lock the mutex here.
 
@@ -61,7 +59,7 @@ namespace ne {
 #endif
 
             // Copy value to push constants.
-            pPushConstantsManager->copyValueToPushConstant(
+            pPushConstantsManager->copyValueToShaderConstant(
                 mtxPushConstantIndices.second.begin()->second,
                 vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
         }
@@ -74,7 +72,7 @@ namespace ne {
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
         inline void copyResourceIndexOfPipelineToPushConstants(
-            VulkanPushConstantsManager* pPushConstantsManager,
+            PipelineShaderConstantsManager* pPushConstantsManager,
             VulkanPipeline* pUsedPipeline,
             size_t iCurrentFrameResourceIndex) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
@@ -93,7 +91,7 @@ namespace ne {
             }
 
             // Copy value to push constants.
-            pPushConstantsManager->copyValueToPushConstant(
+            pPushConstantsManager->copyValueToShaderConstant(
                 it->second, vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
         }
 

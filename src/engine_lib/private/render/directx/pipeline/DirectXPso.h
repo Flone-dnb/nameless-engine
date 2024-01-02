@@ -2,6 +2,7 @@
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
+#include "shader/hlsl/SpecialRootParameterSlot.hpp"
 
 // External.
 #include "directx/d3dx12.h"
@@ -30,6 +31,19 @@ namespace ne {
              * (by using resource name taken from shader file).
              */
             std::unordered_map<std::string, UINT> rootParameterIndices;
+
+            /**
+             * Stores indices of some non-user specified root parameters. Duplicates some root parameters
+             * and their indices from @ref rootParameterIndices but only stored some special non-user
+             * specified root parameter indices.
+             *
+             * @remark Generally used for fast access (without doing a `find` in the map) to some
+             * root parameter indices.
+             *
+             * @remark Example usage: `iRootParameterIndex = vIndices[Slot::FRAME_DATA]`.
+             */
+            std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>
+                vSpecialRootParameterIndices;
 
             /** Created PSO. */
             ComPtr<ID3D12PipelineState> pPso;

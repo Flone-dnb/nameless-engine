@@ -7,7 +7,6 @@
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
-#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
 
 // External.
@@ -22,18 +21,6 @@ namespace ne {
     public:
         /** Stores internal resources. */
         struct InternalResources {
-            /** Groups information related to push constants. */
-            struct PushConstantsData {
-                /** Stores push constants. `nullptr` if push constants are not used. */
-                std::unique_ptr<VulkanPushConstantsManager> pPushConstantsManager;
-
-                /**
-                 * Stores names of fields defined in GLSL as push constants (all with `uint` type)
-                 * and index into the @ref pPushConstantsManager to copy resource's array indices to.
-                 */
-                std::unordered_map<std::string, size_t> uintFieldIndicesToUse;
-            };
-
             /** Created pipeline layout. */
             VkPipelineLayout pPipelineLayout = nullptr;
 
@@ -73,9 +60,6 @@ namespace ne {
              * descriptor in a descriptor set.
              */
             std::unordered_map<std::string, uint32_t> resourceBindings;
-
-            /** Not empty if push constants are used. */
-            std::optional<PushConstantsData> pushConstantsData;
 
             /**
              * Stores pairs of "shader resource name" - "shader array index manager".
@@ -272,17 +256,12 @@ namespace ne {
          * (in `uint`s not bytes)".
          * @param resourceBindings             Map of pairs "resource name" (from GLSL code) - "layout
          * binding index".
-         * @param bMakeSureReferencingOnlyExistingResources Specify `true` if you want this function
-         * to also check that all push constants are referencing only existing resources,
-         * you might want to specify `false` here if you don't have a fragment shader (for example)
-         * and thus most likely some push constants will reference non-existing resources.
          *
          * @return Error if something went wrong, otherwise push constants range.
          */
         std::variant<VkPushConstantRange, Error> definePushConstants(
             const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
-            const std::unordered_map<std::string, uint32_t>& resourceBindings,
-            bool bMakeSureReferencingOnlyExistingResources);
+            const std::unordered_map<std::string, uint32_t>& resourceBindings);
 
         /**
          * Internal resources.

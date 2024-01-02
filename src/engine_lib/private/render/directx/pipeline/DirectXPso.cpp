@@ -124,7 +124,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 104, // NOLINT: current struct size
+            sizeof(InternalResources) == 152, // NOLINT: current struct size
             "release new resources here");
 #endif
 
@@ -241,6 +241,8 @@ namespace ne {
         mtxInternalResources.second.pRootSignature = std::move(generatedRootSignature.pRootSignature);
         mtxInternalResources.second.rootParameterIndices =
             std::move(generatedRootSignature.rootParameterIndices);
+        mtxInternalResources.second.vSpecialRootParameterIndices =
+            std::move(generatedRootSignature.vSpecialRootParameterIndices);
 
         // Prepare to create a PSO using these shaders.
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -384,6 +386,8 @@ namespace ne {
         mtxInternalResources.second.pRootSignature = std::move(generatedRootSignature.pRootSignature);
         mtxInternalResources.second.rootParameterIndices =
             std::move(generatedRootSignature.rootParameterIndices);
+        mtxInternalResources.second.vSpecialRootParameterIndices =
+            std::move(generatedRootSignature.vSpecialRootParameterIndices);
 
         // Prepare to create a PSO using these shaders.
         D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};

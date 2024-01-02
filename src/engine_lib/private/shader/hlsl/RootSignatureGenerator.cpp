@@ -44,9 +44,11 @@ namespace ne {
         // Make sure that names of all resources are unique.
         std::set<std::string> resourceNames;
         for (const auto& resourceDesc : vResourcesDescription) {
+            // Convert name to string.
             auto sName = std::string(resourceDesc.Name);
 
-            auto it = resourceNames.find(sName);
+            // Find resource by name.
+            const auto it = resourceNames.find(sName);
             if (it != resourceNames.end()) [[unlikely]] {
                 return Error(std::format(
                     "found at least two shader resources with the same name \"{}\" - all shader "
@@ -54,7 +56,7 @@ namespace ne {
                     resourceDesc.Name));
             }
 
-            resourceNames.insert(sName);
+            resourceNames.insert(std::move(sName));
         }
 
         // Setup variables to fill root signature info from reflection data.
@@ -62,12 +64,43 @@ namespace ne {
         std::vector<RootParameter> vRootParameters;
         std::set<SamplerType> staticSamplersToBind;
         std::unordered_map<std::string, std::pair<UINT, RootParameter>> rootParameterIndices;
+        std::unordered_map<std::string, size_t> rootConstantOffsets;
 
         // Now iterate over all shader resources and add them to root parameters.
         for (const auto& resourceDesc : vResourcesDescription) {
             if (resourceDesc.Type == D3D_SIT_CBUFFER) {
-                if (std::string(resourceDesc.Name).starts_with(sRootConstantsTypeName)) {
-                    return Error("TODO");
+                if (sRootConstantsTypeName == std::string(resourceDesc.Name)) {
+                    // Found root constants.
+                    const auto pBufferInfo = pShaderReflection->GetConstantBufferByName(resourceDesc.Name);
+                    if (pBufferInfo == nullptr) [[unlikely]] {
+                        return Error(std::format("failed to get cbuffer \"{}\" info", resourceDesc.Name));
+                    }
+
+                    // Get description.
+                    D3D12_SHADER_BUFFER_DESC bufferDesc;
+                    pBufferInfo->GetDesc(&bufferDesc);
+
+                    for (UINT i = 0; i < bufferDesc.Variables; i++) {
+                        // Get variable info.
+                        const auto pVariableInfo = pBufferInfo->GetVariableByIndex(i);
+                        if (pVariableInfo == nullptr) [[unlikely]] {
+                            return Error(std::format(
+                                "failed to get cbuffer \"{}\" variable #{} info", resourceDesc.Name, i));
+                        }
+
+                        // Get variable's type.
+                        const auto pVariableType = pVariableInfo->GetType();
+                        if (pVariableType == nullptr) [[unlikely]] {
+                            return Error(std::format(
+                                "failed to get cbuffer \"{}\" variable #{} type", resourceDesc.Name, i));
+                        }
+
+                        // Get variable description.
+                        D3D12_SHADER_VARIABLE_DESC variableDesc;
+                        pVariableInfo->GetDesc(&variableDesc);
+
+                        rootConstantOffsets[variableDesc.Name] = variableDesc.StartOffset;
+                    }
                 }
 
                 auto optionalError =
@@ -159,6 +192,7 @@ namespace ne {
         collectedInfo.vRootParameters = std::move(vRootParameters);
         collectedInfo.staticSamplers = std::move(staticSamplersToBind);
         collectedInfo.rootParameterIndices = std::move(rootParameterIndices);
+        collectedInfo.rootConstantOffsets = std::move(rootConstantOffsets);
         return collectedInfo;
     }
 
@@ -199,6 +233,14 @@ namespace ne {
         std::unordered_map<std::string, UINT> rootParameterIndices;
         std::vector<CD3DX12_ROOT_PARAMETER> vRootParameters;
         std::set<std::string> addedRootParameterNames;
+        std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>
+            vSpecialRootParameterIndices;
+
+        // Initialize special indices.
+        for (auto& iIndex : vSpecialRootParameterIndices) {
+            iIndex = std::numeric_limits<UINT>::max(); // this should cause a debug layer error if used
+                                                       // uninitialized
+        }
 
         // Lock shader root signature info.
         std::scoped_lock shaderRootSignatureInfoGuard(pMtxVertexRootInfo->first, *pPixelRootInfoMutex);
@@ -220,27 +262,17 @@ namespace ne {
         }
 
         // Get shaders root signature info.
-        HlslShader::RootSignatureInfo* pPixelShaderRootSignatureInfo = nullptr;
-        auto& vertexShaderRootSignatureInfo = pMtxVertexRootInfo->second.value();
+        HlslShader::RootSignatureInfo* pPixelRootSigInfo = nullptr;
+        auto& vertexRootSigInfo = pMtxVertexRootInfo->second.value();
         if (pMtxPixelRootInfo != nullptr) {
-            pPixelShaderRootSignatureInfo = &(*pMtxPixelRootInfo->second);
-            staticSamplers = pPixelShaderRootSignatureInfo->staticSamplers;
-        }
-
-        // Check that vertex shader uses frame constant buffer as first root parameter.
-        const auto vertexFrameBufferIt =
-            vertexShaderRootSignatureInfo.rootParameterIndices.find(sFrameConstantBufferName);
-        if (vertexFrameBufferIt == vertexShaderRootSignatureInfo.rootParameterIndices.end()) [[unlikely]] {
-            return Error(std::format(
-                "expected to find `cbuffer` \"{}\" to be used in vertex shader \"{}\"",
-                sFrameConstantBufferName,
-                pVertexShader->getShaderName()));
+            pPixelRootSigInfo = &(*pMtxPixelRootInfo->second);
+            staticSamplers = pPixelRootSigInfo->staticSamplers;
         }
 
         // Do some basic checks to add parameters/samplers that don't exist in pixel shader.
 
         // First, add static samplers.
-        for (const auto& samplerType : vertexShaderRootSignatureInfo.staticSamplers) {
+        for (const auto& samplerType : vertexRootSigInfo.staticSamplers) {
             // Check if we already use this sampler.
             const auto it = staticSamplers.find(samplerType);
             if (it == staticSamplers.end()) {
@@ -250,9 +282,9 @@ namespace ne {
         }
 
         // Sum vertex/pixel root parameter count.
-        size_t iMaxRootParameterCount = vertexShaderRootSignatureInfo.rootParameterIndices.size();
-        if (pPixelShaderRootSignatureInfo != nullptr) {
-            iMaxRootParameterCount += pPixelShaderRootSignatureInfo->rootParameterIndices.size();
+        size_t iMaxRootParameterCount = vertexRootSigInfo.rootParameterIndices.size();
+        if (pPixelRootSigInfo != nullptr) {
+            iMaxRootParameterCount += pPixelRootSigInfo->rootParameterIndices.size();
         }
 
         // Prepare array of descriptor table ranges for root parameters to reference them since D3D
@@ -261,22 +293,45 @@ namespace ne {
         vTableRanges.reserve(iMaxRootParameterCount);
         const auto iInitialCapacity = vTableRanges.capacity();
 
-        // Add first root parameter (frame constants).
-        static_assert(
-            ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex == 0,
-            "change order in which we add to `vRootParameters`");
-        vRootParameters.push_back(vertexFrameBufferIt->second.second.generateSingleDescriptorDescription());
-        addedRootParameterNames.insert(sFrameConstantBufferName);
-        rootParameterIndices[sFrameConstantBufferName] =
-            ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex;
+        // Prepare to add "frame data" root parameter.
+        bool bAddedFrameData = false;
+        const auto addFrameDataParameter = [&](RootParameter& rootParameter) {
+            // Add root parameter.
+            const auto iRootParameterIndex = static_cast<unsigned int>(vRootParameters.size());
+            vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA_CBUFFER)] =
+                iRootParameterIndex;
+            vRootParameters.push_back(rootParameter.generateSingleDescriptorDescription());
 
-        if (pPixelShaderRootSignatureInfo != nullptr) {
+            addedRootParameterNames.insert(sFrameConstantBufferName);
+            rootParameterIndices[sFrameConstantBufferName] = iRootParameterIndex;
+
+            bAddedFrameData = true;
+        };
+
+        // Check if vertex shader uses frame data cbuffer.
+        auto frameDataIndexIt = vertexRootSigInfo.rootParameterIndices.find(sFrameConstantBufferName);
+        if (frameDataIndexIt != vertexRootSigInfo.rootParameterIndices.end()) {
+            // Add root parameter.
+            addFrameDataParameter(frameDataIndexIt->second.second);
+        }
+
+        if (!bAddedFrameData && pPixelRootSigInfo != nullptr) {
+            // Check for pixel shader.
+            frameDataIndexIt = pPixelRootSigInfo->rootParameterIndices.find(sFrameConstantBufferName);
+            if (frameDataIndexIt != pPixelRootSigInfo->rootParameterIndices.end()) {
+                // Add root parameter.
+                addFrameDataParameter(frameDataIndexIt->second.second);
+            }
+        }
+
+        if (pPixelRootSigInfo != nullptr) {
             addConstantPixelShaderResourcesIfUsed(
-                pPixelShaderRootSignatureInfo->rootParameterIndices,
+                pPixelRootSigInfo->rootParameterIndices,
                 vRootParameters,
                 vTableRanges,
                 addedRootParameterNames,
-                rootParameterIndices);
+                rootParameterIndices,
+                vSpecialRootParameterIndices);
         }
 
         // Then, add other root parameters.
@@ -306,10 +361,10 @@ namespace ne {
                     }
                 }
             };
-        if (pPixelShaderRootSignatureInfo != nullptr) {
-            addRootParameters(pPixelShaderRootSignatureInfo->rootParameterIndices);
+        if (pPixelRootSigInfo != nullptr) {
+            addRootParameters(pPixelRootSigInfo->rootParameterIndices);
         }
-        addRootParameters(vertexShaderRootSignatureInfo.rootParameterIndices);
+        addRootParameters(vertexRootSigInfo.rootParameterIndices);
 
         // Self check: make sure ranges were not moved to other place in memory.
         if (vTableRanges.capacity() != iInitialCapacity) [[unlikely]] {
@@ -402,6 +457,7 @@ namespace ne {
         Generated merged;
         merged.pRootSignature = std::move(pRootSignature);
         merged.rootParameterIndices = std::move(rootParameterIndices);
+        merged.vSpecialRootParameterIndices = std::move(vSpecialRootParameterIndices);
         return merged;
     }
 
@@ -568,16 +624,21 @@ namespace ne {
         std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
         std::vector<CD3DX12_DESCRIPTOR_RANGE>& vTableRanges,
         std::set<std::string>& addedRootParameterNames,
-        std::unordered_map<std::string, UINT>& rootParameterIndices) {
+        std::unordered_map<std::string, UINT>& rootParameterIndices,
+        std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>&
+            vSpecialRootParameterIndices) {
         // Prepare a lambda to add some fixed root parameter indices for light resources.
         auto addLightingResourceRootParameter = [&](const std::string& sLightingShaderResourceName,
-                                                    UINT iLightingResourceRootParameterIndex,
-                                                    bool bIsTable) {
+                                                    bool bIsTable,
+                                                    SpecialRootParameterSlot slot) {
             // See if this resource is used.
             const auto rootParameterIndexIt =
                 pixelShaderRootParameterIndices.find(sLightingShaderResourceName);
 
             if (rootParameterIndexIt != pixelShaderRootParameterIndices.end()) {
+                // Get root parameter index.
+                const auto iRootParameterIndex = static_cast<unsigned int>(vRootParameters.size());
+
                 // Add root parameter.
                 if (bIsTable) {
                     vTableRanges.push_back(rootParameterIndexIt->second.second.generateTableRange());
@@ -590,124 +651,86 @@ namespace ne {
                         rootParameterIndexIt->second.second.generateSingleDescriptorDescription());
                 }
                 addedRootParameterNames.insert(sLightingShaderResourceName);
-                rootParameterIndices[sLightingShaderResourceName] = iLightingResourceRootParameterIndex;
+                rootParameterIndices[sLightingShaderResourceName] = iRootParameterIndex;
+
+                // Save special index.
+                vSpecialRootParameterIndices[static_cast<size_t>(slot)] = iRootParameterIndex;
             }
         };
 
         // General lighting data.
-        static_assert(
-            ConstantRootParameterIndices::iGeneralLightingConstantBufferRootParameterIndex == 1,
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
-            ConstantRootParameterIndices::iGeneralLightingConstantBufferRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::GENERAL_LIGHTING_CBUFFER);
 
         // Point lights array.
-        static_assert(
-            ConstantRootParameterIndices::iPointLightsBufferRootParameterIndex == 2,
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             LightingShaderResourceManager::getPointLightsShaderResourceName(),
-            ConstantRootParameterIndices::iPointLightsBufferRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::POINT_LIGHTS_BUFFER);
 
         // Directional lights array.
-        static_assert(
-            ConstantRootParameterIndices::iDirectionalLightsBufferRootParameterIndex == 3,
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
-            ConstantRootParameterIndices::iDirectionalLightsBufferRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::DIRECTIONAL_LIGHTS_BUFFER);
 
         // Spotlights array.
-        static_assert(
-            ConstantRootParameterIndices::iSpotlightsBufferRootParameterIndex == 4,
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             LightingShaderResourceManager::getSpotlightsShaderResourceName(),
-            ConstantRootParameterIndices::iSpotlightsBufferRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::SPOT_LIGHTS_BUFFER);
 
         // Point light index list.
-        static_assert(
-            ConstantRootParameterIndices::iLightCullingPointLightIndexLightRootParameterIndex == 5, // NOLINT
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaquePointLightIndexList",
-            ConstantRootParameterIndices::iLightCullingPointLightIndexLightRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST);
         addLightingResourceRootParameter(
             "transparentPointLightIndexList",
-            ConstantRootParameterIndices::iLightCullingPointLightIndexLightRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST);
 
         // Spotlight index list.
-        static_assert(
-            ConstantRootParameterIndices::iLightCullingSpotlightIndexLightRootParameterIndex == 6, // NOLINT
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
-            "opaqueSpotLightIndexList",
-            ConstantRootParameterIndices::iLightCullingSpotlightIndexLightRootParameterIndex,
-            false);
+            "opaqueSpotLightIndexList", false, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
         addLightingResourceRootParameter(
             "transparentSpotLightIndexList",
-            ConstantRootParameterIndices::iLightCullingSpotlightIndexLightRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
 
         // Directional light index list.
-        static_assert(
-            ConstantRootParameterIndices::iLightCullingDirectionalLightIndexLightRootParameterIndex ==
-                7, // NOLINT
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaqueDirectionalLightIndexList",
-            ConstantRootParameterIndices::iLightCullingDirectionalLightIndexLightRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_INDEX_LIST);
         addLightingResourceRootParameter(
             "transparentDirectionalLightIndexList",
-            ConstantRootParameterIndices::iLightCullingDirectionalLightIndexLightRootParameterIndex,
-            false);
+            false,
+            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_INDEX_LIST);
 
         // Point light grid.
-        static_assert(
-            ConstantRootParameterIndices::iLightCullingPointLightGridRootParameterIndex == 8, // NOLINT
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
-            "opaquePointLightGrid",
-            ConstantRootParameterIndices::iLightCullingPointLightGridRootParameterIndex,
-            true);
+            "opaquePointLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
         addLightingResourceRootParameter(
-            "transparentPointLightGrid",
-            ConstantRootParameterIndices::iLightCullingPointLightGridRootParameterIndex,
-            true);
+            "transparentPointLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
 
         // Spotlight grid.
-        static_assert(
-            ConstantRootParameterIndices::iLightCullingSpotlightGridRootParameterIndex == 9, // NOLINT
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
-            "opaqueSpotLightGrid",
-            ConstantRootParameterIndices::iLightCullingSpotlightGridRootParameterIndex,
-            true);
+            "opaqueSpotLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
         addLightingResourceRootParameter(
-            "transparentSpotLightGrid",
-            ConstantRootParameterIndices::iLightCullingSpotlightGridRootParameterIndex,
-            true);
+            "transparentSpotLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
 
         // Directional light grid.
-        static_assert(
-            ConstantRootParameterIndices::iLightCullingDirectionalLightGridRootParameterIndex == 10, // NOLINT
-            "change order in which we add to `vRootParameters`");
         addLightingResourceRootParameter(
             "opaqueDirectionalLightGrid",
-            ConstantRootParameterIndices::iLightCullingDirectionalLightGridRootParameterIndex,
-            true);
+            true,
+            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_GRID);
         addLightingResourceRootParameter(
             "transparentDirectionalLightGrid",
-            ConstantRootParameterIndices::iLightCullingDirectionalLightGridRootParameterIndex,
-            true);
+            true,
+            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_GRID);
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(

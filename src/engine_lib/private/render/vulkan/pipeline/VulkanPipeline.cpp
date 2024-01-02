@@ -138,15 +138,15 @@ namespace ne {
         mtxInternalResources.second.resourceBindings.clear();
 
         // Clear push constants.
-        mtxInternalResources.second.pushConstantsData = {};
+        setShaderConstants({});
 
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 312, // NOLINT: current struct size
+            sizeof(InternalResources) == 216, // NOLINT: current struct size
             "release new resources here");
 #elif defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 240, // NOLINT: current struct size
+            sizeof(InternalResources) == 216, // NOLINT: current struct size
             "release new resources here");
 #endif
 
@@ -172,53 +172,30 @@ namespace ne {
 
     std::variant<VkPushConstantRange, Error> VulkanPipeline::definePushConstants(
         const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
-        const std::unordered_map<std::string, uint32_t>& resourceBindings,
-        bool bMakeSureReferencingOnlyExistingResources) {
+        const std::unordered_map<std::string, uint32_t>& resourceBindings) {
         std::scoped_lock guard(mtxInternalResources.first);
-
-        // Make sure push constants data do not exist yet.
-        if (mtxInternalResources.second.pushConstantsData.has_value()) [[unlikely]] {
-            return Error("push constants data already exists");
-        }
 
         // Make sure push constants are specified.
         if (pushConstantUintFieldOffsets.empty()) {
             return Error("received empty array of push constants");
         }
 
-        if (bMakeSureReferencingOnlyExistingResources) {
-            // Make sure push constants referencing existing resources.
-            for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
-                // Push constants names should be equal to resource name that they index into.
-                const auto it = resourceBindings.find(sFieldName);
-                if (it == resourceBindings.end()) [[unlikely]] {
-                    return Error(std::format(
-                        "push constant \"{}\" is referencing a non-existing shader resource \"{}\", make "
-                        "sure "
-                        "the name of your push constant is equal to the name of a shader resource you want "
-                        "to index into",
-                        sFieldName,
-                        sFieldName));
-                }
-            }
+        // Set new push constants.
+        setShaderConstants(pushConstantUintFieldOffsets);
+
+        // Get constants.
+        const auto pMtxShaderConstants = getShaderConstants();
+        std::scoped_lock constantsGuard(pMtxShaderConstants->first);
+
+        // Make sure push constants were set.
+        if (!pMtxShaderConstants->second.has_value()) [[unlikely]] {
+            return Error("expected push constants to be set");
         }
-
-        // Create new push constants data.
-        mtxInternalResources.second.pushConstantsData = InternalResources::PushConstantsData{};
-
-        // Save info about which resources will use which indices into push constants manager.
-        mtxInternalResources.second.pushConstantsData.value().uintFieldIndicesToUse =
-            pushConstantUintFieldOffsets;
-
-        // Create push constants manager.
-        mtxInternalResources.second.pushConstantsData.value().pPushConstantsManager =
-            std::make_unique<VulkanPushConstantsManager>(pushConstantUintFieldOffsets.size());
 
         // Specify range (not creating multiple ranges since it's very complicated to setup).
         VkPushConstantRange range{};
         range.offset = 0;
-        range.size = mtxInternalResources.second.pushConstantsData.value()
-                         .pPushConstantsManager->getTotalSizeInBytes();
+        range.size = pMtxShaderConstants->second->pConstantsManager->getTotalSizeInBytes();
         range.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 
         return range;
@@ -660,9 +637,7 @@ namespace ne {
         if (generatedLayout.pushConstantUintFieldOffsets.has_value()) {
             // Process push constants.
             auto pushConstantsResult = definePushConstants(
-                generatedLayout.pushConstantUintFieldOffsets.value(),
-                generatedLayout.resourceBindings,
-                pFragmentShader != nullptr);
+                generatedLayout.pushConstantUintFieldOffsets.value(), generatedLayout.resourceBindings);
             if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantsResult));
                 error.addCurrentLocationToErrorStack();

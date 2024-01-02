@@ -7,6 +7,7 @@
 // Custom.
 #include "shader/general/ShaderUser.h"
 #include "render/general/pipeline/PipelineCreationSettings.h"
+#include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 
 namespace ne {
     class Renderer;
@@ -28,6 +29,18 @@ namespace ne {
         Pipeline& operator=(const Pipeline&) = delete;
 
         virtual ~Pipeline() override = default;
+
+        /** Groups information related to push/root constants. */
+        struct ShaderConstantsData {
+            /** Stores push constants. `nullptr` if push/root constants are not used. */
+            std::unique_ptr<PipelineShaderConstantsManager> pConstantsManager;
+
+            /**
+             * Stores names of fields defined in GLSL as push constants or as root constants in HLSL (all with
+             * `uint` type) and offset of the constant from the beginning of the layout/struct.
+             */
+            std::unordered_map<std::string, size_t> uintConstantsOffsets;
+        };
 
         /**
          * Combines shader names into one string.
@@ -127,6 +140,15 @@ namespace ne {
          */
         std::set<ShaderMacro> getAdditionalPixelShaderMacros() const;
 
+        /**
+         * Returns push/root constants used in the pipeline (if were specified in the shaders).
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Optional constants.
+         */
+        std::pair<std::mutex, std::optional<ShaderConstantsData>>* getShaderConstants();
+
     protected:
         /**
          * Creates a new empty (no internal GPU resource is created) pipeline.
@@ -187,6 +209,15 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> restoreInternalResources() = 0;
+
+        /**
+         * Sets new push/root constants that will were found in the shaders of the pipeline.
+         *
+         * @param uintConstantsOffsets Empty if shader constants should not be used, otherwise pairs of:
+         * names of fields defined in GLSL as push constants or as root constants in HLSL (all with
+         * `uint` type) and offset of the constant from the beginning of the layout/struct.
+         */
+        void setShaderConstants(const std::unordered_map<std::string, size_t>& uintConstantsOffsets);
 
     private:
         /**
@@ -277,6 +308,9 @@ namespace ne {
          */
         std::pair<std::mutex, std::unordered_set<ComputeShaderInterface*>>
             mtxComputeShadersThatUseThisPipeline;
+
+        /** Not empty if push/root constants are used. */
+        std::pair<std::mutex, std::optional<ShaderConstantsData>> mtxShaderConstantsData;
 
         /**
          * Additional macros that were specified during pipeline creation to be enabled for

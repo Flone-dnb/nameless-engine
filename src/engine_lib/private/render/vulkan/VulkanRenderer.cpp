@@ -12,7 +12,7 @@
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
-#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
+#include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
@@ -582,13 +582,13 @@ namespace ne {
         }
 
         // Make sure that maximum push constants size that we use is supported.
-        if (VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes() >
+        if (PipelineShaderConstantsManager::getMaxConstantsSizeInBytes() >
             deviceProperties.properties.limits.maxPushConstantsSize) {
             return std::format(
                 "GPU \"{}\" max push constants size is only {} while we expect {}",
                 deviceProperties.properties.deviceName,
                 deviceProperties.properties.limits.maxPushConstantsSize,
-                VulkanPushConstantsManager::getMaxPushConstantsSizeInBytes());
+                PipelineShaderConstantsManager::getMaxConstantsSizeInBytes());
         }
 
         // Make sure used indexing features are supported.
@@ -2744,16 +2744,27 @@ namespace ne {
         for (const auto& pipelineInfo : vOpaquePipelines) {
             // Get depth only (vertex shader only) pipeline
             // (all materials that use the same opaque pipeline will use the same depth only pipeline).
-            const auto pDepthOnlyPipeline = pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline();
+            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(
+                pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline());
 
-            // Get internal resources of this pipeline.
-            const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pDepthOnlyPipeline);
+            // Get push constants and pipeline's resources.
+            const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
             auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
-            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
 
-            // Save raw pointer to push constants manager to avoid re-typing this long line of code below.
-            const auto pPushConstantsManager =
-                pMtxPipelineResources->second.pushConstantsData->pPushConstantsManager.get();
+            // Lock both.
+            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first, pMtxPushConstants->first);
+
+            // Self check: make sure push constants are used.
+            if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
+                Error error(std::format(
+                    "expected push constants to be used on the pipeline \"{}\"",
+                    pVulkanPipeline->getPipelineIdentifier()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Get push constants manager.
+            const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
 
             // Bind pipeline.
             vkCmdBindPipeline(
@@ -3075,12 +3086,25 @@ namespace ne {
         for (const auto& pipelineInfo : pipelinesOfSpecificType) {
             // Get internal resources of this pipeline.
             const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pipelineInfo.pPipeline);
-            auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
-            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first);
 
-            // Save raw pointer to push constants manager to avoid re-typing this long line of code below.
-            const auto pPushConstantsManager =
-                pMtxPipelineResources->second.pushConstantsData->pPushConstantsManager.get();
+            // Get push constants and pipeline's resources.
+            const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
+            auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+
+            // Lock both.
+            std::scoped_lock guardPipelineResources(pMtxPipelineResources->first, pMtxPushConstants->first);
+
+            // Self check: make sure push constants are used.
+            if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
+                Error error(std::format(
+                    "expected push constants to be used on the pipeline \"{}\"",
+                    pVulkanPipeline->getPipelineIdentifier()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Get push constants manager.
+            const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
 
             // Bind pipeline.
             vkCmdBindPipeline(

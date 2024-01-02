@@ -5,10 +5,12 @@
 #include <optional>
 #include <unordered_map>
 #include <stdexcept>
+#include <array>
 #include <set>
 
 // Custom.
 #include "misc/Error.h"
+#include "SpecialRootParameterSlot.hpp"
 
 // External.
 #include "directx/d3dx12.h"
@@ -127,6 +129,15 @@ namespace ne {
              * (by using resource name taken from shader file).
              */
             std::unordered_map<std::string, std::pair<UINT, RootParameter>> rootParameterIndices;
+
+            /**
+             * Not empty if root constants are used.
+             * Stores pairs of "name of field defined in HLSL in RootConstants cbuffer" (all with `uint` type)
+             * and "offset from the beginning of the struct (in `uint`s not bytes)".
+             *
+             * @remark If a non `uint` fields is found an error is returned instead.
+             */
+            std::optional<std::unordered_map<std::string, size_t>> rootConstantOffsets;
         };
 
         /** Contains data that was generated during the process of merging two root signatures. */
@@ -142,43 +153,28 @@ namespace ne {
              * (by using resource name taken from shader file).
              */
             std::unordered_map<std::string, UINT> rootParameterIndices;
-        };
 
-        /** Groups indices of root parameters that when used will always have a constant root index. */
-        struct ConstantRootParameterIndices {
-            /** Index of the root parameter that points to `cbuffer` with frame constants. */
-            static constexpr UINT iFrameConstantBufferRootParameterIndex = 0;
-
-            /** Index of the root parameter that points to `cbuffer` with general lighting constants. */
-            static constexpr UINT iGeneralLightingConstantBufferRootParameterIndex = 1;
-
-            /** Index of the root parameter that points to a shader resource that stores point lights. */
-            static constexpr UINT iPointLightsBufferRootParameterIndex = 2;
-
-            /** Index of the root parameter that points to a shader resource that stores directional lights.
+            /**
+             * Stores indices of some non-user specified root parameters. Duplicates some root parameters
+             * and their indices from @ref rootParameterIndices but only stored some special non-user
+             * specified root parameter indices.
+             *
+             * @remark Generally used for fast access (without doing a `find` in the map) to some
+             * root parameter indices.
+             *
+             * @remark Example usage: `iRootParameterIndex = vIndices[Slot::FRAME_DATA]`.
              */
-            static constexpr UINT iDirectionalLightsBufferRootParameterIndex = 3;
+            std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>
+                vSpecialRootParameterIndices;
 
-            /** Index of the root parameter that points to a shader resource that stores spotlights. */
-            static constexpr UINT iSpotlightsBufferRootParameterIndex = 4;
-
-            /** Index of the root parameter that points to a shader resource that stores light index list. */
-            static constexpr UINT iLightCullingPointLightIndexLightRootParameterIndex = 5;
-
-            /** Index of the root parameter that points to a shader resource that stores light index list. */
-            static constexpr UINT iLightCullingSpotlightIndexLightRootParameterIndex = 6;
-
-            /** Index of the root parameter that points to a shader resource that stores light index list. */
-            static constexpr UINT iLightCullingDirectionalLightIndexLightRootParameterIndex = 7;
-
-            /** Index of the root parameter that points to a shader resource that stores light grid. */
-            static constexpr UINT iLightCullingPointLightGridRootParameterIndex = 8;
-
-            /** Index of the root parameter that points to a shader resource that stores light grid. */
-            static constexpr UINT iLightCullingSpotlightGridRootParameterIndex = 9;
-
-            /** Index of the root parameter that points to a shader resource that stores light grid. */
-            static constexpr UINT iLightCullingDirectionalLightGridRootParameterIndex = 10;
+            /**
+             * Not empty if root constants are used.
+             * Stores pairs of "name of field defined in HLSL in RootConstants cbuffer" (all with `uint`
+             * type) and "offset from the beginning of the struct (in `uint`s not bytes)".
+             *
+             * @remark If a non `uint` fields is found an error is returned instead.
+             */
+            std::optional<std::unordered_map<std::string, size_t>> rootConstantOffsets;
         };
 
         /**
@@ -251,6 +247,7 @@ namespace ne {
          * @param addedRootParameterNames         Names of the root parameters that were added.
          * @param rootParameterIndices            Pairs of "resource name" - "root parameter index" that were
          * added.
+         * @param vSpecialRootParameterIndices    Indices of special root parameters.
          */
         static void addConstantPixelShaderResourcesIfUsed(
             std::unordered_map<std::string, std::pair<UINT, RootSignatureGenerator::RootParameter>>&
@@ -258,7 +255,9 @@ namespace ne {
             std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
             std::vector<CD3DX12_DESCRIPTOR_RANGE>& vTableRanges,
             std::set<std::string>& addedRootParameterNames,
-            std::unordered_map<std::string, UINT>& rootParameterIndices);
+            std::unordered_map<std::string, UINT>& rootParameterIndices,
+            std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>&
+                vSpecialRootParameterIndices);
 
         /**
          * Adds a new pair of `resource name` - `root parameter index` to the specified map,

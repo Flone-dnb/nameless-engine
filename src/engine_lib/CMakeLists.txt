@@ -98,9 +98,9 @@ set(PROJECT_SOURCES
     private/render/general/pipeline/PipelineType.hpp
     private/render/general/pipeline/PipelineSharedPtr.h
     private/render/general/pipeline/PipelineSharedPtr.cpp
+    private/render/general/pipeline/PipelineShaderConstantsManager.hpp
     private/render/vulkan/pipeline/VulkanPipeline.h
     private/render/vulkan/pipeline/VulkanPipeline.cpp
-    private/render/vulkan/pipeline/VulkanPushConstantsManager.hpp
     private/render/general/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/frame/FrameResourcesManager.h

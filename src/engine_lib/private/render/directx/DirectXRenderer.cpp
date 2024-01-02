@@ -573,10 +573,10 @@ namespace ne {
         for (const auto& pipelineInfo : vOpaquePipelines) {
             // Get depth only (vertex shader only) pipeline
             // (all materials that use the same opaque pipeline will use the same depth only pipeline).
-            const auto pDepthOnlyPipeline = pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline();
+            const auto pDirectXPso =
+                reinterpret_cast<DirectXPso*>(pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline());
 
-            // Get internal resources of this pipeline.
-            const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pDepthOnlyPipeline);
+            // Get pipeline's resources.
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
             std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
@@ -588,7 +588,8 @@ namespace ne {
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                RootSignatureGenerator::ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex,
+                pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                    SpecialRootParameterSlot::FRAME_DATA_CBUFFER)],
                 reinterpret_cast<DirectXResource*>(
                     pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
                     ->getInternalResource()
@@ -855,8 +856,10 @@ namespace ne {
         const auto pDrawCallCounter = getDrawCallCounter();
 
         for (const auto& pipelineInfo : pipelinesOfSpecificType) {
-            // Get internal resources of this pipeline.
+            // Convert pipeline.
             const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pipelineInfo.pPipeline);
+
+            // Get pipeline's resources.
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
             std::scoped_lock guardPsoResources(pMtxPsoResources->first);
 
@@ -868,7 +871,8 @@ namespace ne {
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                RootSignatureGenerator::ConstantRootParameterIndices::iFrameConstantBufferRootParameterIndex,
+                pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                    SpecialRootParameterSlot::FRAME_DATA_CBUFFER)],
                 reinterpret_cast<DirectXResource*>(
                     pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
                     ->getInternalResource()
@@ -879,14 +883,14 @@ namespace ne {
                 pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
 
             // Bind light grid.
-            if (bIsDrawingTransparentMeshes) { // this is a const argument which is known at compile
-                                               // time (see how we specify it) let's hope that the compiler
-                                               // will remove this branch (I will probably rework this later)
+            if (bIsDrawingTransparentMeshes) { // TODO: this is a const argument which is known at compile
+                                               // time (see how we specify it) so the compiler will probably
+                                               // remove this branch
                 getLightingShaderResourceManager()->setTransparentLightGridResourcesViewToCommandList(
-                    pCommandList);
+                    pDirectXPso, pCommandList);
             } else {
                 getLightingShaderResourceManager()->setOpaqueLightGridResourcesViewToCommandList(
-                    pCommandList);
+                    pDirectXPso, pCommandList);
             }
 
             for (const auto& materialInfo : pipelineInfo.vMaterials) {

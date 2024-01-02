@@ -9,7 +9,7 @@
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
 #include "material/TextureManager.h"
-#include "render/vulkan/pipeline/VulkanPushConstantsManager.hpp"
+#include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
 
 // External.
@@ -76,8 +76,8 @@ namespace ne {
          *
          * @param pPushConstantsManager Push constants manager.
          */
-        inline void
-        copyResourceIndexOfOnlyPipelineToPushConstants(VulkanPushConstantsManager* pPushConstantsManager) {
+        inline void copyResourceIndexOfOnlyPipelineToPushConstants(
+            PipelineShaderConstantsManager* pPushConstantsManager) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
             // we don't need to lock the mutex here.
 
@@ -99,7 +99,7 @@ namespace ne {
             const auto it = mtxPushConstantIndices.second.begin();
 
             // Copy value to push constants.
-            pPushConstantsManager->copyValueToPushConstant(
+            pPushConstantsManager->copyValueToShaderConstant(
                 it->second.iPushConstantIndex, it->second.pShaderArrayIndex->getActualIndex());
         }
 
@@ -110,7 +110,7 @@ namespace ne {
          * @param pUsedPipeline         Current pipeline.
          */
         inline void copyResourceIndexOfPipelineToPushConstants(
-            VulkanPushConstantsManager* pPushConstantsManager, VulkanPipeline* pUsedPipeline) {
+            PipelineShaderConstantsManager* pPushConstantsManager, VulkanPipeline* pUsedPipeline) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
             // we don't need to lock the mutex here.
 
@@ -127,7 +127,7 @@ namespace ne {
             }
 
             // Copy value to push constants.
-            pPushConstantsManager->copyValueToPushConstant(
+            pPushConstantsManager->copyValueToShaderConstant(
                 it->second.iPushConstantIndex, it->second.pShaderArrayIndex->getActualIndex());
         }
 

@@ -1,6 +1,10 @@
 #include "../../include/Base.glsl"
 #include "../../include/MeshData.glsl"
 #include "../../include/shader_constants/MeshNodeShaderConstants.glsl"
+#ifdef VS_SHADOW_MAPPING_PASS
+#include "../../include/Lighting.glsl"
+#include "../../include/shader_constants/LightingConstants.glsl"
+#endif
 
 /** Input parameters. */
 layout(location = 0) in vec3 localPosition; // position in local space
@@ -22,7 +26,11 @@ void vsMeshNode(){
     fragmentWorldNormal = normalize(mat3(MESH_DATA.normalMatrix) * localNormal);
 
     // Transform position to homogeneous clip space.
+#ifdef VS_SHADOW_MAPPING_PASS
+    gl_Position = lightViewProjectionMatrices.array[constants.iLightViewProjectionMatrixIndex] * fragmentWorldPosition;
+#else
     gl_Position = frameData.viewProjectionMatrix * fragmentWorldPosition;
+#endif
     
     // Copy UV.
     fragmentUv = uv;

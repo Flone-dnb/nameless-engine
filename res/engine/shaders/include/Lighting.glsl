@@ -158,7 +158,7 @@ layout(std140, binding = 57) readonly buffer ViewProjectionMatricesForLightSourc
     mat4 array[];
 } lightViewProjectionMatrices;
 }
-#hlsl StructuredBuffer<mat4> lightViewProjectionMatrices : register(t6, space7);
+#hlsl StructuredBuffer<float4x4> lightViewProjectionMatrices : register(t6, space7);
 #endif
 
 #ifdef INCLUDE_LIGHTING_FUNCTIONS

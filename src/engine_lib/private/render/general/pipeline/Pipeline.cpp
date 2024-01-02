@@ -41,6 +41,25 @@ namespace ne {
         usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
     }
 
+    void Pipeline::setShaderConstants(const std::unordered_map<std::string, size_t>& uintConstantsOffsets) {
+        std::scoped_lock guard(mtxShaderConstantsData.first);
+
+        // Clear constants data if empty.
+        if (uintConstantsOffsets.empty()) {
+            mtxShaderConstantsData.second = {};
+            return;
+        }
+
+        // Prepare new data.
+        ShaderConstantsData data;
+        data.uintConstantsOffsets = uintConstantsOffsets;
+        data.pConstantsManager =
+            std::make_unique<PipelineShaderConstantsManager>(uintConstantsOffsets.size());
+
+        // Initialize.
+        mtxShaderConstantsData.second = std::move(data);
+    }
+
     std::string
     Pipeline::combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
         if (sPixelShaderName.empty()) {
@@ -170,6 +189,10 @@ namespace ne {
 
     std::set<ShaderMacro> Pipeline::getAdditionalPixelShaderMacros() const {
         return additionalPixelShaderMacros;
+    }
+
+    std::pair<std::mutex, std::optional<Pipeline::ShaderConstantsData>>* Pipeline::getShaderConstants() {
+        return &mtxShaderConstantsData;
     }
 
     void Pipeline::onMaterialUsingPipeline(Material* pMaterial) {

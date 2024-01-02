@@ -637,7 +637,7 @@ namespace ne RNAMESPACE() {
 
         /** Defines how much specular light will be reflected. Value in range [0.0F; 1.0F]. */
         RPROPERTY(Serialize)
-        float roughness = 1.0F;
+        float roughness = 0.7F;
 
         /**
          * Opacity in range [0.0; 1.0].

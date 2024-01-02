@@ -152,19 +152,14 @@ namespace ne {
          * they will be released from the memory once the pipeline object is destroyed (not the shared
          * pointer) and no other object is using them.
          *
-         * @param sVertexShaderName         Name of the compiled vertex shader.
          * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
          * @param pMaterial                 Material that requests the pipeline.
          *
          * @return Error if one or both shaders were not found in ShaderManager or if failed to generate
          * pipeline, otherwise created pipeline.
          */
         std::variant<PipelineSharedPtr, Error> getGraphicsPipelineForMaterial(
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
-            Material* pMaterial);
+            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings, Material* pMaterial);
 
         /**
          * Returns all compute shaders and their pipelines to be executed on the graphics queue.
@@ -348,10 +343,7 @@ namespace ne {
          * @param pipelines            Pipelines of specific type to look in.
          * @param sShaderNames         Shader or shaders (map key value) for target pipeline.
          * @param macrosToUse          Macros that are set (can be only vertex or combined).
-         * @param sVertexShaderName    Name of the compiled vertex shader.
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader
-         * configuration.
-         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
+         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
          * @param pMaterial            Material that requests the pipeline.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate pipeline,
@@ -361,8 +353,6 @@ namespace ne {
             std::unordered_map<std::string, ShaderPipelines>& pipelines,
             const std::string& sShaderNames,
             const std::set<ShaderMacro>& macrosToUse,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
             Material* pMaterial);
 
@@ -389,8 +379,6 @@ namespace ne {
          * @param pipelines                    Pipelines of specific type to look in.
          * @param sKeyToLookFor                Shader or shaders (map key value) for target pipeline.
          * @param macrosToLookFor              Macros that are set (can be only vertex or combined).
-         * @param sVertexShaderName            Pipeline's vertex shader.
-         * @param additionalVertexShaderMacros Vertex shader macros to define.
          * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
          * @param pMaterial                    Material that requests the pipeline.
          *
@@ -400,8 +388,6 @@ namespace ne {
             std::unordered_map<std::string, ShaderPipelines>& pipelines,
             const std::string& sKeyToLookFor,
             const std::set<ShaderMacro>& macrosToLookFor,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
             Material* pMaterial);
 

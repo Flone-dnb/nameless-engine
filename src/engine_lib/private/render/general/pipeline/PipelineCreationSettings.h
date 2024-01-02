@@ -16,8 +16,33 @@ namespace ne {
      */
     class PipelineCreationSettings {
     public:
-        PipelineCreationSettings() = default;
+        PipelineCreationSettings() = delete;
         virtual ~PipelineCreationSettings() = default;
+
+        /**
+         * Initializes options.
+         *
+         * @param sVertexShaderName            Name of the compiled vertex shader to use.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         */
+        PipelineCreationSettings(
+            const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros);
+
+        /**
+         * Returns additional macros to enable for vertex shader configuration.
+         *
+         * @return Additional vertex shader macros to enable.
+         */
+        inline std::set<ShaderMacro> getAdditionalVertexShaderMacros() {
+            return additionalVertexShaderMacros;
+        }
+
+        /**
+         * Returns name of the vertex shader that should be used.
+         *
+         * @return Name of the compiled shader.
+         */
+        inline std::string getVertexShaderName() { return sVertexShaderName; }
 
         /**
          * Returns type of the pipeline that the object describes.
@@ -55,6 +80,13 @@ namespace ne {
          * @return `true` to enable, `false` to disable.
          */
         virtual bool isDepthBiasEnabled() { return false; }
+
+    protected:
+        /** Additional macros to enable for vertex shader configuration. */
+        std::set<ShaderMacro> additionalVertexShaderMacros;
+
+        /** Name of the compiled vertex shader to use. */
+        const std::string sVertexShaderName;
     };
 
     /** Pipeline that uses pixel/fragment shaders to draw color. */
@@ -66,11 +98,15 @@ namespace ne {
         /**
          * Initializes options.
          *
-         * @param sPixelShaderName            Name of the compiled pixel shader to use.
-         * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
-         * @param bUsePixelBlending           `true` to enable transparency, `false` to disable.
+         * @param sVertexShaderName            Name of the compiled vertex shader to use.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param sPixelShaderName             Name of the compiled pixel shader to use.
+         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
+         * @param bUsePixelBlending            `true` to enable transparency, `false` to disable.
          */
         ColorPipelineCreationSettings(
+            const std::string& sVertexShaderName,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             const std::string& sPixelShaderName,
             std::set<ShaderMacro> additionalPixelShaderMacros,
             bool bUsePixelBlending);
@@ -104,8 +140,9 @@ namespace ne {
          */
         virtual bool isPixelBlendingEnabled() override;
 
+    protected:
         /** Additional macros to enable for pixel shader configuration. */
-        const std::set<ShaderMacro> additionalPixelShaderMacros;
+        std::set<ShaderMacro> additionalPixelShaderMacros;
 
         /** Name of the compiled pixel shader to use. */
         const std::string sPixelShaderName;
@@ -123,10 +160,15 @@ namespace ne {
         /**
          * Initializes options.
          *
-         * @param bUsedForShadowMapping Specify `true` if the pipeline will be used for shadow mapping and
-         * thus shadow bias should be used, otherwise `false`.
+         * @param sVertexShaderName            Name of the compiled vertex shader to use.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param bUsedForShadowMapping        Specify `true` if the pipeline will be used for shadow mapping
+         * and thus shadow bias should be used, otherwise `false`.
          */
-        DepthPipelineCreationSettings(bool bUsedForShadowMapping);
+        DepthPipelineCreationSettings(
+            const std::string& sVertexShaderName,
+            const std::set<ShaderMacro>& additionalVertexShaderMacros,
+            bool bUsedForShadowMapping);
 
         /**
          * Returns type of the pipeline that the object describes.
@@ -142,6 +184,7 @@ namespace ne {
          */
         virtual bool isDepthBiasEnabled() override;
 
+    protected:
         /** `true` to enable shadow bias, `false` otherwise. */
         const bool bUsedForShadowMapping;
     };

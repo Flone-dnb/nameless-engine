@@ -28,8 +28,11 @@ namespace ne {
     enum class ShaderMacro : int {
         PS_USE_DIFFUSE_TEXTURE,
         PS_USE_MATERIAL_TRANSPARENCY,
-        // add new entries here...
-        // !! also add new entries to shaderMacrosToText !!
+        VS_SHADOW_MAPPING_PASS,
+
+        // ... add new entries here...
+
+        // !! also add new entries to convertShaderMacrosToText !!
         // !! also add new entries to valid configuration combinations below !!
     };
 
@@ -168,7 +171,8 @@ namespace ne {
          *
          * @remark Also consider @ref dependentMacros.
          */
-        static inline const std::set<std::set<ShaderMacro>> validVertexShaderMacroConfigurations = {{}};
+        static inline const std::set<std::set<ShaderMacro>> validVertexShaderMacroConfigurations = {
+            {}, {ShaderMacro::VS_SHADOW_MAPPING_PASS}};
 
         /**
          * Valid combinations of pixel shader macros.

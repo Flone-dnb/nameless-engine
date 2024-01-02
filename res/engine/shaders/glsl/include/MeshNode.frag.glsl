@@ -1,6 +1,6 @@
 #include "../../include/Base.glsl"
 #include "../../include/MaterialData.glsl"
-#include "../misc/MeshNodePushConstants.glsl"
+#include "../../include/shader_constants/MeshNodeShaderConstants.glsl"
 
 #define INCLUDE_LIGHTING_FUNCTIONS
 #define READ_ONLY_LIGHT_GRID
@@ -22,7 +22,7 @@ layout(location = 0) out vec4 outputColor;
 layout(early_fragment_tests) in;
 void fsMeshNode(){
     // Prepare a short macro to access material data.
-#define MATERIAL_DATA materialData.array[arrayIndices.materialData]
+#define MATERIAL_DATA materialData.array[constants.materialData]
 
     // Normals may be unnormalized after the rasterization (when they are interpolated).
     vec3 fragmentWorldNormalUnit = normalize(fragmentWorldNormal);
@@ -30,7 +30,7 @@ void fsMeshNode(){
     // Prepare diffuse color.
     vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    vec4 diffuseTextureSample = texture(diffuseTexture[arrayIndices.diffuseTexture], fragmentUv);
+    vec4 diffuseTextureSample = texture(diffuseTexture[constants.diffuseTexture], fragmentUv);
     fragmentDiffuseColor *= diffuseTextureSample.rgb;
 #endif
 

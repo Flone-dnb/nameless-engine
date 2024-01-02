@@ -957,10 +957,12 @@ namespace ne {
 
         // Get color pipeline.
         auto result = pPipelineManager->getGraphicsPipelineForMaterial(
-            sVertexShaderName,
-            materialVertexMacros,
-            std::unique_ptr<ColorPipelineCreationSettings>(
-                new ColorPipelineCreationSettings(sPixelShaderName, materialPixelMacros, bUseTransparency)),
+            std::unique_ptr<ColorPipelineCreationSettings>(new ColorPipelineCreationSettings(
+                sVertexShaderName,
+                materialVertexMacros,
+                sPixelShaderName,
+                materialPixelMacros,
+                bUseTransparency)),
             this);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
@@ -972,9 +974,8 @@ namespace ne {
         if (!bUseTransparency) {
             // Get depth only pipeline.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
-                sVertexShaderName,
-                materialVertexMacros,
-                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(false)),
+                std::unique_ptr<DepthPipelineCreationSettings>(
+                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, false)),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
@@ -985,9 +986,8 @@ namespace ne {
 
             // Get shadow mapping pipeline.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
-                sVertexShaderName,
-                materialVertexMacros,
-                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(true)),
+                std::unique_ptr<DepthPipelineCreationSettings>(
+                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, true)),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));

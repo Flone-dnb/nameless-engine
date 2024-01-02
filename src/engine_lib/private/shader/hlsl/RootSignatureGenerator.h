@@ -326,5 +326,8 @@ namespace ne {
 
         /** Name of the `cbuffer` resource used to store frame data in HLSL shaders. */
         static inline const std::string sFrameConstantBufferName = "frameData";
+
+        /** Name of the shader `cbuffer` that will be considered as buffer that stores root constants. */
+        static inline const std::string sRootConstantsTypeName = "RootConstants";
     };
 } // namespace ne

@@ -58,15 +58,13 @@ namespace ne {
     std::variant<std::shared_ptr<VulkanPipeline>, Error> VulkanPipeline::createGraphicsPipeline(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
         // Create pipeline.
         auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
             pRenderer,
             pPipelineManager,
-            sVertexShaderName,
-            additionalVertexShaderMacros,
+            pPipelineCreationSettings->getVertexShaderName(),
+            pPipelineCreationSettings->getAdditionalVertexShaderMacros(),
             pPipelineCreationSettings->getPixelShaderName(),
             pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
             "", // no compute shader

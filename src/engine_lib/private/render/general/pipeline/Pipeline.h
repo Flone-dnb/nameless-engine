@@ -193,11 +193,9 @@ namespace ne {
          * Assigns vertex and pixel shaders to create a render specific graphics pipeline
          * (for usual rendering).
          *
-         * @param pRenderer            Parent renderer that owns this pipeline.
-         * @param pPipelineManager     Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName    Name of the compiled vertex shader.
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
+         * @param pRenderer                 Parent renderer that owns this pipeline.
+         * @param pPipelineManager          Pipeline manager that owns this pipeline.
+         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate Pipeline,
          * otherwise created Pipeline.
@@ -205,8 +203,6 @@ namespace ne {
         static std::variant<std::shared_ptr<Pipeline>, Error> createGraphicsPipeline(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
 
         /**

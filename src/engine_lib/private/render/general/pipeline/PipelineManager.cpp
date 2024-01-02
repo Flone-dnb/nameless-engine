@@ -17,8 +17,6 @@ namespace ne {
         std::unordered_map<std::string, ShaderPipelines>& pipelines,
         const std::string& sKeyToLookFor,
         const std::set<ShaderMacro>& macrosToLookFor,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
         Material* pMaterial) {
         // Find pipeline for the specified shader(s).
@@ -26,13 +24,7 @@ namespace ne {
         if (foundPipelineIt == pipelines.end()) {
             // There are no pipelines that use this shader combination.
             return createGraphicsPipelineForMaterial(
-                pipelines,
-                sKeyToLookFor,
-                macrosToLookFor,
-                sVertexShaderName,
-                additionalVertexShaderMacros,
-                std::move(pPipelineCreationSettings),
-                pMaterial);
+                pipelines, sKeyToLookFor, macrosToLookFor, std::move(pPipelineCreationSettings), pMaterial);
         }
 
         // Check if we already have a pipeline that uses the same shader macro combination.
@@ -40,13 +32,7 @@ namespace ne {
         if (shaderPipelinesIt == foundPipelineIt->second.shaderPipelines.end()) {
             // There is no pipeline that uses the same shader macros.
             return createGraphicsPipelineForMaterial(
-                pipelines,
-                sKeyToLookFor,
-                macrosToLookFor,
-                sVertexShaderName,
-                additionalVertexShaderMacros,
-                std::move(pPipelineCreationSettings),
-                pMaterial);
+                pipelines, sKeyToLookFor, macrosToLookFor, std::move(pPipelineCreationSettings), pMaterial);
         }
 
         // Just create a new shared pointer to already existing pipeline.
@@ -54,15 +40,14 @@ namespace ne {
     }
 
     std::variant<PipelineSharedPtr, Error> PipelineManager::getGraphicsPipelineForMaterial(
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
-        Material* pMaterial) {
+        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings, Material* pMaterial) {
         // Self check: make sure settings are not `nullptr`.
         if (pPipelineCreationSettings == nullptr) [[unlikely]] {
             return Error("settings cannot be `nullptr`");
         }
 
+        const auto additionalVertexShaderMacros =
+            pPipelineCreationSettings->getAdditionalVertexShaderMacros();
         const auto additionalPixelShaderMacros = pPipelineCreationSettings->getAdditionalPixelShaderMacros();
         {
             // Self check: make sure vertex macros have "VS_" prefix and pixel macros "PS_" prefix.
@@ -92,16 +77,15 @@ namespace ne {
         std::scoped_lock guard(mtxGraphicsPipelines.first);
 
         const auto iPipelineTypeIndex = static_cast<size_t>(pPipelineCreationSettings->getType());
-        const auto sKeyToLookFor =
-            Pipeline::combineShaderNames(sVertexShaderName, pPipelineCreationSettings->getPixelShaderName());
+        const auto sKeyToLookFor = Pipeline::combineShaderNames(
+            pPipelineCreationSettings->getVertexShaderName(),
+            pPipelineCreationSettings->getPixelShaderName());
 
         // Find existing or create a new pipeline.
         return findOrCreatePipeline(
             mtxGraphicsPipelines.second.vPipelineTypes[iPipelineTypeIndex],
             sKeyToLookFor,
             additionalVertexAndPixelShaderMacros,
-            sVertexShaderName,
-            additionalVertexShaderMacros,
             std::move(pPipelineCreationSettings),
             pMaterial);
     }
@@ -162,17 +146,10 @@ namespace ne {
         std::unordered_map<std::string, ShaderPipelines>& pipelines,
         const std::string& sShaderNames,
         const std::set<ShaderMacro>& macrosToUse,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
         Material* pMaterial) {
         // Create pipeline.
-        auto result = Pipeline::createGraphicsPipeline(
-            pRenderer,
-            this,
-            sVertexShaderName,
-            additionalVertexShaderMacros,
-            std::move(pPipelineCreationSettings));
+        auto result = Pipeline::createGraphicsPipeline(pRenderer, this, std::move(pPipelineCreationSettings));
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

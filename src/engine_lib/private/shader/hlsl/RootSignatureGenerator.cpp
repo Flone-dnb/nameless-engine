@@ -66,6 +66,10 @@ namespace ne {
         // Now iterate over all shader resources and add them to root parameters.
         for (const auto& resourceDesc : vResourcesDescription) {
             if (resourceDesc.Type == D3D_SIT_CBUFFER) {
+                if (std::string(resourceDesc.Name).starts_with(sRootConstantsTypeName)) {
+                    return Error("TODO");
+                }
+
                 auto optionalError =
                     addCbufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
                 if (optionalError.has_value()) [[unlikely]] {

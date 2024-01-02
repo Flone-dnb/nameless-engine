@@ -3,10 +3,13 @@
 namespace ne {
 
     ColorPipelineCreationSettings::ColorPipelineCreationSettings(
+        const std::string& sVertexShaderName,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::string& sPixelShaderName,
         std::set<ShaderMacro> additionalPixelShaderMacros,
         bool bUsePixelBlending)
-        : additionalPixelShaderMacros(std::move(additionalPixelShaderMacros)),
+        : PipelineCreationSettings(sVertexShaderName, additionalVertexShaderMacros),
+          additionalPixelShaderMacros(std::move(additionalPixelShaderMacros)),
           sPixelShaderName(sPixelShaderName), bUsePixelBlending(bUsePixelBlending) {}
 
     PipelineType ColorPipelineCreationSettings::getType() {
@@ -25,8 +28,17 @@ namespace ne {
 
     bool ColorPipelineCreationSettings::isPixelBlendingEnabled() { return bUsePixelBlending; }
 
-    DepthPipelineCreationSettings::DepthPipelineCreationSettings(bool bUsedForShadowMapping)
-        : bUsedForShadowMapping(bUsedForShadowMapping) {}
+    DepthPipelineCreationSettings::DepthPipelineCreationSettings(
+        const std::string& sVertexShaderName,
+        const std::set<ShaderMacro>& additionalVertexShaderMacros,
+        bool bUsedForShadowMapping)
+        : PipelineCreationSettings(sVertexShaderName, additionalVertexShaderMacros),
+          bUsedForShadowMapping(bUsedForShadowMapping) {
+        // Add shadow mapping macro if enabled.
+        if (bUsedForShadowMapping) {
+            this->additionalVertexShaderMacros.insert(ShaderMacro::VS_SHADOW_MAPPING_PASS);
+        }
+    }
 
     PipelineType DepthPipelineCreationSettings::getType() {
         if (bUsedForShadowMapping) {
@@ -37,5 +49,9 @@ namespace ne {
     }
 
     bool DepthPipelineCreationSettings::isDepthBiasEnabled() { return bUsedForShadowMapping; }
+
+    PipelineCreationSettings::PipelineCreationSettings(
+        const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros)
+        : additionalVertexShaderMacros(additionalVertexShaderMacros), sVertexShaderName(sVertexShaderName) {}
 
 }

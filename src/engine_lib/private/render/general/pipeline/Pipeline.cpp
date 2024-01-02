@@ -76,8 +76,6 @@ namespace ne {
     std::variant<std::shared_ptr<Pipeline>, Error> Pipeline::createGraphicsPipeline(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
         // Prepare resulting pipeline pointer.
         std::shared_ptr<Pipeline> pCreatedPipeline = nullptr;
@@ -86,11 +84,7 @@ namespace ne {
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Create DirectX PSO.
             auto result = DirectXPso::createGraphicsPso(
-                pRenderer,
-                pPipelineManager,
-                sVertexShaderName,
-                additionalVertexShaderMacros,
-                std::move(pPipelineCreationSettings));
+                pRenderer, pPipelineManager, std::move(pPipelineCreationSettings));
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -105,11 +99,7 @@ namespace ne {
         if (pCreatedPipeline == nullptr && dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             // Create Vulkan pipeline.
             auto result = VulkanPipeline::createGraphicsPipeline(
-                pRenderer,
-                pPipelineManager,
-                sVertexShaderName,
-                additionalVertexShaderMacros,
-                std::move(pPipelineCreationSettings));
+                pRenderer, pPipelineManager, std::move(pPipelineCreationSettings));
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

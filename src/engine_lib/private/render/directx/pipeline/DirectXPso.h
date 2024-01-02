@@ -50,11 +50,9 @@ namespace ne {
         /**
          * Assigns vertex and pixel shaders to create a graphics PSO (for usual rendering).
          *
-         * @param pRenderer              Used renderer.
-         * @param pPipelineManager       Pipeline manager that owns this PSO.
-         * @param sVertexShaderName      Name of the compiled vertex shader.
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
+         * @param pRenderer                 Used renderer.
+         * @param pPipelineManager          Pipeline manager that owns this PSO.
+         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate PSO,
          * otherwise created PSO.
@@ -62,8 +60,6 @@ namespace ne {
         static std::variant<std::shared_ptr<DirectXPso>, Error> createGraphicsPso(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
             std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
 
         /**

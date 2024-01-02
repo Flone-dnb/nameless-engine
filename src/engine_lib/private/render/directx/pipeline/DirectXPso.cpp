@@ -47,15 +47,13 @@ namespace ne {
     std::variant<std::shared_ptr<DirectXPso>, Error> DirectXPso::createGraphicsPso(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(new DirectXPso(
             pRenderer,
             pPipelineManager,
-            sVertexShaderName,
-            additionalVertexShaderMacros,
+            pPipelineCreationSettings->getVertexShaderName(),
+            pPipelineCreationSettings->getAdditionalVertexShaderMacros(),
             pPipelineCreationSettings->getPixelShaderName(),
             pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
             "", // no compute shader

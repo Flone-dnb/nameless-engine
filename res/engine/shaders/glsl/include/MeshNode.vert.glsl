@@ -1,6 +1,6 @@
 #include "../../include/Base.glsl"
 #include "../../include/MeshData.glsl"
-#include "../misc/MeshNodePushConstants.glsl"
+#include "../../include/shader_constants/MeshNodeShaderConstants.glsl"
 
 /** Input parameters. */
 layout(location = 0) in vec3 localPosition; // position in local space
@@ -15,7 +15,7 @@ layout(location = 2) out vec2 fragmentUv;
 /** Vertex shader. */
 void vsMeshNode(){
     // Prepare a short macro to access mesh data.
-#define MESH_DATA meshData.array[arrayIndices.meshData]
+#define MESH_DATA meshData.array[constants.meshData]
 
     // Calculate world coordinates.
     fragmentWorldPosition = MESH_DATA.worldMatrix * vec4(localPosition, 1.0F);

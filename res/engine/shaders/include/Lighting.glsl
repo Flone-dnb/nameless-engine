@@ -151,6 +151,16 @@ layout(std430, binding = 56) readonly buffer SpotlightsInCameraFrustumBuffer{
 }
 #hlsl StructuredBuffer<uint> spotlightsInCameraFrustumIndices : register(t5, space7);
 
+#ifdef VS_SHADOW_MAPPING_PASS
+/** `viewProjectionMatrix` for all spawned light sources, used for shadow mapping. */
+#glsl{
+layout(std140, binding = 57) readonly buffer ViewProjectionMatricesForLightSourcesBuffer{
+    mat4 array[];
+} lightViewProjectionMatrices;
+}
+#hlsl StructuredBuffer<mat4> lightViewProjectionMatrices : register(t6, space7);
+#endif
+
 #ifdef INCLUDE_LIGHTING_FUNCTIONS
 
 /**

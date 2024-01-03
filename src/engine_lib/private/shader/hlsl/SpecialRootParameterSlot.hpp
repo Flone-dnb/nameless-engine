@@ -1,6 +1,6 @@
 #pragma once
 
-namespace ne{
+namespace ne {
     /**
      * Constant indices into an array that stores pairs of "slot" - "root parameter index"
      * to query indices of root parameters of various non-user specified resources.
@@ -23,4 +23,3 @@ namespace ne{
         SIZE, // marks the size of this enum
     };
 }
-

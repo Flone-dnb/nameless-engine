@@ -11,7 +11,8 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-static constexpr size_t iCheckIntervalTimeInMs = 30;
+static constexpr size_t iStartStopCheckTimeInMs = 50;
+static constexpr long long iWaitTime = 150;
 
 TEST_CASE("measure elapsed time") {
     using namespace ne;
@@ -238,13 +239,13 @@ TEST_CASE("check that timer is running (without callback)") {
             using namespace std::chrono;
 
             pTimer->start();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());
 
             pTimer->stop();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(!pTimer->isRunning());
             REQUIRE(pTimer->isStopped());
@@ -305,7 +306,6 @@ TEST_CASE("check that timer is running (with callback, force stop)") {
             pTimer = createTimer("test timer");
             REQUIRE(pTimer != nullptr);
 
-            constexpr long long iWaitTime = 100;
             using namespace std::chrono;
 
             pTimer->setCallbackForTimeout(iWaitTime, []() {
@@ -320,7 +320,7 @@ TEST_CASE("check that timer is running (with callback, force stop)") {
             REQUIRE(!pTimer->isStopped());
 
             pTimer->stop();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(!pTimer->isRunning());
             REQUIRE(pTimer->isStopped());
@@ -392,7 +392,6 @@ TEST_CASE("check that timer is running (with callback)") {
             pTimer = createTimer("test timer");
             REQUIRE(pTimer != nullptr);
 
-            constexpr long long iWaitTime = 100;
             using namespace std::chrono;
 
             pTimer->setCallbackForTimeout(iWaitTime, [this]() {
@@ -406,7 +405,7 @@ TEST_CASE("check that timer is running (with callback)") {
             });
 
             pTimer->start();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());
@@ -470,7 +469,6 @@ TEST_CASE("callback validator should prevent callback being executed after despa
         virtual void onSpawning() override {
             Node::onSpawning();
 
-            constexpr long long iWaitTime = 50;
             using namespace std::chrono;
 
             // This will queue a deferred task on timeout.
@@ -480,7 +478,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
             });
 
             pTimer->start();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());
@@ -567,7 +565,6 @@ TEST_CASE("callback validator should prevent callback being executed after despa
         virtual void onSpawning() override {
             Node::onSpawning();
 
-            constexpr long long iWaitTime = 50;
             using namespace std::chrono;
 
             // This will queue a deferred task on timeout.
@@ -577,7 +574,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
             });
 
             pTimer->start();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());
@@ -666,7 +663,6 @@ TEST_CASE("callback validator should prevent callback being executed after despa
         virtual ~MyDerivedNode() override = default;
 
         void runTimer() {
-            constexpr long long iWaitTime = 50;
             using namespace std::chrono;
 
             // This will queue a deferred task on timeout.
@@ -676,7 +672,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
             });
 
             pTimer->start();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());
@@ -765,7 +761,6 @@ TEST_CASE("callback validator should prevent previous callback being executed af
         virtual ~MyDerivedNode() override { REQUIRE(bExpectedCallbackWasCalled); }
 
         void runTimer(bool bExpectToBeCalled) {
-            constexpr long long iWaitTime = 50;
             using namespace std::chrono;
 
             // This will queue a deferred task on timeout.
@@ -778,7 +773,7 @@ TEST_CASE("callback validator should prevent previous callback being executed af
             });
 
             pTimer->start();
-            std::this_thread::sleep_for(std::chrono::milliseconds(iCheckIntervalTimeInMs));
+            std::this_thread::sleep_for(std::chrono::milliseconds(iStartStopCheckTimeInMs));
 
             REQUIRE(pTimer->isRunning());
             REQUIRE(!pTimer->isStopped());

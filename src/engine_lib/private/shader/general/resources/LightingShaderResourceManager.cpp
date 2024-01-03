@@ -452,15 +452,6 @@ namespace ne {
             return optionalError;
         }
 
-        // Bind opaque directional light index list.
-        optionalError = bindLightIndexListResource(
-            "opaqueDirectionalLightIndexList",
-            lightCullingComputeShaderData.resources.pOpaqueDirectionalLightIndexList.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Bind transparent point light index list.
         optionalError = bindLightIndexListResource(
             "transparentPointLightIndexList",
@@ -474,15 +465,6 @@ namespace ne {
         optionalError = bindLightIndexListResource(
             "transparentSpotLightIndexList",
             lightCullingComputeShaderData.resources.pTransparentSpotLightIndexList.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Bind transparent directional light index list.
-        optionalError = bindLightIndexListResource(
-            "transparentDirectionalLightIndexList",
-            lightCullingComputeShaderData.resources.pTransparentDirectionalLightIndexList.get());
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -532,15 +514,6 @@ namespace ne {
             return optionalError;
         }
 
-        // Bind opaque directional light grid.
-        optionalError = bindLightGridResource(
-            "opaqueDirectionalLightGrid",
-            lightCullingComputeShaderData.resources.pOpaqueDirectionalLightGrid.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Bind transparent point light grid.
         optionalError = bindLightGridResource(
             "transparentPointLightGrid",
@@ -554,15 +527,6 @@ namespace ne {
         optionalError = bindLightGridResource(
             "transparentSpotLightGrid",
             lightCullingComputeShaderData.resources.pTransparentSpotLightGrid.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Bind transparent directional light grid.
-        optionalError = bindLightGridResource(
-            "transparentDirectionalLightGrid",
-            lightCullingComputeShaderData.resources.pTransparentDirectionalLightGrid.get());
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1040,7 +1004,6 @@ namespace ne {
         // First convert all constants (shader macros) from strings to integers.
         size_t iAveragePointLightNumPerTile = 0;
         size_t iAverageSpotLightNumPerTile = 0;
-        size_t iAverageDirectionalLightNumPerTile = 0;
         try {
             // Point lights.
             iAveragePointLightNumPerTile = std::stoull(
@@ -1049,10 +1012,6 @@ namespace ne {
             // Spotlights.
             iAverageSpotLightNumPerTile = std::stoull(
                 EngineShaderConstantMacros::ForwardPlus::getAverageSpotLightNumPerTileMacro().second);
-
-            // Directional lights.
-            iAverageDirectionalLightNumPerTile = std::stoull(
-                EngineShaderConstantMacros::ForwardPlus::getAverageDirectionalLightNumPerTileMacro().second);
         } catch (const std::exception& exception) {
             return Error(std::format("failed to convert string to integer, error: {}", exception.what()));
         }
@@ -1061,7 +1020,6 @@ namespace ne {
         const auto iLightGridSize = iTileCountX * iTileCountY;
         const auto iPointLightIndexListSize = iLightGridSize * iAveragePointLightNumPerTile;
         const auto iSpotLightIndexListSize = iLightGridSize * iAverageSpotLightNumPerTile;
-        const auto iDirectionalLightIndexListSize = iLightGridSize * iAverageDirectionalLightNumPerTile;
 
         // Get resource manager.
         const auto pResourceManager = pRenderer->getResourceManager();
@@ -1084,7 +1042,7 @@ namespace ne {
             std::string sShaderResourceName;
             size_t iResourceElementCount = 0;
         };
-        const std::array<LightIndexListCreationInfo, 6> vResourcesToCreate = {
+        const std::array<LightIndexListCreationInfo, 4> vResourcesToCreate = {
             LightIndexListCreationInfo(
                 &resources.pOpaquePointLightIndexList,
                 "opaque point",
@@ -1096,11 +1054,6 @@ namespace ne {
                 "opaqueSpotLightIndexList",
                 iSpotLightIndexListSize),
             LightIndexListCreationInfo(
-                &resources.pOpaqueDirectionalLightIndexList,
-                "opaque directional",
-                "opaqueDirectionalLightIndexList",
-                iDirectionalLightIndexListSize),
-            LightIndexListCreationInfo(
                 &resources.pTransparentPointLightIndexList,
                 "transparent point",
                 "transparentPointLightIndexList",
@@ -1109,12 +1062,7 @@ namespace ne {
                 &resources.pTransparentSpotLightIndexList,
                 "transparent spot",
                 "transparentSpotLightIndexList",
-                iSpotLightIndexListSize),
-            LightIndexListCreationInfo(
-                &resources.pTransparentDirectionalLightIndexList,
-                "transparent directional",
-                "transparentDirectionalLightIndexList",
-                iDirectionalLightIndexListSize)};
+                iSpotLightIndexListSize)};
 
         // Create light index lists.
         for (const auto& info : vResourcesToCreate) {
@@ -1159,19 +1107,13 @@ namespace ne {
             std::string sResourceDescription;
             std::string sShaderResourceName;
         };
-        const std::array<LightGridCreationInfo, 6> vGridsToCreate = {
+        const std::array<LightGridCreationInfo, 4> vGridsToCreate = {
             LightGridCreationInfo(&resources.pOpaquePointLightGrid, "opaque point", "opaquePointLightGrid"),
             LightGridCreationInfo(&resources.pOpaqueSpotLightGrid, "opaque spot", "opaqueSpotLightGrid"),
             LightGridCreationInfo(
-                &resources.pOpaqueDirectionalLightGrid, "opaque directional", "opaqueDirectionalLightGrid"),
-            LightGridCreationInfo(
                 &resources.pTransparentPointLightGrid, "transparent point", "transparentPointLightGrid"),
             LightGridCreationInfo(
-                &resources.pTransparentSpotLightGrid, "transparent spot", "transparentSpotLightGrid"),
-            LightGridCreationInfo(
-                &resources.pTransparentDirectionalLightGrid,
-                "transparent directional",
-                "transparentDirectionalLightGrid")};
+                &resources.pTransparentSpotLightGrid, "transparent spot", "transparentSpotLightGrid")};
 
         // Create light grids.
         for (const auto& info : vGridsToCreate) {

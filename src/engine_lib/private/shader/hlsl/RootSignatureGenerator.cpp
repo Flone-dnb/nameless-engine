@@ -722,16 +722,6 @@ namespace ne {
             false,
             SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
 
-        // Directional light index list.
-        addLightingResourceRootParameter(
-            "opaqueDirectionalLightIndexList",
-            false,
-            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_INDEX_LIST);
-        addLightingResourceRootParameter(
-            "transparentDirectionalLightIndexList",
-            false,
-            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_INDEX_LIST);
-
         // Point light grid.
         addLightingResourceRootParameter(
             "opaquePointLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
@@ -743,16 +733,6 @@ namespace ne {
             "opaqueSpotLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
         addLightingResourceRootParameter(
             "transparentSpotLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
-
-        // Directional light grid.
-        addLightingResourceRootParameter(
-            "opaqueDirectionalLightGrid",
-            true,
-            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_GRID);
-        addLightingResourceRootParameter(
-            "transparentDirectionalLightGrid",
-            true,
-            SpecialRootParameterSlot::LIGHT_CULLING_DIRECTIONAL_LIGHT_GRID);
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(

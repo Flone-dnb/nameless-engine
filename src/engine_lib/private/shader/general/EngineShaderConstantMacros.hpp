@@ -47,18 +47,6 @@ namespace ne {
             static inline std::pair<std::string, std::string> getAverageSpotLightNumPerTileMacro() {
                 return {"AVERAGE_SPOT_LIGHT_NUM_PER_TILE", "200"};
             }
-
-            /**
-             * Returns a macro that defines how much directional lights are expected to be on average in a
-             * light grid tile for opaque or transparent geometry.
-             *
-             * @remark Determines the size for light lists and light grid.
-             *
-             * @return Macro name and macro value.
-             */
-            static inline std::pair<std::string, std::string> getAverageDirectionalLightNumPerTileMacro() {
-                return {"AVERAGE_DIRECTIONAL_LIGHT_NUM_PER_TILE", "150"};
-            }
         };
     };
 }

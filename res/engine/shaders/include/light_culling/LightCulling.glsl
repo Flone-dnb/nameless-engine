@@ -72,9 +72,6 @@ shared uint iOpaquePointLightCountIntersectingTileFrustum;
 /** Stores total number of spot lights that intersect frustum of a grid tile for opaque geometry. */
 shared uint iOpaqueSpotLightCountIntersectingTileFrustum;
 
-/** Stores total number of directional lights that intersect frustum of a grid tile for opaque geometry. */
-shared uint iOpaqueDirectionalLightCountIntersectingTileFrustum;
-
 // -------------------------------------------------------------------------------------------------------------------- 
 
 /** Stores total number of point lights that intersect frustum of a grid tile for transparent geometry. */
@@ -82,9 +79,6 @@ shared uint iTransparentPointLightCountIntersectingTileFrustum;
 
 /** Stores total number of spot lights that intersect frustum of a grid tile for transparent geometry. */
 shared uint iTransparentSpotLightCountIntersectingTileFrustum;
-
-/** Stores total number of directional lights that intersect frustum of a grid tile for transparent geometry. */
-shared uint iTransparentDirectionalLightCountIntersectingTileFrustum;
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                 light index list offset - group shared (tile) variables
@@ -96,38 +90,27 @@ shared uint iOpaquePointLightIndexListStartOffset;
 /** Offset into the global spot light index list for opaque geometry. */
 shared uint iOpaqueSpotLightIndexListStartOffset;
 
-/** Offset into the global directional light index list for opaque geometry. */
-shared uint iOpaqueDirectionalLightIndexListStartOffset;
-
 // -------------------------------------------------------------------------------------------------------------------- 
 
 /** Offset into the global point light index list for transparent geometry. */
 shared uint iTransparentPointLightIndexListStartOffset;
 
-
 /** Offset into the global spot light index list for transparent geometry. */
 shared uint iTransparentSpotLightIndexListStartOffset;
-
-/** Offset into the global directional light index list for transparent geometry. */
-shared uint iTransparentDirectionalLightIndexListStartOffset;
 
 // --------------------------------------------------------------------------------------------------------------------
 //                               local light index list - group shared (tile) variables
 // --------------------------------------------------------------------------------------------------------------------
 
 // allowing N lights of a specific type to be in a tile, this limit should never be reached
-#define TILE_POINT_LIGHT_INDEX_LIST_SIZE        AVERAGE_POINT_LIGHT_NUM_PER_TILE       * 5
-#define TILE_SPOT_LIGHT_INDEX_LIST_SIZE         AVERAGE_SPOT_LIGHT_NUM_PER_TILE        * 5
-#define TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE  AVERAGE_DIRECTIONAL_LIGHT_NUM_PER_TILE * 5
+#define TILE_POINT_LIGHT_INDEX_LIST_SIZE AVERAGE_POINT_LIGHT_NUM_PER_TILE * 5
+#define TILE_SPOT_LIGHT_INDEX_LIST_SIZE  AVERAGE_SPOT_LIGHT_NUM_PER_TILE  * 5
 
 /** Local light index list that will be copied to the global list index list. */
 shared uint tileOpaquePointLightIndexList[TILE_POINT_LIGHT_INDEX_LIST_SIZE];
 
 /** Local light index list that will be copied to the global list index list. */
 shared uint tileOpaqueSpotLightIndexList[TILE_SPOT_LIGHT_INDEX_LIST_SIZE];
-
-/** Local light index list that will be copied to the global list index list. */
-shared uint tileOpaqueDirectionalLightIndexList[TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE];
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -136,9 +119,6 @@ shared uint tileTransparentPointLightIndexList[TILE_POINT_LIGHT_INDEX_LIST_SIZE]
 
 /** Local light index list that will be copied to the global list index list. */
 shared uint tileTransparentSpotLightIndexList[TILE_SPOT_LIGHT_INDEX_LIST_SIZE];
-
-/** Local light index list that will be copied to the global list index list. */
-shared uint tileTransparentDirectionalLightIndexList[TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE];
 
 // --------------------------------------------------------------------------------------------------------------------
 //                                             general functions
@@ -160,18 +140,14 @@ void initializeGroupSharedVariables(uint iThreadGroupXIdInDispatch, uint iThread
     // Initialize counters.
     iOpaquePointLightCountIntersectingTileFrustum = 0;
     iOpaqueSpotLightCountIntersectingTileFrustum = 0;
-    iOpaqueDirectionalLightCountIntersectingTileFrustum = 0;
     iTransparentPointLightCountIntersectingTileFrustum = 0;
     iTransparentSpotLightCountIntersectingTileFrustum = 0;
-    iTransparentDirectionalLightCountIntersectingTileFrustum = 0;
 
     // Initialize offsets.
     iOpaquePointLightIndexListStartOffset = 0;
     iOpaqueSpotLightIndexListStartOffset = 0;
-    iOpaqueDirectionalLightIndexListStartOffset = 0;
     iTransparentPointLightIndexListStartOffset = 0;
     iTransparentSpotLightIndexListStartOffset = 0;
-    iTransparentDirectionalLightIndexListStartOffset = 0;
 
     // Prepare index to get tile frustum.
     const uint iFrustumIndex = (iThreadGroupYIdInDispatch * threadGroupCount.iThreadGroupCountX) + iThreadGroupXIdInDispatch;
@@ -244,14 +220,6 @@ void reserveSpaceForNonCulledTileLightsInLightGridAndList(uint iThreadGroupXIdIn
 #hlsl opaqueSpotLightGrid[lightGridIndex] = uint2(iOpaqueSpotLightIndexListStartOffset, iOpaqueSpotLightCountIntersectingTileFrustum);
 #glsl imageStore(opaqueSpotLightGrid, lightGridIndex, uvec4(iOpaqueSpotLightIndexListStartOffset, iOpaqueSpotLightCountIntersectingTileFrustum, 0.0F, 0.0F));
 
-    // Get offset into the global light index list with directional lights.
-#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iDirectionalLightListOpaque, iOpaqueDirectionalLightCountIntersectingTileFrustum, iOpaqueDirectionalLightIndexListStartOffset);
-#glsl iOpaqueDirectionalLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iDirectionalLightListOpaque, iOpaqueDirectionalLightCountIntersectingTileFrustum);
-
-    // Write lights into the light grid.
-#hlsl opaqueDirectionalLightGrid[lightGridIndex] = uint2(iOpaqueDirectionalLightIndexListStartOffset, iOpaqueDirectionalLightCountIntersectingTileFrustum);
-#glsl imageStore(opaqueDirectionalLightGrid, lightGridIndex, uvec4(iOpaqueDirectionalLightIndexListStartOffset, iOpaqueDirectionalLightCountIntersectingTileFrustum, 0.0F, 0.0F));
-
     // Now set lights for transparent geometry.
 
     // Get offset into the global light index list with point lights.
@@ -269,14 +237,6 @@ void reserveSpaceForNonCulledTileLightsInLightGridAndList(uint iThreadGroupXIdIn
     // Write lights into the light grid.
 #hlsl transparentSpotLightGrid[lightGridIndex] = uint2(iTransparentSpotLightIndexListStartOffset, iTransparentSpotLightCountIntersectingTileFrustum);
 #glsl imageStore(transparentSpotLightGrid, lightGridIndex, uvec4(iTransparentSpotLightIndexListStartOffset, iTransparentSpotLightCountIntersectingTileFrustum, 0.0F, 0.0F));
-
-    // Get offset into the global light index list with directional lights.
-#hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iDirectionalLightListTransparent, iTransparentDirectionalLightCountIntersectingTileFrustum, iTransparentDirectionalLightIndexListStartOffset);
-#glsl iTransparentDirectionalLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iDirectionalLightListTransparent, iTransparentDirectionalLightCountIntersectingTileFrustum);
-
-    // Write lights into the light grid.
-#hlsl transparentDirectionalLightGrid[lightGridIndex] = uint2(iTransparentDirectionalLightIndexListStartOffset, iTransparentDirectionalLightCountIntersectingTileFrustum);
-#glsl imageStore(transparentDirectionalLightGrid, lightGridIndex, uvec4(iTransparentDirectionalLightIndexListStartOffset, iTransparentDirectionalLightCountIntersectingTileFrustum, 0.0F, 0.0F));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -323,26 +283,6 @@ void addSpotLightToTileOpaqueLightIndexList(uint iSpotLightIndex){
     }
 }
 
-/**
- * Adds an index to the specified directional light to array of lights that affect this tile (this thread group)
- * for opaque geometry.
- *
- * @param iDirectionalLightIndex Index to a directional light to add.
- */
-void addDirectionalLightToTileOpaqueLightIndexList(uint iDirectionalLightIndex){
-    // Prepare index to light list.
-    uint iIndexToDirectionalLightList = 0;
-
-    // Atomically increment counter of directional lights in tile.
-#hlsl InterlockedAdd(iOpaqueDirectionalLightCountIntersectingTileFrustum, 1, iIndexToDirectionalLightList);
-#glsl iIndexToDirectionalLightList = atomicAdd(iOpaqueDirectionalLightCountIntersectingTileFrustum, 1);
-
-    // Make sure we won't access out of bound.
-    if (iIndexToDirectionalLightList < TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE){
-        tileOpaqueDirectionalLightIndexList[iIndexToDirectionalLightList] = iDirectionalLightIndex;
-    }
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 /**
@@ -382,26 +322,6 @@ void addSpotLightToTileTransparentLightIndexList(uint iSpotLightIndex){
     // Make sure we won't access out of bound.
     if (iIndexToSpotLightList < TILE_SPOT_LIGHT_INDEX_LIST_SIZE){
         tileTransparentSpotLightIndexList[iIndexToSpotLightList] = iSpotLightIndex;
-    }
-}
-
-/**
- * Adds an index to the specified directional light to array of lights that affect this tile (this thread group)
- * for transparent geometry.
- *
- * @param iDirectionalLightIndex Index to a directional light to add.
- */
-void addDirectionalLightToTileTransparentLightIndexList(uint iDirectionalLightIndex){
-    // Prepare index to light list.
-    uint iIndexToDirectionalLightList = 0;
-
-    // Atomically increment counter of directional lights in tile.
-#hlsl InterlockedAdd(iTransparentDirectionalLightCountIntersectingTileFrustum, 1, iIndexToDirectionalLightList);
-#glsl iIndexToDirectionalLightList = atomicAdd(iTransparentDirectionalLightCountIntersectingTileFrustum, 1);
-
-    // Make sure we won't access out of bound.
-    if (iIndexToDirectionalLightList < TILE_DIRECTIONAL_LIGHT_INDEX_LIST_SIZE){
-        tileTransparentDirectionalLightIndexList[iIndexToDirectionalLightList] = iDirectionalLightIndex;
     }
 }
 
@@ -542,17 +462,6 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
         addSpotLightToTileOpaqueLightIndexList(iSpotlightIndex);
     }
 
-    // Cull directional lights.
-    for (uint i = iThreadIdInGroup; i < generalLightingData.iDirectionalLightCount; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
-        // Since directional lights have infinite light distance just add them.
-        
-        // Append this light to transparent geometry.
-        addDirectionalLightToTileTransparentLightIndexList(i);
-
-        // Append this light to opaque geometry.
-        addDirectionalLightToTileOpaqueLightIndexList(i);
-    }
-
     // Wait for all group threads to cull lights and finish writing to groupshared memory.
 #hlsl GroupMemoryBarrierWithGroupSync();
 #glsl groupMemoryBarrier(); barrier();
@@ -583,13 +492,6 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
             [iOpaqueSpotLightIndexListStartOffset + i] = tileOpaqueSpotLightIndexList[i];
     }
 
-    // Write directional lights.
-    for (uint i = iThreadIdInGroup; i < iOpaqueDirectionalLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
-#hlsl    opaqueDirectionalLightIndexList
-#glsl    opaqueDirectionalLightIndexList.array
-            [iOpaqueDirectionalLightIndexListStartOffset + i] = tileOpaqueDirectionalLightIndexList[i];
-    }
-
     // Now write lights for transparent geometry.
 
     // Write point lights.
@@ -604,12 +506,5 @@ void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iT
 #hlsl    transparentSpotLightIndexList
 #glsl    transparentSpotLightIndexList.array
             [iTransparentSpotLightIndexListStartOffset + i] = tileTransparentSpotLightIndexList[i];
-    }
-
-    // Write directional lights.
-    for (uint i = iThreadIdInGroup; i < iTransparentDirectionalLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS){
-#hlsl    transparentDirectionalLightIndexList
-#glsl    transparentDirectionalLightIndexList.array
-            [iTransparentDirectionalLightIndexListStartOffset + i] = tileTransparentDirectionalLightIndexList[i];
     }
 }

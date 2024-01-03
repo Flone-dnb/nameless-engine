@@ -3,11 +3,9 @@
 #glsl layout(std140, binding = 6) buffer GlobalCountersIntoLightIndexList{
     uint iPointLightListOpaque;
     uint iSpotlightListOpaque;
-    uint iDirectionalLightListOpaque;
 
     uint iPointLightListTransparent;
     uint iSpotlightListTransparent;
-    uint iDirectionalLightListTransparent;
 #hlsl }; RWStructuredBuffer<GlobalCountersIntoLightIndexList> globalCountersIntoLightIndexList : register(u0, space6);
 #glsl } globalCountersIntoLightIndexList;
 
@@ -19,9 +17,7 @@ void resetGlobalLightIndexListCounters(){
 
     COUNTERS.iPointLightListOpaque = 0;
     COUNTERS.iSpotlightListOpaque = 0;
-    COUNTERS.iDirectionalLightListOpaque = 0;
 
     COUNTERS.iPointLightListTransparent = 0;
     COUNTERS.iSpotlightListTransparent = 0;
-    COUNTERS.iDirectionalLightListTransparent = 0;
 }

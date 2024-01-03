@@ -407,31 +407,25 @@ vec3 calculateColorFromLights(
 
 #define POINT_LIGHT_GRID             transparentPointLightGrid
 #define SPOT_LIGHT_GRID              transparentSpotLightGrid
-#define DIRECTIONAL_LIGHT_GRID       transparentDirectionalLightGrid
 
 #define POINT_LIGHT_INDEX_LIST       transparentPointLightIndexList
 #define SPOT_LIGHT_INDEX_LIST        transparentSpotLightIndexList
-#define DIRECTIONAL_LIGHT_INDEX_LIST transparentDirectionalLightIndexList
 
-#else
+#else // opaque material
 
 #define POINT_LIGHT_GRID             opaquePointLightGrid
 #define SPOT_LIGHT_GRID              opaqueSpotLightGrid
-#define DIRECTIONAL_LIGHT_GRID       opaqueDirectionalLightGrid
 
 #define POINT_LIGHT_INDEX_LIST       opaquePointLightIndexList
 #define SPOT_LIGHT_INDEX_LIST        opaqueSpotLightIndexList
-#define DIRECTIONAL_LIGHT_INDEX_LIST opaqueDirectionalLightIndexList
 
 #endif
 
     // Prepare additional macros to access light grid tile.
-#hlsl #define POINT_LIGHT_GRID_TILE        POINT_LIGHT_GRID[tileIndex]
-#glsl #define POINT_LIGHT_GRID_TILE        imageLoad(POINT_LIGHT_GRID, tileIndex)
-#hlsl #define SPOT_LIGHT_GRID_TILE         SPOT_LIGHT_GRID[tileIndex]
-#glsl #define SPOT_LIGHT_GRID_TILE         imageLoad(SPOT_LIGHT_GRID, tileIndex)
-#hlsl #define DIRECTIONAL_LIGHT_GRID_TILE  DIRECTIONAL_LIGHT_GRID[tileIndex]
-#glsl #define DIRECTIONAL_LIGHT_GRID_TILE  imageLoad(DIRECTIONAL_LIGHT_GRID, tileIndex)
+#hlsl #define POINT_LIGHT_GRID_TILE POINT_LIGHT_GRID[tileIndex]
+#glsl #define POINT_LIGHT_GRID_TILE imageLoad(POINT_LIGHT_GRID, tileIndex)
+#hlsl #define SPOT_LIGHT_GRID_TILE  SPOT_LIGHT_GRID[tileIndex]
+#glsl #define SPOT_LIGHT_GRID_TILE  imageLoad(SPOT_LIGHT_GRID, tileIndex)
 
     // Get index into non-culled point lights.
     uint iPointLightIndexListOffset = POINT_LIGHT_GRID_TILE.x;
@@ -479,21 +473,12 @@ vec3 calculateColorFromLights(
             materialRoughness);
     }
 
-    // Get index into non-culled directional lights.
-    uint iDirectionalLightIndexListOffset = DIRECTIONAL_LIGHT_GRID_TILE.x;
-    uint iDirectionalLightIndexListCount = DIRECTIONAL_LIGHT_GRID_TILE.y;
-
     // Calculate light from directional lights.
-    for (uint i = 0; i < iDirectionalLightIndexListCount; i++){
-        // Get light index.
-        uint iLightIndex = DIRECTIONAL_LIGHT_INDEX_LIST
-#glsl                          .array
-                               [iDirectionalLightIndexListOffset + i];
-
+    for (uint i = 0; i < generalLightingData.iDirectionalLightCount; i++){
         // Calculate light.
         outputColor += calculateColorFromDirectionalLight(
-#glsl       directionalLights.array[iLightIndex],
-#hlsl       directionalLights[iLightIndex],
+#glsl       directionalLights.array[i],
+#hlsl       directionalLights[i],
             cameraPosition,
             fragmentPositionWorldSpace,
             fragmentNormalUnit,

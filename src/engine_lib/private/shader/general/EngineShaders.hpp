@@ -118,8 +118,7 @@ namespace ne {
                     "main",
                     {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro(),
                      EngineShaderConstantMacros::ForwardPlus::getAveragePointLightNumPerTileMacro(),
-                     EngineShaderConstantMacros::ForwardPlus::getAverageSpotLightNumPerTileMacro(),
-                     EngineShaderConstantMacros::ForwardPlus::getAverageDirectionalLightNumPerTileMacro()});
+                     EngineShaderConstantMacros::ForwardPlus::getAverageSpotLightNumPerTileMacro()});
             }
         };
     };

@@ -9,6 +9,8 @@
 
 // External.
 #include "math/GLMath.hpp"
+#include "misc/Error.h"
+#include "misc/Profiler.hpp"
 
 namespace ne {
     /** Static helper functions for math. */
@@ -110,6 +112,9 @@ namespace ne {
     };
 
     glm::vec3 MathHelpers::convertDirectionToRollPitchYaw(const glm::vec3& direction) {
+        PROFILE_FUNC;
+
+        // Ignore zero vectors.
         if (glm::all(glm::epsilonEqual(direction, glm::vec3(0.0F, 0.0F, 0.0F), smallFloatEpsilon))) {
             return glm::vec3(0.0F, 0.0F, 0.0F);
         }
@@ -119,7 +124,10 @@ namespace ne {
         constexpr float lengthDelta = 0.001F; // NOLINT: don't use too small value here
         const auto length = glm::length(direction);
         if (!glm::epsilonEqual(length, 1.0F, lengthDelta)) [[unlikely]] {
-            Logger::get().error("the specified direction vector should have been normalized");
+            // show an error so that it will be instantly noticeable because we're in the debug build
+            Error error("the specified direction vector should have been normalized");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 #endif
 

@@ -44,7 +44,7 @@ namespace ne {
         class RootParameter {
         public:
             /** Describes a root parameter type. */
-            enum class Type { CBV, SRV, UAV };
+            enum class Type { CONSTANTS, CBV, SRV, UAV };
 
             /** Creates uninitialized parameter. */
             RootParameter() = default;
@@ -57,10 +57,10 @@ namespace ne {
              * @param type             Root parameter type.
              * @param bIsTable         `true` to initialize this parameter as descriptor table
              * (even if descriptor count is 1), otherwise `false` to initialize it as just one descriptor.
-             * @param iDescriptorCount Number of descriptors this parameter stores.
+             * @param iCount           If type is table them defined the number of descriptors this parameter
+             * stores, if type is constants then the number of 32 bit constants, otherwise ignored.
              */
-            RootParameter(
-                UINT iBindPoint, UINT iSpace, Type type, bool bIsTable = false, UINT iDescriptorCount = 1);
+            RootParameter(UINT iBindPoint, UINT iSpace, Type type, bool bIsTable = false, UINT iCount = 1);
 
             /**
              * Generates root parameter description that describes a single descriptor.
@@ -105,8 +105,12 @@ namespace ne {
             /** Parameter type. */
             Type type;
 
-            /** Descriptors in this parameter. */
-            UINT iDescriptorCount = 0;
+            /**
+             * If @ref type is table them defined the number of descriptors this parameter
+             * stores, if @ref type is constants then the number of 32 bit constants,
+             * otherwise ignored.
+             */
+            UINT iCount = 0;
 
             /** Whether this parameter should be initialized as descriptor table or not. */
             bool bIsTable = false;
@@ -131,13 +135,14 @@ namespace ne {
             std::unordered_map<std::string, std::pair<UINT, RootParameter>> rootParameterIndices;
 
             /**
-             * Not empty if root constants are used.
              * Stores pairs of "name of field defined in HLSL in RootConstants cbuffer" (all with `uint` type)
              * and "offset from the beginning of the struct (in `uint`s not bytes)".
              *
+             * @remark May be empty if constants are not used.
+             *
              * @remark If a non `uint` fields is found an error is returned instead.
              */
-            std::optional<std::unordered_map<std::string, size_t>> rootConstantOffsets;
+            std::unordered_map<std::string, size_t> rootConstantOffsets;
         };
 
         /** Contains data that was generated during the process of merging two root signatures. */
@@ -168,13 +173,14 @@ namespace ne {
                 vSpecialRootParameterIndices;
 
             /**
-             * Not empty if root constants are used.
              * Stores pairs of "name of field defined in HLSL in RootConstants cbuffer" (all with `uint`
              * type) and "offset from the beginning of the struct (in `uint`s not bytes)".
              *
+             * @remark May be empty if constants are not used.
+             *
              * @remark If a non `uint` fields is found an error is returned instead.
              */
-            std::optional<std::unordered_map<std::string, size_t>> rootConstantOffsets;
+            std::unordered_map<std::string, size_t> rootConstantOffsets;
         };
 
         /**
@@ -323,10 +329,33 @@ namespace ne {
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
             bool bIsReadWrite);
 
+        /**
+         * Looks if the specified cbuffer resource description stores root constants (@ref
+         * sRootConstantsTypeName) and if it does adds root constant offsets to the specified map.
+         *
+         * @param pShaderReflection    Shader reflection.
+         * @param resourceDescription  Cbuffer description.
+         * @param rootConstantOffsets  If found root constants, their offsets will be added here.
+         * @param vRootParameters      Parameters to add the new resource to (if root constants are found).
+         * @param rootParameterIndices Map to add new parameter to (if root constants are found).
+         *
+         * @return Error if something went wrong, otherwise `false` if no root constants were found
+         * and `true` if root constants were found and variable offsets were added.
+         */
+        static std::variant<bool, Error> processRootConstantsIfFound(
+            const ComPtr<ID3D12ShaderReflection>& pShaderReflection,
+            const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
+            std::unordered_map<std::string, size_t>& rootConstantOffsets,
+            std::vector<RootParameter>& vRootParameters,
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices);
+
         /** Name of the `cbuffer` resource used to store frame data in HLSL shaders. */
         static inline const std::string sFrameConstantBufferName = "frameData";
 
         /** Name of the shader `cbuffer` that will be considered as buffer that stores root constants. */
+        static inline const std::string sRootConstantsVariableName = "constants";
+
+        /** Name of the shader struct that stores root constants. */
         static inline const std::string sRootConstantsTypeName = "RootConstants";
     };
 } // namespace ne

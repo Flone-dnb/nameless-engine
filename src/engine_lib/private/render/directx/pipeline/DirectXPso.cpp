@@ -323,6 +323,9 @@ namespace ne {
             return Error(hResult);
         }
 
+        // Set new root constants.
+        setShaderConstants(generatedRootSignature.rootConstantOffsets);
+
         // Done.
         mtxInternalResources.second.bIsReadyForUsage = true;
         saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));

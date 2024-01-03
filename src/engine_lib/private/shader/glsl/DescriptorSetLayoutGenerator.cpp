@@ -541,17 +541,11 @@ namespace ne {
         }
 
         // Merge push constants (if used).
-        std::unordered_map<std::string, size_t> pushConstantUintFieldOffsets;
-        if (vertexShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets.has_value()) {
+        std::unordered_map<std::string, size_t> pushConstantUintFieldOffsets =
+            vertexShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets;
+        if (pFragmentShaderDescriptorLayoutInfo != nullptr) {
             for (const auto& [sFieldName, iOffsetInUints] :
-                 *vertexShaderDescriptorLayoutInfo.pushConstantUintFieldOffsets) {
-                pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
-            }
-        }
-        if (pFragmentShaderDescriptorLayoutInfo != nullptr &&
-            pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets.has_value()) {
-            for (const auto& [sFieldName, iOffsetInUints] :
-                 *pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets) {
+                 pFragmentShaderDescriptorLayoutInfo->pushConstantUintFieldOffsets) {
                 pushConstantUintFieldOffsets[sFieldName] = iOffsetInUints;
             }
         }
@@ -559,6 +553,7 @@ namespace ne {
         // Make sure fields have unique offsets.
         std::unordered_set<size_t> fieldOffsets;
         for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
+            // Make sure this offset was not used before.
             const auto it = fieldOffsets.find(iOffsetInUints);
             if (it != fieldOffsets.end()) [[unlikely]] {
                 return Error(std::format(
@@ -568,13 +563,12 @@ namespace ne {
                     sFieldName));
             }
 
+            // Add offset as used.
             fieldOffsets.insert(iOffsetInUints);
         }
 
-        // Save info.
-        if (!pushConstantUintFieldOffsets.empty()) {
-            generatedData.pushConstantUintFieldOffsets = std::move(pushConstantUintFieldOffsets);
-        }
+        // Save push constants.
+        generatedData.pushConstantUintFieldOffsets = std::move(pushConstantUintFieldOffsets);
 
         return generatedData;
     }

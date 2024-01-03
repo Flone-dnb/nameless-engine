@@ -30,22 +30,6 @@ namespace ne {
     /** Represents a compiled HLSL shader. */
     class HlslShader : public Shader {
     public:
-        /** Stores information about root signature. */
-        struct RootSignatureInfo {
-            /** Root parameters that were used in creation of the root signature. */
-            std::vector<RootSignatureGenerator::RootParameter> vRootParameters;
-
-            /** Static samplers that were used in creation of the root signature. */
-            std::set<SamplerType> staticSamplers;
-
-            /**
-             * Stores pairs of `shader resource name` (taken from shader file) -
-             * `root parameter index / root parameter`.
-             */
-            std::unordered_map<std::string, std::pair<UINT, RootSignatureGenerator::RootParameter>>
-                rootParameterIndices;
-        };
-
         /**
          * Constructor. Used to create shader using cache.
          *
@@ -156,7 +140,7 @@ namespace ne {
          * @return Empty if root signature information was not collected yet, use @ref getCompiledBlob
          * to collect and load everything, otherwise root signature info.
          */
-        std::pair<std::mutex, std::optional<RootSignatureInfo>>* getRootSignatureInfo();
+        std::pair<std::mutex, std::optional<RootSignatureGenerator::CollectedInfo>>* getRootSignatureInfo();
 
         /**
          * Returns hash of the shader source file that was used to compile the shader.
@@ -241,7 +225,7 @@ namespace ne {
          * @remark Might not be calculated yet, see @ref loadShaderDataFromDiskIfNotLoaded for
          * collecting root signature information.
          */
-        std::pair<std::mutex, std::optional<RootSignatureInfo>> mtxRootSignatureInfo;
+        std::pair<std::mutex, std::optional<RootSignatureGenerator::CollectedInfo>> mtxRootSignatureInfo;
 
         /** Shader source file hash, used to tell what shaders were compiled from the same file. */
         std::string sSourceFileHash;

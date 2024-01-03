@@ -65,50 +65,45 @@ namespace ne {
         std::set<SamplerType> staticSamplersToBind;
         std::unordered_map<std::string, std::pair<UINT, RootParameter>> rootParameterIndices;
         std::unordered_map<std::string, size_t> rootConstantOffsets;
+        bool bFoundRootConstants = false;
 
         // Now iterate over all shader resources and add them to root parameters.
         for (const auto& resourceDesc : vResourcesDescription) {
             if (resourceDesc.Type == D3D_SIT_CBUFFER) {
-                if (sRootConstantsTypeName == std::string(resourceDesc.Name)) {
-                    // Found root constants.
-                    const auto pBufferInfo = pShaderReflection->GetConstantBufferByName(resourceDesc.Name);
-                    if (pBufferInfo == nullptr) [[unlikely]] {
-                        return Error(std::format("failed to get cbuffer \"{}\" info", resourceDesc.Name));
-                    }
-
-                    // Get description.
-                    D3D12_SHADER_BUFFER_DESC bufferDesc;
-                    pBufferInfo->GetDesc(&bufferDesc);
-
-                    for (UINT i = 0; i < bufferDesc.Variables; i++) {
-                        // Get variable info.
-                        const auto pVariableInfo = pBufferInfo->GetVariableByIndex(i);
-                        if (pVariableInfo == nullptr) [[unlikely]] {
-                            return Error(std::format(
-                                "failed to get cbuffer \"{}\" variable #{} info", resourceDesc.Name, i));
-                        }
-
-                        // Get variable's type.
-                        const auto pVariableType = pVariableInfo->GetType();
-                        if (pVariableType == nullptr) [[unlikely]] {
-                            return Error(std::format(
-                                "failed to get cbuffer \"{}\" variable #{} type", resourceDesc.Name, i));
-                        }
-
-                        // Get variable description.
-                        D3D12_SHADER_VARIABLE_DESC variableDesc;
-                        pVariableInfo->GetDesc(&variableDesc);
-
-                        rootConstantOffsets[variableDesc.Name] = variableDesc.StartOffset;
-                    }
-                }
-
-                auto optionalError =
-                    addCbufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
-                if (optionalError.has_value()) [[unlikely]] {
-                    auto error = optionalError.value();
+                // See if this is root constants.
+                auto result = processRootConstantsIfFound(
+                    pShaderReflection,
+                    resourceDesc,
+                    rootConstantOffsets,
+                    vRootParameters,
+                    rootParameterIndices);
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
                     return error;
+                }
+                const auto bProcessedRootConstants = std::get<bool>(result);
+
+                if (!bProcessedRootConstants) {
+                    // Process as a regular cbuffer.
+                    auto optionalError =
+                        addCbufferRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        auto error = optionalError.value();
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
+                } else {
+                    if (bFoundRootConstants) [[unlikely]] {
+                        return Error(std::format(
+                            "root constants struct was already found previously but found "
+                            "another struct with root constants named \"{}\" at register {} and space {}",
+                            resourceDesc.Name,
+                            resourceDesc.BindPoint,
+                            resourceDesc.Space));
+                    }
+
+                    bFoundRootConstants = true;
                 }
             } else if (resourceDesc.Type == D3D_SIT_SAMPLER) {
                 auto result = findStaticSamplerForSamplerResource(resourceDesc);
@@ -222,7 +217,8 @@ namespace ne {
         std::mutex* pPixelRootInfoMutex = &mtxDummy;
 
         // Get pixel shader root signature info.
-        std::pair<std::mutex, std::optional<HlslShader::RootSignatureInfo>>* pMtxPixelRootInfo = nullptr;
+        std::pair<std::mutex, std::optional<RootSignatureGenerator::CollectedInfo>>* pMtxPixelRootInfo =
+            nullptr;
         if (pPixelShader != nullptr) {
             pMtxPixelRootInfo = pPixelShader->getRootSignatureInfo();
             pPixelRootInfoMutex = &pMtxPixelRootInfo->first;
@@ -262,7 +258,7 @@ namespace ne {
         }
 
         // Get shaders root signature info.
-        HlslShader::RootSignatureInfo* pPixelRootSigInfo = nullptr;
+        RootSignatureGenerator::CollectedInfo* pPixelRootSigInfo = nullptr;
         auto& vertexRootSigInfo = pMtxVertexRootInfo->second.value();
         if (pMtxPixelRootInfo != nullptr) {
             pPixelRootSigInfo = &(*pMtxPixelRootInfo->second);
@@ -386,6 +382,31 @@ namespace ne {
                 sFrameConstantBufferName));
         }
 
+        // Merge root constants (if used).
+        std::unordered_map<std::string, size_t> rootConstantOffsets = vertexRootSigInfo.rootConstantOffsets;
+        if (pPixelRootSigInfo != nullptr) {
+            for (const auto& [sFieldName, iOffsetInUints] : pPixelRootSigInfo->rootConstantOffsets) {
+                rootConstantOffsets[sFieldName] = iOffsetInUints;
+            }
+        }
+
+        // Make sure fields have unique offsets.
+        std::unordered_set<size_t> fieldOffsets;
+        for (const auto& [sFieldName, iOffsetInUints] : rootConstantOffsets) {
+            // Make sure this offset was not used before.
+            const auto it = fieldOffsets.find(iOffsetInUints);
+            if (it != fieldOffsets.end()) [[unlikely]] {
+                return Error(std::format(
+                    "found 2 fields in root constants with different names but the same "
+                    "offsets from struct start, conflicting offset: {} (found on field: {})",
+                    iOffsetInUints,
+                    sFieldName));
+            }
+
+            // Add offset as used.
+            fieldOffsets.insert(iOffsetInUints);
+        }
+
         // Get current render settings to query texture filtering for static sampler.
         const auto pMtxRenderSettings = pRenderer->getRenderSettings();
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first); // keep locked until finished
@@ -458,6 +479,7 @@ namespace ne {
         merged.pRootSignature = std::move(pRootSignature);
         merged.rootParameterIndices = std::move(rootParameterIndices);
         merged.vSpecialRootParameterIndices = std::move(vSpecialRootParameterIndices);
+        merged.rootConstantOffsets = std::move(rootConstantOffsets);
         return merged;
     }
 
@@ -838,16 +860,127 @@ namespace ne {
         return {};
     }
 
+    std::variant<bool, Error> RootSignatureGenerator::processRootConstantsIfFound(
+        const ComPtr<ID3D12ShaderReflection>& pShaderReflection,
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
+        std::unordered_map<std::string, size_t>& rootConstantOffsets,
+        std::vector<RootParameter>& vRootParameters,
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices) {
+        // Make sure it's a cbuffer.
+        if (resourceDescription.Type != D3D_SIT_CBUFFER) [[unlikely]] {
+            return Error(std::format(
+                "expected the specified resource \"{}\" to be a cbuffer", resourceDescription.Name));
+        }
+
+        // Check name.
+        if (sRootConstantsVariableName != std::string(resourceDescription.Name)) {
+            return false;
+        }
+
+        // Get info.
+        const auto pBufferInfo = pShaderReflection->GetConstantBufferByName(resourceDescription.Name);
+        if (pBufferInfo == nullptr) [[unlikely]] {
+            return Error(std::format("failed to get cbuffer \"{}\" info", resourceDescription.Name));
+        }
+
+        // Get description.
+        D3D12_SHADER_BUFFER_DESC bufferDesc;
+        pBufferInfo->GetDesc(&bufferDesc);
+
+        if (bufferDesc.Variables != 1) { // only struct
+            return false;
+        }
+
+        // Get variable info.
+        const auto pStructVariableInfo = pBufferInfo->GetVariableByIndex(0);
+        if (pStructVariableInfo == nullptr) [[unlikely]] {
+            return Error(std::format("failed to get cbuffer \"{}\" variable info", resourceDescription.Name));
+        }
+
+        // Get variable's type.
+        const auto pStructType = pStructVariableInfo->GetType();
+        if (pStructType == nullptr) [[unlikely]] {
+            return Error(std::format("failed to get cbuffer \"{}\" variable type", resourceDescription.Name));
+        }
+
+        // Make sure it's a struct.
+        D3D12_SHADER_TYPE_DESC structTypeDesc;
+        pStructType->GetDesc(&structTypeDesc);
+        if (structTypeDesc.Class != D3D_SVC_STRUCT) {
+            return false;
+        }
+
+        // Check struct name.
+        if (sRootConstantsTypeName != std::string(structTypeDesc.Name)) {
+            return false;
+        }
+
+        // This is indeed a root constants struct.
+        for (UINT i = 0; i < structTypeDesc.Members; i++) {
+            // Get member variable.
+            const auto pMemberType = pStructType->GetMemberTypeByIndex(i);
+            if (pMemberType == nullptr) [[unlikely]] {
+                return Error(std::format("failed to get member #{} of type \"{}\"", i, structTypeDesc.Name));
+            }
+
+            // Get member variable type.
+            D3D12_SHADER_TYPE_DESC memberDesc;
+            pMemberType->GetDesc(&memberDesc);
+
+            // Make sure it's a `uint` as we expect only `uint`s.
+            if (memberDesc.Type != D3D_SHADER_VARIABLE_TYPE::D3D_SVT_UINT) [[unlikely]] {
+                return Error(std::format("found a non uint member variable #{} in root constants", i));
+            }
+
+            // Make sure member's offset is evenly divisible by sizeof(uint).
+            if (memberDesc.Offset % sizeof(unsigned int) != 0) [[unlikely]] {
+                return Error(std::format(
+                    "expected the offset of member variable #{} to be evenly divisible by sizeof(uint) in "
+                    "root "
+                    "constants",
+                    i));
+            }
+
+            // Add root constant.
+            rootConstantOffsets[memberDesc.Name] = memberDesc.Offset / sizeof(unsigned int);
+        }
+
+        // Prepare a new root parameter.
+        auto newRootParameter = RootParameter(
+            resourceDescription.BindPoint,
+            resourceDescription.Space,
+            RootParameter::Type::CONSTANTS,
+            false,
+            structTypeDesc.Members);
+
+        // Make sure this resource name is unique, save its root index.
+        auto optionalError = addUniquePairResourceNameRootParameterIndex(
+            rootParameterIndices,
+            resourceDescription.Name,
+            static_cast<UINT>(vRootParameters.size()),
+            newRootParameter);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Add to root parameters.
+        vRootParameters.push_back(newRootParameter);
+
+        return true;
+    }
+
     RootSignatureGenerator::RootParameter::RootParameter(
-        UINT iBindPoint, UINT iSpace, RootParameter::Type type, bool bIsTable, UINT iDescriptorCount) {
+        UINT iBindPoint, UINT iSpace, RootParameter::Type type, bool bIsTable, UINT iCount) {
         this->iBindPoint = iBindPoint;
         this->iSpace = iSpace;
         this->type = type;
         this->bIsTable = bIsTable;
-        this->iDescriptorCount = iDescriptorCount;
+        this->iCount = iCount;
 
-        // Self check: make sure descriptor count is not zero.
-        if (iDescriptorCount == 0) [[unlikely]] {
+        // Self check: make sure count is not zero.
+        if (iCount == 0) [[unlikely]] {
             Error error("root parameter descriptor count cannot be zero");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
@@ -868,6 +1001,10 @@ namespace ne {
         auto rootParameter = CD3DX12_ROOT_PARAMETER{};
 
         switch (type) {
+        case (RootParameter::Type::CONSTANTS): {
+            rootParameter.InitAsConstants(iCount, iBindPoint, iSpace, visibility);
+            break;
+        }
         case (RootParameter::Type::CBV): {
             rootParameter.InitAsConstantBufferView(iBindPoint, iSpace, visibility);
             break;
@@ -905,6 +1042,13 @@ namespace ne {
 
         D3D12_DESCRIPTOR_RANGE_TYPE rangeType;
         switch (type) {
+        case (RootParameter::Type::CONSTANTS): {
+            Error error("attempted to generate descriptor table range but this root parameter was "
+                        "initialized as 32 bit constants");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
         case (RootParameter::Type::CBV): {
             rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
             break;
@@ -925,7 +1069,7 @@ namespace ne {
         }
         }
 
-        table.Init(rangeType, iDescriptorCount, iBindPoint, iSpace);
+        table.Init(rangeType, iCount, iBindPoint, iSpace);
 
         return table;
     }

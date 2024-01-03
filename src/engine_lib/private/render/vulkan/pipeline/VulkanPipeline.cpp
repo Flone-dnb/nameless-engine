@@ -634,10 +634,10 @@ namespace ne {
 
         // Specify push constants (if used).
         VkPushConstantRange pushConstants{};
-        if (generatedLayout.pushConstantUintFieldOffsets.has_value()) {
+        if (!generatedLayout.pushConstantUintFieldOffsets.empty()) {
             // Process push constants.
             auto pushConstantsResult = definePushConstants(
-                generatedLayout.pushConstantUintFieldOffsets.value(), generatedLayout.resourceBindings);
+                generatedLayout.pushConstantUintFieldOffsets, generatedLayout.resourceBindings);
             if (std::holds_alternative<Error>(pushConstantsResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantsResult));
                 error.addCurrentLocationToErrorStack();

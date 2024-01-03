@@ -406,7 +406,8 @@ namespace ne {
         return mtxCompiledBytecode.second;
     }
 
-    std::pair<std::mutex, std::optional<HlslShader::RootSignatureInfo>>* HlslShader::getRootSignatureInfo() {
+    std::pair<std::mutex, std::optional<RootSignatureGenerator::CollectedInfo>>*
+    HlslShader::getRootSignatureInfo() {
         return &mtxRootSignatureInfo;
     }
 
@@ -632,15 +633,7 @@ namespace ne {
                 err.addCurrentLocationToErrorStack();
                 return err;
             }
-            auto collectedRootSignatureInfo =
-                std::get<RootSignatureGenerator::CollectedInfo>(std::move(result));
-
-            // Save root signature info.
-            RootSignatureInfo info;
-            info.rootParameterIndices = std::move(collectedRootSignatureInfo.rootParameterIndices);
-            info.staticSamplers = std::move(collectedRootSignatureInfo.staticSamplers);
-            info.vRootParameters = std::move(collectedRootSignatureInfo.vRootParameters);
-            mtxRootSignatureInfo.second = std::move(info);
+            mtxRootSignatureInfo.second = std::get<RootSignatureGenerator::CollectedInfo>(std::move(result));
         }
 
         return {};

@@ -20,6 +20,43 @@
 
 // External.
 #include "catch2/catch_session.hpp"
+#include "catch2/catch_test_case_info.hpp"
+#include "catch2/reporters/catch_reporter_event_listener.hpp"
+#include "catch2/reporters/catch_reporter_registrars.hpp"
+
+struct EventListener : Catch::EventListenerBase {
+    using Catch::EventListenerBase::EventListenerBase;
+
+    void testCaseStarting(Catch::TestCaseInfo const& testInfo) override {
+        ne::Logger::get().info(std::format("\n\nstarting test case \"{}\"\n", testInfo.name));
+        ne::Logger::get().flushToDisk();
+    }
+
+    void testCaseEnded(Catch::TestCaseStats const& testCaseStats) override {
+        if (testCaseStats.totals.assertions.failed > 0) {
+            std::scoped_lock guard(mtxFailedTestNames.first);
+            mtxFailedTestNames.second.push_back(testCaseStats.testInfo->name);
+        }
+    }
+
+    void testRunEnded(Catch::TestRunStats const& runStats) override {
+        std::scoped_lock guard(mtxFailedTestNames.first);
+
+        if (mtxFailedTestNames.second.empty()) {
+            return;
+        }
+
+        ne::Logger::get().info("failed tests:");
+        for (const auto& sName : mtxFailedTestNames.second) {
+            ne::Logger::get().info(std::format("- {}", sName));
+        }
+    }
+
+private:
+    std::pair<std::mutex, std::vector<std::string>> mtxFailedTestNames;
+};
+
+CATCH_REGISTER_LISTENER(EventListener)
 
 int main() {
 // Enable run-time memory check for debug builds.

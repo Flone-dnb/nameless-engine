@@ -147,7 +147,7 @@ namespace ne {
             "radius");
         mtxShaderData.second.shaderData.coneBottomRadius =
             glm::tan(glm::radians(outerConeAngle)) * distance *
-            1.1F; // NOLINT: TODO: multiply to avoid a rare light culling issue when viewing exactly in the
+            1.3F; // NOLINT: TODO: multiply to avoid a rare light culling issue when viewing exactly in the
                   // direction of the spotlight (light outer cone bounds are slightly culled)
 
 #if defined(DEBUG)

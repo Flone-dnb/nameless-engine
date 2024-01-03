@@ -390,28 +390,34 @@ TEST_CASE("unused materials unload shaders from memory") {
                         auto pMeshNode = gc_new<MeshNode>();
                         pMeshNode->setMeshData(meshData);
 
-                        // Make sure there are no shaders loaded in the memory.
-                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == 0);
+                        // Get current shader count.
+                        const auto iInitialShaderCount = Shader::getCurrentAmountOfShadersInMemory();
 
                         // Spawn.
                         getWorldRootNode()->addChildNode(pMeshNode);
+                        REQUIRE(
+                            Shader::getCurrentAmountOfShadersInMemory() ==
+                            iInitialShaderCount +
+                                3); // 1 pixel + 1 vertex + 1 vertex with shadow mapping macro
+
                         getWorldRootNode()->addChildNode(pCustomMeshNode1);
                         getWorldRootNode()->addChildNode(pCustomMeshNode2);
+
                         REQUIRE(
-                            Shader::getCurrentAmountOfShadersInMemory() == 4); // 2 vertex + 2 pixel shaders
+                            Shader::getCurrentAmountOfShadersInMemory() ==
+                            iInitialShaderCount + 3 + 3); // same thing but with new vertex/pixel shaders
 
                         // Despawn the first custom mesh.
                         pCustomMeshNode1->detachFromParentAndDespawn();
-                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == 4);
+                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount + 3 + 3);
 
                         // Despawn the second custom mesh.
                         pCustomMeshNode2->detachFromParentAndDespawn();
-                        REQUIRE(
-                            Shader::getCurrentAmountOfShadersInMemory() == 2); // 1 vertex + 1 pixel shader
+                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount + 3);
 
                         // Despawn default mesh.
                         pMeshNode->detachFromParentAndDespawn();
-                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == 0);
+                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount);
 
                         getWindow()->close();
                     });

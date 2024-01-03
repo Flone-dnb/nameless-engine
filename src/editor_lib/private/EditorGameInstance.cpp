@@ -13,6 +13,7 @@
 #include "game/nodes/EnvironmentNode.h"
 #include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/PointLightNode.h"
+#include "game/nodes/light/SpotlightNode.h"
 
 namespace ne {
     const char* EditorGameInstance::getEditorWindowTitle() { return pEditorWindowTitle; }
@@ -54,7 +55,7 @@ namespace ne {
             getWorldRootNode()->addChildNode(pDirectionalLightNode);
             pDirectionalLightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
                 glm::normalize(glm::vec3(0.5F, -1.0F, -1.0F)))); // NOLINT
-            pDirectionalLightNode->setLightIntensity(0.7F);      // NOLINT
+            pDirectionalLightNode->setLightIntensity(0.6F);      // NOLINT
 
             // Spawn point light.
             const auto pPointLightNode = gc_new<PointLightNode>();
@@ -69,11 +70,31 @@ namespace ne {
             pFloorNode->setWorldScale(glm::vec3(100.0F, 100.0F, 1.0F)); // NOLINT
             pFloorNode->getMaterial()->setRoughness(0.9F);
 
-            // Spawn cube.
-            const auto pCubeNode = gc_new<MeshNode>();
-            pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
-            getWorldRootNode()->addChildNode(pCubeNode);
-            pCubeNode->setWorldLocation(glm::vec3(0.0F, 0.0F, 1.0F)); // NOLINT
+            {
+                // Spawn cube 1.
+                const auto pCubeNode = gc_new<MeshNode>();
+                pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pCubeNode);
+                pCubeNode->setWorldLocation(glm::vec3(0.0F, 0.0F, 1.0F)); // NOLINT
+            }
+            {
+                // Spawn cube 2.
+                const auto pCubeNode = gc_new<MeshNode>();
+                pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pCubeNode);
+                pCubeNode->setWorldLocation(glm::vec3(10.0F, 0.0F, 1.0F)); // NOLINT
+            }
+
+            // Spawn spotlight.
+            const auto pSpotlightNode = gc_new<SpotlightNode>();
+            getWorldRootNode()->addChildNode(pSpotlightNode);
+            pSpotlightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));
+            pSpotlightNode->setWorldLocation(glm::vec3(7.0F, 4.0F, 3.0F));
+            pSpotlightNode->setWorldRotation(
+                MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
+            pSpotlightNode->setLightInnerConeAngle(10.0F);
+            pSpotlightNode->setLightInnerConeAngle(20.0F);
+            pSpotlightNode->setLightIntensity(0.3F);
         });
     }
 

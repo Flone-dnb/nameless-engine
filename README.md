@@ -291,6 +291,7 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Occlusion culling
     - [ ] Emissive materials
     - [ ] Light culling improvements
+    - [ ] Shadow caster culling
     - [ ] GUI
 - [ ] Skeletal animations
 - [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)

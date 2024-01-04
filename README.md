@@ -291,6 +291,7 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Occlusion culling
     - [ ] Emissive materials
     - [ ] Light culling improvements
+    - [ ] Multi-threaded command list/buffer generation
     - [ ] Shadow caster culling
     - [ ] GUI
 - [ ] Skeletal animations

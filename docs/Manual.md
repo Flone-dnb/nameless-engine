@@ -1780,11 +1780,14 @@ void MyGameInstance::foo(){
 }
 ```
 
-When use change something in `RenderSettings` (for example render resolution) that change is instantly saved on the disk on the renderer config so you don't need to save them manually, on the next startup last applied settings will be restored.
+When use change something in `RenderSettings` (for example render resolution) that change is instantly saved on the disk in the renderer config so you don't need to save them manually, on the next startup last applied settings will be restored.
 
 You can find renderer's config file at:
     - (on Windows) `%%localappdata%/nameless-engine/*yourtarget*/engine/render.toml`
     - (on Linux) `~/.config/nameless-engine/*yourtarget*/engine/render.toml`
+
+Note
+> You can change values in the specified config files to quicky change settings for testing purposes. Note that changes made in the config files will only be applied locally (only for your computer).
 
 Note that some render settings might not be supported depending on the OS/renderer/hardware, as we shown above some `set` functions would have a special remark in their documentation saying about what function to use to query supported values. Let's consider another example, this one uses anti-aliasing:
 

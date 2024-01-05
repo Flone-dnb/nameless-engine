@@ -519,7 +519,7 @@ namespace ne {
         // After material was notified (because materials initialize PSOs that shader resources need).
         allocateShaderResources();
 
-        // Bind some shader resources to depth pipelines of our materials.
+        // Bind some shader resources to additional pipelines of our materials.
         updateShaderResourcesToUseChangedMaterialPipelines();
     }
 
@@ -576,7 +576,7 @@ namespace ne {
         std::unordered_set<Pipeline*> pipelinesToUse;
         for (const auto& pMaterial : vMaterials) {
             // Get used pipeline.
-            const auto pUsedPipeline = pMaterial->getUsedPipeline();
+            const auto pUsedPipeline = pMaterial->getColorPipeline();
             if (pUsedPipeline == nullptr) [[unlikely]] {
                 Error error(std::format(
                     "unable to create shader resources for mesh node \"{}\" because material \"{}\" was not "
@@ -686,9 +686,10 @@ namespace ne {
         // Collect pipelines of all materials.
         std::unordered_set<Pipeline*> pipelinesToUse;
         std::unordered_set<Pipeline*> depthOnlyPipelines;
+        std::unordered_set<Pipeline*> shadowMappingPipelines;
         for (const auto& pMaterial : vMaterials) {
             // Get material's used pipeline.
-            const auto pPipeline = pMaterial->getUsedPipeline();
+            const auto pPipeline = pMaterial->getColorPipeline();
             if (pPipeline == nullptr) [[unlikely]] {
                 Error error(std::format(
                     "expected pipeline of material \"{}\" to be initialized", pMaterial->getMaterialName()));
@@ -701,12 +702,17 @@ namespace ne {
 
             // Check if this material also has depth only pipeline.
             const auto pDepthOnlyPipeline = pMaterial->getDepthOnlyPipeline();
-            if (pDepthOnlyPipeline == nullptr) {
-                continue;
+            if (pDepthOnlyPipeline != nullptr) {
+                // Add it to later bind some special resources to it.
+                depthOnlyPipelines.insert(pDepthOnlyPipeline);
             }
 
-            // Add it to later bind some special resources to it.
-            depthOnlyPipelines.insert(pDepthOnlyPipeline);
+            // Check if this material also has shadow mapping pipeline.
+            const auto pShadowMappingPipeline = pMaterial->getShadowMappingPipeline();
+            if (pShadowMappingPipeline != nullptr) {
+                // Add it to later bind some special resources to it.
+                shadowMappingPipelines.insert(pShadowMappingPipeline);
+            }
         }
 
         // Update shader CPU write resources.
@@ -721,13 +727,16 @@ namespace ne {
             }
         }
 
-        if (!depthOnlyPipelines.empty()) {
-            // Additionally, bind mesh data shader resource to depth only pipelines for depth prepass
-            // since in depth prepass (only vertex shader) only mesh data is used.
+        if (!depthOnlyPipelines.empty() || !shadowMappingPipelines.empty()) {
+            // Additionally, bind mesh data shader resource to depth only / shadow mapping pipelines for depth
+            // prepass / shadow mapping since in those passes (only vertex shader) only mesh data is used.
 
-            // Combine usual and depth only pipelines.
+            // Combine usual, depth only and shadow mapping pipelines.
             std::unordered_set<Pipeline*> combinedPipelines = pipelinesToUse;
             for (const auto& pPipeline : depthOnlyPipelines) {
+                combinedPipelines.insert(pPipeline);
+            }
+            for (const auto& pPipeline : shadowMappingPipelines) {
                 combinedPipelines.insert(pPipeline);
             }
 

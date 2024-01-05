@@ -40,6 +40,11 @@ namespace ne {
             depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
             "also change format in DirectX renderer for (visual) consistency");
 
+        // Check shadow map format.
+        static_assert(
+            shadowMapFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            "also change format in DirectX renderer for (visual) consistency");
+
         // Self check for light culling compute shader:
         static_assert(
             depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
@@ -2391,6 +2396,13 @@ namespace ne {
 
         // Mark render pass start.
         vkCmdBeginRenderPass(pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    }
+
+    void VulkanRenderer::drawShadowMappingPass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        // TODO
     }
 
     std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>

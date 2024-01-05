@@ -533,7 +533,7 @@ namespace ne {
             iTextureSize,
             1,
             VK_SAMPLE_COUNT_1_BIT,
-            VulkanRenderer::getDepthImageFormat(),
+            VulkanRenderer::getShadowMapFormat(),
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             VK_IMAGE_ASPECT_DEPTH_BIT,

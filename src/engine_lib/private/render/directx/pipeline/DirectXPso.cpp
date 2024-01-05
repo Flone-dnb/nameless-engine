@@ -124,7 +124,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 144, // NOLINT: current struct size
+            sizeof(InternalResources) == 152, // NOLINT: current struct size
             "release new resources here");
 #endif
 
@@ -261,7 +261,6 @@ namespace ne {
         psoDesc.RasterizerState.CullMode =
             isUsingPixelBlending() ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
         psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-        psoDesc.RasterizerState.MultisampleEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
 
         // Specify depth bias settings.
         if (isDepthBiasEnabled()) {
@@ -303,10 +302,26 @@ namespace ne {
         // Finalize PSO description.
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        psoDesc.SampleDesc.Count = iMsaaSampleCount;
-        psoDesc.SampleDesc.Quality =
-            msaaState != MsaaState::DISABLED ? (pDirectXRenderer->getMsaaQualityLevel() - 1) : 0;
-        psoDesc.DSVFormat = DirectXRenderer::getDepthStencilBufferFormat();
+
+        // MSAA.
+        if (isDepthBiasEnabled()) {
+            // No multisampling when drawing to shadow maps.
+            psoDesc.RasterizerState.MultisampleEnable = 0;
+            psoDesc.SampleDesc.Count = 1;
+            psoDesc.SampleDesc.Quality = 0;
+        } else {
+            psoDesc.RasterizerState.MultisampleEnable = static_cast<int>(msaaState != MsaaState::DISABLED);
+            psoDesc.SampleDesc.Count = iMsaaSampleCount;
+            psoDesc.SampleDesc.Quality =
+                msaaState != MsaaState::DISABLED ? (pDirectXRenderer->getMsaaQualityLevel() - 1) : 0;
+        }
+
+        // DSV format.
+        if (isDepthBiasEnabled()) {
+            psoDesc.DSVFormat = DirectXRenderer::getShadowMapFormat();
+        } else {
+            psoDesc.DSVFormat = DirectXRenderer::getDepthStencilBufferFormat();
+        }
 
         // Specify render target.
         if (!bDepthOnlyPipeline) {

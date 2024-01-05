@@ -46,6 +46,13 @@ namespace ne {
         static constexpr VkFormat getDepthImageFormat() { return depthImageFormat; }
 
         /**
+         * Returns texture format used for shadow maps.
+         *
+         * @return Shadow map format.
+         */
+        static constexpr VkFormat getShadowMapFormat() { return shadowMapFormat; }
+
+        /**
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.
@@ -752,6 +759,19 @@ namespace ne {
         void startDepthOnlyRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
 
         /**
+         * Submits commands to draw world from the perspective of all spawned light sources to capture
+         * shadow maps.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param pGraphicsPipelines         Graphics pipelines to draw.
+         */
+        virtual void drawShadowMappingPass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) override;
+
+        /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
          *
          * @param pCurrentFrameResource      Frame resource of the frame being submitted.
@@ -1013,6 +1033,9 @@ namespace ne {
 
         /** Format of @ref pDepthImage. */
         static constexpr auto depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+        /** Format used for shadow maps. */
+        static constexpr auto shadowMapFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
         /** Tiling option for @ref pDepthImage. */
         static constexpr auto depthImageTiling = VK_IMAGE_TILING_OPTIMAL;

@@ -20,8 +20,9 @@
 #include "game/camera/CameraProperties.h"
 #include "shader/general/EngineShaders.hpp"
 #include "game/nodes/light/PointLightNode.h"
-#include "misc/shapes/AABB.h"
+#include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/SpotlightNode.h"
+#include "misc/shapes/AABB.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -334,11 +335,17 @@ namespace ne {
         cullLightsOutsideCameraFrustum(
             pActiveCameraProperties, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
 
+        // Capture shadow maps.
+        drawShadowMappingPass(
+            pMtxCurrentFrameResource->second.pResource,
+            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            &pMtxGraphicsPipelines->second);
+
         // Cull meshes.
         const auto pMeshPipelinesInFrustum =
             getMeshesInCameraFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
 
-        // Draw depth prepass.
+        // Draw depth prepass on non-culled meshes.
         drawMeshesDepthPrepass(
             pMtxCurrentFrameResource->second.pResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
@@ -350,7 +357,7 @@ namespace ne {
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             ComputeExecutionStage::AFTER_DEPTH_PREPASS);
 
-        // Draw main pass.
+        // Draw main pass on non-culled meshes.
         drawMeshesMainPass(
             pMtxCurrentFrameResource->second.pResource,
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
@@ -1170,6 +1177,14 @@ namespace ne {
             renderStats.frameTemporaryStatistics.mtxFrustumCullingLightsTimeInMs.second +=
                 duration<float, milliseconds::period>(steady_clock::now() - startFrustumCullingTime).count();
         }
+    }
+
+    void Renderer::getDirectionalLightNodeShadowMappingInfo(
+        DirectionalLightNode* pNode,
+        ShadowMapHandle*& pShadowMapHandle,
+        unsigned int& iViewProjectionMatrixArrayIndex) {
+        pShadowMapHandle = pNode->getShadowMapHandle();
+        iViewProjectionMatrixArrayIndex = pNode->getIndexIntoLightViewProjectionShaderArray();
     }
 
 } // namespace ne

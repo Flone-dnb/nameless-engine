@@ -81,7 +81,7 @@ namespace ne {
 
         // Create handle.
         auto pShadowMapHandle = std::unique_ptr<ShadowMapHandle>(
-            new ShadowMapHandle(this, pShadowMapResource.get(), type, onArrayIndexChanged));
+            new ShadowMapHandle(this, pShadowMapResource.get(), type, iShadowMapSize, onArrayIndexChanged));
 
         // Get array index manager.
         const auto pShadowMapArrayIndexManager = getArrayIndexManagerBasedOnShadowMapType(type);
@@ -158,8 +158,10 @@ namespace ne {
         const auto pRenderer = pResourceManager->getRenderer();
         const auto pMtxRenderSettings = pRenderer->getRenderSettings();
 
-        // Lock render settings and internal resources.
-        std::scoped_lock guardSettings(pMtxRenderSettings->first, mtxInternalResources.first);
+        // Lock render settings, internal resources and rendering.
+        std::scoped_lock guardSettings(
+            pMtxRenderSettings->first, mtxInternalResources.first, *pRenderer->getRenderResourcesMutex());
+        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Get shadow map resolution from render settings.
         unsigned int iRenderSettingsShadowMapSize =
@@ -205,8 +207,9 @@ namespace ne {
             }
             pShadowMap = std::get<std::unique_ptr<GpuResource>>(std::move(result));
 
-            // Update raw pointer in the handle.
+            // Update handle.
             pShadowMapHandle->mtxResource.second = pShadowMap.get();
+            pShadowMapHandle->iShadowMapSize = iShadowMapSize;
 
             // Register newly created resource to bind the new GPU resource to descriptor.
             optionalError = pShadowMapArrayIndexManager->registerShadowMapResource(pShadowMapHandle);

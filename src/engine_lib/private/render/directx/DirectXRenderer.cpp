@@ -2,9 +2,7 @@
 
 // Standard.
 #include <format>
-#include <filesystem>
 #include <array>
-#include <future>
 
 // Custom.
 #include "game/Window.h"
@@ -21,11 +19,10 @@
 #include "render/general/resources/frame/FrameResourcesManager.h"
 #include "game/camera/CameraProperties.h"
 #include "game/camera/CameraManager.h"
-#include "game/nodes/CameraNode.h"
-#include "game/camera/TransientCamera.h"
 #include "shader/hlsl/resources/HlslShaderCpuWriteResource.h"
 #include "shader/hlsl/resources/HlslShaderTextureResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
+#include "game/nodes/light/DirectionalLightNode.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
 
@@ -58,6 +55,11 @@ namespace ne {
             "also change format in Vulkan renderer for (visual) consistency");
         static_assert(
             depthStencilBufferFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
+            "also change format in Vulkan renderer for (visual) consistency");
+
+        // Check shadow map format.
+        static_assert(
+            shadowMapFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
             "also change format in Vulkan renderer for (visual) consistency");
 
         // Self check for light culling compute shader:
@@ -189,7 +191,7 @@ namespace ne {
 
         D3D12_CLEAR_VALUE depthClear;
         depthClear.Format = depthStencilBufferFormat;
-        depthClear.DepthStencil.Depth = 1.0F;
+        depthClear.DepthStencil.Depth = getMaxDepth();
         depthClear.DepthStencil.Stencil = 0;
 
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
@@ -723,6 +725,263 @@ namespace ne {
 
         // Record barriers.
         pCommandList->ResourceBarrier(static_cast<UINT>(vDepthTransitions.size()), vDepthTransitions.data());
+
+        // Execute recorded commands.
+        executeGraphicsCommandList(pCommandList.Get());
+    }
+
+    void DirectXRenderer::drawShadowMappingPass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        PROFILE_FUNC;
+
+        // Prepare command list.
+        resetCommandListForGraphics(reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource));
+
+        // Prepare draw call counter to be used later.
+        const auto pDrawCallCounter = getDrawCallCounter();
+
+        // Get pipelines to iterate over.
+        const auto& shadowMappingPipelines =
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING));
+
+        // Prepare lambda to set viewport size according to shadow map size.
+        const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {
+            const auto iShadowMapSize = pShadowMapHandle->getShadowMapSize();
+
+            D3D12_VIEWPORT shadowMapViewport;
+            D3D12_RECT shadowMapScissorRect;
+
+            shadowMapViewport.TopLeftX = 0;
+            shadowMapViewport.TopLeftY = 0;
+            shadowMapViewport.Width = static_cast<float>(iShadowMapSize);
+            shadowMapViewport.Height = static_cast<float>(iShadowMapSize);
+            shadowMapViewport.MinDepth = getMinDepth();
+            shadowMapViewport.MaxDepth = getMaxDepth();
+
+            shadowMapScissorRect.left = 0;
+            shadowMapScissorRect.top = 0;
+            shadowMapScissorRect.right = static_cast<LONG>(iShadowMapSize);
+            shadowMapScissorRect.bottom = static_cast<LONG>(iShadowMapSize);
+
+            // Set shadow map size as viewport size.
+            pCommandList->RSSetViewports(1, &shadowMapViewport);
+            pCommandList->RSSetScissorRects(1, &shadowMapScissorRect);
+        };
+
+        // Get directional lights.
+        const auto pMtxDirectionalLights =
+            getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
+        std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
+
+        // Iterate over all directional lights.
+        for (const auto& pLightNode : pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
+            // Convert node type.
+            const auto pDirectionalLightNode = reinterpret_cast<DirectionalLightNode*>(pLightNode);
+
+            // Get light info.
+            ShadowMapHandle* pShadowMapHandle = nullptr;
+            unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+            getDirectionalLightNodeShadowMappingInfo(
+                pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+
+            // Get shadow map texture.
+            const auto pMtxShadowMap = pShadowMapHandle->getResource();
+            std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
+
+            // Convert resource type.
+            const auto pShadowMapTexture = reinterpret_cast<DirectXResource*>(pMtxShadowMap->second);
+
+            // Set viewport size.
+            setViewportSizeToShadowMap(pShadowMapHandle);
+
+            // Transition shadow map to write state.
+            CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                pShadowMapTexture->getInternalResource(),
+                D3D12_RESOURCE_STATE_DEPTH_READ,
+                D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            pCommandList->ResourceBarrier(1, &transition);
+
+            // Get DSV handle.
+            const auto depthDescriptorHandle =
+                *pShadowMapTexture->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
+
+            // Clear depth.
+            pCommandList->ClearDepthStencilView(
+                depthDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, getMaxDepth(), 0, 0, nullptr);
+
+            // Bind only DSV.
+            pCommandList->OMSetRenderTargets(0, nullptr, FALSE, &depthDescriptorHandle);
+
+            // Iterate over all shadow mapping pipelines that have different vertex shaders.
+            for (const auto& [sShaderNames, pipelines] : shadowMappingPipelines) {
+
+                // Iterate over all shadow mapping pipelines that use the same vertex shader but different
+                // shader macros (if there are different macro variations).
+                for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                    // Convert pipeline type.
+                    const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
+
+                    // Get root constants manager.
+                    const auto pMtxRootConstantsManager = pPipeline->getShaderConstants();
+
+                    // Get pipeline's resources.
+                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
+                    std::scoped_lock guardPsoResources(
+                        pMtxPsoResources->first, pMtxRootConstantsManager->first);
+
+                    // Set PSO and root signature.
+                    pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
+                    pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+
+                    // After setting root signature we can set root parameters.
+
+                    // Don't set frame data buffer because it's not used in shadow mapping.
+
+                    // Bind array of viewProjection matrix array for lights.
+                    getLightingShaderResourceManager()
+                        ->setLightsViewProjectionMatricesBufferViewToCommandList(
+                            pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
+
+#if defined(DEBUG)
+                    // Self check: make sure root constants are used.
+                    if (!pMtxRootConstantsManager->second.has_value()) [[unlikely]] {
+                        Error error(std::format(
+                            "expected root constants to be used on pipeline \"{}\"",
+                            pPipeline->getPipelineIdentifier()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
+#endif
+
+                    // Get root constants manager.
+                    const auto pRootConstantsManager =
+                        pMtxRootConstantsManager->second->pConstantsManager.get();
+                    auto& rootConstantsOffsets = pMtxRootConstantsManager->second->uintConstantsOffsets;
+
+                    // Get offset of root constant.
+                    const auto lightViewProjectionIndexIt =
+                        rootConstantsOffsets.find(PipelineShaderConstantsManager::SpecialConstantsNames::
+                                                      pLightViewProjectionMatrixIndex);
+#if defined(DEBUG)
+                    // Make sure it's valid.
+                    if (lightViewProjectionIndexIt == rootConstantsOffsets.end()) [[unlikely]] {
+                        Error error(std::format(
+                            "expected root constant \"{}\" to be used on pipeline \"{}\"",
+                            PipelineShaderConstantsManager::SpecialConstantsNames::
+                                pLightViewProjectionMatrixIndex,
+                            pPipeline->getPipelineIdentifier()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
+#endif
+
+                    // Copy light's index into viewProjection matrix array to root constants.
+                    pRootConstantsManager->copyValueToShaderConstant(
+                        lightViewProjectionIndexIt->second, iIndexIntoLightViewProjectionMatrixArray);
+
+                    // Bind root constants.
+                    pCommandList->SetGraphicsRoot32BitConstants(
+                        pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                            SpecialRootParameterSlot::ROOT_CONSTANTS)],
+                        pRootConstantsManager->getVariableCount(),
+                        pRootConstantsManager->getData(),
+                        0);
+
+                    // Get materials.
+                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                    std::scoped_lock materialsGuard(pMtxMaterials->first);
+
+                    // No need to bind material's shader resources since they are not used in vertex shader
+                    // (since we are in shadow mapping pass).
+
+                    for (const auto& pMaterial : pMtxMaterials->second) {
+                        // Get meshes.
+                        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+
+                        // Iterate over all visible mesh nodes that use this material.
+                        for (const auto& [pMeshNode, vIndexBuffers] :
+                             pMtxMeshNodes->second.visibleMeshNodes) {
+                            // Get mesh data.
+                            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                            auto mtxMeshData = pMeshNode->getMeshData();
+
+                            // Note: if you will ever need it - don't lock mesh node's spawning/despawning
+                            // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
+                            // example).
+                            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+                            // Find and bind mesh data resource since only it is used in vertex shader.
+                            const auto& meshDataIt =
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                    MeshNode::getMeshShaderConstantBufferName());
+#if defined(DEBUG)
+                            if (meshDataIt ==
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                                [[unlikely]] {
+                                Error error(std::format(
+                                    "expected to find \"{}\" shader resource",
+                                    MeshNode::getMeshShaderConstantBufferName()));
+                                error.showError();
+                                throw std::runtime_error(error.getFullErrorMessage());
+                            }
+#endif
+                            // Set resource.
+                            reinterpret_cast<HlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
+                                ->setConstantBufferViewOfPipeline(
+                                    pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+
+                            // Prepare vertex buffer view.
+                            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+                            vertexBufferView.BufferLocation =
+                                reinterpret_cast<DirectXResource*>(
+                                    pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                    ->getInternalResource()
+                                    ->GetGPUVirtualAddress();
+                            vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+                            vertexBufferView.SizeInBytes = static_cast<UINT>(
+                                mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
+
+                            // Set vertex buffer view.
+                            pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+                            // Iterate over all index buffers of a specific mesh node that use this material.
+                            for (const auto& indexBufferInfo : vIndexBuffers) {
+                                // Prepare index buffer view.
+                                static_assert(
+                                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
+                                D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                                indexBufferView.BufferLocation =
+                                    reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
+                                        ->getInternalResource()
+                                        ->GetGPUVirtualAddress();
+                                indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                                indexBufferView.SizeInBytes = static_cast<UINT>(
+                                    indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
+
+                                // Set vertex/index buffer.
+                                pCommandList->IASetIndexBuffer(&indexBufferView);
+
+                                // Add a draw command.
+                                pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                                // Increment draw call counter.
+                                pDrawCallCounter->fetch_add(1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Transition shadow map to read state.
+            transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                pShadowMapTexture->getInternalResource(),
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                D3D12_RESOURCE_STATE_DEPTH_READ);
+            pCommandList->ResourceBarrier(1, &transition);
+        }
 
         // Execute recorded commands.
         executeGraphicsCommandList(pCommandList.Get());
@@ -1522,14 +1781,6 @@ namespace ne {
     }
 
     IDXGIAdapter3* DirectXRenderer::getVideoAdapter() const { return pVideoAdapter.Get(); }
-
-    DXGI_FORMAT DirectXRenderer::getBackBufferFormat() { return backBufferFormat; }
-
-    DXGI_FORMAT DirectXRenderer::getDepthStencilBufferFormat() { return depthStencilBufferFormat; }
-
-    DXGI_FORMAT DirectXRenderer::getDepthBufferFormatNoMultisampling() {
-        return depthBufferNoMultisamplingFormat;
-    }
 
     UINT DirectXRenderer::getMsaaQualityLevel() const { return iMsaaQualityLevelsCount; }
 

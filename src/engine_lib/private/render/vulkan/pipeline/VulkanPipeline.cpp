@@ -571,7 +571,8 @@ namespace ne {
         VkPipelineMultisampleStateCreateInfo multisamplingStateInfo{};
         multisamplingStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisamplingStateInfo.sampleShadingEnable = VK_FALSE;
-        multisamplingStateInfo.rasterizationSamples = pVulkanRenderer->getMsaaSampleCount();
+        multisamplingStateInfo.rasterizationSamples =
+            isDepthBiasEnabled() ? VK_SAMPLE_COUNT_1_BIT : pVulkanRenderer->getMsaaSampleCount();
         multisamplingStateInfo.minSampleShading = 1.0F;
         multisamplingStateInfo.pSampleMask = nullptr;
         multisamplingStateInfo.alphaToOneEnable = VK_FALSE;

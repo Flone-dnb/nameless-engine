@@ -364,7 +364,7 @@ namespace ne {
         }
     }
 
-    Pipeline* Material::getUsedPipeline() const {
+    Pipeline* Material::getColorPipeline() const {
         return mtxInternalResources.second.pColorPipeline.getPipeline();
     }
 

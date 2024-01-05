@@ -60,21 +60,30 @@ namespace ne {
          *
          * @return Back buffer format.
          */
-        static DXGI_FORMAT getBackBufferFormat();
+        static constexpr DXGI_FORMAT getBackBufferFormat() { return backBufferFormat; }
 
         /**
          * Returns used depth/stencil buffer format.
          *
          * @return Depth/stencil buffer format.
          */
-        static DXGI_FORMAT getDepthStencilBufferFormat();
+        static constexpr DXGI_FORMAT getDepthStencilBufferFormat() { return depthStencilBufferFormat; }
 
         /**
          * Returns used depth buffer format for resolved depth buffer.
          *
          * @return Depth buffer format.
          */
-        static DXGI_FORMAT getDepthBufferFormatNoMultisampling();
+        static constexpr DXGI_FORMAT getDepthBufferFormatNoMultisampling() {
+            return depthBufferNoMultisamplingFormat;
+        }
+
+        /**
+         * Returns texture format used for shadow maps.
+         *
+         * @return Shadow map format.
+         */
+        static constexpr DXGI_FORMAT getShadowMapFormat() { return shadowMapFormat; }
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -199,6 +208,19 @@ namespace ne {
          * @param pGameManager GameManager object that owns this renderer.
          */
         DirectXRenderer(GameManager* pGameManager);
+
+        /**
+         * Submits commands to draw world from the perspective of all spawned light sources to capture
+         * shadow maps.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param pGraphicsPipelines         Graphics pipelines to draw.
+         */
+        virtual void drawShadowMappingPass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) override;
 
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
@@ -571,6 +593,9 @@ namespace ne {
 
         /** Depth/stencil buffer format. */
         static constexpr DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        /** Format used for shadow maps. */
+        static constexpr DXGI_FORMAT shadowMapFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         /**
          * Depth buffer format for @ref pDepthBufferNoMultisampling.

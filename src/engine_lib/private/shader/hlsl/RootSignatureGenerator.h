@@ -243,21 +243,21 @@ namespace ne {
         findStaticSamplerForSamplerResource(const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription);
 
         /**
-         * Adds resources that only pixel shaders will use (if they are actually used).
+         * Adds special root signature resources (if they are actually used).
          *
-         * @param pixelShaderRootParameterIndices Used resources of pixel shader.
-         * @param vRootParameters                 Single root parameters of the root signature that will be
+         * @param shaderRootParameterIndices    Used resources of shaders.
+         * @param vRootParameters               Single root parameters of the root signature that will be
          * generated.
-         * @param vTableRanges                    Range root parameters of the root signature that will be
+         * @param vTableRanges                  Range root parameters of the root signature that will be
          * generated.
-         * @param addedRootParameterNames         Names of the root parameters that were added.
-         * @param rootParameterIndices            Pairs of "resource name" - "root parameter index" that were
+         * @param addedRootParameterNames       Names of the root parameters that were added.
+         * @param rootParameterIndices          Pairs of "resource name" - "root parameter index" that were
          * added.
-         * @param vSpecialRootParameterIndices    Indices of special root parameters.
+         * @param vSpecialRootParameterIndices  Indices of special root parameters.
          */
-        static void addConstantPixelShaderResourcesIfUsed(
+        static void addSpecialResourceRootParametersIfUsed(
             std::unordered_map<std::string, std::pair<UINT, RootSignatureGenerator::RootParameter>>&
-                pixelShaderRootParameterIndices,
+                shaderRootParameterIndices,
             std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
             std::vector<CD3DX12_DESCRIPTOR_RANGE>& vTableRanges,
             std::set<std::string>& addedRootParameterNames,

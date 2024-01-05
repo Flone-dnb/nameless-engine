@@ -120,6 +120,63 @@ namespace ne {
          */
         static std::string getSpotlightsInCameraFrustumIndicesShaderResourceName();
 
+        /**
+         * Returns name of the shader resource that stores array of `viewProjectionMatrix` for all light
+         * sources (used for shadow mapping).
+         *
+         * @return Name of the shader resource.
+         */
+        static std::string getLightViewProjectionMatricesShaderResourceName();
+
+#if defined(WIN32)
+        /**
+         * Sets views SRV of buffer that stored array of view projection matrices of spawned lights to the
+         * specified command list.
+         *
+         * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
+         *
+         * @warning Expects that the specified pipeline's internal resources mutex is locked.
+         *
+         * @param pPso                       PSO to query for root signature index of the lighting resources.
+         * @param pCommandList               Command list to set views to.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
+         * submit a new frame.
+         */
+        inline void setLightsViewProjectionMatricesBufferViewToCommandList(
+            DirectXPso* pPso,
+            const ComPtr<ID3D12GraphicsCommandList>& pCommandList,
+            size_t iCurrentFrameResourceIndex) {
+            // Lock internal resources.
+            std::scoped_lock gpuDataGuard(mtxGpuData.first);
+
+            auto& pipelineData = pPso->getInternalResources()->second;
+
+#if defined(DEBUG)
+            // Self check: make sure this resource is actually being used in the PSO.
+            if (pipelineData.rootParameterIndices.find(sLightViewProjectionMatricesShaderResourceName) ==
+                pipelineData.rootParameterIndices.end()) [[unlikely]] {
+                Error error(std::format(
+                    "shader resource \"{}\" is not used in the shaders of the specified PSO \"{}\" "
+                    "but you are attempting to set this resource to a command list",
+                    sLightViewProjectionMatricesShaderResourceName,
+                    pPso->getPipelineIdentifier()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+#endif
+
+            // Bind array.
+            setLightingArrayViewToCommandList(
+                pPso,
+                pCommandList,
+                iCurrentFrameResourceIndex,
+                lightArrays.pLightViewProjectionMatrices,
+                sLightViewProjectionMatricesShaderResourceName,
+                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
+                    SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES_BUFFER)]);
+        }
+#endif
+
 #if defined(WIN32)
         /**
          * Sets resource view of the specified lighting array to the specified command list.
@@ -197,6 +254,16 @@ namespace ne {
          * @return Array that stores data of all spawned spotlights.
          */
         ShaderLightArray* getSpotlightDataArray() const;
+
+        /**
+         * Returns a non-owning reference to an array that stores `viewProjection` matrices of all spawned
+         * lights (used for shadow mapping).
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Array that stores matrices of all spawned lights.
+         */
+        ShaderLightArray* getLightViewProjectionMatricesArray() const;
 
         /**
          * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
@@ -306,7 +373,7 @@ namespace ne {
                     SpecialRootParameterSlot::SPOT_LIGHTS_BUFFER)]);
 
 #if defined(DEBUG)
-            static_assert(sizeof(LightArrays) == 24, "consider adding new arrays here"); // NOLINT
+            static_assert(sizeof(LightArrays) == 32, "consider adding new arrays here"); // NOLINT
 #endif
         }
 
@@ -423,6 +490,9 @@ namespace ne {
 
             /** Stores data of all spawned spotlights. */
             std::unique_ptr<ShaderLightArray> pSpotlightDataArray;
+
+            /** `viewProjectionMatrix` for all spawned light sources, used for shadow mapping. */
+            std::unique_ptr<ShaderLightArray> pLightViewProjectionMatrices;
         };
 
         /** Groups shader data for compute shaders that operate on light-related data. */
@@ -963,6 +1033,13 @@ namespace ne {
         /** Name of the resources that stores indices of spotlights in camera's frustum. */
         static inline const std::string sSpotlightsInCameraFrustumIndicesShaderResourceName =
             "spotlightsInCameraFrustumIndices";
+
+        /**
+         * Name of the resource that stores array of `viewProjectionMatrix` for all light sources (used for
+         * shadow mapping).
+         */
+        static inline const std::string sLightViewProjectionMatricesShaderResourceName =
+            "lightViewProjectionMatrices";
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

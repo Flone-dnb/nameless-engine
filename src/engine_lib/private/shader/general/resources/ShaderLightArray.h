@@ -45,6 +45,13 @@ namespace ne {
          */
         void markAsNeedsUpdate();
 
+        /**
+         * Returns the current index (because it may change later) into the array.
+         *
+         * @return Index.
+         */
+        inline size_t getCurrentIndexIntoArray() const { return iIndexIntoArray; }
+
     private:
         /**
          * Creates a new slot.
@@ -212,7 +219,7 @@ namespace ne {
          * @remark If you mark your slot as "needs update" callbacks may be called multiple times
          * (this is perfectly fine, just don't rely on your callbacks being called only once).
          *
-         * @param pSpawnedOwnerLightNode Spawned light node that requests the slot.
+         * @param pSpawnedOwnerLightNode Spawned light node that requests the slot. Used for light culling.
          * @param iDataSizeInBytes       Size of the data that you want to store in the slot in bytes.
          * @param startUpdateCallback    Callback that will be called after you mark your slot as "needs
          * update" when the engine is ready to copy the data to the GPU. You must return a pointer which data

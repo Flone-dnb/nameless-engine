@@ -12,6 +12,9 @@
 namespace ne RNAMESPACE() {
     /** Represents a directional light source in world. */
     class RCLASS(Guid("7c95023e-c185-46af-8745-79fc0b59bbb3")) DirectionalLightNode : public SpatialNode {
+        // Renderer reads shadow map handle and index into viewProjection matrix array.
+        friend class Renderer;
+
     public:
         DirectionalLightNode();
 
@@ -102,12 +105,6 @@ namespace ne RNAMESPACE() {
         /** Data that will be directly copied into shaders. */
         struct DirecionalLightShaderData {
             /**
-             * Matrix that transforms data (such as positions) to clip (projection) space of the light
-             * source.
-             */
-            alignas(iVkMat4Alignment) glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
-
-            /**
              * Matrix that transforms data (such as positions) to texture space (shadow map space) of the
              * light source.
              */
@@ -131,9 +128,35 @@ namespace ne RNAMESPACE() {
             /** Slot in the array with data of all spawned directional lights. */
             std::unique_ptr<ShaderLightArraySlot> pDirectionalLightArraySlot;
 
+            /** Slot in the array with `viewProjectionMatrix` of all spawned lights. */
+            std::unique_ptr<ShaderLightArraySlot> pViewProjectionMatrixSlot;
+
+            /**
+             * Matrix that transforms data (such as positions) to clip (projection) space of the light
+             * source (used for shadow mapping).
+             */
+            glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
+
             /** Groups data that will be directly copied to the GPU resource. */
             DirecionalLightShaderData shaderData;
         };
+
+        /**
+         * Used by renderer and returns handle to shadow map texture that this light source uses.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return `nullptr` if node is not spawned, otherwise valid pointer.
+         */
+        ShadowMapHandle* getShadowMapHandle() const;
+
+        /**
+         * Used by renderer and returns the current index (because it may change later) into the shader array
+         * that stores viewProjection matrices of spawned light sources.
+         *
+         * @return Index into array.
+         */
+        unsigned int getIndexIntoLightViewProjectionShaderArray();
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
@@ -148,6 +171,28 @@ namespace ne RNAMESPACE() {
          * copying the data to the GPU resource.
          */
         void onFinishedUpdatingShaderData();
+
+        /**
+         * Callback that will be called by the renderer when it's ready to copy new (updated)
+         * `viewProjectionMatrix` of the light source to the GPU resource.
+         *
+         * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
+         */
+        void* onStartedUpdatingViewProjectionMatrix();
+
+        /**
+         * Called after @ref onStartedUpdatingViewProjectionMatrix to notify this node that the renderer has
+         * finished copying the data to the GPU resource.
+         */
+        void onFinishedUpdatingViewProjectionMatrix();
+
+        /**
+         * Marks array slot at for `viewProjectionMatrix` at @ref mtxShaderData as "needs update" (if the slot
+         * is created) to later be copied to the GPU resource.
+         *
+         * @remark Does nothing if the slot is `nullptr`.
+         */
+        void markViewProjectionMatrixToBeCopiedToGpu();
 
         /**
          * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)

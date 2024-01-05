@@ -15,6 +15,8 @@ namespace ne {
         LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST,
         LIGHT_CULLING_POINT_LIGHT_GRID,
         LIGHT_CULLING_SPOT_LIGHT_GRID,
+        LIGHT_VIEW_PROJECTION_MATRICES_BUFFER,
+        ROOT_CONSTANTS,
 
         // ... new items go here ...
 

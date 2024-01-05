@@ -56,6 +56,13 @@ namespace ne {
          */
         inline ShadowMapType getShadowMapType() const { return shadowMapType; }
 
+        /**
+         * Returns the current size of the shadow map resource.
+         *
+         * @return Size in pixels.
+         */
+        inline size_t getShadowMapSize() const { return iShadowMapSize; }
+
     private:
         /**
          * Constructs a new handle.
@@ -63,6 +70,7 @@ namespace ne {
          * @param pManager                    Manager that owns the resource.
          * @param pResource                   Resource to point to.
          * @param type                        Type of the shadow map this handle references.
+         * @param iTextureSize                Size (in pixels) of the shadow map.
          * @param onArrayIndexChanged Called after the index of the shadow map into the
          * descriptor array of shadow maps was initialized/changed.
          */
@@ -70,6 +78,7 @@ namespace ne {
             ShadowMapManager* pManager,
             GpuResource* pResource,
             ShadowMapType type,
+            size_t iTextureSize,
             const std::function<void(unsigned int)>& onArrayIndexChanged);
 
         /**
@@ -84,6 +93,9 @@ namespace ne {
 
         /** Resource that this handle references. */
         std::pair<std::recursive_mutex, GpuResource*> mtxResource;
+
+        /** Size (in pixels) of the @ref mtxResource texture, used for fast access. */
+        size_t iShadowMapSize = 0;
 
         /**
          * Called after the index of the shadow map into the

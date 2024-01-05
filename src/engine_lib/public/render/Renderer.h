@@ -30,6 +30,8 @@ namespace ne {
     class MeshNode;
     class Material;
     class Pipeline;
+    class ShadowMapHandle;
+    class DirectionalLightNode;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -497,6 +499,22 @@ namespace ne {
             CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) = 0;
 
         /**
+         * Submits commands to draw world from the perspective of all spawned light sources to capture
+         * shadow maps.
+         *
+         * @warning Expects to be called after @ref cullLightsOutsideCameraFrustum to capture shadow maps
+         * only for lights in frustum.
+         *
+         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
+         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param pGraphicsPipelines         Graphics pipelines to draw.
+         */
+        virtual void drawShadowMappingPass(
+            FrameResource* pCurrentFrameResource,
+            size_t iCurrentFrameResourceIndex,
+            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) = 0;
+
+        /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
          *
          * @param pCurrentFrameResource      Frame resource of the frame being submitted.
@@ -649,6 +667,19 @@ namespace ne {
          */
         void cullLightsOutsideCameraFrustum(
             CameraProperties* pActiveCameraProperties, size_t iCurrentFrameResourceIndex);
+
+        /**
+         * Returns information needed to capture/update a shadow map for a specific node.
+         *
+         * @param pNode                           Directional light to update its shadow map.
+         * @param pShadowMapHandle                Shadow map handle of the specified light.
+         * @param iViewProjectionMatrixArrayIndex Index into the array of viewProjection matrices of spawned
+         * light sources of the specified light.
+         */
+        void getDirectionalLightNodeShadowMappingInfo(
+            DirectionalLightNode* pNode,
+            ShadowMapHandle*& pShadowMapHandle,
+            unsigned int& iViewProjectionMatrixArrayIndex);
 
         /**
          * Returns frame constants.

@@ -255,13 +255,14 @@ namespace ne RNAMESPACE() {
         bool isUsingTransparency() const;
 
         /**
-         * Returns pipeline that this material uses.
+         * Returns pipeline with pixel/fragment shader enabled (this pipeline is considered to be the main
+         * pipeline while others might be optional).
          *
          * @warning Do not delete returned pointer.
          *
          * @return `nullptr` if pipeline was not initialized yet, otherwise used pipeline.
          */
-        Pipeline* getUsedPipeline() const;
+        Pipeline* getColorPipeline() const;
 
         /**
          * Returns pipeline that only has vertex shader (used for depth only passes).

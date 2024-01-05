@@ -320,15 +320,25 @@ namespace ne {
             }
         }
 
+        // Prepare indices of root parameters used by shaders.
+        auto shaderRootParameterIndices = vertexRootSigInfo.rootParameterIndices;
         if (pPixelRootSigInfo != nullptr) {
-            addConstantPixelShaderResourcesIfUsed(
-                pPixelRootSigInfo->rootParameterIndices,
-                vRootParameters,
-                vTableRanges,
-                addedRootParameterNames,
-                rootParameterIndices,
-                vSpecialRootParameterIndices);
+            // Add pixel shader parameters.
+            for (const auto& [sName, pair] : pPixelRootSigInfo->rootParameterIndices) {
+                // Resources with the same name store the same parameter so it's safe to overwrite
+                // something here.
+                shaderRootParameterIndices[sName] = pair;
+            }
         }
+
+        // Add special root parameters.
+        addSpecialResourceRootParametersIfUsed(
+            shaderRootParameterIndices,
+            vRootParameters,
+            vTableRanges,
+            addedRootParameterNames,
+            rootParameterIndices,
+            vSpecialRootParameterIndices);
 
         // Then, add other root parameters.
         auto addRootParameters =
@@ -444,7 +454,6 @@ namespace ne {
         // Serialize root signature in order to create it.
         ComPtr<ID3DBlob> pSerializedRootSignature = nullptr;
         ComPtr<ID3DBlob> pSerializerErrorMessage = nullptr;
-
         auto hResult = D3D12SerializeRootSignature(
             &rootSignatureDesc,
             D3D_ROOT_SIGNATURE_VERSION_1,
@@ -641,8 +650,8 @@ namespace ne {
         return typeToReturn;
     }
 
-    void RootSignatureGenerator::addConstantPixelShaderResourcesIfUsed(
-        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& pixelShaderRootParameterIndices,
+    void RootSignatureGenerator::addSpecialResourceRootParametersIfUsed(
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& shaderRootParameterIndices,
         std::vector<CD3DX12_ROOT_PARAMETER>& vRootParameters,
         std::vector<CD3DX12_DESCRIPTOR_RANGE>& vTableRanges,
         std::set<std::string>& addedRootParameterNames,
@@ -650,89 +659,88 @@ namespace ne {
         std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>&
             vSpecialRootParameterIndices) {
         // Prepare a lambda to add some fixed root parameter indices for light resources.
-        auto addLightingResourceRootParameter = [&](const std::string& sLightingShaderResourceName,
-                                                    bool bIsTable,
-                                                    SpecialRootParameterSlot slot) {
+        const auto addSpecialResourceRootParameter = [&](const std::string& sLightingShaderResourceName,
+                                                         SpecialRootParameterSlot slot) {
             // See if this resource is used.
-            const auto rootParameterIndexIt =
-                pixelShaderRootParameterIndices.find(sLightingShaderResourceName);
-
-            if (rootParameterIndexIt != pixelShaderRootParameterIndices.end()) {
-                // Get root parameter index.
-                const auto iRootParameterIndex = static_cast<unsigned int>(vRootParameters.size());
-
-                // Add root parameter.
-                if (bIsTable) {
-                    vTableRanges.push_back(rootParameterIndexIt->second.second.generateTableRange());
-                    CD3DX12_ROOT_PARAMETER newParameter{};
-                    newParameter.InitAsDescriptorTable(
-                        1, &vTableRanges.back(), rootParameterIndexIt->second.second.getVisibility());
-                    vRootParameters.push_back(newParameter);
-                } else {
-                    vRootParameters.push_back(
-                        rootParameterIndexIt->second.second.generateSingleDescriptorDescription());
-                }
-                addedRootParameterNames.insert(sLightingShaderResourceName);
-                rootParameterIndices[sLightingShaderResourceName] = iRootParameterIndex;
-
-                // Save special index.
-                vSpecialRootParameterIndices[static_cast<size_t>(slot)] = iRootParameterIndex;
+            const auto rootParameterIndexIt = shaderRootParameterIndices.find(sLightingShaderResourceName);
+            if (rootParameterIndexIt == shaderRootParameterIndices.end()) {
+                return;
             }
+
+            // Get root parameter.
+            auto& rootParameter = rootParameterIndexIt->second.second;
+
+            // Get root parameter index.
+            const auto iRootParameterIndex = static_cast<unsigned int>(vRootParameters.size());
+
+            // Add root parameter.
+            if (rootParameter.isTable()) {
+                vTableRanges.push_back(rootParameter.generateTableRange());
+
+                CD3DX12_ROOT_PARAMETER newParameter{};
+                newParameter.InitAsDescriptorTable(1, &vTableRanges.back(), rootParameter.getVisibility());
+                vRootParameters.push_back(newParameter);
+            } else {
+                vRootParameters.push_back(rootParameter.generateSingleDescriptorDescription());
+            }
+            addedRootParameterNames.insert(sLightingShaderResourceName);
+            rootParameterIndices[sLightingShaderResourceName] = iRootParameterIndex;
+
+            // Save special index.
+            vSpecialRootParameterIndices[static_cast<size_t>(slot)] = iRootParameterIndex;
         };
 
         // General lighting data.
-        addLightingResourceRootParameter(
+        addSpecialResourceRootParameter(
             LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
-            false,
             SpecialRootParameterSlot::GENERAL_LIGHTING_CBUFFER);
 
         // Point lights array.
-        addLightingResourceRootParameter(
+        addSpecialResourceRootParameter(
             LightingShaderResourceManager::getPointLightsShaderResourceName(),
-            false,
             SpecialRootParameterSlot::POINT_LIGHTS_BUFFER);
 
         // Directional lights array.
-        addLightingResourceRootParameter(
+        addSpecialResourceRootParameter(
             LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
-            false,
             SpecialRootParameterSlot::DIRECTIONAL_LIGHTS_BUFFER);
 
         // Spotlights array.
-        addLightingResourceRootParameter(
+        addSpecialResourceRootParameter(
             LightingShaderResourceManager::getSpotlightsShaderResourceName(),
-            false,
             SpecialRootParameterSlot::SPOT_LIGHTS_BUFFER);
 
         // Point light index list.
-        addLightingResourceRootParameter(
-            "opaquePointLightIndexList",
-            false,
-            SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST);
-        addLightingResourceRootParameter(
-            "transparentPointLightIndexList",
-            false,
-            SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST);
+        addSpecialResourceRootParameter(
+            "opaquePointLightIndexList", SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST);
+        addSpecialResourceRootParameter(
+            "transparentPointLightIndexList", SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST);
 
         // Spotlight index list.
-        addLightingResourceRootParameter(
-            "opaqueSpotLightIndexList", false, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
-        addLightingResourceRootParameter(
-            "transparentSpotLightIndexList",
-            false,
-            SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
+        addSpecialResourceRootParameter(
+            "opaqueSpotLightIndexList", SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
+        addSpecialResourceRootParameter(
+            "transparentSpotLightIndexList", SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST);
 
         // Point light grid.
-        addLightingResourceRootParameter(
-            "opaquePointLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
-        addLightingResourceRootParameter(
-            "transparentPointLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
+        addSpecialResourceRootParameter(
+            "opaquePointLightGrid", SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
+        addSpecialResourceRootParameter(
+            "transparentPointLightGrid", SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID);
 
         // Spotlight grid.
-        addLightingResourceRootParameter(
-            "opaqueSpotLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
-        addLightingResourceRootParameter(
-            "transparentSpotLightGrid", true, SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
+        addSpecialResourceRootParameter(
+            "opaqueSpotLightGrid", SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
+        addSpecialResourceRootParameter(
+            "transparentSpotLightGrid", SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
+
+        // Add lights view projection matrices array.
+        addSpecialResourceRootParameter(
+            LightingShaderResourceManager::getLightViewProjectionMatricesShaderResourceName(),
+            SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES_BUFFER);
+
+        // Add root constants.
+        addSpecialResourceRootParameter(sRootConstantsVariableName, SpecialRootParameterSlot::ROOT_CONSTANTS);
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(
@@ -903,26 +911,33 @@ namespace ne {
                 return Error(std::format("failed to get member #{} of type \"{}\"", i, structTypeDesc.Name));
             }
 
+            // Get member variable name.
+            const auto pVariableName = pStructType->GetMemberTypeName(i);
+            if (pVariableName == nullptr) [[unlikely]] {
+                return Error(
+                    std::format("failed to get name of member #{} of type \"{}\"", i, structTypeDesc.Name));
+            }
+
             // Get member variable type.
             D3D12_SHADER_TYPE_DESC memberDesc;
             pMemberType->GetDesc(&memberDesc);
 
             // Make sure it's a `uint` as we expect only `uint`s.
             if (memberDesc.Type != D3D_SHADER_VARIABLE_TYPE::D3D_SVT_UINT) [[unlikely]] {
-                return Error(std::format("found a non uint member variable #{} in root constants", i));
+                return Error(
+                    std::format("found a non uint member variable \"{}\" in root constants", pVariableName));
             }
 
             // Make sure member's offset is evenly divisible by sizeof(uint).
             if (memberDesc.Offset % sizeof(unsigned int) != 0) [[unlikely]] {
                 return Error(std::format(
-                    "expected the offset of member variable #{} to be evenly divisible by sizeof(uint) in "
-                    "root "
-                    "constants",
-                    i));
+                    "expected the offset of member variable \"{}\" to be evenly divisible by sizeof(uint) in "
+                    "root constants",
+                    pVariableName));
             }
 
             // Add root constant.
-            rootConstantOffsets[memberDesc.Name] = memberDesc.Offset / sizeof(unsigned int);
+            rootConstantOffsets[pVariableName] = memberDesc.Offset / sizeof(unsigned int);
         }
 
         // Prepare a new root parameter.

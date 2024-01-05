@@ -26,6 +26,10 @@ namespace ne {
         return lightArrays.pSpotlightDataArray.get();
     }
 
+    ShaderLightArray* LightingShaderResourceManager::getLightViewProjectionMatricesArray() const {
+        return lightArrays.pLightViewProjectionMatrices.get();
+    }
+
     std::optional<Error> LightingShaderResourceManager::bindDescriptorsToRecreatedPipelineResources() {
         // Notify point light array.
         auto optionalError = lightArrays.pPointLightDataArray->updateBindingsInAllPipelines();
@@ -48,10 +52,17 @@ namespace ne {
             return optionalError;
         }
 
+        // Notify matrices array.
+        optionalError = lightArrays.pLightViewProjectionMatrices->updateBindingsInAllPipelines();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -87,10 +98,17 @@ namespace ne {
             return optionalError;
         }
 
+        // Notify matrices array.
+        optionalError = lightArrays.pLightViewProjectionMatrices->updatePipelineBinding(pPipeline);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Rebind general lighting data.
@@ -116,11 +134,12 @@ namespace ne {
         lightArrays.pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         lightArrays.pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         lightArrays.pSpotlightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        lightArrays.pLightViewProjectionMatrices->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(LightArrays) == 24, "consider notifying new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
 #endif
 
         // Copy general lighting info (maybe changed, since that data is very small it should be OK to
@@ -704,6 +723,10 @@ namespace ne {
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
+        // Create array to store view and projection matrices of light sources (for shadow mapping).
+        lightArrays.pLightViewProjectionMatrices = ShaderLightArray::create(
+            pRenderer, sLightViewProjectionMatricesShaderResourceName, [](size_t) {}, {});
+
         // Create point light array.
         lightArrays.pPointLightDataArray = ShaderLightArray::create(
             pRenderer,
@@ -734,9 +757,9 @@ namespace ne {
                 sSpotlightsInCameraFrustumIndicesShaderResourceName});
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider creating new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(LightArrays) == 24, "consider creating new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider creating new arrays here"); // NOLINT
 #endif
     }
 
@@ -1389,11 +1412,12 @@ namespace ne {
         lightArrays.pPointLightDataArray = nullptr;
         lightArrays.pDirectionalLightDataArray = nullptr;
         lightArrays.pSpotlightDataArray = nullptr;
+        lightArrays.pLightViewProjectionMatrices = nullptr;
 
 #if defined(DEBUG) && defined(WIN32)
-        static_assert(sizeof(LightArrays) == 24, "consider resetting new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider resetting new arrays here"); // NOLINT
 #elif defined(DEBUG)
-        static_assert(sizeof(LightArrays) == 24, "consider resetting new arrays here"); // NOLINT
+        static_assert(sizeof(LightArrays) == 32, "consider resetting new arrays here"); // NOLINT
 #endif
 
         // Make sure light culling shader is destroyed first because it uses resources from compute
@@ -1424,6 +1448,10 @@ namespace ne {
 
     std::string LightingShaderResourceManager::getSpotlightsInCameraFrustumIndicesShaderResourceName() {
         return sSpotlightsInCameraFrustumIndicesShaderResourceName;
+    }
+
+    std::string LightingShaderResourceManager::getLightViewProjectionMatricesShaderResourceName() {
+        return sLightViewProjectionMatricesShaderResourceName;
     }
 
     std::unique_ptr<LightingShaderResourceManager>

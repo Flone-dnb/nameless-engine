@@ -37,7 +37,7 @@ TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is corre
                 getWorldRootNode()->addChildNode(pMeshNode);
 
                 // Get initialized PSO.
-                const auto pPso = pMeshNode->getMaterial()->getUsedPipeline();
+                const auto pPso = pMeshNode->getMaterial()->getColorPipeline();
 
                 // Check vertex shader configuration.
                 const auto optionalFullVertexShaderConfiguration =

@@ -23,6 +23,7 @@ namespace ne {
         ShadowMapManager* pManager,
         GpuResource* pResource,
         ShadowMapType type,
+        size_t iTextureSize,
         const std::function<void(unsigned int)>& onArrayIndexChanged)
         : onArrayIndexChanged(onArrayIndexChanged), shadowMapType(type) {
         // Save manager.
@@ -36,8 +37,9 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Save resource.
+        // Save resource and size.
         mtxResource.second = pResource;
+        iShadowMapSize = iTextureSize;
     }
 
     void ShadowMapHandle::changeArrayIndex(unsigned int iNewArrayIndex) {

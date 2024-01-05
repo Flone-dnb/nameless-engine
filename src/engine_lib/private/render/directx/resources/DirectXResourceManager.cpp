@@ -284,9 +284,12 @@ namespace ne {
                 "shadow map size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.)", iTextureSize));
         }
 
+        // Prepare texture format.
+        const auto textureFormat = DirectXRenderer::getShadowMapFormat();
+
         // Prepare resource description.
         auto resourceDescription = CD3DX12_RESOURCE_DESC::Tex2D(
-            DirectXRenderer::getDepthBufferFormatNoMultisampling(),
+            textureFormat,
             iTextureSize,
             iTextureSize,
             1, // depth / array size
@@ -296,7 +299,7 @@ namespace ne {
             D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
         if (bIsCubeTexture) {
             CD3DX12_RESOURCE_DESC::Tex3D(
-                DirectXRenderer::getDepthBufferFormatNoMultisampling(),
+                textureFormat,
                 iTextureSize,
                 iTextureSize,
                 1, // depth / array size
@@ -308,6 +311,11 @@ namespace ne {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
+        D3D12_CLEAR_VALUE depthClear;
+        depthClear.Format = textureFormat;
+        depthClear.DepthStencil.Depth = Renderer::getMaxDepth();
+        depthClear.DepthStencil.Stencil = 0;
+
         // Create resource.
         auto result = DirectXResource::create(
             this,
@@ -315,8 +323,8 @@ namespace ne {
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDescription,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            {},
+            D3D12_RESOURCE_STATE_DEPTH_READ, // will be transitioned to write in `draw`
+            depthClear,
             0,
             0);
         if (std::holds_alternative<Error>(result)) {

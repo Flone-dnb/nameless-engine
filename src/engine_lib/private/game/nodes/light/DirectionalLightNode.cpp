@@ -20,7 +20,7 @@ namespace ne {
         intensity = std::clamp(intensity, 0.0F, 1.0F);
 
 #if defined(DEBUG)
-        static_assert(sizeof(DirecionalLightShaderData) == 176, "consider clamping new parameters here");
+        static_assert(sizeof(DirecionalLightShaderData) == 112, "consider clamping new parameters here");
 #endif
     }
 
@@ -31,6 +31,14 @@ namespace ne {
     }
 
     void DirectionalLightNode::onFinishedUpdatingShaderData() { mtxShaderData.first.unlock(); }
+
+    void* DirectionalLightNode::onStartedUpdatingViewProjectionMatrix() {
+        mtxShaderData.first.lock(); // don't unlock until finished with update
+
+        return &mtxShaderData.second.viewProjectionMatrix;
+    }
+
+    void DirectionalLightNode::onFinishedUpdatingViewProjectionMatrix() { mtxShaderData.first.unlock(); }
 
     void DirectionalLightNode::markShaderDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
@@ -83,16 +91,16 @@ namespace ne {
         mtxShaderData.second.shaderData.intensity = intensity;
         recalculateMatricesForShadowMapping();
 #if defined(DEBUG)
-        static_assert(sizeof(DirecionalLightShaderData) == 176, "consider copying new parameters here");
+        static_assert(sizeof(DirecionalLightShaderData) == 112, "consider copying new parameters here");
 #endif
 
-        // Reserve a slot in the directional light shader data array
+        // Get lighting manager.
+        const auto pLightingShaderResourceManager =
+            getGameInstance()->getWindow()->getRenderer()->getLightingShaderResourceManager();
+
+        // Reserve a slot in the directional light array
         // so that our parameters will be available in the shaders.
-        const auto pDirectionalLightArray = getGameInstance()
-                                                ->getWindow()
-                                                ->getRenderer()
-                                                ->getLightingShaderResourceManager()
-                                                ->getDirectionalLightDataArray();
+        const auto pDirectionalLightArray = pLightingShaderResourceManager->getDirectionalLightDataArray();
         auto result = pDirectionalLightArray->reserveNewSlot(
             this,
             sizeof(DirecionalLightShaderData),
@@ -107,6 +115,24 @@ namespace ne {
 
         // Save received slot.
         mtxShaderData.second.pDirectionalLightArraySlot =
+            std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
+
+        // Reserve a slot to copy our `viewProjectionMatrix`
+        // so that it will be available in the shaders.
+        result = pLightingShaderResourceManager->getLightViewProjectionMatricesArray()->reserveNewSlot(
+            this,
+            sizeof(glm::mat4x4),
+            [this]() { return onStartedUpdatingViewProjectionMatrix(); },
+            [this]() { onFinishedUpdatingViewProjectionMatrix(); });
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save received slot.
+        mtxShaderData.second.pViewProjectionMatrixSlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
     }
 
@@ -151,7 +177,8 @@ namespace ne {
         // Update matrices for shaders.
         recalculateMatricesForShadowMapping();
 
-        // Mark updated shader data to be later copied to the GPU resource.
+        // Mark matrices and shader data to be copied to the GPU.
+        markViewProjectionMatrixToBeCopiedToGpu();
         markShaderDataToBeCopiedToGpu();
     }
 
@@ -218,8 +245,50 @@ namespace ne {
             glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
 
         // Save to shaders.
-        mtxShaderData.second.shaderData.viewProjectionMatrix = viewProjectionMatrix;
+        mtxShaderData.second.viewProjectionMatrix = viewProjectionMatrix;
         mtxShaderData.second.shaderData.viewProjectionTextureMatrix = textureMatrix * viewProjectionMatrix;
+    }
+
+    void DirectionalLightNode::markViewProjectionMatrixToBeCopiedToGpu() {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Make sure the slot exists.
+        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) {
+            return;
+        }
+
+        // Mark as "needs update".
+        mtxShaderData.second.pViewProjectionMatrixSlot->markAsNeedsUpdate();
+    }
+
+    ShadowMapHandle* DirectionalLightNode::getShadowMapHandle() const { return pShadowMapHandle.get(); }
+
+    unsigned int DirectionalLightNode::getIndexIntoLightViewProjectionShaderArray() {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Make sure the slot exists.
+        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) [[unlikely]] {
+            Error error(std::format(
+                "expected viewProjectionMatrix slot to be valid on light node \"{}\"", getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get index.
+        const auto iIndex = mtxShaderData.second.pViewProjectionMatrixSlot->getCurrentIndexIntoArray();
+
+        // Make sure we won't reach uint limit.
+        if (iIndex > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format(
+                "viewProjectionMatrix slot index on light node \"{}\" reached type limit: {}",
+                getNodeName(),
+                iIndex));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Cast to uint because Vulkan and DirectX operate on `uint`s.
+        return static_cast<unsigned int>(iIndex);
     }
 
 }

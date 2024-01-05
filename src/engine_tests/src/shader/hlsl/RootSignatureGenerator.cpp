@@ -46,7 +46,7 @@ TEST_CASE("root signature merge is correct") {
                 getWorldRootNode()->addChildNode(pMeshNode);
 
                 // Get initialized PSO.
-                const auto pPso = dynamic_cast<DirectXPso*>(pMeshNode->getMaterial()->getUsedPipeline());
+                const auto pPso = dynamic_cast<DirectXPso*>(pMeshNode->getMaterial()->getColorPipeline());
                 if (pPso == nullptr) {
                     INFO("expected a DirectX renderer");
                     REQUIRE(false);

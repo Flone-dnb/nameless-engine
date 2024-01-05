@@ -20,6 +20,12 @@ namespace ne {
         PipelineShaderConstantsManager(const PipelineShaderConstantsManager&) = delete;
         PipelineShaderConstantsManager& operator=(const PipelineShaderConstantsManager&) = delete;
 
+        /** Groups names of special (some non-user specified) push/root constants. */
+        struct SpecialConstantsNames {
+            /** Index into array of viewProjection matrices of spawned light sources (for shadow mapping). */
+            static constexpr auto pLightViewProjectionMatrixIndex = "iLightViewProjectionMatrixIndex";
+        };
+
         /**
          * Returns the maximum size of constants data that the manager allows to have.
          *
@@ -88,6 +94,15 @@ namespace ne {
         inline unsigned int getTotalSizeInBytes() const {
             // We can safely cast to `uint` here since push/root constants are very small in size.
             return static_cast<unsigned int>(vConstantsData.size() * sizeof(variable_type));
+        }
+
+        /**
+         * Returns the total number of `unsigned int`s stored as push/root constants.
+         *
+         * @return Number of variables.
+         */
+        inline unsigned int getVariableCount() const {
+            return static_cast<unsigned int>(vConstantsData.size());
         }
 
         /**

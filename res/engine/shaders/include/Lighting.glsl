@@ -63,9 +63,6 @@ layout(std430, binding = 52) readonly buffer PointLightsInCameraFrustumBuffer{
 
 /** Directional light parameters. */
 struct DirectionalLight{
-    /** Matrix that transforms data (such as positions) to clip (projection) space of the light source. */
-    mat4 viewProjectionMatrix;
-
     /** Matrix that transforms data (such as positions) to texture space (shadow map space) of the light source. */
     mat4 viewProjectionTextureMatrix;
 

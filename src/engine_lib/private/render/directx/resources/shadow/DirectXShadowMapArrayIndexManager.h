@@ -41,6 +41,13 @@ namespace ne {
             GpuResourceManager* pResourceManager,
             const std::string& sShaderArrayResourceName);
 
+        /**
+         * Returns internal SRV descriptor range.
+         *
+         * @return SRV descriptor range.
+         */
+        inline ContinuousDirectXDescriptorRange* getSrvDescriptorRange() const { return pSrvRange.get(); }
+
     protected:
         /**
          * Initializes the manager except for SRV range which is expected to be initialized after
@@ -94,15 +101,6 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> bindShadowMapsToAllPipelines() override;
 
     private:
-        /** Groups mutex guarded data. */
-        struct InternalData {
-            /** Continuous SRV descriptor range for registered shadow maps. */
-            std::unique_ptr<ContinuousDirectXDescriptorRange> pSrvRange;
-
-            /** Shadows maps that take place in this array. */
-            std::unordered_set<ShadowMapHandle*> registeredShadowMaps;
-        };
-
         /**
          * Calculates offset of the SRV descriptor (of the specified resource) from the start of the
          * continuous SRV descriptor range that this manager stores.
@@ -116,7 +114,14 @@ namespace ne {
         /** Called after SRV range changed its location in the heap. */
         void onSrvRangeIndicesChanged();
 
-        /** Mutex guarded internal data. */
-        std::pair<std::recursive_mutex, InternalData> mtxInternalData;
+        /**
+         * Continuous SRV descriptor range for registered shadow maps.
+         *
+         * @remark Always valid, never changing pointer.
+         */
+        std::unique_ptr<ContinuousDirectXDescriptorRange> pSrvRange;
+
+        /** Shadows maps that take place in this array. */
+        std::pair<std::recursive_mutex, std::unordered_set<ShadowMapHandle*>> mtxRegisteredShadowMaps;
     };
 }

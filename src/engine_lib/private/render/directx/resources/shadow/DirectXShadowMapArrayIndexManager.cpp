@@ -13,15 +13,15 @@ namespace ne {
         : ShadowMapArrayIndexManager(pRenderer, sShaderArrayResourceName) {}
 
     DirectXShadowMapArrayIndexManager::~DirectXShadowMapArrayIndexManager() {
-        std::scoped_lock guard(mtxInternalData.first);
+        std::scoped_lock guard(mtxRegisteredShadowMaps.first);
 
         // Make sure no shadow map is registered.
-        if (!mtxInternalData.second.registeredShadowMaps.empty()) [[unlikely]] {
+        if (!mtxRegisteredShadowMaps.second.empty()) [[unlikely]] {
             Error error(std::format(
                 "\"{}\" index manager is being destroyed but there are still {} registered shadow map "
                 "handle(s) alive",
                 *getShaderArrayResourceName(),
-                mtxInternalData.second.registeredShadowMaps.size()));
+                mtxRegisteredShadowMaps.second.size()));
             error.showError();
             return; // don't throw in destructor
         }
@@ -56,7 +56,7 @@ namespace ne {
         auto pSrvRange = std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
 
         // Save SRV range.
-        pIndexManager->mtxInternalData.second.pSrvRange = std::move(pSrvRange);
+        pIndexManager->pSrvRange = std::move(pSrvRange);
 
         return pIndexManager;
     }
@@ -67,7 +67,7 @@ namespace ne {
         const auto pMtxResource = pShadowMapHandle->getResource();
 
         // Lock shadow map and internal resources.
-        std::scoped_lock guard(pMtxResource->first, mtxInternalData.first);
+        std::scoped_lock guard(pMtxResource->first, mtxRegisteredShadowMaps.first);
 
         // Convert resource.
         const auto pResource = dynamic_cast<DirectXResource*>(pMtxResource->second);
@@ -83,8 +83,8 @@ namespace ne {
         }
 
         // Self check: make sure this resource was not registered yet.
-        if (mtxInternalData.second.registeredShadowMaps.find(pShadowMapHandle) !=
-            mtxInternalData.second.registeredShadowMaps.end()) [[unlikely]] {
+        if (mtxRegisteredShadowMaps.second.find(pShadowMapHandle) != mtxRegisteredShadowMaps.second.end())
+            [[unlikely]] {
             return Error(std::format(
                 "\"{}\" was requested to register a shadow map handle \"{}\" but this shadow map handle was "
                 "already registered",
@@ -102,8 +102,7 @@ namespace ne {
         }
 
         // Bind SRV from the range.
-        optionalError =
-            pResource->bindDescriptor(DirectXDescriptorType::SRV, mtxInternalData.second.pSrvRange.get());
+        optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange.get());
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -119,7 +118,7 @@ namespace ne {
         const auto iDescriptorOffsetFromRangeStart = std::get<unsigned int>(descriptorOffsetResult);
 
         // Save resource to internal array.
-        mtxInternalData.second.registeredShadowMaps.insert(pShadowMapHandle);
+        mtxRegisteredShadowMaps.second.insert(pShadowMapHandle);
 
         // Notify shadow map user about array index initialized.
         changeShadowMapArrayIndex(pShadowMapHandle, iDescriptorOffsetFromRangeStart);
@@ -129,11 +128,11 @@ namespace ne {
 
     std::optional<Error>
     DirectXShadowMapArrayIndexManager::unregisterShadowMapResource(ShadowMapHandle* pShadowMapHandle) {
-        std::scoped_lock guard(mtxInternalData.first);
+        std::scoped_lock guard(mtxRegisteredShadowMaps.first);
 
         // Make sure this shadow map was previously registered.
-        const auto shadowMapIt = mtxInternalData.second.registeredShadowMaps.find(pShadowMapHandle);
-        if (shadowMapIt == mtxInternalData.second.registeredShadowMaps.end()) [[unlikely]] {
+        const auto shadowMapIt = mtxRegisteredShadowMaps.second.find(pShadowMapHandle);
+        if (shadowMapIt == mtxRegisteredShadowMaps.second.end()) [[unlikely]] {
             return Error(std::format(
                 "\"{}\" index manager is unable to unregister the specified shadow map handle because it was "
                 "not registered previously",
@@ -141,7 +140,7 @@ namespace ne {
         }
 
         // Remove handle.
-        mtxInternalData.second.registeredShadowMaps.erase(shadowMapIt);
+        mtxRegisteredShadowMaps.second.erase(shadowMapIt);
 
         // After this function is finished the resource is expected to be destroyed and thus descriptors
         // will be freed which will free some space in our SRV range.
@@ -168,13 +167,13 @@ namespace ne {
                 "expected resource \"{}\" to have an SRV descriptor binded", pResource->getResourceName()));
         }
 
-        std::scoped_lock guard(mtxInternalData.first);
+        std::scoped_lock guard(mtxRegisteredShadowMaps.first);
 
         // Get descriptor offset from heap start.
         const auto iDescriptorOffsetFromHeapStart = pSrvDescriptor->getDescriptorOffsetInDescriptors();
 
         // Get range offset from heap start.
-        const auto iRangeStartFromHeapStart = mtxInternalData.second.pSrvRange->getRangeStartInHeap();
+        const auto iRangeStartFromHeapStart = pSrvRange->getRangeStartInHeap();
 
         // Calculate offset from range start.
         const auto iDescriptorOffsetFromRangeStart =
@@ -196,9 +195,9 @@ namespace ne {
     }
 
     void DirectXShadowMapArrayIndexManager::onSrvRangeIndicesChanged() {
-        std::scoped_lock guard(mtxInternalData.first);
+        std::scoped_lock guard(mtxRegisteredShadowMaps.first);
 
-        for (const auto& pShadowMapHandle : mtxInternalData.second.registeredShadowMaps) {
+        for (const auto& pShadowMapHandle : mtxRegisteredShadowMaps.second) {
             // Get descriptor offset from range start.
             auto descriptorOffsetResult = getSrvDescriptorOffsetFromRangeStart(
                 reinterpret_cast<DirectXResource*>(pShadowMapHandle->getResource()));

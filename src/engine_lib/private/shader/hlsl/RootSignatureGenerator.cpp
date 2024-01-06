@@ -294,7 +294,7 @@ namespace ne {
         const auto addFrameDataParameter = [&](RootParameter& rootParameter) {
             // Add root parameter.
             const auto iRootParameterIndex = static_cast<unsigned int>(vRootParameters.size());
-            vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA_CBUFFER)] =
+            vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA)] =
                 iRootParameterIndex;
             vRootParameters.push_back(rootParameter.generateSingleDescriptorDescription());
 
@@ -693,22 +693,22 @@ namespace ne {
         // General lighting data.
         addSpecialResourceRootParameter(
             LightingShaderResourceManager::getGeneralLightingDataShaderResourceName(),
-            SpecialRootParameterSlot::GENERAL_LIGHTING_CBUFFER);
+            SpecialRootParameterSlot::GENERAL_LIGHTING);
 
         // Point lights array.
         addSpecialResourceRootParameter(
             LightingShaderResourceManager::getPointLightsShaderResourceName(),
-            SpecialRootParameterSlot::POINT_LIGHTS_BUFFER);
+            SpecialRootParameterSlot::POINT_LIGHTS);
 
         // Directional lights array.
         addSpecialResourceRootParameter(
             LightingShaderResourceManager::getDirectionalLightsShaderResourceName(),
-            SpecialRootParameterSlot::DIRECTIONAL_LIGHTS_BUFFER);
+            SpecialRootParameterSlot::DIRECTIONAL_LIGHTS);
 
         // Spotlights array.
         addSpecialResourceRootParameter(
             LightingShaderResourceManager::getSpotlightsShaderResourceName(),
-            SpecialRootParameterSlot::SPOT_LIGHTS_BUFFER);
+            SpecialRootParameterSlot::SPOT_LIGHTS);
 
         // Point light index list.
         addSpecialResourceRootParameter(
@@ -737,10 +737,15 @@ namespace ne {
         // Add lights view projection matrices array.
         addSpecialResourceRootParameter(
             LightingShaderResourceManager::getLightViewProjectionMatricesShaderResourceName(),
-            SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES_BUFFER);
+            SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES);
 
         // Add root constants.
         addSpecialResourceRootParameter(sRootConstantsVariableName, SpecialRootParameterSlot::ROOT_CONSTANTS);
+
+        // Add directional shadow maps.
+        addSpecialResourceRootParameter(
+            ShadowMapManager::getDirectionalShadowMapsShaderResourceName(),
+            SpecialRootParameterSlot::DIRECTIONAL_SHADOW_MAPS);
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(

@@ -920,6 +920,12 @@ namespace ne {
         return mtxInternalData.second.iRangeStartInHeap;
     }
 
+    D3D12_GPU_DESCRIPTOR_HANDLE ContinuousDirectXDescriptorRange::getGpuDescriptorHandleToRangeStart() const {
+        return D3D12_GPU_DESCRIPTOR_HANDLE{
+            pHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
+            mtxInternalData.second.iRangeStartInHeap * pHeap->getDescriptorSize()};
+    }
+
     ContinuousDirectXDescriptorRange::~ContinuousDirectXDescriptorRange() {
         std::scoped_lock guard(mtxInternalData.first);
 

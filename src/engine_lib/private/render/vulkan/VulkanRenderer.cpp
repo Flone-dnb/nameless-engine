@@ -2000,7 +2000,7 @@ namespace ne {
         // Specify texel comparison for texture filtering.
         samplerInfo.compareEnable = VK_TRUE; // for automatic PCF on shadow samplers
         samplerInfo.compareOp =
-            VK_COMPARE_OP_LESS_OR_EQUAL; // same in DirectX, pixel depth <= shadow map value
+            VK_COMPARE_OP_LESS_OR_EQUAL; // same in DirectX, fragment depth <= shadow map value
 
         // Specify mipmapping options.
         samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;

@@ -173,7 +173,7 @@ namespace ne {
                 lightArrays.pLightViewProjectionMatrices,
                 sLightViewProjectionMatricesShaderResourceName,
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES_BUFFER)]);
+                    SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES)]);
         }
 #endif
 
@@ -335,7 +335,7 @@ namespace ne {
             // Bind general lighting resources buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::GENERAL_LIGHTING_CBUFFER)],
+                    SpecialRootParameterSlot::GENERAL_LIGHTING)],
                 reinterpret_cast<DirectXResource*>(
                     mtxGpuData.second.vGeneralDataGpuResources[iCurrentFrameResourceIndex]
                         ->getInternalResource())
@@ -350,7 +350,7 @@ namespace ne {
                 lightArrays.pPointLightDataArray,
                 sPointLightsShaderResourceName,
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::POINT_LIGHTS_BUFFER)]);
+                    SpecialRootParameterSlot::POINT_LIGHTS)]);
 
             // Bind directional lights array.
             setLightingArrayViewToCommandList(
@@ -360,7 +360,7 @@ namespace ne {
                 lightArrays.pDirectionalLightDataArray,
                 sDirectionalLightsShaderResourceName,
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::DIRECTIONAL_LIGHTS_BUFFER)]);
+                    SpecialRootParameterSlot::DIRECTIONAL_LIGHTS)]);
 
             // Bind spotlights array.
             setLightingArrayViewToCommandList(
@@ -370,7 +370,7 @@ namespace ne {
                 lightArrays.pSpotlightDataArray,
                 sSpotlightsShaderResourceName,
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::SPOT_LIGHTS_BUFFER)]);
+                    SpecialRootParameterSlot::SPOT_LIGHTS)]);
 
 #if defined(DEBUG)
             static_assert(sizeof(LightArrays) == 32, "consider adding new arrays here"); // NOLINT

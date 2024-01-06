@@ -6,17 +6,18 @@ namespace ne {
      * to query indices of root parameters of various non-user specified resources.
      */
     enum class SpecialRootParameterSlot : unsigned int {
-        FRAME_DATA_CBUFFER = 0,
-        GENERAL_LIGHTING_CBUFFER,
-        POINT_LIGHTS_BUFFER,
-        DIRECTIONAL_LIGHTS_BUFFER,
-        SPOT_LIGHTS_BUFFER,
+        FRAME_DATA = 0,
+        GENERAL_LIGHTING,
+        POINT_LIGHTS,
+        DIRECTIONAL_LIGHTS,
+        SPOT_LIGHTS,
         LIGHT_CULLING_POINT_LIGHT_INDEX_LIST,
         LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST,
         LIGHT_CULLING_POINT_LIGHT_GRID,
         LIGHT_CULLING_SPOT_LIGHT_GRID,
-        LIGHT_VIEW_PROJECTION_MATRICES_BUFFER,
+        LIGHT_VIEW_PROJECTION_MATRICES,
         ROOT_CONSTANTS,
+        DIRECTIONAL_SHADOW_MAPS,
 
         // ... new items go here ...
 

@@ -88,6 +88,16 @@ namespace ne {
          */
         INT getRangeStartInHeap();
 
+        /**
+         * Returns a GPU descriptor handle to the current range start.
+         *
+         * @warning Returned handle is only valid for limited amount of time, until range is moved to other
+         * place in heap (because heap is being re-created for example).
+         *
+         * @return GPU descriptor handle to range start.
+         */
+        D3D12_GPU_DESCRIPTOR_HANDLE getGpuDescriptorHandleToRangeStart() const;
+
     private:
         /** Groups mutex guarded data. */
         struct InternalData {

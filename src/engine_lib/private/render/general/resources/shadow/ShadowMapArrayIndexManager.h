@@ -14,7 +14,14 @@ namespace ne {
     class Renderer;
     class GpuResourceManager;
 
-    /** Manages indices of shadows maps into a descriptor array used by shaders. */
+    /**
+     * Manages indices of shadows maps into a descriptor array used by shaders.
+     *
+     * Allows requesting an index into the array of shadow maps and binds specified shadow map
+     * to array's descriptor.
+     *
+     * Binds array of descriptors to the rendering pipeline to be used by shaders.
+     */
     class ShadowMapArrayIndexManager {
         // This class is expected to be used by shadow map manager.
         friend class ShadowMapManager;

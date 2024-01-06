@@ -23,6 +23,7 @@
 #include "shader/hlsl/resources/HlslShaderTextureResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "game/nodes/light/DirectionalLightNode.h"
+#include "render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
 
@@ -590,8 +591,8 @@ namespace ne {
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::FRAME_DATA_CBUFFER)],
+                pMtxPsoResources->second
+                    .vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA)],
                 reinterpret_cast<DirectXResource*>(
                     pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
                     ->getInternalResource()
@@ -1015,6 +1016,22 @@ namespace ne {
         // Convert frame resource.
         const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
 
+        // Get shadow map manager.
+        const auto pMtxShadowMaps = getResourceManager()->getShadowMapManager()->getInternalResources();
+        std::scoped_lock shadowMaps(pMtxShadowMaps->first);
+
+        // Get directional shadow map array.
+        const auto pDirectionalShadowMapArray = reinterpret_cast<DirectXShadowMapArrayIndexManager*>(
+            pMtxShadowMaps->second
+                .vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::DIRECTIONAL)]
+                .get());
+
+        // Get GPU handles to shadow map arrays.
+        // Handles will be valid because while we are inside the `draw` function descriptor heap won't be
+        // re-created.
+        const auto directionalShadowMapsGpuHandle =
+            pDirectionalShadowMapArray->getSrvDescriptorRange()->getGpuDescriptorHandleToRangeStart();
+
         // Prepare command list for main pass.
         resetCommandListForGraphics(pDirectXFrameResource);
 
@@ -1041,11 +1058,19 @@ namespace ne {
 
         // Draw opaque meshes.
         drawMeshesMainPassSpecificPipelines(
-            pDirectXFrameResource, iCurrentFrameResourceIndex, vOpaquePipelines, false);
+            pDirectXFrameResource,
+            iCurrentFrameResourceIndex,
+            vOpaquePipelines,
+            directionalShadowMapsGpuHandle,
+            false);
 
         // Draw transparent meshes.
         drawMeshesMainPassSpecificPipelines(
-            pDirectXFrameResource, iCurrentFrameResourceIndex, vTransparentPipelines, true);
+            pDirectXFrameResource,
+            iCurrentFrameResourceIndex,
+            vTransparentPipelines,
+            directionalShadowMapsGpuHandle,
+            true);
 
         if (bIsUsingMsaaRenderTarget) {
             PROFILE_SCOPE(ResolveMsaaTarget);
@@ -1108,6 +1133,7 @@ namespace ne {
         DirectXFrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
+        D3D12_GPU_DESCRIPTOR_HANDLE directionalShadowMapsHandle,
         const bool bIsDrawingTransparentMeshes) {
         PROFILE_FUNC;
 
@@ -1121,21 +1147,28 @@ namespace ne {
             // Get pipeline's resources.
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
             std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+            auto& pipelineData = pMtxPsoResources->second;
 
             // Set PSO and root signature.
-            pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
-            pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+            pCommandList->SetPipelineState(pipelineData.pPso.Get());
+            pCommandList->SetGraphicsRootSignature(pipelineData.pRootSignature.Get());
 
             // After setting root signature we can set root parameters.
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
-                pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::FRAME_DATA_CBUFFER)],
+                pipelineData
+                    .vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA)],
                 reinterpret_cast<DirectXResource*>(
                     pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
                     ->getInternalResource()
                     ->GetGPUVirtualAddress());
+
+            // Bind directional shadow maps.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
+                    SpecialRootParameterSlot::DIRECTIONAL_SHADOW_MAPS)],
+                directionalShadowMapsHandle);
 
             // Bind lighting resources.
             getLightingShaderResourceManager()->setResourceViewToCommandList(
@@ -1145,9 +1178,11 @@ namespace ne {
             if (bIsDrawingTransparentMeshes) { // TODO: this is a const argument which is known at compile
                                                // time (see how we specify it) so the compiler will probably
                                                // remove this branch
+                // Bind transparent light grid and index list.
                 getLightingShaderResourceManager()->setTransparentLightGridResourcesViewToCommandList(
                     pDirectXPso, pCommandList);
             } else {
+                // Bind opaque light grid and index list.
                 getLightingShaderResourceManager()->setOpaqueLightGridResourcesViewToCommandList(
                     pDirectXPso, pCommandList);
             }

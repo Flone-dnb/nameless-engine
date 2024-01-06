@@ -37,6 +37,20 @@ namespace ne {
         friend class PipelineManager;
 
     public:
+        /** Groups mutex guarded data. */
+        struct InternalResources {
+            /** All allocated shadow maps. */
+            std::unordered_map<ShadowMapHandle*, std::unique_ptr<GpuResource>> shadowMaps;
+
+            /**
+             * Array index managers for various light source types.
+             *
+             * @remark Access using enum: `vManagers[ShadowMapType::DIRECTIONAL]`.
+             */
+            std::array<std::unique_ptr<ShadowMapArrayIndexManager>, static_cast<size_t>(ShadowMapType::SIZE)>
+                vShadowMapArrayIndexManagers;
+        };
+
         ShadowMapManager() = delete;
         ShadowMapManager(const ShadowMapManager&) = delete;
         ShadowMapManager& operator=(const ShadowMapManager&) = delete;
@@ -51,6 +65,15 @@ namespace ne {
          * @return Constant depth bias.
          */
         static constexpr int getShadowMappingDepthBias() { return iShadowMappingDepthBias; }
+
+        /**
+         * Returns name of the shader resource (from shader code) that stores all directional shadow maps.
+         *
+         * @return Shader resource name.
+         */
+        static constexpr const char* getDirectionalShadowMapsShaderResourceName() {
+            return pDirectionalShadowMapsShaderResourceName;
+        }
 
         /**
          * Returns constant used to convert visible (non-clipped) distance to near clip plane for shadow
@@ -91,21 +114,18 @@ namespace ne {
             ShadowMapType type,
             const std::function<void(unsigned int)>& onArrayIndexChanged);
 
+        /**
+         * Returns internal resources of this manager.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Internal resources.
+         */
+        inline std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
+            return &mtxInternalResources;
+        }
+
     private:
-        /** Groups mutex guarded data. */
-        struct InternalResources {
-            /** All allocated shadow maps. */
-            std::unordered_map<ShadowMapHandle*, std::unique_ptr<GpuResource>> shadowMaps;
-
-            /**
-             * Array index managers for various light source types.
-             *
-             * @remark Access using enum: `vManagers[ShadowMapType::DIRECTIONAL]`.
-             */
-            std::array<std::unique_ptr<ShadowMapArrayIndexManager>, static_cast<size_t>(ShadowMapType::SIZE)>
-                vShadowMapArrayIndexManagers;
-        };
-
         /**
          * Initializes the manager.
          *

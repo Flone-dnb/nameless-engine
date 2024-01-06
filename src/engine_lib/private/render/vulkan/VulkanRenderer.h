@@ -215,6 +215,13 @@ namespace ne {
         VkRenderPass getDepthOnlyRenderPass() const;
 
         /**
+         * Returns render pass used for shadow mapping.
+         *
+         * @return `nullptr` if render pass is not created yet, otherwise valid pointer.
+         */
+        VkRenderPass getShadowMappingRenderPass() const;
+
+        /**
          * Returns Vulkan command pool used in the renderer.
          *
          * @return `nullptr` if command pool is not created yet, otherwise used command pool.
@@ -615,9 +622,13 @@ namespace ne {
          *
          * @warning Expects @ref pLogicalDevice to be valid.
          *
+         * @param bIsRendererInitialization Specify `true` if the renderer is doing initialization,
+         * `false` if some render settings (or similar) was changed and the renderer re-creates
+         * resources that may depend on changed settings/parameters.
+         *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> createRenderPasses();
+        [[nodiscard]] std::optional<Error> createRenderPasses(bool bIsRendererInitialization);
 
         /**
          * Creates @ref pMainRenderPass using the current @ref msaaSampleCount.
@@ -636,6 +647,15 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createDepthOnlyRenderPass();
+
+        /**
+         * Creates @ref pShadowMappingRenderPass.
+         *
+         * @warning Expects @ref pLogicalDevice to be valid.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> createShadowMappingRenderPass();
 
         /**
          * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
@@ -757,6 +777,16 @@ namespace ne {
          * @param iAcquiredImageIndex Index of the framebuffer to use.
          */
         void startDepthOnlyRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
+
+        /**
+         * Adds render pass start commands to the specified command buffer with @ref pShadowMappingRenderPass.
+         *
+         * @param pCommandBuffer    Command buffer to modify.
+         * @param pFramebufferToUse Framebuffer to use.
+         * @param iShadowMapSize    Size of the framebuffer image.
+         */
+        void startShadowMappingRenderPass(
+            VkCommandBuffer pCommandBuffer, VkFramebuffer pFramebufferToUse, uint32_t iShadowMapSize);
 
         /**
          * Submits commands to draw world from the perspective of all spawned light sources to capture
@@ -897,6 +927,9 @@ namespace ne {
 
         /** Render pass for main pass. */
         VkRenderPass pMainRenderPass = nullptr;
+
+        /** Render pass for shadow mapping. */
+        VkRenderPass pShadowMappingRenderPass = nullptr;
 
         /** Used to create command buffers. */
         VkCommandPool pCommandPool = nullptr;

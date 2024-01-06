@@ -893,10 +893,10 @@ namespace ne {
                     const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
                     std::scoped_lock materialsGuard(pMtxMaterials->first);
 
-                    // No need to bind material's shader resources since they are not used in vertex shader
-                    // (since we are in shadow mapping pass).
-
                     for (const auto& pMaterial : pMtxMaterials->second) {
+                        // No need to bind material's shader resources since they are not used in vertex
+                        // shader (since we are in shadow mapping pass).
+
                         // Get meshes.
                         const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
                         std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);

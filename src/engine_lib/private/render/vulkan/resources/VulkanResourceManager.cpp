@@ -537,7 +537,8 @@ namespace ne {
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
             VK_IMAGE_ASPECT_DEPTH_BIT,
-            bIsCubeTexture);
+            bIsCubeTexture,
+            true); // create framebuffer
         if (std::holds_alternative<Error>(resourceResult)) {
             auto error = std::get<Error>(std::move(resourceResult));
             error.addCurrentLocationToErrorStack();
@@ -557,7 +558,8 @@ namespace ne {
         VkImageTiling imageTilingMode,
         VkImageUsageFlags imageUsage,
         std::optional<VkImageAspectFlags> viewDescription,
-        bool bIsCubeMap) {
+        bool bIsCubeMap,
+        bool bCreateShadowMappingFramebuffer) {
         // Describe an image object.
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -582,7 +584,14 @@ namespace ne {
 
         // Create resource.
         auto result = VulkanResource::create(
-            this, sResourceName, pMemoryAllocator, imageInfo, allocationInfo, viewDescription, bIsCubeMap);
+            this,
+            sResourceName,
+            pMemoryAllocator,
+            imageInfo,
+            allocationInfo,
+            viewDescription,
+            bIsCubeMap,
+            bCreateShadowMappingFramebuffer);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

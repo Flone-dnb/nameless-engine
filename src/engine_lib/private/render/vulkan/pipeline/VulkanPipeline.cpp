@@ -690,7 +690,29 @@ namespace ne {
         if (pFragmentShader != nullptr) {
             pipelineInfo.renderPass = pVulkanRenderer->getMainRenderPass();
         } else {
-            pipelineInfo.renderPass = pVulkanRenderer->getDepthOnlyRenderPass();
+            if (isDepthBiasEnabled()) {
+                pipelineInfo.renderPass = pVulkanRenderer->getShadowMappingRenderPass();
+            } else {
+                pipelineInfo.renderPass = pVulkanRenderer->getDepthOnlyRenderPass();
+            }
+        }
+
+        // Specify dynamic state.
+        std::vector<VkDynamicState> vDynamicStates;
+        if (isDepthBiasEnabled()) {
+            // We will change viewport/scissor depending on the shadow map size.
+            vDynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+        }
+        VkPipelineDynamicStateCreateInfo dynamicStateInfo{};
+        dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(vDynamicStates.size());
+        dynamicStateInfo.pDynamicStates = vDynamicStates.data();
+        dynamicStateInfo.flags = 0;
+        dynamicStateInfo.pNext = nullptr;
+        if (vDynamicStates.empty()) {
+            pipelineInfo.pDynamicState = nullptr;
+        } else {
+            pipelineInfo.pDynamicState = &dynamicStateInfo;
         }
 
         // Specify parent pipeline.

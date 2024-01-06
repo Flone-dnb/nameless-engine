@@ -79,6 +79,12 @@ namespace ne {
 
         std::scoped_lock guard(mtxResourceMemory.first);
 
+        if (pShadowMappingFramebuffer != nullptr) {
+            // Destroy shadow mapping framebuffer.
+            vkDestroyFramebuffer(pLogicalDevice, pShadowMappingFramebuffer, nullptr);
+            pShadowMappingFramebuffer = nullptr;
+        }
+
         if (pImageResource != nullptr) {
             // Destroy image view.
             if (pImageView != nullptr) {
@@ -142,7 +148,8 @@ namespace ne {
         const VkImageCreateInfo& imageInfo,
         const VmaAllocationCreateInfo& allocationInfo,
         std::optional<VkImageAspectFlags> viewDescription,
-        bool bIsCubeMapView) {
+        bool bIsCubeMapView,
+        bool bCreateShadowMappingFramebuffer) {
         // Prepare variables for created data.
         VkImage pCreatedImage = nullptr;
         VmaAllocation pCreatedMemory = nullptr;
@@ -188,14 +195,17 @@ namespace ne {
 
             if (imageInfo.imageType != VK_IMAGE_TYPE_2D && viewInfo.viewType == VK_IMAGE_VIEW_TYPE_2D)
                 [[unlikely]] {
-                return Error("image type / view type mismatch");
+                return Error(std::format("image type / view type mismatch on image \"{}\"", sResourceName));
             }
 
             // Create image view.
             auto result =
                 vkCreateImageView(pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pImageView);
             if (result != VK_SUCCESS) [[unlikely]] {
-                return Error(std::format("failed to create image view, error: {}", string_VkResult(result)));
+                return Error(std::format(
+                    "failed to create image view for image \"{}\", error: {}",
+                    sResourceName,
+                    string_VkResult(result)));
             }
 
             if ((viewDescription.value() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 &&
@@ -207,10 +217,49 @@ namespace ne {
                 result = vkCreateImageView(
                     pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pDepthAspectImageView);
                 if (result != VK_SUCCESS) [[unlikely]] {
-                    return Error(
-                        std::format("failed to create image view, error: {}", string_VkResult(result)));
+                    return Error(std::format(
+                        "failed to create depth aspect image view for image \"{}\", error: {}",
+                        sResourceName,
+                        string_VkResult(result)));
                 }
             }
+
+            if (bCreateShadowMappingFramebuffer) {
+                // Get shadow mapping render pass.
+                const auto pShadowMappingRenderPass = pVulkanRenderer->getShadowMappingRenderPass();
+                if (pShadowMappingRenderPass == nullptr) [[unlikely]] {
+                    return Error(std::format(
+                        "expected shadow mapping render pass to be valid when creation image \"{}\"",
+                        sResourceName));
+                }
+
+                // Describe framebuffer.
+                VkFramebufferCreateInfo framebufferInfo{};
+                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferInfo.renderPass = pShadowMappingRenderPass;
+                framebufferInfo.attachmentCount = 1;
+                framebufferInfo.pAttachments = &pCreatedImageResource->pImageView;
+                framebufferInfo.width = imageInfo.extent.width;
+                framebufferInfo.height = imageInfo.extent.height;
+                framebufferInfo.layers = 1;
+
+                // Create main render pass framebuffer.
+                auto result = vkCreateFramebuffer(
+                    pLogicalDevice,
+                    &framebufferInfo,
+                    nullptr,
+                    &pCreatedImageResource->pShadowMappingFramebuffer);
+                if (result != VK_SUCCESS) [[unlikely]] {
+                    return Error(std::format(
+                        "failed to create a framebuffer for a swapchain image view, error: {}",
+                        string_VkResult(result)));
+                }
+            }
+        } else if (bCreateShadowMappingFramebuffer) [[unlikely]] {
+            return Error(std::format(
+                "possible error found during image \"{}\" creation: image view creation info is not "
+                "specified but a framebuffer creation was requested",
+                sResourceName));
         }
 
         return pCreatedImageResource;

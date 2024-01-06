@@ -78,6 +78,15 @@ namespace ne {
         inline VkImage getInternalImage() const { return pImageResource; }
 
         /**
+         * Framebuffer that references @ref getInternalImageView and shadow mapping render pass if this is an
+         * image resource that was requested to create a framebuffer.
+         *
+         * @return `nullptr` if this resource is a buffer or an image that was not requested to create
+         * a framebuffer at resource creation.
+         */
+        inline VkFramebuffer getShadowMappingFramebuffer() const { return pShadowMappingFramebuffer; }
+
+        /**
          * Returns memory allocation of the internal resource.
          *
          * @remark Do not delete (free) returned pointer.
@@ -172,6 +181,8 @@ namespace ne {
          * @param viewDescription  If specified also creates an image view that references the image.
          * @param bIsCubeMapView   `true` to create a view to a cubemap, `false` to create a 2D texture
          * view. Ignored if view description is not specified.
+         * @param bCreateShadowMappingFramebuffer Specify `true` if you want this resource to create a
+         * framebuffer for shadow mapping render pass for the underlying image view, `false` otherwise.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -182,7 +193,8 @@ namespace ne {
             const VkImageCreateInfo& imageInfo,
             const VmaAllocationCreateInfo& allocationInfo,
             std::optional<VkImageAspectFlags> viewDescription,
-            bool bIsCubeMapView = false);
+            bool bIsCubeMapView = false,
+            bool bCreateShadowMappingFramebuffer = false);
 
         /**
          * Creates a new image resource.
@@ -225,6 +237,12 @@ namespace ne {
          * @remark Only used when @ref pImageResource specified both depth and stencil aspects.
          */
         VkImageView pDepthAspectImageView = nullptr;
+
+        /**
+         * Framebuffer that references @ref pImageView and shadow mapping render pass if this is an image
+         * resource that was requested to create a framebuffer at resource creation.
+         */
+        VkFramebuffer pShadowMappingFramebuffer = nullptr;
 
         /**
          * Allocated memory for created resource.

@@ -4,7 +4,6 @@
 #include <format>
 
 // Custom.
-#include "game/nodes/CameraNode.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "window/GLFW.hpp"
 #include "game/GameManager.h"
@@ -20,7 +19,7 @@
 #include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "shader/glsl/resources/GlslShaderTextureResource.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
-#include "game/camera/TransientCamera.h"
+#include "render/general/resources/shadow/ShadowMapHandle.h"
 #include "shader/glsl/GlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
 
@@ -234,7 +233,7 @@ namespace ne {
         }
 
         // Create render pass.
-        optionalError = createRenderPasses();
+        optionalError = createRenderPasses(true);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1407,7 +1406,19 @@ namespace ne {
         return extent;
     }
 
-    std::optional<Error> VulkanRenderer::createRenderPasses() {
+    std::optional<Error> VulkanRenderer::createRenderPasses(bool bIsRendererInitialization) {
+        if (bIsRendererInitialization) {
+            // Create shadow mapping render pass
+            // (there's no need to re-create it when render settings change
+            // moreover framebuffers in shadow maps will reference this render pass
+            // and expect that it will not be re-created).
+            auto optionalError = createShadowMappingRenderPass();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
         // Create depth only render pass.
         auto optionalError = createDepthOnlyRenderPass();
         if (optionalError.has_value()) [[unlikely]] {
@@ -1522,15 +1533,13 @@ namespace ne {
         mainSubpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         mainSubpassDependency.dstSubpass = 0;
         mainSubpassDependency.srcStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // make commands in `src` subpass to reach
-                                                           // color attachment stage (swap chain
-                                                           // finished reading the image)
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // make sure swap chain finished reading the image
         mainSubpassDependency.dstStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // before commands in `dst` subpass reach color
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // before commands in our subpass reach color
                                                            // attachment stage
-        mainSubpassDependency.srcAccessMask = 0;
+        mainSubpassDependency.srcAccessMask = 0;           // 0 (no need) because we have semaphore
         mainSubpassDependency.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // because we will write to color attachment
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // because we will write to swap chain image
 
         // Describe main render pass.
         VkRenderPassCreateInfo mainRenderPassInfo{};
@@ -1627,6 +1636,40 @@ namespace ne {
             depthSubpass.pNext = &depthResolveDescription;
         }
 
+        // Describe main subpass dependency.
+        std::array<VkSubpassDependency2, 2> vSubpassDependencies{};
+
+        // Specify dependency before subpass.
+        auto& beforeSubpassDependency = vSubpassDependencies[0];
+        beforeSubpassDependency.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
+        beforeSubpassDependency.srcSubpass = 0;
+        beforeSubpassDependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+        beforeSubpassDependency.srcStageMask =
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // make commands before our subpass reach fragment shader
+                                                   // stage
+        beforeSubpassDependency.dstStageMask =
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // before commands in our subpass reach depth load
+                                                        // stage
+        beforeSubpassDependency.srcAccessMask =
+            VK_ACCESS_SHADER_READ_BIT; // because we want depth read commands to finish
+        beforeSubpassDependency.dstAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; // before we write to depth
+
+        // Specify dependency after subpass.
+        auto& afterSubpassDependency = vSubpassDependencies[1];
+        afterSubpassDependency.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
+        afterSubpassDependency.srcSubpass = 0;
+        afterSubpassDependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+        afterSubpassDependency.srcStageMask =
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT; // make commands in our subpass to reach depth store
+                                                       // stage
+        afterSubpassDependency.dstStageMask =
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // before commands after our subpass reach depth load
+                                                   // stage (can't use EARLY_FRAGMENT because of dstAccess)
+        afterSubpassDependency.srcAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; // because we want to first write depth
+        afterSubpassDependency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // and only then read it
+
         // Describe depth render pass.
         VkRenderPassCreateInfo2 depthRenderPassInfo{};
         depthRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO_2;
@@ -1634,11 +1677,91 @@ namespace ne {
         depthRenderPassInfo.pAttachments = vAttachments.data();
         depthRenderPassInfo.subpassCount = 1;
         depthRenderPassInfo.pSubpasses = &depthSubpass;
-        depthRenderPassInfo.dependencyCount = 0;
+        depthRenderPassInfo.dependencyCount = static_cast<uint32_t>(vSubpassDependencies.size());
+        depthRenderPassInfo.pDependencies = vSubpassDependencies.data();
 
         // Create depth render pass.
         const auto result =
             vkCreateRenderPass2(pLogicalDevice, &depthRenderPassInfo, nullptr, &pDepthOnlyRenderPass);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanRenderer::createShadowMappingRenderPass() {
+        // Describe depth image attachment.
+        VkAttachmentDescription depthAttachment{};
+        depthAttachment.format = shadowMapFormat;
+        depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save depth for main pass
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        // Create depth image reference in write layout for depth subpass.
+        VkAttachmentReference depthAttachmentRef{};
+        depthAttachmentRef.attachment = 0;
+        depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
+
+        // Describe depth only subpass.
+        VkSubpassDescription depthSubpass{};
+        depthSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        depthSubpass.colorAttachmentCount = 0;
+        depthSubpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+        // Use subpass dependencies for layout transitions
+        std::array<VkSubpassDependency, 2> vDependencies{};
+
+        // Specify dependency before subpass.
+        auto& beforeSubpassDependency = vDependencies[0];
+        beforeSubpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        beforeSubpassDependency.dstSubpass = 0;
+        beforeSubpassDependency.srcStageMask =
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // make commands before our subpass reach fragment shader
+                                                   // stage
+        beforeSubpassDependency.dstStageMask =
+            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT; // before commands in our subpass reach depth
+                                                        // load stage
+        beforeSubpassDependency.srcAccessMask =
+            VK_ACCESS_SHADER_READ_BIT; // because we want depth read commands to finish
+        beforeSubpassDependency.dstAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; // before we write to depth
+        beforeSubpassDependency.dependencyFlags =
+            VK_DEPENDENCY_BY_REGION_BIT; // we don't need random access to other fragments
+
+        // Specify dependency after subpass.
+        auto& afterSubpassDependency = vDependencies[1];
+        afterSubpassDependency.srcSubpass = 0;
+        afterSubpassDependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+        afterSubpassDependency.srcStageMask =
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT; // make commands in our subpass to reach depth store
+                                                       // stage
+        afterSubpassDependency.dstStageMask =
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // before commands after our subpass reach depth load stage
+                                                   // (can't use EARLY_FRAGMENT because of dstAccess)
+        afterSubpassDependency.srcAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT; // because we want to first write depth
+        afterSubpassDependency.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // and only then read
+        afterSubpassDependency.dependencyFlags =
+            VK_DEPENDENCY_BY_REGION_BIT; // we don't need random access to other fragments
+
+        // Describe depth render pass.
+        VkRenderPassCreateInfo shadowMappingRenderPassInfo{};
+        shadowMappingRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        shadowMappingRenderPassInfo.attachmentCount = 1;
+        shadowMappingRenderPassInfo.pAttachments = &depthAttachment;
+        shadowMappingRenderPassInfo.subpassCount = 1;
+        shadowMappingRenderPassInfo.pSubpasses = &depthSubpass;
+        shadowMappingRenderPassInfo.dependencyCount = static_cast<uint32_t>(vDependencies.size());
+        shadowMappingRenderPassInfo.pDependencies = vDependencies.data();
+
+        // Create shadow mapping render pass.
+        const auto result = vkCreateRenderPass(
+            pLogicalDevice, &shadowMappingRenderPassInfo, nullptr, &pShadowMappingRenderPass);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
@@ -1676,9 +1799,14 @@ namespace ne {
         // Now when all pipelines were destroyed:
         // Destroy render pass.
         vkDestroyRenderPass(pLogicalDevice, pMainRenderPass, nullptr);
-        vkDestroyRenderPass(pLogicalDevice, pDepthOnlyRenderPass, nullptr);
         pMainRenderPass = nullptr;
+        vkDestroyRenderPass(pLogicalDevice, pDepthOnlyRenderPass, nullptr);
         pDepthOnlyRenderPass = nullptr;
+        if (bDestroyPipelineManager) {
+            // Renderer is being destroyed.
+            vkDestroyRenderPass(pLogicalDevice, pShadowMappingRenderPass, nullptr);
+            pShadowMappingRenderPass = nullptr;
+        }
 
         // Destroy swap chain image views.
         for (size_t i = 0; i < vSwapChainImageViews.size(); i++) {
@@ -2038,7 +2166,7 @@ namespace ne {
                 return optionalError;
             }
 
-            optionalError = createRenderPasses(); // it depends on the format of the swap chain images
+            optionalError = createRenderPasses(false); // it depends on the format of the swap chain images
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -2398,11 +2526,30 @@ namespace ne {
         vkCmdBeginRenderPass(pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    void VulkanRenderer::drawShadowMappingPass(
-        FrameResource* pCurrentFrameResource,
-        size_t iCurrentFrameResourceIndex,
-        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
-        // TODO
+    void VulkanRenderer::startShadowMappingRenderPass(
+        VkCommandBuffer pCommandBuffer, VkFramebuffer pFramebufferToUse, uint32_t iShadowMapSize) {
+        PROFILE_FUNC;
+
+        // Prepare to begin render pass.
+        VkRenderPassBeginInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = pShadowMappingRenderPass;
+        renderPassInfo.framebuffer = pFramebufferToUse;
+
+        // Specify render area.
+        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.extent.width = iShadowMapSize;
+        renderPassInfo.renderArea.extent.height = iShadowMapSize;
+
+        // Specify clear color for attachments.
+        std::array<VkClearValue, 1> vClearValues{};
+        vClearValues[0].depthStencil = {getMaxDepth(), 0};
+
+        renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
+        renderPassInfo.pClearValues = vClearValues.data();
+
+        // Mark render pass start.
+        vkCmdBeginRenderPass(pCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
     std::variant<std::unique_ptr<Renderer>, std::pair<Error, std::string>>
@@ -2506,6 +2653,8 @@ namespace ne {
     VkRenderPass VulkanRenderer::getMainRenderPass() const { return pMainRenderPass; }
 
     VkRenderPass VulkanRenderer::getDepthOnlyRenderPass() const { return pDepthOnlyRenderPass; }
+
+    VkRenderPass VulkanRenderer::getShadowMappingRenderPass() const { return pShadowMappingRenderPass; }
 
     VkCommandPool VulkanRenderer::getCommandPool() const { return pCommandPool; }
 
@@ -2732,6 +2881,245 @@ namespace ne {
         return {swapChainExtent->width, swapChainExtent->height};
     }
 
+    void VulkanRenderer::drawShadowMappingPass(
+        FrameResource* pCurrentFrameResource,
+        size_t iCurrentFrameResourceIndex,
+        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        PROFILE_FUNC;
+
+        // Prepare draw call counter to be used later.
+        const auto pDrawCallCounter = getDrawCallCounter();
+
+        // Prepare vertex buffer.
+        static constexpr size_t iVertexBufferCount = 1;
+        std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
+        const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
+
+        // Get command buffer of the current frame resource.
+        const auto pCommandBuffer =
+            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource)->pCommandBuffer;
+
+        // Get pipelines to iterate over.
+        const auto& shadowMappingPipelines =
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING));
+
+        // Get directional lights.
+        const auto pMtxDirectionalLights =
+            getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
+        std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
+
+        // Prepare lambda to set viewport size according to shadow map size.
+        const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {
+            const auto iShadowMapSize = pShadowMapHandle->getShadowMapSize();
+
+            // Describe viewport.
+            VkViewport viewport{};
+            viewport.x = 0.0F;
+            viewport.y = static_cast<float>(iShadowMapSize); // flip view space Y to behave as in DirectX
+            viewport.width = static_cast<float>(iShadowMapSize);
+            viewport.height =
+                -static_cast<float>(iShadowMapSize); // flip view space Y to behave as in DirectX
+            viewport.minDepth = Renderer::getMinDepth();
+            viewport.maxDepth = Renderer::getMaxDepth();
+
+            // Describe scissor.
+            VkRect2D scissor{};
+            scissor.offset = {0, 0};
+            scissor.extent.width = static_cast<uint32_t>(iShadowMapSize);
+            scissor.extent.height = static_cast<uint32_t>(iShadowMapSize);
+
+            // Set viewport/scissor.
+            vkCmdSetViewport(pCommandBuffer, 0, 1, &viewport);
+            vkCmdSetScissor(pCommandBuffer, 0, 1, &scissor);
+        };
+
+        // Iterate over all directional lights.
+        for (const auto& pLightNode : pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
+            // Convert node type.
+            const auto pDirectionalLightNode = reinterpret_cast<DirectionalLightNode*>(pLightNode);
+
+            // Get light info.
+            ShadowMapHandle* pShadowMapHandle = nullptr;
+            unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+            getDirectionalLightNodeShadowMappingInfo(
+                pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+
+            // Get shadow map texture.
+            const auto pMtxShadowMap = pShadowMapHandle->getResource();
+            std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
+
+            // Convert resource type.
+            const auto pShadowMapTexture = reinterpret_cast<VulkanResource*>(pMtxShadowMap->second);
+
+            // Start shadow mapping render pass.
+            startShadowMappingRenderPass(
+                pCommandBuffer,
+                pShadowMapTexture->getShadowMappingFramebuffer(),
+                static_cast<uint32_t>(pShadowMapHandle->getShadowMapSize()));
+
+            // Set viewport size.
+            setViewportSizeToShadowMap(pShadowMapHandle);
+
+            // Iterate over all shadow mapping pipelines that have different vertex shaders.
+            for (const auto& [sShaderNames, pipelines] : shadowMappingPipelines) {
+                // Iterate over all shadow mapping pipelines that use the same vertex shader but different
+                // shader macros (if there are different macro variations).
+                for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                    // Convert pipeline type.
+                    const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
+
+                    // Get push constants and pipeline's resources.
+                    const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
+                    auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+
+                    // Lock both.
+                    std::scoped_lock guardPipelineResources(
+                        pMtxPipelineResources->first, pMtxPushConstants->first);
+
+                    // Bind pipeline.
+                    vkCmdBindPipeline(
+                        pCommandBuffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pMtxPipelineResources->second.pPipeline);
+
+                    // Bind descriptor sets.
+                    vkCmdBindDescriptorSets(
+                        pCommandBuffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pMtxPipelineResources->second.pPipelineLayout,
+                        0,
+                        1,
+                        &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
+                        0,
+                        nullptr);
+
+#if defined(DEBUG)
+                    // Self check: make sure push constants are used.
+                    if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
+                        Error error(std::format(
+                            "expected push constants to be used on the pipeline \"{}\"",
+                            pVulkanPipeline->getPipelineIdentifier()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
+#endif
+
+                    // Get push constants manager.
+                    const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
+                    auto& pushConstantsOffsets = pMtxPushConstants->second->uintConstantsOffsets;
+
+                    // Get offset of root constant.
+                    const auto lightViewProjectionIndexIt =
+                        pushConstantsOffsets.find(PipelineShaderConstantsManager::SpecialConstantsNames::
+                                                      pLightViewProjectionMatrixIndex);
+#if defined(DEBUG)
+                    // Make sure it's valid.
+                    if (lightViewProjectionIndexIt == pushConstantsOffsets.end()) [[unlikely]] {
+                        Error error(std::format(
+                            "expected root constant \"{}\" to be used on pipeline \"{}\"",
+                            PipelineShaderConstantsManager::SpecialConstantsNames::
+                                pLightViewProjectionMatrixIndex,
+                            pPipeline->getPipelineIdentifier()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
+#endif
+
+                    // Copy light's index into viewProjection matrix array to push constants.
+                    pPushConstantsManager->copyValueToShaderConstant(
+                        lightViewProjectionIndexIt->second, iIndexIntoLightViewProjectionMatrixArray);
+
+                    // Get materials.
+                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                    std::scoped_lock materialsGuard(pMtxMaterials->first);
+
+                    for (const auto& pMaterial : pMtxMaterials->second) {
+                        // No need to bind material's shader resources since they are not used in vertex
+                        // shader (since we are in shadow mapping pass).
+
+                        // Get meshes.
+                        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+
+                        // Iterate over all visible mesh nodes that use this material.
+                        for (const auto& [pMeshNode, vIndexBuffers] :
+                             pMtxMeshNodes->second.visibleMeshNodes) {
+                            // Get mesh data.
+                            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+
+                            // Note: if you will ever need it - don't lock mesh node's spawning/despawning
+                            // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
+                            // example).
+                            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
+
+                            // Find and bind mesh data resource since only it is used in vertex shader.
+                            const auto& meshDataIt =
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                    MeshNode::getMeshShaderConstantBufferName());
+#if defined(DEBUG)
+                            if (meshDataIt ==
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                                [[unlikely]] {
+                                Error error(std::format(
+                                    "expected to find \"{}\" shader resource",
+                                    MeshNode::getMeshShaderConstantBufferName()));
+                                error.showError();
+                                throw std::runtime_error(error.getFullErrorMessage());
+                            }
+#endif
+                            reinterpret_cast<GlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
+                                ->copyResourceIndexOfPipelineToPushConstants(
+                                    pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+
+                            // Bind vertex buffer.
+                            vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
+                                                     pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                                     ->getInternalBufferResource()};
+                            vkCmdBindVertexBuffers(
+                                pCommandBuffer,
+                                0,
+                                static_cast<uint32_t>(vVertexBuffers.size()),
+                                vVertexBuffers.data(),
+                                vOffsets.data());
+
+                            // Set push constants.
+                            vkCmdPushConstants(
+                                pCommandBuffer,
+                                pMtxPipelineResources->second.pPipelineLayout,
+                                VK_SHADER_STAGE_ALL_GRAPHICS,
+                                0,
+                                pPushConstantsManager->getTotalSizeInBytes(),
+                                pPushConstantsManager->getData());
+
+                            // Iterate over all index buffers of a specific mesh node that use this material.
+                            for (const auto& indexBufferInfo : vIndexBuffers) {
+                                // Bind index buffer.
+                                static_assert(
+                                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
+                                    "change `indexTypeFormat`");
+                                vkCmdBindIndexBuffer(
+                                    pCommandBuffer,
+                                    reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
+                                        ->getInternalBufferResource(),
+                                    0,
+                                    indexTypeFormat);
+
+                                // Add a draw command.
+                                vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                                // Increment draw call counter.
+                                pDrawCallCounter->fetch_add(1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Finish depth only render pass.
+            vkCmdEndRenderPass(pCommandBuffer);
+        }
+    }
+
     void VulkanRenderer::drawMeshesDepthPrepass(
         FrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
@@ -2766,6 +3154,7 @@ namespace ne {
             // Lock both.
             std::scoped_lock guardPipelineResources(pMtxPipelineResources->first, pMtxPushConstants->first);
 
+#if defined(DEBUG)
             // Self check: make sure push constants are used.
             if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
                 Error error(std::format(
@@ -2774,6 +3163,7 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+#endif
 
             // Get push constants manager.
             const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
@@ -3106,6 +3496,7 @@ namespace ne {
             // Lock both.
             std::scoped_lock guardPipelineResources(pMtxPipelineResources->first, pMtxPushConstants->first);
 
+#if defined(DEBUG)
             // Self check: make sure push constants are used.
             if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
                 Error error(std::format(
@@ -3114,6 +3505,7 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+#endif
 
             // Get push constants manager.
             const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();

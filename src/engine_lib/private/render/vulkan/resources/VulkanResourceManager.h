@@ -98,6 +98,8 @@ namespace ne {
          * @param imageUsage        Image usage.
          * @param viewDescription   If specified also creates an image view that references the image.
          * @param bIsCubeMap        `true` if you need a cubemap, `false` if a single texture.
+         * @param bCreateShadowMappingFramebuffer Specify `true` if you want this resource to create a
+         * framebuffer for shadow mapping render pass for the underlying image view, `false` otherwise.
          *
          * @return Created image.
          */
@@ -111,7 +113,8 @@ namespace ne {
             VkImageTiling imageTilingMode,
             VkImageUsageFlags imageUsage,
             std::optional<VkImageAspectFlags> viewDescription,
-            bool bIsCubeMap = false);
+            bool bIsCubeMap = false,
+            bool bCreateShadowMappingFramebuffer = false);
 
         /**
          * Loads a texture from a KTX file in the GPU memory.

@@ -238,7 +238,7 @@ namespace ne {
 
             iRenderSettingsShadowMapSize =
                 static_cast<unsigned int>(iWorldSize) *
-                32; // NOLINT: due to no cascading shadow maps we have to use huge directional shadow maps
+                16; // NOLINT: due to no cascading shadow maps we have to use huge directional shadow maps
         }
 
         return iRenderSettingsShadowMapSize;

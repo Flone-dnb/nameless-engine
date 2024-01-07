@@ -213,7 +213,7 @@ namespace ne {
          * Constant depth bias (offset) to apply when rendering depth to shadow maps to avoid an
          * effect known as "shadow acne" (stair-stepping).
          */
-        static constexpr int iShadowMappingDepthBias = 20000; // NOLINT
+        static constexpr int iShadowMappingDepthBias = 40000; // NOLINT
 
         /** Constant used to convert visible (non-clipped) distance to near clip plane for shadow mapping. */
         static constexpr float visibleDistanceToNearClipPlaneRatio = 0.004F; // NOLINT

@@ -236,7 +236,9 @@ namespace ne {
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
-            iRenderSettingsShadowMapSize = static_cast<unsigned int>(iWorldSize);
+            iRenderSettingsShadowMapSize =
+                static_cast<unsigned int>(iWorldSize) *
+                32; // NOLINT: due to no cascading shadow maps we have to use huge directional shadow maps
         }
 
         return iRenderSettingsShadowMapSize;

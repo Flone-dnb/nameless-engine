@@ -63,8 +63,8 @@ layout(std430, binding = 52) readonly buffer PointLightsInCameraFrustumBuffer{
 
 /** Directional light parameters. */
 struct DirectionalLight{
-    /** Matrix that transforms data (such as positions) to texture space (shadow map space) of the light source. */
-    mat4 viewProjectionTextureMatrix;
+    /** Matrix that transforms data (such as positions) to clip (projection) space of the light source. */
+    mat4 viewProjectionMatrix;
 
     /** Light forward unit vector (direction). 4th component is not used. */
     vec4 direction;
@@ -171,14 +171,19 @@ uint getDirectionalShadowMapSize(uint iShadowMapIndex){
 }
 
 /** Transforms position from world space to shadow map space. */
-vec3 transformWorldPositionToShadowMapSpace(vec3 worldPosition, mat4 viewProjectionTextureMatrix){
-    // Transform to shadow map texture space.
+vec3 transformWorldPositionToShadowMapSpace(vec3 worldPosition, mat4 viewProjectionMatrix){
+    // Transform to light's projection space.
     vec4 posShadowMapSpace =
-#hlsl mul(float4(worldPosition, 1.0F), viewProjectionTextureMatrix);
-#glsl viewProjectionTextureMatrix * vec4(worldPosition, 1.0F);
+#hlsl mul(viewProjectionMatrix, float4(worldPosition, 1.0F));
+#glsl viewProjectionMatrix * vec4(worldPosition, 1.0F);
 
     // Perspective divide.
     posShadowMapSpace = posShadowMapSpace / posShadowMapSpace.w;
+
+    // Transform to texture space (shadow map space).
+    posShadowMapSpace.x = (posShadowMapSpace.x + 1.0F) / 2.0F;  // converts from [-1..1] to [0..1]
+    posShadowMapSpace.y = (posShadowMapSpace.y - 1.0F) / -2.0F; // converts from [-1..1] to [0..1] and "flips" Y
+                                                                // because of Y axis difference in NDC and texture space
 
     return posShadowMapSpace.xyz;
 }
@@ -202,7 +207,7 @@ float calculateShadowForDirectionalLight(
 
     // Transform fragment to shadow map space.
     const vec3 fragPosShadowMapSpace
-        = transformWorldPositionToShadowMapSpace(fragmentWorldPosition, light.viewProjectionTextureMatrix);
+        = transformWorldPositionToShadowMapSpace(fragmentWorldPosition, light.viewProjectionMatrix);
 
     // Calculate texel size.
     const float texelSize = 1.0F /

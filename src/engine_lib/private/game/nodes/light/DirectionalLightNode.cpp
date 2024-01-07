@@ -35,7 +35,7 @@ namespace ne {
     void* DirectionalLightNode::onStartedUpdatingViewProjectionMatrix() {
         mtxShaderData.first.lock(); // don't unlock until finished with update
 
-        return &mtxShaderData.second.viewProjectionMatrix;
+        return &mtxShaderData.second.shaderData.viewProjectionMatrix;
     }
 
     void DirectionalLightNode::onFinishedUpdatingViewProjectionMatrix() { mtxShaderData.first.unlock(); }
@@ -233,20 +233,9 @@ namespace ne {
         const auto frustumFar = lookAtViewPosition.z + worldHalfSize;
 
         // Calculate projection matrix.
-        const auto viewProjectionMatrix =
+        mtxShaderData.second.shaderData.viewProjectionMatrix =
             glm::orthoLH(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNear, frustumFar) *
             viewMatrix;
-
-        // Construct matrix to convert coordinates from NDC space [-1; +1] to shadow map space [0; 1].
-        const auto textureMatrix = glm::mat4(
-            glm::vec4(0.5F, 0.0F, 0.0F, 0.5F),
-            glm::vec4(0.0F, -0.5F, 0.0F, 0.5F), // minus to flip Y due to difference in Y in NDC/UV space
-            glm::vec4(0.0F, 0.0F, 1.0F, 0.0F),
-            glm::vec4(0.0F, 0.0F, 0.0F, 1.0F));
-
-        // Save to shaders.
-        mtxShaderData.second.viewProjectionMatrix = viewProjectionMatrix;
-        mtxShaderData.second.shaderData.viewProjectionTextureMatrix = textureMatrix * viewProjectionMatrix;
     }
 
     void DirectionalLightNode::markViewProjectionMatrixToBeCopiedToGpu() {

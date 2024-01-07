@@ -105,10 +105,10 @@ namespace ne RNAMESPACE() {
         /** Data that will be directly copied into shaders. */
         struct DirecionalLightShaderData {
             /**
-             * Matrix that transforms data (such as positions) to texture space (shadow map space) of the
-             * light source.
+             * Matrix that transforms data (such as positions) to clip (projection) space of the light
+             * source (used for shadow mapping).
              */
-            alignas(iVkMat4Alignment) glm::mat4 viewProjectionTextureMatrix = glm::identity<glm::mat4>();
+            alignas(iVkMat4Alignment) glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
 
             /** Light forward unit vector (direction). 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 direction = glm::vec4(0.0F, 0.0F, 0.0F, 0.0F);
@@ -130,12 +130,6 @@ namespace ne RNAMESPACE() {
 
             /** Slot in the array with `viewProjectionMatrix` of all spawned lights. */
             std::unique_ptr<ShaderLightArraySlot> pViewProjectionMatrixSlot;
-
-            /**
-             * Matrix that transforms data (such as positions) to clip (projection) space of the light
-             * source (used for shadow mapping).
-             */
-            glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
 
             /** Groups data that will be directly copied to the GPU resource. */
             DirecionalLightShaderData shaderData;

@@ -13,7 +13,9 @@ VertexOut vsMeshNode(VertexIn vertexIn)
 
     // Calculate world coordinates.
     vertexOut.worldPosition = mul(meshData.worldMatrix, float4(vertexIn.localPosition, 1.0F));
+#ifndef VS_SHADOW_MAPPING_PASS
     vertexOut.worldNormal = normalize(mul((float3x3)meshData.normalMatrix, vertexIn.localNormal));
+#endif
 
     // Transform position to homogeneous clip space.
 #ifdef VS_SHADOW_MAPPING_PASS

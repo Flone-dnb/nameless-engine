@@ -23,7 +23,9 @@ void vsMeshNode(){
 
     // Calculate world coordinates.
     fragmentWorldPosition = MESH_DATA.worldMatrix * vec4(localPosition, 1.0F);
+#ifndef VS_SHADOW_MAPPING_PASS
     fragmentWorldNormal = normalize(mat3(MESH_DATA.normalMatrix) * localNormal);
+#endif
 
     // Transform position to homogeneous clip space.
 #ifdef VS_SHADOW_MAPPING_PASS

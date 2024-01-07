@@ -557,8 +557,9 @@ namespace ne {
         // Specify depth bias settings.
         if (isDepthBiasEnabled()) {
             rasterizerStateInfo.depthBiasEnable = VK_TRUE;
-            rasterizerStateInfo.depthBiasConstantFactor =
-                static_cast<float>(ShadowMapManager::getShadowMappingDepthBias());
+            rasterizerStateInfo.depthBiasConstantFactor = static_cast<float>(
+                ShadowMapManager::getShadowMappingDepthBias() /
+                2); // NOLINT: this gives results similar to DirectX
             rasterizerStateInfo.depthBiasClamp = 0.0F;
             rasterizerStateInfo.depthBiasSlopeFactor = 1.0F;
         }

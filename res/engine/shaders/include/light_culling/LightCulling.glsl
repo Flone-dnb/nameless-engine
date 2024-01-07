@@ -329,10 +329,31 @@ void addSpotLightToTileTransparentLightIndexList(uint iSpotLightIndex){
 //                                              light culling functions
 // --------------------------------------------------------------------------------------------------------------------
 
-void cullLightsForTile(float pixelDepth, uint iThreadGroupXIdInDispatch, uint iThreadGroupYIdInDispatch, uint iThreadIdInGroup){
+/** Does forward tiled light culling for the specified thread in a group. */
+void cullLightsForTile(
+    uint iThreadIdXInDispatch,
+    uint iThreadIdYInDispatch,
+    uint iThreadGroupXIdInDispatch,
+    uint iThreadGroupYIdInDispatch,
+    uint iThreadIdInGroup){
     // Sources:
     // - Presentation "DirectX 11 Rendering in Battlefield 3" (2011) by Johan Andersson, DICE.
     // - "Forward+: A Step Toward Film-Style Shading in Real Time", Takahiro Harada (2012).
+
+    // Prepare variable to store depth.
+    float pixelDepth = 1.0F;
+
+    // Avoid reading depth and running calculations out of bounds because if width/height is not evenly divisible
+    // by the thread group size, in C++ we will `ceil` the result and dispatch slightly more threads.
+    // So some thread groups can have some threads that will be out of bounds.
+    if (iThreadIdXInDispatch >= screenToViewData.iRenderTargetWidth || iThreadIdYInDispatch >= screenToViewData.iRenderTargetHeight){
+        return;
+    }
+
+    // Get depth of this pixel.
+    pixelDepth =
+#hlsl depthTexture.Load(int3(iThreadIdXInDispatch, iThreadIdYInDispatch, 0)).r;
+#glsl texelFetch(depthTexture, ivec2(iThreadIdXInDispatch, iThreadIdYInDispatch), 0).r;
 
     if (iThreadIdInGroup == 0){
         // Only one thread in the group should initialize group shared variables.

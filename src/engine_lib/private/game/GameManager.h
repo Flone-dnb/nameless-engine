@@ -172,7 +172,8 @@ namespace ne {
          * to the logs).
          */
         void createWorld(
-            const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize = 1024);
+            const std::function<void(const std::optional<Error>&)>& onCreated,
+            size_t iWorldSize = Globals::getDefaultWorldSize());
 
         /**
          * Adds a deferred task (see @ref addDeferredTask)
@@ -206,7 +207,7 @@ namespace ne {
         void loadNodeTreeAsWorld(
             const std::function<void(const std::optional<Error>&)>& onLoaded,
             const std::filesystem::path& pathToNodeTree,
-            size_t iWorldSize = 1024);
+            size_t iWorldSize = Globals::getDefaultWorldSize());
 
         /**
          * Returns a pointer to world's root node.

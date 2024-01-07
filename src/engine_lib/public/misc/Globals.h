@@ -26,6 +26,13 @@ namespace ne {
         };
 
         /**
+         * Returns default size for created/loaded worlds.
+         *
+         * @return World size.
+         */
+        static constexpr size_t getDefaultWorldSize() { return iDefaultWorldSize; }
+
+        /**
          * Returns the name of this application.
          *
          * @return Name of this application.
@@ -81,5 +88,8 @@ namespace ne {
 
         /** Name of the directory used to store resources. */
         static constexpr auto sResDirectoryName = "res";
+
+        /** Default size of a world. */
+        static constexpr size_t iDefaultWorldSize = 128; // NOLINT: start small and increase when needed
     };
 } // namespace ne

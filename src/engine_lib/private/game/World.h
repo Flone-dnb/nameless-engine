@@ -12,6 +12,7 @@
 
 // Custom.
 #include "misc/GC.hpp"
+#include "misc/Globals.h"
 #include "misc/Error.h"
 
 namespace ne {
@@ -67,7 +68,8 @@ namespace ne {
          *
          * @return Pointer to the new world instance.
          */
-        static std::unique_ptr<World> createWorld(GameManager* pGameManager, size_t iWorldSize = 1024);
+        static std::unique_ptr<World>
+        createWorld(GameManager* pGameManager, size_t iWorldSize = Globals::getDefaultWorldSize());
 
         /**
          * Loads and deserializes a node tree to be used as a new world.
@@ -88,7 +90,9 @@ namespace ne {
          * @return Error if failed to deserialize the node tree, otherwise pointer to the new world instance.
          */
         static std::variant<std::unique_ptr<World>, Error> loadNodeTreeAsWorld(
-            GameManager* pGameManager, const std::filesystem::path& pathToNodeTree, size_t iWorldSize = 1024);
+            GameManager* pGameManager,
+            const std::filesystem::path& pathToNodeTree,
+            size_t iWorldSize = Globals::getDefaultWorldSize());
 
         /**
          * Returns total amount of currently spawned nodes.

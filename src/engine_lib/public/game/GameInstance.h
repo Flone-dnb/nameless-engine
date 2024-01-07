@@ -10,6 +10,7 @@
 #include "input/KeyboardKey.hpp"
 #include "input/MouseButton.hpp"
 #include "misc/Timer.h"
+#include "misc/Globals.h"
 #include "misc/GC.hpp"
 
 namespace ne {
@@ -153,7 +154,7 @@ namespace ne {
          */
         void createWorld(
             const std::function<void(const std::optional<Error>&)>& onCreated,
-            size_t iWorldSize = 1024); // NOLINT: seems like a typical world size
+            size_t iWorldSize = Globals::getDefaultWorldSize());
 
         /**
          * Adds a deferred task (see @ref addDeferredTask)
@@ -190,7 +191,7 @@ namespace ne {
         void loadNodeTreeAsWorld(
             const std::function<void(const std::optional<Error>&)>& onLoaded,
             const std::filesystem::path& pathToNodeTree,
-            size_t iWorldSize = 1024); // NOLINT: seems like a typical world size
+            size_t iWorldSize = Globals::getDefaultWorldSize());
 
         /**
          * Queues a request to run a garbage collection as a deferred task on the main thread

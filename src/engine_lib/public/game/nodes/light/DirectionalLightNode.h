@@ -204,11 +204,11 @@ namespace ne RNAMESPACE() {
         void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
 
         /**
-         * (Re)calculates view, projection and texture matrices used for shadow mapping.
+         * (Re)calculates viewProjection matrix used for shadow mapping.
          *
          * @remark Does not call @ref markShaderDataToBeCopiedToGpu.
          */
-        void recalculateMatricesForShadowMapping();
+        void recalculateViewProjectionMatrixForShadowMapping();
 
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;

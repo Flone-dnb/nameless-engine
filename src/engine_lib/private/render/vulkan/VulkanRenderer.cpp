@@ -2903,11 +2903,6 @@ namespace ne {
         const auto& shadowMappingPipelines =
             pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING));
 
-        // Get directional lights.
-        const auto pMtxDirectionalLights =
-            getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
-        std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
-
         // Prepare lambda to set viewport size according to shadow map size.
         const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {
             const auto iShadowMapSize = pShadowMapHandle->getShadowMapSize();
@@ -2933,17 +2928,9 @@ namespace ne {
             vkCmdSetScissor(pCommandBuffer, 0, 1, &scissor);
         };
 
-        // Iterate over all directional lights.
-        for (const auto& pLightNode : pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
-            // Convert node type.
-            const auto pDirectionalLightNode = reinterpret_cast<DirectionalLightNode*>(pLightNode);
-
-            // Get light info.
-            ShadowMapHandle* pShadowMapHandle = nullptr;
-            unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-            getDirectionalLightNodeShadowMappingInfo(
-                pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
-
+        // Prepare lambda to draw scene to shadow map.
+        const auto drawSceneToShadowMap = [&](ShadowMapHandle* pShadowMapHandle,
+                                              unsigned int iIndexIntoLightViewProjectionMatrixArray) {
             // Get shadow map texture.
             const auto pMtxShadowMap = pShadowMapHandle->getResource();
             std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
@@ -2951,7 +2938,7 @@ namespace ne {
             // Convert resource type.
             const auto pShadowMapTexture = reinterpret_cast<VulkanResource*>(pMtxShadowMap->second);
 
-            // Start shadow mapping render pass.
+            // Start shadow mapping render pass with light's framebuffer.
             startShadowMappingRenderPass(
                 pCommandBuffer,
                 pShadowMapTexture->getShadowMappingFramebuffer(),
@@ -3115,8 +3102,53 @@ namespace ne {
                 }
             }
 
-            // Finish depth only render pass.
+            // Finish shadow mapping render pass with light's framebuffer.
             vkCmdEndRenderPass(pCommandBuffer);
+        };
+
+        {
+            // Get directional lights.
+            const auto pMtxDirectionalLights =
+                getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
+            std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
+
+            // Iterate over all directional lights.
+            for (const auto& pLightNode :
+                 pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
+                // Convert node type.
+                const auto pDirectionalLightNode = reinterpret_cast<DirectionalLightNode*>(pLightNode);
+
+                // Get light info.
+                ShadowMapHandle* pShadowMapHandle = nullptr;
+                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+                getDirectionalLightNodeShadowMappingInfo(
+                    pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+
+                // Draw to shadow map.
+                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+            }
+        }
+
+        {
+            // Get spotlights.
+            const auto pMtxSpotlights =
+                getLightingShaderResourceManager()->getSpotlightDataArray()->getInternalResources();
+            std::scoped_lock spotlightsGuard(pMtxSpotlights->first);
+
+            // Iterate over all spotlights.
+            for (const auto& pLightNode : pMtxSpotlights->second.lightsInFrustum.vShaderLightNodeArray) {
+                // Convert node type.
+                const auto pSpotlightNode = reinterpret_cast<SpotlightNode*>(pLightNode);
+
+                // Get light info.
+                ShadowMapHandle* pShadowMapHandle = nullptr;
+                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+                getSpotlightNodeShadowMappingInfo(
+                    pSpotlightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+
+                // Draw to shadow map.
+                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+            }
         }
     }
 

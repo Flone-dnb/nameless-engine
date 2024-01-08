@@ -746,6 +746,11 @@ namespace ne {
         addSpecialResourceRootParameter(
             ShadowMapManager::getDirectionalShadowMapsShaderResourceName(),
             SpecialRootParameterSlot::DIRECTIONAL_SHADOW_MAPS);
+
+        // Add spot shadow maps.
+        addSpecialResourceRootParameter(
+            ShadowMapManager::getSpotShadowMapsShaderResourceName(),
+            SpecialRootParameterSlot::SPOT_SHADOW_MAPS);
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(

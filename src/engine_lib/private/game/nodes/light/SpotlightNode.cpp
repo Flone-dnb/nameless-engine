@@ -3,6 +3,7 @@
 // Custom.
 #include "game/Window.h"
 #include "render/Renderer.h"
+#include "render/general/resources/shadow/ShadowMapManager.h"
 
 #include "SpotlightNode.generated_impl.h"
 
@@ -15,16 +16,30 @@ namespace ne {
     void SpotlightNode::onSpawning() {
         SpatialNode::onSpawning();
 
-        // Prepare shader data.
         std::scoped_lock guard(mtxShaderData.first);
+
+        // Create a shadow map.
+        const auto pShadowMapManager =
+            getGameInstance()->getWindow()->getRenderer()->getResourceManager()->getShadowMapManager();
+        auto shadowMapResult = pShadowMapManager->createShadowMap(
+            getNodeName(), ShadowMapType::SPOT, [this](unsigned int iIndexToUse) {
+                onShadowMapArrayIndexChanged(iIndexToUse);
+            });
+        if (std::holds_alternative<Error>(shadowMapResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(shadowMapResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        pShadowMapHandle = std::get<std::unique_ptr<ShadowMapHandle>>(std::move(shadowMapResult));
+
+        // Get lighting manager.
+        const auto pLightingShaderResourceManager =
+            getGameInstance()->getWindow()->getRenderer()->getLightingShaderResourceManager();
 
         // Reserve a slot in the spotlight shader data array
         // so that our parameters will be available in the shaders.
-        const auto pSpotlightDataArray = getGameInstance()
-                                             ->getWindow()
-                                             ->getRenderer()
-                                             ->getLightingShaderResourceManager()
-                                             ->getSpotlightDataArray();
+        const auto pSpotlightDataArray = pLightingShaderResourceManager->getSpotlightDataArray();
         auto result = pSpotlightDataArray->reserveNewSlot(
             this,
             sizeof(SpotlightShaderData),
@@ -41,15 +56,41 @@ namespace ne {
         mtxShaderData.second.pSpotlightArraySlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
 
+        // Reserve a slot to copy our `viewProjectionMatrix`
+        // so that it will be available in the shaders.
+        result = pLightingShaderResourceManager->getLightViewProjectionMatricesArray()->reserveNewSlot(
+            this,
+            sizeof(glm::mat4x4),
+            [this]() { return onStartedUpdatingViewProjectionMatrix(); },
+            [this]() { onFinishedUpdatingViewProjectionMatrix(); });
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Save received slot.
+        mtxShaderData.second.pViewProjectionMatrixSlot =
+            std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
+
+        // Update shader data.
         recalculateAndMarkShaderDataToBeCopiedToGpu();
     }
 
     void SpotlightNode::onDespawning() {
         SpatialNode::onDespawning();
 
-        // Mark slot as unused.
         std::scoped_lock guard(mtxShaderData.first);
+
+        // Mark light slot as unused.
         mtxShaderData.second.pSpotlightArraySlot = nullptr;
+
+        // Free shadow map.
+        pShadowMapHandle = nullptr;
+
+        // Free matrix slot.
+        mtxShaderData.second.pViewProjectionMatrixSlot = nullptr;
     }
 
     void SpotlightNode::setLightColor(const glm::vec3& color) {
@@ -117,7 +158,7 @@ namespace ne {
         distance = glm::max(distance, 0.0F);
 
 #if defined(DEBUG)
-        static_assert(sizeof(SpotlightShaderData) == 80, "consider clamping new parameters here");
+        static_assert(sizeof(SpotlightShaderData) == 144, "consider clamping new parameters here");
 #endif
     }
 
@@ -129,8 +170,19 @@ namespace ne {
 
     void SpotlightNode::onFinishedUpdatingShaderData() { mtxShaderData.first.unlock(); }
 
+    void* SpotlightNode::onStartedUpdatingViewProjectionMatrix() {
+        mtxShaderData.first.lock(); // don't unlock until finished with update
+
+        return &mtxShaderData.second.shaderData.viewProjectionMatrix;
+    }
+
+    void SpotlightNode::onFinishedUpdatingViewProjectionMatrix() { mtxShaderData.first.unlock(); }
+
     void SpotlightNode::recalculateAndMarkShaderDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
+
+        // Recalculate viewProjection matrix.
+        recalculateViewProjectionMatrixForShadowMapping();
 
         // Copy up to date parameters.
         mtxShaderData.second.shaderData.position = glm::vec4(getWorldLocation(), 1.0F);
@@ -151,8 +203,18 @@ namespace ne {
                   // direction of the spotlight (light outer cone bounds are slightly culled)
 
 #if defined(DEBUG)
-        static_assert(sizeof(SpotlightShaderData) == 80, "consider copying new parameters here");
+        static_assert(sizeof(SpotlightShaderData) == 144, "consider copying new parameters here");
 #endif
+
+        // Mark to be copied to the GPU.
+        markShaderDataToBeCopiedToGpu();
+
+        // Recalculate sphere shape.
+        recalculateShape();
+    }
+
+    void SpotlightNode::markShaderDataToBeCopiedToGpu() {
+        std::scoped_lock guard(mtxShaderData.first);
 
         // Make sure the slot exists.
         if (mtxShaderData.second.pSpotlightArraySlot == nullptr) {
@@ -162,8 +224,13 @@ namespace ne {
         // Mark as "needs update".
         mtxShaderData.second.pSpotlightArraySlot->markAsNeedsUpdate();
 
-        // Recalculate sphere shape.
-        recalculateShape();
+        // Make sure the slot exists.
+        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) {
+            return;
+        }
+
+        // Mark as "needs update".
+        mtxShaderData.second.pViewProjectionMatrixSlot->markAsNeedsUpdate();
     }
 
     glm::vec3 SpotlightNode::getLightColor() const { return color; }
@@ -192,6 +259,76 @@ namespace ne {
         mtxShape.second.direction = mtxShaderData.second.shaderData.direction;
         mtxShape.second.height = mtxShaderData.second.shaderData.distance;
         mtxShape.second.bottomRadius = mtxShaderData.second.shaderData.coneBottomRadius;
+    }
+
+    ShadowMapHandle* SpotlightNode::getShadowMapHandle() const { return pShadowMapHandle.get(); }
+
+    unsigned int SpotlightNode::getIndexIntoLightViewProjectionShaderArray() {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Make sure the slot exists.
+        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) [[unlikely]] {
+            Error error(std::format(
+                "expected viewProjectionMatrix slot to be valid on light node \"{}\"", getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get index.
+        const auto iIndex = mtxShaderData.second.pViewProjectionMatrixSlot->getCurrentIndexIntoArray();
+
+        // Make sure we won't reach uint limit.
+        if (iIndex > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
+            Error error(std::format(
+                "viewProjectionMatrix slot index on light node \"{}\" reached type limit: {}",
+                getNodeName(),
+                iIndex));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Cast to uint because Vulkan and DirectX operate on `uint`s.
+        return static_cast<unsigned int>(iIndex);
+    }
+
+    void SpotlightNode::onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray) {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Self check: make sure we are spawned.
+        if (!isSpawned()) [[unlikely]] {
+            Error error(std::format(
+                "shadow map array index callback is triggered on node \"{}\" while it's not spawned",
+                getNodeName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Shadow map handle will be invalid the first time this function is called
+        // (we will receive initial index into the array).
+
+        // Update shader data.
+        mtxShaderData.second.shaderData.iShadowMapIndex = iNewIndexIntoArray;
+
+        // Mark updated shader data to be later copied to the GPU resource.
+        markShaderDataToBeCopiedToGpu();
+    }
+
+    void SpotlightNode::recalculateViewProjectionMatrixForShadowMapping() {
+        std::scoped_lock guard(mtxShaderData.first);
+
+        // Prepare some constants.
+        const auto worldLocation = getWorldLocation();
+        const auto farClipPlane = distance;
+        const auto nearClipPlane = distance * ShadowMapManager::getVisibleDistanceToNearClipPlaneRatio();
+
+        // Calculate view matrix.
+        const auto viewMatrix = glm::lookAtLH(
+            worldLocation, worldLocation + getWorldForwardDirection(), Globals::WorldDirection::up);
+
+        // Calculate projection matrix.
+        mtxShaderData.second.shaderData.viewProjectionMatrix =
+            glm::perspectiveLH(glm::radians(outerConeAngle * 2.0F), 1.0F, nearClipPlane, farClipPlane) *
+            viewMatrix;
     }
 
 }

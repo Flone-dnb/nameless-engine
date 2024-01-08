@@ -1187,4 +1187,12 @@ namespace ne {
         iViewProjectionMatrixArrayIndex = pNode->getIndexIntoLightViewProjectionShaderArray();
     }
 
+    void Renderer::getSpotlightNodeShadowMappingInfo(
+        SpotlightNode* pNode,
+        ShadowMapHandle*& pShadowMapHandle,
+        unsigned int& iViewProjectionMatrixArrayIndex) {
+        pShadowMapHandle = pNode->getShadowMapHandle();
+        iViewProjectionMatrixArrayIndex = pNode->getIndexIntoLightViewProjectionShaderArray();
+    }
+
 } // namespace ne

@@ -62,12 +62,14 @@ namespace ne {
 
         // Free shadow map.
         pShadowMapHandle = nullptr;
+
+        // Free matrix slot.
+        mtxShaderData.second.pViewProjectionMatrixSlot = nullptr;
     }
 
     void DirectionalLightNode::onSpawning() {
         SpatialNode::onSpawning();
 
-        // Prepare shader data.
         std::scoped_lock guard(mtxShaderData.first);
 
         // Create a shadow map.
@@ -89,7 +91,7 @@ namespace ne {
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
         mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
-        recalculateMatricesForShadowMapping();
+        recalculateViewProjectionMatrixForShadowMapping();
 #if defined(DEBUG)
         static_assert(sizeof(DirecionalLightShaderData) == 112, "consider copying new parameters here");
 #endif
@@ -175,7 +177,7 @@ namespace ne {
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
 
         // Update matrices for shaders.
-        recalculateMatricesForShadowMapping();
+        recalculateViewProjectionMatrixForShadowMapping();
 
         // Mark matrices and shader data to be copied to the GPU.
         markViewProjectionMatrixToBeCopiedToGpu();
@@ -204,7 +206,7 @@ namespace ne {
         markShaderDataToBeCopiedToGpu();
     }
 
-    void DirectionalLightNode::recalculateMatricesForShadowMapping() {
+    void DirectionalLightNode::recalculateViewProjectionMatrixForShadowMapping() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Prepare some constants.
@@ -217,7 +219,7 @@ namespace ne {
         const auto shadowMappingLightWorldPosition =
             -getWorldForwardDirection() * glm::vec3(worldHalfSize * 2.0F);
 
-        // Calculate view matrix for shadow mapping.
+        // Calculate view matrix.
         const auto viewMatrix =
             glm::lookAtLH(shadowMappingLightWorldPosition, lookAtWorldPosition, Globals::WorldDirection::up);
 

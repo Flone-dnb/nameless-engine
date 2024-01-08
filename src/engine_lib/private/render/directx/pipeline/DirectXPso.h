@@ -48,9 +48,6 @@ namespace ne {
             /** Created PSO. */
             ComPtr<ID3D12PipelineState> pPso;
 
-            // !!! new internal resources go here !!!
-            // !!! don't forget to update @ref releaseInternalResources !!!
-
             /** Whether resources were created or not. */
             bool bIsReadyForUsage = false;
         };

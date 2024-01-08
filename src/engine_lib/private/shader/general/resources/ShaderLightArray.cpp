@@ -555,9 +555,7 @@ namespace ne {
             // Iterate over all active shader combinations.
             for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
 
-                // Iterate over all active unique material macros combinations (for example:
-                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
-                // macro for shaders) and the second one is not we will have 2 pipelines here).
+                // Iterate over all active unique material macros combinations.
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
 
                     // Convert to a Vulkan pipeline.

@@ -6,12 +6,16 @@
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "misc/shapes/Cone.h"
+#include "render/general/resources/shadow/ShadowMapHandle.h"
 
 #include "SpotlightNode.generated.h"
 
 namespace ne RNAMESPACE() {
     /** Represents a spotlight in world. */
     class RCLASS(Guid("e7b203dc-0f47-43f2-b26d-3b09a5ec1661")) SpotlightNode : public SpatialNode {
+        // Renderer reads shadow map handle and index into viewProjection matrix array.
+        friend class Renderer;
+
     public:
         SpotlightNode();
 
@@ -167,6 +171,12 @@ namespace ne RNAMESPACE() {
     private:
         /** Data that will be directly copied into shaders. */
         struct SpotlightShaderData {
+            /**
+             * Matrix that transforms data (such as positions) to clip (projection) space of the light
+             * source (used for shadow mapping).
+             */
+            alignas(iVkMat4Alignment) glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
+
             /** Light position in world space. 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 position = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
@@ -200,6 +210,9 @@ namespace ne RNAMESPACE() {
 
             /** Radius of cone's bottom part. */
             alignas(iVkScalarAlignment) float coneBottomRadius = 0.0F;
+
+            /** Index in the directional shadow map array where shadow map of this light source is stored. */
+            alignas(iVkScalarAlignment) unsigned int iShadowMapIndex = 0;
         };
 
         /** Groups data related to shaders. */
@@ -207,9 +220,36 @@ namespace ne RNAMESPACE() {
             /** Slot in the array with data of all spawned spotlights. */
             std::unique_ptr<ShaderLightArraySlot> pSpotlightArraySlot;
 
+            /** Slot in the array with `viewProjectionMatrix` of all spawned lights. */
+            std::unique_ptr<ShaderLightArraySlot> pViewProjectionMatrixSlot;
+
             /** Groups data that will be directly copied to the GPU resource. */
             SpotlightShaderData shaderData;
         };
+
+        /**
+         * Used by renderer and returns handle to shadow map texture that this light source uses.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return `nullptr` if node is not spawned, otherwise valid pointer.
+         */
+        ShadowMapHandle* getShadowMapHandle() const;
+
+        /**
+         * Used by renderer and returns the current index (because it may change later) into the shader array
+         * that stores viewProjection matrices of spawned light sources.
+         *
+         * @return Index into array.
+         */
+        unsigned int getIndexIntoLightViewProjectionShaderArray();
+
+        /**
+         * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
+         *
+         * @param iNewIndexIntoArray New index to use.
+         */
+        void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
@@ -226,12 +266,41 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingShaderData();
 
         /**
-         * Recalculates shader data according to the current spotlight data and marks array slot at @ref
-         * mtxShaderData as "needs update" (if the slot is created) to later be copied to the GPU resource.
+         * Callback that will be called by the renderer when it's ready to copy new (updated)
+         * `viewProjectionMatrix` of the light source to the GPU resource.
+         *
+         * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
+         */
+        void* onStartedUpdatingViewProjectionMatrix();
+
+        /**
+         * Called after @ref onStartedUpdatingViewProjectionMatrix to notify this node that the renderer has
+         * finished copying the data to the GPU resource.
+         */
+        void onFinishedUpdatingViewProjectionMatrix();
+
+        /**
+         * (Re)calculates viewProjection matrix used for shadow mapping.
+         *
+         * @remark Does not call @ref markShaderDataToBeCopiedToGpu.
+         */
+        void recalculateViewProjectionMatrixForShadowMapping();
+
+        /**
+         * Recalculates shader data according to the current spotlight data and calls @ref
+         * markShaderDataToBeCopiedToGpu.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
         void recalculateAndMarkShaderDataToBeCopiedToGpu();
+
+        /**
+         * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)
+         * to later be copied to the GPU resource.
+         *
+         * @remark Does nothing if the slot is `nullptr`.
+         */
+        void markShaderDataToBeCopiedToGpu();
 
         /**
          * Recalculates @ref mtxShaderData according to the current parameters (state).
@@ -249,6 +318,13 @@ namespace ne RNAMESPACE() {
          * @remark Only valid while spawned.
          */
         std::pair<std::mutex, Cone> mtxShape;
+
+        /**
+         * References shadow map of the light source.
+         *
+         * @remark Only valid while spawned.
+         */
+        std::unique_ptr<ShadowMapHandle> pShadowMapHandle;
 
         /** Color of the light source. */
         RPROPERTY(Serialize)

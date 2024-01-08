@@ -18,6 +18,7 @@ namespace ne {
         LIGHT_VIEW_PROJECTION_MATRICES,
         ROOT_CONSTANTS,
         DIRECTIONAL_SHADOW_MAPS,
+        SPOT_SHADOW_MAPS,
 
         // ... new items go here ...
 

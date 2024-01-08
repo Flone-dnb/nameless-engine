@@ -23,6 +23,7 @@
 #include "shader/hlsl/resources/HlslShaderTextureResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "game/nodes/light/DirectionalLightNode.h"
+#include "game/nodes/light/SpotlightNode.h"
 #include "render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
@@ -771,22 +772,9 @@ namespace ne {
             pCommandList->RSSetScissorRects(1, &shadowMapScissorRect);
         };
 
-        // Get directional lights.
-        const auto pMtxDirectionalLights =
-            getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
-        std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
-
-        // Iterate over all directional lights.
-        for (const auto& pLightNode : pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
-            // Convert node type.
-            const auto pDirectionalLightNode = reinterpret_cast<DirectionalLightNode*>(pLightNode);
-
-            // Get light info.
-            ShadowMapHandle* pShadowMapHandle = nullptr;
-            unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-            getDirectionalLightNodeShadowMappingInfo(
-                pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
-
+        // Prepare lambda to draw scene to shadow map.
+        const auto drawSceneToShadowMap = [&](ShadowMapHandle* pShadowMapHandle,
+                                              unsigned int iIndexIntoLightViewProjectionMatrixArray) {
             // Get shadow map texture.
             const auto pMtxShadowMap = pShadowMapHandle->getResource();
             std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
@@ -982,6 +970,51 @@ namespace ne {
                 D3D12_RESOURCE_STATE_DEPTH_WRITE,
                 D3D12_RESOURCE_STATE_DEPTH_READ);
             pCommandList->ResourceBarrier(1, &transition);
+        };
+
+        {
+            // Get directional lights.
+            const auto pMtxDirectionalLights =
+                getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
+            std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
+
+            // Iterate over all directional lights.
+            for (const auto& pLightNode :
+                 pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
+                // Convert node type.
+                const auto pDirectionalLightNode = reinterpret_cast<DirectionalLightNode*>(pLightNode);
+
+                // Get light info.
+                ShadowMapHandle* pShadowMapHandle = nullptr;
+                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+                getDirectionalLightNodeShadowMappingInfo(
+                    pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+
+                // Draw to shadow map.
+                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+            }
+        }
+
+        {
+            // Get spotlights.
+            const auto pMtxSpotlights =
+                getLightingShaderResourceManager()->getSpotlightDataArray()->getInternalResources();
+            std::scoped_lock spotlightsGuard(pMtxSpotlights->first);
+
+            // Iterate over all spotlights.
+            for (const auto& pLightNode : pMtxSpotlights->second.lightsInFrustum.vShaderLightNodeArray) {
+                // Convert node type.
+                const auto pSpotlightNode = reinterpret_cast<SpotlightNode*>(pLightNode);
+
+                // Get light info.
+                ShadowMapHandle* pShadowMapHandle = nullptr;
+                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+                getSpotlightNodeShadowMappingInfo(
+                    pSpotlightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+
+                // Draw to shadow map.
+                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+            }
         }
 
         // Execute recorded commands.
@@ -1026,11 +1059,18 @@ namespace ne {
                 .vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::DIRECTIONAL)]
                 .get());
 
+        // Get spot shadow map array.
+        const auto pSpotShadowMapArray = reinterpret_cast<DirectXShadowMapArrayIndexManager*>(
+            pMtxShadowMaps->second.vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::SPOT)]
+                .get());
+
         // Get GPU handles to shadow map arrays.
         // Handles will be valid because while we are inside the `draw` function descriptor heap won't be
         // re-created.
         const auto directionalShadowMapsGpuHandle =
             pDirectionalShadowMapArray->getSrvDescriptorRange()->getGpuDescriptorHandleToRangeStart();
+        const auto spotShadowMapsGpuHandle =
+            pSpotShadowMapArray->getSrvDescriptorRange()->getGpuDescriptorHandleToRangeStart();
 
         // Prepare command list for main pass.
         resetCommandListForGraphics(pDirectXFrameResource);
@@ -1062,6 +1102,7 @@ namespace ne {
             iCurrentFrameResourceIndex,
             vOpaquePipelines,
             directionalShadowMapsGpuHandle,
+            spotShadowMapsGpuHandle,
             false);
 
         // Draw transparent meshes.
@@ -1070,6 +1111,7 @@ namespace ne {
             iCurrentFrameResourceIndex,
             vTransparentPipelines,
             directionalShadowMapsGpuHandle,
+            spotShadowMapsGpuHandle,
             true);
 
         if (bIsUsingMsaaRenderTarget) {
@@ -1134,6 +1176,7 @@ namespace ne {
         size_t iCurrentFrameResourceIndex,
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
         D3D12_GPU_DESCRIPTOR_HANDLE directionalShadowMapsHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE spotShadowMapsHandle,
         const bool bIsDrawingTransparentMeshes) {
         PROFILE_FUNC;
 
@@ -1169,6 +1212,12 @@ namespace ne {
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
                     SpecialRootParameterSlot::DIRECTIONAL_SHADOW_MAPS)],
                 directionalShadowMapsHandle);
+
+            // Bind spot shadow maps.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
+                    SpecialRootParameterSlot::SPOT_SHADOW_MAPS)],
+                spotShadowMapsHandle);
 
             // Bind lighting resources.
             getLightingShaderResourceManager()->setResourceViewToCommandList(

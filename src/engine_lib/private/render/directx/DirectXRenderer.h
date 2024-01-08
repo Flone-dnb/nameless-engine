@@ -279,6 +279,7 @@ namespace ne {
          * @param iCurrentFrameResourceIndex  Index of the current frame resource.
          * @param pipelinesOfSpecificType     Pipelines to use.
          * @param directionalShadowMapsHandle GPU handle to array of directional shadow maps.
+         * @param spotShadowMapsHandle        GPU handle to array of spot shadow maps.
          * @param bIsDrawingTransparentMeshes `true` if transparent pipelines are used, `false` otherwise.
          */
         void drawMeshesMainPassSpecificPipelines(
@@ -286,6 +287,7 @@ namespace ne {
             size_t iCurrentFrameResourceIndex,
             const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
             D3D12_GPU_DESCRIPTOR_HANDLE directionalShadowMapsHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE spotShadowMapsHandle,
             const bool bIsDrawingTransparentMeshes);
 
         /**

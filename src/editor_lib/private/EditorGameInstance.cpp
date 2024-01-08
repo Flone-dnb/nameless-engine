@@ -55,13 +55,25 @@ namespace ne {
             getWorldRootNode()->addChildNode(pDirectionalLightNode);
             pDirectionalLightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
                 glm::normalize(glm::vec3(0.5F, -1.0F, -1.0F)))); // NOLINT
-            pDirectionalLightNode->setLightIntensity(0.6F);      // NOLINT
+            pDirectionalLightNode->setLightIntensity(0.5F);      // NOLINT
+            pDirectionalLightNode->setLightColor(glm::vec3(0.5F, 0.5F, 1.0F));
 
             // Spawn point light.
             const auto pPointLightNode = gc_new<PointLightNode>();
             getWorldRootNode()->addChildNode(pPointLightNode);
             pPointLightNode->setLightColor(glm::vec3(1.0F, 0.0F, 0.0F));
             pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 4.0F));
+
+            // Spawn spotlight.
+            const auto pSpotlightNode = gc_new<SpotlightNode>();
+            getWorldRootNode()->addChildNode(pSpotlightNode);
+            pSpotlightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));
+            pSpotlightNode->setWorldLocation(glm::vec3(7.0F, 4.0F, 3.0F));
+            pSpotlightNode->setWorldRotation(
+                MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
+            pSpotlightNode->setLightInnerConeAngle(10.0F);
+            pSpotlightNode->setLightInnerConeAngle(20.0F);
+            pSpotlightNode->setLightIntensity(0.5F);
 
             // Spawn floor.
             const auto pFloorNode = gc_new<MeshNode>();
@@ -84,17 +96,6 @@ namespace ne {
                 getWorldRootNode()->addChildNode(pCubeNode);
                 pCubeNode->setWorldLocation(glm::vec3(10.0F, 0.0F, 1.0F)); // NOLINT
             }
-
-            // Spawn spotlight.
-            const auto pSpotlightNode = gc_new<SpotlightNode>();
-            getWorldRootNode()->addChildNode(pSpotlightNode);
-            pSpotlightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));
-            pSpotlightNode->setWorldLocation(glm::vec3(7.0F, 4.0F, 3.0F));
-            pSpotlightNode->setWorldRotation(
-                MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
-            pSpotlightNode->setLightInnerConeAngle(10.0F);
-            pSpotlightNode->setLightInnerConeAngle(20.0F);
-            pSpotlightNode->setLightIntensity(0.3F);
         });
     }
 

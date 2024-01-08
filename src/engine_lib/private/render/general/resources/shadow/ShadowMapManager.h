@@ -67,12 +67,22 @@ namespace ne {
         static constexpr int getShadowMappingDepthBias() { return iShadowMappingDepthBias; }
 
         /**
-         * Returns name of the shader resource (from shader code) that stores all directional shadow maps.
+         * Returns name of the shader resource (from shader code) that stores all directional light shadow
+         * maps.
          *
          * @return Shader resource name.
          */
         static constexpr const char* getDirectionalShadowMapsShaderResourceName() {
             return pDirectionalShadowMapsShaderResourceName;
+        }
+
+        /**
+         * Returns name of the shader resource (from shader code) that stores all spot light shadow maps.
+         *
+         * @return Shader resource name.
+         */
+        static constexpr const char* getSpotShadowMapsShaderResourceName() {
+            return pSpotShadowMapsShaderResourceName;
         }
 
         /**

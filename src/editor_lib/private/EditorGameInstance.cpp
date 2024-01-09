@@ -64,6 +64,13 @@ namespace ne {
             pPointLightNode->setLightColor(glm::vec3(1.0F, 0.0F, 0.0F));
             pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 4.0F));
 
+            // Spawn floor.
+            const auto pFloorNode = gc_new<MeshNode>();
+            pFloorNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+            getWorldRootNode()->addChildNode(pFloorNode);
+            pFloorNode->setWorldScale(glm::vec3(100.0F, 100.0F, 1.0F)); // NOLINT
+            pFloorNode->getMaterial()->setRoughness(0.9F);
+
             // Spawn spotlight.
             const auto pSpotlightNode = gc_new<SpotlightNode>();
             getWorldRootNode()->addChildNode(pSpotlightNode);
@@ -74,13 +81,6 @@ namespace ne {
             pSpotlightNode->setLightInnerConeAngle(10.0F);
             pSpotlightNode->setLightInnerConeAngle(20.0F);
             pSpotlightNode->setLightIntensity(0.5F);
-
-            // Spawn floor.
-            const auto pFloorNode = gc_new<MeshNode>();
-            pFloorNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
-            getWorldRootNode()->addChildNode(pFloorNode);
-            pFloorNode->setWorldScale(glm::vec3(100.0F, 100.0F, 1.0F)); // NOLINT
-            pFloorNode->getMaterial()->setRoughness(0.9F);
 
             {
                 // Spawn cube 1.

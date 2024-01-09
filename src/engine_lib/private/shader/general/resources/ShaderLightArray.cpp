@@ -572,7 +572,7 @@ namespace ne {
                     auto it =
                         pMtxPipelineInternalResources->second.resourceBindings.find(sShaderLightResourceName);
                     if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-                        return {};
+                        continue;
                     }
 
                     // Update one descriptor in set per frame resource.

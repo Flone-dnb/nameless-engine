@@ -1985,10 +1985,13 @@ namespace ne {
         samplerInfo.minFilter = VK_FILTER_LINEAR;
 
         // Specify address mode (clamp to edge because in shadow mapping we can get UVs outside [0; 1] range).
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
+        static_assert(
+            shadowMapFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            "consider changing border color type (INT/FLOAT)");
 
         // Disable anisotropic filtering.
         samplerInfo.anisotropyEnable = VK_FALSE;

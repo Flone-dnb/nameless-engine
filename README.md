@@ -277,10 +277,10 @@ Here is the list of base features that needs to be implemented in order for you 
         - [X] Spot light
         - [X] Directional light
     - [ ] Shadow mapping (for all light sources)
+    - [ ] Cascading shadow maps
     - [ ] Space partitioning and multi-threading for frustum culling
     - [ ] Post-processing effects
     - [ ] HDR (High dynamic range)
-    - [ ] Cascading shadow maps
     - [ ] Normal mapping
     - [ ] Cube mapping
     - [ ] Instancing

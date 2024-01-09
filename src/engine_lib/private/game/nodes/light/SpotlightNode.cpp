@@ -325,10 +325,13 @@ namespace ne {
         const auto viewMatrix = glm::lookAtLH(
             worldLocation, worldLocation + getWorldForwardDirection(), Globals::WorldDirection::up);
 
+        // Prepare FOV for shadow map capture.
+        static_assert(maxConeAngle <= 90.0F, "change FOV for shadow map capture");
+        const auto fovY = glm::radians(outerConeAngle * 2.0F); // x2 to convert [0..90] degree to [0..180] FOV
+
         // Calculate projection matrix.
         mtxShaderData.second.shaderData.viewProjectionMatrix =
-            glm::perspectiveLH(glm::radians(outerConeAngle * 2.0F), 1.0F, nearClipPlane, farClipPlane) *
-            viewMatrix;
+            glm::perspectiveLH(fovY, 1.0F, nearClipPlane, farClipPlane) * viewMatrix;
     }
 
 }

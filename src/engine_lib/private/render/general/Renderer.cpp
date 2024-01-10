@@ -1195,4 +1195,14 @@ namespace ne {
         iViewProjectionMatrixArrayIndex = pNode->getIndexIntoLightViewProjectionShaderArray();
     }
 
+    void Renderer::getPointLightNodeShadowMappingInfo(
+        PointLightNode* pNode,
+        ShadowMapHandle*& pShadowMapHandle,
+        size_t iCubemapFaceIndex,
+        unsigned int& iViewProjectionMatrixArrayIndex) {
+        pShadowMapHandle = pNode->getShadowMapHandle();
+        iViewProjectionMatrixArrayIndex =
+            pNode->getIndexIntoLightViewProjectionShaderArray(iCubemapFaceIndex);
+    }
+
 } // namespace ne

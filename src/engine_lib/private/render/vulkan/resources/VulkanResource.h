@@ -8,6 +8,7 @@
 
 // Custom.
 #include "render/general/resources/GpuResource.h"
+#include "io/Logger.h"
 
 // External.
 #include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
@@ -81,10 +82,28 @@ namespace ne {
          * Framebuffer that references @ref getInternalImageView and shadow mapping render pass if this is an
          * image resource that was requested to create a framebuffer.
          *
+         * @param iFramebufferIndex Index of the framebuffer to query, non-zero index is used for cube maps
+         * where each face has a separate framebuffer.
+         *
          * @return `nullptr` if this resource is a buffer or an image that was not requested to create
          * a framebuffer at resource creation.
          */
-        inline VkFramebuffer getShadowMappingFramebuffer() const { return pShadowMappingFramebuffer; }
+        inline VkFramebuffer getShadowMappingFramebuffer(size_t iFramebufferIndex = 0) const {
+            // Make sure we won't access out of bounds.
+            if (iFramebufferIndex >= vShadowMappingFramebuffers.size()) [[unlikely]] { // <- remove if no log
+                // Log an error because this case is marked as unlikely.
+                // ! REMOVE [[unlikely]] IF REMOVING LOG !
+                Logger::get().error(std::format(
+                    "shadow mapping framebuffer was requested on resource \"{}\" with an out of bounds index "
+                    "{} while framebuffer count is {}",
+                    getResourceName(),
+                    iFramebufferIndex,
+                    vShadowMappingFramebuffers.size()));
+                return nullptr;
+            }
+
+            return vShadowMappingFramebuffers[iFramebufferIndex];
+        }
 
         /**
          * Returns memory allocation of the internal resource.
@@ -238,11 +257,16 @@ namespace ne {
          */
         VkImageView pDepthAspectImageView = nullptr;
 
+        /** Views to each face of the cubemap texture (only valid if the resource is a cubemap texture). */
+        std::vector<VkImageView> vCubeMapViews;
+
         /**
-         * Framebuffer that references @ref pImageView and shadow mapping render pass if this is an image
+         * Framebuffers that references @ref pImageView and shadow mapping render pass if this is an image
          * resource that was requested to create a framebuffer at resource creation.
+         *
+         * @remark Stores only 1 framebuffer for non cube maps and 6 framebuffers for cube maps.
          */
-        VkFramebuffer pShadowMappingFramebuffer = nullptr;
+        std::vector<VkFramebuffer> vShadowMappingFramebuffers;
 
         /**
          * Allocated memory for created resource.

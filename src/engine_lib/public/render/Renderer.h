@@ -33,6 +33,7 @@ namespace ne {
     class ShadowMapHandle;
     class DirectionalLightNode;
     class SpotlightNode;
+    class PointLightNode;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -693,6 +694,21 @@ namespace ne {
         void getSpotlightNodeShadowMappingInfo(
             SpotlightNode* pNode,
             ShadowMapHandle*& pShadowMapHandle,
+            unsigned int& iViewProjectionMatrixArrayIndex);
+
+        /**
+         * Returns information needed to capture/update a shadow map for a specific node.
+         *
+         * @param pNode                           Point light to update its shadow map.
+         * @param pShadowMapHandle                Shadow map handle of the specified light.
+         * @param iCubemapFaceIndex               Index of the cubemap to get matrix index.
+         * @param iViewProjectionMatrixArrayIndex Index into the array of viewProjection matrices of spawned
+         * light sources of the specified light.
+         */
+        void getPointLightNodeShadowMappingInfo(
+            PointLightNode* pNode,
+            ShadowMapHandle*& pShadowMapHandle,
+            size_t iCubemapFaceIndex,
             unsigned int& iViewProjectionMatrixArrayIndex);
 
         /**

@@ -24,6 +24,7 @@
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/SpotlightNode.h"
+#include "game/nodes/light/PointLightNode.h"
 #include "render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
@@ -774,7 +775,8 @@ namespace ne {
 
         // Prepare lambda to draw scene to shadow map.
         const auto drawSceneToShadowMap = [&](ShadowMapHandle* pShadowMapHandle,
-                                              unsigned int iIndexIntoLightViewProjectionMatrixArray) {
+                                              unsigned int iIndexIntoLightViewProjectionMatrixArray,
+                                              size_t iDsvIndex = 0) {
             // Get shadow map texture.
             const auto pMtxShadowMap = pShadowMapHandle->getResource();
             std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
@@ -794,7 +796,7 @@ namespace ne {
 
             // Get DSV handle.
             const auto depthDescriptorHandle =
-                *pShadowMapTexture->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
+                *pShadowMapTexture->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV, iDsvIndex);
 
             // Clear depth.
             pCommandList->ClearDepthStencilView(
@@ -1014,6 +1016,31 @@ namespace ne {
 
                 // Draw to shadow map.
                 drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+            }
+        }
+
+        {
+            // Get point lights.
+            const auto pMtxPointLights =
+                getLightingShaderResourceManager()->getPointLightDataArray()->getInternalResources();
+            std::scoped_lock pointLightsGuard(pMtxPointLights->first);
+
+            // Iterate over all point lights.
+            for (const auto& pLightNode : pMtxPointLights->second.lightsInFrustum.vShaderLightNodeArray) {
+                // Convert node type.
+                const auto pPointLightNode = reinterpret_cast<PointLightNode*>(pLightNode);
+
+                // Draw to each cube shadow map face.
+                for (size_t i = 0; i < 6; i++) { // NOLINT: cubemap has 6 faces
+                    // Get light info.
+                    ShadowMapHandle* pShadowMapHandle = nullptr;
+                    unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+                    getPointLightNodeShadowMappingInfo(
+                        pPointLightNode, pShadowMapHandle, i, iIndexIntoLightViewProjectionMatrixArray);
+
+                    // Draw to cubemap's face.
+                    drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray, i);
+                }
             }
         }
 

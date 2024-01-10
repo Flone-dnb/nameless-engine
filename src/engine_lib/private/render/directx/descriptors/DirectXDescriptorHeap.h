@@ -403,14 +403,17 @@ namespace ne {
          * Creates a new view using the specified descriptor handle that will point to
          * the specified resource.
          *
-         * @param heapHandle A place in the heap to create view.
-         * @param pResource  Resource to bind to the new view.
-         * @param descriptorType Descriptor type.
+         * @param heapHandle        A place in the heap to create view.
+         * @param pResource         Resource to bind to the new view.
+         * @param descriptorType    Descriptor type.
+         * @param iCubemapFaceIndex Specify zero if creating a view for a non-cubemap resource, otherwise
+         * specify index of the cubemap face to bind the descriptor to.
          */
         void createView(
             CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
             const DirectXResource* pResource,
-            DirectXDescriptorType descriptorType) const;
+            DirectXDescriptorType descriptorType,
+            size_t iCubemapFaceIndex) const;
 
         /**
          * Re-creates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.

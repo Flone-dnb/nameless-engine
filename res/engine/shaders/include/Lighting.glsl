@@ -42,7 +42,10 @@ struct PointLight{
     /** Lit distance. */
     float distance;
 
-#hlsl float2 pad1; // padding to match C++ struct padding
+    /** Index in the point cube shadow map array where shadow map of this light source is stored. */
+    uint iShadowMapIndex;
+
+#hlsl float pad1; // padding to match C++ struct padding, only in HLSL because `StructuredBuffer` is tightly-packed
 };
 
 /** All spawned point lights. */
@@ -78,7 +81,7 @@ struct DirectionalLight{
     /** Index in the directional shadow map array where shadow map of this light source is stored. */
     uint iShadowMapIndex;
 
-#hlsl float2 pad1; // padding to match C++ struct padding
+#hlsl float2 pad1; // padding to match C++ struct padding, only in HLSL because `StructuredBuffer` is tightly-packed
 };
 
 /** All spawned directional lights. */
@@ -128,10 +131,10 @@ struct Spotlight{
     /** Radius of cone's bottom part. */
     float coneBottomRadius;
 
-    /** Index in the directional shadow map array where shadow map of this light source is stored. */
+    /** Index in the spot shadow map array where shadow map of this light source is stored. */
     uint iShadowMapIndex;
 
-#hlsl float2 pad1; // padding to match C++ struct padding
+#hlsl float2 pad1; // padding to match C++ struct padding, only in HLSL because `StructuredBuffer` is tightly-packed
 };
 
 /** All spawned spotlights. */
@@ -166,7 +169,11 @@ layout(std140, binding = 56) readonly buffer ViewProjectionMatricesForLightSourc
 
 /** Array of shadow maps for all spotlight sources. */
 #glsl layout(binding = 58) uniform sampler2DShadow spotShadowMaps[];
-#hlsl Texture2D spotShadowMaps[] : register(t6, space8);
+#hlsl Texture2D spotShadowMaps[] : register(t0, space8);
+
+/** Array of shadow maps for all point light sources. */
+#glsl layout(binding = 59) uniform samplerCubeShadow pointShadowMaps[];
+#hlsl TextureCube pointShadowMaps[] : register(t0, space9);
 
 #ifdef INCLUDE_LIGHTING_FUNCTIONS
 
@@ -209,8 +216,8 @@ const vec3 fragPosShadowMapSpace                                                
     = transformWorldPositionToShadowMapSpace(fragmentWorldPosition, viewProjectionMatrix);                           \
 /** Calcualte texel size. */                                                                                         \
 const float texelSize = 1.0F /                                                                                       \
-#hlsl     (float)iShadowMapWidth;                                                                                     \
-#glsl     float(iShadowMapWidth);                                                                                     \
+#hlsl     (float)iShadowMapWidth;                                                                                    \
+#glsl     float(iShadowMapWidth);                                                                                    \
 /** Prepare positions of the shadow map to sample using PCF per each position. */                                    \
 /** Sample multiple near/close positions for better shadow anti-aliasing */                                          \
 /** (too much sample points might cause shadow acne). */                                                             \

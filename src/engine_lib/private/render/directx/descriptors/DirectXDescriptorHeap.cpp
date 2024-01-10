@@ -71,112 +71,154 @@ namespace ne {
         std::scoped_lock guard(mtxInternalData.first, pResource->mtxHeapDescriptors.first, *pRangeMutex);
 
         // Check if the resource already has descriptor of this type.
-        if (pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)] != nullptr) [[unlikely]] {
-            return Error(std::format(
-                "resource already has this descriptor assigned (descriptor type {})",
-                static_cast<int>(descriptorType)));
+        auto& vDescriptorsSameType = pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)];
+
+        // Check if this resource is a cubemap.
+        D3D12_RESOURCE_DESC desc;
+        desc = pResource->pInternalResource->GetDesc();
+        const auto bIsCubeMap = desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+
+        // Make sure we won't double assign descriptors (we have this check in resource and it return empty
+        // (no error) if already binded but I will also do it here just to be extra sure if some genius will
+        // use the heap directly and will return an error instead of empty).
+        if (!bIsCubeMap) {
+            // Check if we already have descriptor of this type binded.
+            if (vDescriptorsSameType[0] != nullptr) [[unlikely]] {
+                // Already binded.
+                return Error(std::format(
+                    "resource \"{}\" already has a descriptor of this type binded",
+                    pResource->getResourceName()));
+            }
+        } else {
+            // Either none or all descriptors should be binded.
+            size_t iBindedDescriptorCount = 0;
+            for (const auto& pDescriptor : vDescriptorsSameType) {
+                if (pDescriptor == nullptr) {
+                    continue;
+                }
+                iBindedDescriptorCount += 1;
+            }
+
+            if (iBindedDescriptorCount == vDescriptorsSameType.size()) [[unlikely]] {
+                // Already binded.
+                return Error(std::format(
+                    "resource \"{}\" already has descriptors of this type binded",
+                    pResource->getResourceName()));
+            } else if (iBindedDescriptorCount > 0) [[unlikely]] {
+                return Error(std::format(
+                    "cubemap resource \"{}\" attempted to bind descriptors to cubemap faces but there are "
+                    "already {} descriptors somehow binded although expected to have {} binded descriptors "
+                    "(descriptor per cubemap face)",
+                    pResource->getResourceName(),
+                    iBindedDescriptorCount,
+                    vDescriptorsSameType.size()));
+            }
         }
 
-        // Prepare to create a new view.
-        INT iFreeDescriptorIndexInHeap = 0;
+        const size_t iDescriptorCount = bIsCubeMap ? 6 : 1;
+        for (size_t iDescriptorIndex = 0; iDescriptorIndex < iDescriptorCount; iDescriptorIndex++) {
+            // Prepare to create a new view.
+            INT iFreeDescriptorIndexInHeap = 0;
 
-        if (pRange != nullptr) {
-            // Make sure the specified range exists.
-            const auto rangeIt = mtxInternalData.second.continuousDescriptorRanges.find(pRange);
-            if (rangeIt == mtxInternalData.second.continuousDescriptorRanges.end()) [[unlikely]] {
-                return Error(std::format(
-                    "resource \"{}\" attempted to assign a descriptor in {} heap with "
-                    "invalid range specified",
-                    pResource->getResourceName(),
-                    sHeapType));
-            }
-
-            // Lock range data.
-            std::scoped_lock rangeGuard(pRange->mtxInternalData.first);
-
-            // Get free heap index from range to use.
-            auto indexResult = pRange->tryReserveFreeHeapIndexToCreateDescriptor();
-            if (std::holds_alternative<Error>(indexResult)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(indexResult));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-            auto optionalHeapIndex = std::get<std::optional<INT>>(indexResult);
-
-            if (!optionalHeapIndex.has_value()) {
-                // Expand range.
-                auto optionalError = expandRange(pRange);
-                if (optionalError.has_value()) [[unlikely]] {
-                    optionalError->addCurrentLocationToErrorStack();
-                    return optionalError;
+            if (pRange != nullptr) {
+                // Make sure the specified range exists.
+                const auto rangeIt = mtxInternalData.second.continuousDescriptorRanges.find(pRange);
+                if (rangeIt == mtxInternalData.second.continuousDescriptorRanges.end()) [[unlikely]] {
+                    return Error(std::format(
+                        "resource \"{}\" attempted to assign a descriptor in {} heap with "
+                        "invalid range specified",
+                        pResource->getResourceName(),
+                        sHeapType));
                 }
 
-                // Again, get free heap index from range to use.
-                indexResult = pRange->tryReserveFreeHeapIndexToCreateDescriptor();
+                // Lock range data.
+                std::scoped_lock rangeGuard(pRange->mtxInternalData.first);
+
+                // Get free heap index from range to use.
+                auto indexResult = pRange->tryReserveFreeHeapIndexToCreateDescriptor();
                 if (std::holds_alternative<Error>(indexResult)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(indexResult));
                     error.addCurrentLocationToErrorStack();
                     return error;
                 }
-                optionalHeapIndex = std::get<std::optional<INT>>(indexResult);
+                auto optionalHeapIndex = std::get<std::optional<INT>>(indexResult);
 
-                // Make sure it's valid.
-                if (!optionalHeapIndex.has_value()) [[unlikely]] {
-                    return Error(std::format(
-                        "{} heap expanded the range \"{}\" but the range still reports that there are no "
-                        "space for a new descriptor",
-                        sHeapType,
-                        pRange->sRangeName));
+                if (!optionalHeapIndex.has_value()) {
+                    // Expand range.
+                    auto optionalError = expandRange(pRange);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
+                    }
+
+                    // Again, get free heap index from range to use.
+                    indexResult = pRange->tryReserveFreeHeapIndexToCreateDescriptor();
+                    if (std::holds_alternative<Error>(indexResult)) [[unlikely]] {
+                        auto error = std::get<Error>(std::move(indexResult));
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
+                    optionalHeapIndex = std::get<std::optional<INT>>(indexResult);
+
+                    // Make sure it's valid.
+                    if (!optionalHeapIndex.has_value()) [[unlikely]] {
+                        return Error(std::format(
+                            "{} heap expanded the range \"{}\" but the range still reports that there are no "
+                            "space for a new descriptor",
+                            sHeapType,
+                            pRange->sRangeName));
+                    }
                 }
-            }
 
-            // Save index.
-            iFreeDescriptorIndexInHeap = optionalHeapIndex.value();
-        } else {
-            // Expand the heap if it's full.
-            if (mtxInternalData.second.iHeapSize == mtxInternalData.second.iHeapCapacity) {
-                auto optionalError = expandHeap(nullptr);
-                if (optionalError.has_value()) [[unlikely]] {
-                    optionalError->addCurrentLocationToErrorStack();
-                    return optionalError.value();
-                }
-            }
-
-            // Mark increased heap size.
-            mtxInternalData.second.iHeapSize += 1;
-
-            // Get free index.
-            if (mtxInternalData.second.iNextFreeHeapIndex == mtxInternalData.second.iHeapCapacity) {
-                iFreeDescriptorIndexInHeap =
-                    mtxInternalData.second.noLongerUsedSingleDescriptorIndices.front();
-                mtxInternalData.second.noLongerUsedSingleDescriptorIndices.pop();
+                // Save index.
+                iFreeDescriptorIndexInHeap = optionalHeapIndex.value();
             } else {
-                iFreeDescriptorIndexInHeap = mtxInternalData.second.iNextFreeHeapIndex;
-                mtxInternalData.second.iNextFreeHeapIndex += 1;
+                // Expand the heap if it's full.
+                if (mtxInternalData.second.iHeapSize == mtxInternalData.second.iHeapCapacity) {
+                    auto optionalError = expandHeap(nullptr);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError.value();
+                    }
+                }
+
+                // Mark increased heap size.
+                mtxInternalData.second.iHeapSize += 1;
+
+                // Get free index.
+                if (mtxInternalData.second.iNextFreeHeapIndex == mtxInternalData.second.iHeapCapacity) {
+                    iFreeDescriptorIndexInHeap =
+                        mtxInternalData.second.noLongerUsedSingleDescriptorIndices.front();
+                    mtxInternalData.second.noLongerUsedSingleDescriptorIndices.pop();
+                } else {
+                    iFreeDescriptorIndexInHeap = mtxInternalData.second.iNextFreeHeapIndex;
+                    mtxInternalData.second.iNextFreeHeapIndex += 1;
+                }
             }
+
+            // Create heap handle to point to a free place.
+            auto heapHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                mtxInternalData.second.pHeap->GetCPUDescriptorHandleForHeapStart());
+            heapHandle.Offset(iFreeDescriptorIndexInHeap, iDescriptorSize);
+
+            // Create view.
+            createView(heapHandle, pResource, descriptorType, iDescriptorIndex);
+
+            // Create descriptor.
+            auto pDescriptor = std::unique_ptr<DirectXDescriptor>(new DirectXDescriptor(
+                this, descriptorType, pResource, iFreeDescriptorIndexInHeap, iDescriptorIndex, pRange));
+
+            // Save descriptor.
+            if (pRange != nullptr) {
+                pRange->mtxInternalData.second.allocatedDescriptors.insert(pDescriptor.get());
+            } else {
+                mtxInternalData.second.bindedSingleDescriptors.insert(pDescriptor.get());
+            }
+
+            // Assign descriptor.
+            pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)][iDescriptorIndex] =
+                std::move(pDescriptor);
         }
-
-        // Create heap handle to point to a free place.
-        auto heapHandle =
-            CD3DX12_CPU_DESCRIPTOR_HANDLE(mtxInternalData.second.pHeap->GetCPUDescriptorHandleForHeapStart());
-        heapHandle.Offset(iFreeDescriptorIndexInHeap, iDescriptorSize);
-
-        // Create view.
-        createView(heapHandle, pResource, descriptorType);
-
-        // Create descriptor.
-        auto pDescriptor = std::unique_ptr<DirectXDescriptor>(
-            new DirectXDescriptor(this, descriptorType, pResource, iFreeDescriptorIndexInHeap, pRange));
-
-        // Save descriptor.
-        if (pRange != nullptr) {
-            pRange->mtxInternalData.second.allocatedDescriptors.insert(pDescriptor.get());
-        } else {
-            mtxInternalData.second.bindedSingleDescriptors.insert(pDescriptor.get());
-        }
-
-        // Assign descriptor.
-        pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)] = std::move(pDescriptor);
 
         return {};
     }
@@ -568,9 +610,10 @@ namespace ne {
     void DirectXDescriptorHeap::createView(
         CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
         const DirectXResource* pResource,
-        DirectXDescriptorType descriptorType) const {
-        const auto pRenderSettings = pRenderer->getRenderSettings();
-        std::scoped_lock guard(pRenderSettings->first);
+        DirectXDescriptorType descriptorType,
+        size_t iCubemapFaceIndex) const {
+        // Get resource description.
+        const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
         switch (descriptorType) {
         case (DirectXDescriptorType::RTV): {
@@ -579,14 +622,44 @@ namespace ne {
             break;
         }
         case (DirectXDescriptorType::DSV): {
+            // Prepare DSV description.
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-            dsvDesc.ViewDimension = pRenderSettings->second->getAntialiasingState() != MsaaState::DISABLED
-                                        ? D3D12_DSV_DIMENSION_TEXTURE2DMS
-                                        : D3D12_DSV_DIMENSION_TEXTURE2D;
-            dsvDesc.Format = DirectXRenderer::getDepthStencilBufferFormat();
             dsvDesc.Texture2D.MipSlice = 0;
+            dsvDesc.Format = resourceDesc.Format;
 
+            if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
+                // Cubemap.
+                // Make sure it's not using multisampling.
+                if (resourceDesc.SampleDesc.Count > 1) [[unlikely]] {
+                    Error error(std::format(
+                        "unable to create DSV for resource \"{}\": support for multisampled cubemaps not "
+                        "implemented",
+                        pResource->getResourceName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+
+                // Set dimension.
+                dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+
+                // Specify which cubemap face to reference in the view.
+                dsvDesc.Texture2DArray.FirstArraySlice = static_cast<UINT>(iCubemapFaceIndex);
+                dsvDesc.Texture2DArray.ArraySize = 1;
+            } else if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+                // Set dimension.
+                dsvDesc.ViewDimension = resourceDesc.SampleDesc.Count > 1 ? D3D12_DSV_DIMENSION_TEXTURE2DMS
+                                                                          : D3D12_DSV_DIMENSION_TEXTURE2D;
+            } else [[unlikely]] {
+                Error error(std::format(
+                    "unexpected resource dimension for DSV of resource \"{}\": {}",
+                    static_cast<int>(resourceDesc.Dimension),
+                    pResource->getResourceName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Create DSV.
             pRenderer->getD3dDevice()->CreateDepthStencilView(
                 pResource->getInternalResource(), &dsvDesc, heapHandle);
             break;
@@ -603,8 +676,6 @@ namespace ne {
             break;
         }
         case (DirectXDescriptorType::SRV): {
-            const auto resourceDesc = pResource->getInternalResource()->GetDesc();
-
             // Prepare SRV description.
             D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 
@@ -813,7 +884,11 @@ namespace ne {
             std::scoped_lock resourceDescriptorsGuard(pDescriptor->pResource->mtxHeapDescriptors.first);
 
             // Re-create the view.
-            createView(heapHandle, pDescriptor->pResource, pDescriptor->descriptorType);
+            createView(
+                heapHandle,
+                pDescriptor->pResource,
+                pDescriptor->descriptorType,
+                pDescriptor->iReferencedCubemapFaceIndex);
 
             // Update descriptor index.
             pDescriptor->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;

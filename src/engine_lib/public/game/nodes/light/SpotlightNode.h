@@ -211,7 +211,7 @@ namespace ne RNAMESPACE() {
             /** Radius of cone's bottom part. */
             alignas(iVkScalarAlignment) float coneBottomRadius = 0.0F;
 
-            /** Index in the directional shadow map array where shadow map of this light source is stored. */
+            /** Index in the spot shadow map array where shadow map of this light source is stored. */
             alignas(iVkScalarAlignment) unsigned int iShadowMapIndex = 0;
         };
 

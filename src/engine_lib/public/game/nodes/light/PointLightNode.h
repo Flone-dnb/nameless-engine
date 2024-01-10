@@ -6,12 +6,16 @@
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "misc/shapes/Sphere.h"
+#include "render/general/resources/shadow/ShadowMapHandle.h"
 
 #include "PointLightNode.generated.h"
 
 namespace ne RNAMESPACE() {
     /** Represents a point light source in world. */
     class RCLASS(Guid("7890ed17-6efb-43d1-a7ef-aa5a0589921a")) PointLightNode : public SpatialNode {
+        // Renderer reads shadow map handle and index into viewProjection matrix array.
+        friend class Renderer;
+
     public:
         PointLightNode();
 
@@ -139,16 +143,50 @@ namespace ne RNAMESPACE() {
 
             /** Lit distance. */
             alignas(iVkScalarAlignment) float distance = 1.0F;
+
+            /** Index in the point cube shadow map array where shadow map of this light source is stored. */
+            alignas(iVkScalarAlignment) unsigned int iShadowMapIndex = 0;
         };
 
         /** Groups data related to shaders. */
         struct ShaderData {
+            /** Groups data related to `viewProjection` matrix of cubemap's face for shadow mapping. */
+            struct ViewProjectionMatrixGroup {
+                /** Slot to store @ref matrix. */
+                std::unique_ptr<ShaderLightArraySlot> pSlot;
+
+                /** Matrix that transforms data from world space to projection space of a cubemap's face. */
+                glm::mat4 matrix;
+            };
+
             /** Slot in the array with data of all spawned point lights. */
             std::unique_ptr<ShaderLightArraySlot> pPointLightArraySlot;
+
+            /** Matrices and slots in the array with `viewProjectionMatrix` of all spawned lights. */
+            std::array<ViewProjectionMatrixGroup, 6> vViewProjectionMatrixGroups;
 
             /** Groups data that will be directly copied to the GPU resource. */
             PointLightShaderData shaderData;
         };
+
+        /**
+         * Used by renderer and returns handle to shadow map texture that this light source uses.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return `nullptr` if node is not spawned, otherwise valid pointer.
+         */
+        ShadowMapHandle* getShadowMapHandle() const;
+
+        /**
+         * Used by renderer and returns the current index (because it may change later) into the shader array
+         * that stores viewProjection matrices of spawned light sources.
+         *
+         * @param iCubemapFaceIndex Index of the cubemap face to get `viewProjection` matrix for.
+         *
+         * @return Index into array.
+         */
+        unsigned int getIndexIntoLightViewProjectionShaderArray(size_t iCubemapFaceIndex = 0);
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
@@ -165,12 +203,50 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingShaderData();
 
         /**
+         * Callback that will be called by the renderer when it's ready to copy new (updated)
+         * `viewProjectionMatrix` of the light source to the GPU resource.
+         *
+         * @param iMatrixIndex Index of the matrix (i.e. cubemap face index).
+         *
+         * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
+         */
+        void* onStartedUpdatingViewProjectionMatrix(size_t iMatrixIndex);
+
+        /**
+         * Called after @ref onStartedUpdatingViewProjectionMatrix to notify this node that the renderer has
+         * finished copying the data to the GPU resource.
+         */
+        void onFinishedUpdatingViewProjectionMatrix();
+
+        /**
          * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)
          * to later be copied to the GPU resource.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
         void markShaderDataToBeCopiedToGpu();
+
+        /**
+         * Marks array slots at @ref mtxShaderData for `viewProjectionMatrix` as "needs
+         * update" (if the slots were created) to later be copied to the GPU resource.
+         *
+         * @remark Does nothing if the slot is `nullptr`.
+         */
+        void markViewProjectionMatricesToBeCopiedToGpu();
+
+        /**
+         * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
+         *
+         * @param iNewIndexIntoArray New index to use.
+         */
+        void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
+
+        /**
+         * (Re)calculates viewProjection matrices used for shadow mapping.
+         *
+         * @remark Does not call @ref markViewProjectionMatricesToBeCopiedToGpu.
+         */
+        void recalculateViewProjectionMatricesForShadowMapping();
 
         /**
          * Recalculates @ref mtxShaderData according to the current parameters (state).
@@ -189,6 +265,13 @@ namespace ne RNAMESPACE() {
          */
         std::pair<std::mutex, Sphere> mtxShape;
 
+        /**
+         * References shadow map of the light source.
+         *
+         * @remark Only valid while spawned.
+         */
+        std::unique_ptr<ShadowMapHandle> pShadowMapHandle;
+
         /** Color of the light source. */
         RPROPERTY(Serialize)
         glm::vec3 color = glm::vec3(1.0F, 1.0F, 1.0F);
@@ -200,6 +283,12 @@ namespace ne RNAMESPACE() {
         /** Lit distance. */
         RPROPERTY(Serialize)
         float distance = 10.0F; // NOLINT: seems like a pretty good default value
+
+        /**
+         * Minimum value for @ref distance to avoid zero because we divide by this value in shaders for shadow
+         * mapping.
+         */
+        static constexpr float minLightDistance = 0.0001F;
 
         ne_PointLightNode_GENERATED
     };

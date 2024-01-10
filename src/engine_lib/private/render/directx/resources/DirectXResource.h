@@ -61,13 +61,15 @@ namespace ne {
         /**
          * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.
          *
-         * @param descriptorType Type of descriptor to get.
+         * @param descriptorType   Type of descriptor to get.
+         * @param iDescriptorIndex Index of a descriptor to get. Use non-zero index for cubemaps to access
+         * descriptors to different cubemap faces.
          *
          * @return Empty if descriptor if this type was not binded to this resource, otherwise
          * descriptor handle.
          */
         std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-        getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType);
+        getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType, size_t iDescriptorIndex = 0);
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.
@@ -170,10 +172,15 @@ namespace ne {
          * @remark Access elements like this: "vHeapDescriptors[DirectXDescriptorType::SRV]".
          *
          * @remark Some descriptors are `nullptr`. `nullptr` descriptor means that it's not set (not used).
+         *
+         * @remark There might be 6 descriptors of the same type if this resource is a cubemap, then
+         * each descriptor will reference a specific cubemap face.
          */
         std::pair<
             std::recursive_mutex,
-            std::array<std::unique_ptr<DirectXDescriptor>, static_cast<size_t>(DirectXDescriptorType::END)>>
+            std::array<
+                std::array<std::unique_ptr<DirectXDescriptor>, 6>, // NOLINT: 1 per cubemap face (if cubemap)
+                static_cast<size_t>(DirectXDescriptorType::END)>>
             mtxHeapDescriptors;
 
         /** Created resource (can be empty if @ref pSwapChainBuffer is used). */

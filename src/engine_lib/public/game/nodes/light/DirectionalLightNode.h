@@ -181,8 +181,8 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingViewProjectionMatrix();
 
         /**
-         * Marks array slot at for `viewProjectionMatrix` at @ref mtxShaderData as "needs update" (if the slot
-         * is created) to later be copied to the GPU resource.
+         * Marks array slot at @ref mtxShaderData for `viewProjectionMatrix` as "needs
+         * update" (if the slot is created) to later be copied to the GPU resource.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
@@ -206,7 +206,7 @@ namespace ne RNAMESPACE() {
         /**
          * (Re)calculates viewProjection matrix used for shadow mapping.
          *
-         * @remark Does not call @ref markShaderDataToBeCopiedToGpu.
+         * @remark Does not call @ref markViewProjectionMatrixToBeCopiedToGpu.
          */
         void recalculateViewProjectionMatrixForShadowMapping();
 

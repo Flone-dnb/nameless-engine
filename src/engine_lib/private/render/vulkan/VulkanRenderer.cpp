@@ -2933,7 +2933,8 @@ namespace ne {
 
         // Prepare lambda to draw scene to shadow map.
         const auto drawSceneToShadowMap = [&](ShadowMapHandle* pShadowMapHandle,
-                                              unsigned int iIndexIntoLightViewProjectionMatrixArray) {
+                                              unsigned int iIndexIntoLightViewProjectionMatrixArray,
+                                              size_t iCubemapFaceIndex = 0) {
             // Get shadow map texture.
             const auto pMtxShadowMap = pShadowMapHandle->getResource();
             std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
@@ -2944,7 +2945,7 @@ namespace ne {
             // Start shadow mapping render pass with light's framebuffer.
             startShadowMappingRenderPass(
                 pCommandBuffer,
-                pShadowMapTexture->getShadowMappingFramebuffer(),
+                pShadowMapTexture->getShadowMappingFramebuffer(iCubemapFaceIndex),
                 static_cast<uint32_t>(pShadowMapHandle->getShadowMapSize()));
 
             // Set viewport size.
@@ -3151,6 +3152,31 @@ namespace ne {
 
                 // Draw to shadow map.
                 drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+            }
+        }
+
+        {
+            // Get point lights.
+            const auto pMtxPointLights =
+                getLightingShaderResourceManager()->getPointLightDataArray()->getInternalResources();
+            std::scoped_lock pointLightsGuard(pMtxPointLights->first);
+
+            // Iterate over all point lights.
+            for (const auto& pLightNode : pMtxPointLights->second.lightsInFrustum.vShaderLightNodeArray) {
+                // Convert node type.
+                const auto pPointLightNode = reinterpret_cast<PointLightNode*>(pLightNode);
+
+                // Draw to each cube shadow map face.
+                for (size_t i = 0; i < 6; i++) { // NOLINT: cubemap has 6 faces
+                    // Get light info.
+                    ShadowMapHandle* pShadowMapHandle = nullptr;
+                    unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
+                    getPointLightNodeShadowMappingInfo(
+                        pPointLightNode, pShadowMapHandle, i, iIndexIntoLightViewProjectionMatrixArray);
+
+                    // Draw to cubemap's face.
+                    drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray, i);
+                }
             }
         }
     }

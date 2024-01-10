@@ -2,11 +2,9 @@
 
 // Standard.
 #include <stdexcept>
-#include <format>
 
 // Custom.
 #include "render/vulkan/resources/VulkanResourceManager.h"
-#include "io/Logger.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resources/KtxLoadingCallbackManager.h"
 
@@ -79,10 +77,20 @@ namespace ne {
 
         std::scoped_lock guard(mtxResourceMemory.first);
 
-        if (pShadowMappingFramebuffer != nullptr) {
+        if (!vShadowMappingFramebuffers.empty()) {
             // Destroy shadow mapping framebuffer.
-            vkDestroyFramebuffer(pLogicalDevice, pShadowMappingFramebuffer, nullptr);
-            pShadowMappingFramebuffer = nullptr;
+            for (const auto pFramebuffer : vShadowMappingFramebuffers) {
+                vkDestroyFramebuffer(pLogicalDevice, pFramebuffer, nullptr);
+            }
+            vShadowMappingFramebuffers.clear();
+        }
+
+        if (!vCubeMapViews.empty()) {
+            // Destroy cube map face views.
+            for (const auto pCubeMapFaceView : vCubeMapViews) {
+                vkDestroyImageView(pLogicalDevice, pCubeMapFaceView, nullptr);
+            }
+            vCubeMapViews.clear();
         }
 
         if (pImageResource != nullptr) {
@@ -193,6 +201,7 @@ namespace ne {
             viewInfo.subresourceRange.baseArrayLayer = 0;
             viewInfo.subresourceRange.layerCount = imageInfo.arrayLayers;
 
+            // Self check: make sure image type and view type is correct.
             if (imageInfo.imageType != VK_IMAGE_TYPE_2D && viewInfo.viewType == VK_IMAGE_VIEW_TYPE_2D)
                 [[unlikely]] {
                 return Error(std::format("image type / view type mismatch on image \"{}\"", sResourceName));
@@ -208,14 +217,19 @@ namespace ne {
                     string_VkResult(result)));
             }
 
+            // Check if need to create an additional view.
             if ((viewDescription.value() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 &&
                 (viewDescription.value() & VK_IMAGE_ASPECT_STENCIL_BIT) != 0) {
                 // Create a depth only view.
-                viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                auto additionalViewInfo = viewInfo;
+                additionalViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
                 // Create image view.
                 result = vkCreateImageView(
-                    pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->pDepthAspectImageView);
+                    pLogicalDevice,
+                    &additionalViewInfo,
+                    nullptr,
+                    &pCreatedImageResource->pDepthAspectImageView);
                 if (result != VK_SUCCESS) [[unlikely]] {
                     return Error(std::format(
                         "failed to create depth aspect image view for image \"{}\", error: {}",
@@ -233,6 +247,27 @@ namespace ne {
                         sResourceName));
                 }
 
+                if (bIsCubeMapView) {
+                    // Create image views to each cubemap face.
+                    pCreatedImageResource->vCubeMapViews.resize(6); // NOLINT: number of cubemap faces
+                    for (size_t i = 0; i < pCreatedImageResource->vCubeMapViews.size(); i++) {
+                        // Set face info.
+                        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                        viewInfo.subresourceRange.baseArrayLayer = static_cast<uint32_t>(i);
+                        viewInfo.subresourceRange.layerCount = 1;
+
+                        // Create image view.
+                        auto result = vkCreateImageView(
+                            pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->vCubeMapViews[i]);
+                        if (result != VK_SUCCESS) [[unlikely]] {
+                            return Error(std::format(
+                                "failed to create image view for image \"{}\", error: {}",
+                                sResourceName,
+                                string_VkResult(result)));
+                        }
+                    }
+                }
+
                 // Describe framebuffer.
                 VkFramebufferCreateInfo framebufferInfo{};
                 framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -243,16 +278,38 @@ namespace ne {
                 framebufferInfo.height = imageInfo.extent.height;
                 framebufferInfo.layers = 1;
 
-                // Create main render pass framebuffer.
-                auto result = vkCreateFramebuffer(
-                    pLogicalDevice,
-                    &framebufferInfo,
-                    nullptr,
-                    &pCreatedImageResource->pShadowMappingFramebuffer);
-                if (result != VK_SUCCESS) [[unlikely]] {
-                    return Error(std::format(
-                        "failed to create a framebuffer for a swapchain image view, error: {}",
-                        string_VkResult(result)));
+                if (bIsCubeMapView) {
+                    // Create framebuffer to each cubemap face.
+                    pCreatedImageResource->vShadowMappingFramebuffers.resize(6); // NOLINT
+                    for (size_t i = 0; i < pCreatedImageResource->vShadowMappingFramebuffers.size(); i++) {
+                        // Set cubemap face image view.
+                        framebufferInfo.pAttachments = &pCreatedImageResource->vCubeMapViews[i];
+
+                        // Create framebuffer.
+                        const auto result = vkCreateFramebuffer(
+                            pLogicalDevice,
+                            &framebufferInfo,
+                            nullptr,
+                            &pCreatedImageResource->vShadowMappingFramebuffers[i]);
+                        if (result != VK_SUCCESS) [[unlikely]] {
+                            return Error(std::format(
+                                "failed to create a framebuffer for a swapchain image view, error: {}",
+                                string_VkResult(result)));
+                        }
+                    }
+                } else {
+                    // Create framebuffer.
+                    pCreatedImageResource->vShadowMappingFramebuffers.resize(1);
+                    const auto result = vkCreateFramebuffer(
+                        pLogicalDevice,
+                        &framebufferInfo,
+                        nullptr,
+                        &pCreatedImageResource->vShadowMappingFramebuffers[0]);
+                    if (result != VK_SUCCESS) [[unlikely]] {
+                        return Error(std::format(
+                            "failed to create a framebuffer for a swapchain image view, error: {}",
+                            string_VkResult(result)));
+                    }
                 }
             }
         } else if (bCreateShadowMappingFramebuffer) [[unlikely]] {

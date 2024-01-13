@@ -64,22 +64,40 @@ namespace ne {
     std::optional<Error>
     DirectXShadowMapArrayIndexManager::registerShadowMapResource(ShadowMapHandle* pShadowMapHandle) {
         // Get resource.
-        const auto pMtxResource = pShadowMapHandle->getResource();
+        const auto pMtxResources = pShadowMapHandle->getResources();
 
         // Lock shadow map and internal resources.
-        std::scoped_lock guard(pMtxResource->first, mtxRegisteredShadowMaps.first);
+        std::scoped_lock guard(pMtxResources->first, mtxRegisteredShadowMaps.first);
 
-        // Convert resource.
-        const auto pResource = dynamic_cast<DirectXResource*>(pMtxResource->second);
-        if (pResource == nullptr) [[unlikely]] {
+        // Convert resources.
+        const auto pDepthTexture = dynamic_cast<DirectXResource*>(pMtxResources->second.pDepthTexture);
+        if (pDepthTexture == nullptr) [[unlikely]] {
             return Error("expected a DirectX resource");
+        }
+        const auto pColorTexture = reinterpret_cast<DirectXResource*>(pMtxResources->second.pColorTexture);
+
+        // Determine which resource to use to bind SRV.
+        DirectXResource* pSrvResource = pDepthTexture;
+        if (pColorTexture != nullptr) {
+            // This is a shadow map handle for point light and we will later sample from the color texture
+            // (not from the depth texture).
+            pSrvResource = pColorTexture;
         }
 
         // Bind a single DSV from descriptor heap (not a range).
-        auto optionalError = pResource->bindDescriptor(DirectXDescriptorType::DSV);
+        auto optionalError = pDepthTexture->bindDescriptor(DirectXDescriptorType::DSV);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
+        }
+
+        if (pColorTexture != nullptr) {
+            // We also need a RTV to color texture during shadow pass for point lights.
+            optionalError = pColorTexture->bindDescriptor(DirectXDescriptorType::RTV);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
         }
 
         // Self check: make sure this resource was not registered yet.
@@ -89,27 +107,27 @@ namespace ne {
                 "\"{}\" was requested to register a shadow map handle \"{}\" but this shadow map handle was "
                 "already registered",
                 *getShaderArrayResourceName(),
-                pResource->getResourceName()));
+                pDepthTexture->getResourceName()));
         }
 
         // Self check: make sure the resource does not have SRV yet.
-        if (pResource->getDescriptor(DirectXDescriptorType::SRV) != nullptr) [[unlikely]] {
+        if (pSrvResource->getDescriptor(DirectXDescriptorType::SRV) != nullptr) [[unlikely]] {
             return Error(std::format(
                 "\"{}\" was requested to register a shadow map handle \"{}\" but the GPU resource of this "
                 "shadow map handle already has an SRV binded to it which is unexpected",
                 *getShaderArrayResourceName(),
-                pResource->getResourceName()));
+                pSrvResource->getResourceName()));
         }
 
         // Bind SRV from the range.
-        optionalError = pResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange.get());
+        optionalError = pSrvResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange.get(), true);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Get descriptor offset from range start.
-        auto descriptorOffsetResult = getSrvDescriptorOffsetFromRangeStart(pResource);
+        auto descriptorOffsetResult = getSrvDescriptorOffsetFromRangeStart(pSrvResource);
         if (std::holds_alternative<Error>(descriptorOffsetResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(descriptorOffsetResult));
             error.addCurrentLocationToErrorStack();
@@ -198,9 +216,18 @@ namespace ne {
         std::scoped_lock guard(mtxRegisteredShadowMaps.first);
 
         for (const auto& pShadowMapHandle : mtxRegisteredShadowMaps.second) {
+            // Get handle resources.
+            const auto pMtxResources = pShadowMapHandle->getResources();
+
+            // Determine which resource to use to bind SRV.
+            auto pSrvResource = pMtxResources->second.pDepthTexture;
+            if (pMtxResources->second.pColorTexture != nullptr) {
+                pSrvResource = pMtxResources->second.pColorTexture;
+            }
+
             // Get descriptor offset from range start.
-            auto descriptorOffsetResult = getSrvDescriptorOffsetFromRangeStart(
-                reinterpret_cast<DirectXResource*>(pShadowMapHandle->getResource()));
+            auto descriptorOffsetResult =
+                getSrvDescriptorOffsetFromRangeStart(reinterpret_cast<DirectXResource*>(pSrvResource));
             if (std::holds_alternative<Error>(descriptorOffsetResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(descriptorOffsetResult));
                 error.addCurrentLocationToErrorStack();

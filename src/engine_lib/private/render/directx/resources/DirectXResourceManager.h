@@ -293,13 +293,15 @@ namespace ne {
          * @param sResourceName  Resource name, used for logging.
          * @param iTextureSize   Size of one dimension of the texture in pixels.
          * Must be power of 2 (128, 256, 512, 1024, 2048, etc.).
-         * @param bIsCubeTexture `false` is you need a single 2D texture resource or `true` to have
-         * 6 2D textures arranged as a cube map.
+         * @param bPointLightColorCubemap `false` is you need a single 2D texture resource or `true` to have
+         * 6 2D textures arranged as a cube map specifically for point lights.
          *
          * @return Error if something went wrong, otherwise created texture resource.
          */
         virtual std::variant<std::unique_ptr<GpuResource>, Error> createShadowMapTexture(
-            const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) override;
+            const std::string& sResourceName,
+            unsigned int iTextureSize,
+            bool bPointLightColorCubemap) override;
 
         /**
          * Creates a new GPU resource and fills it with the specified data.

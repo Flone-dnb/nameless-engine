@@ -43,6 +43,9 @@ namespace ne {
         static_assert(
             shadowMapFormat == VK_FORMAT_D24_UNORM_S8_UINT,
             "also change format in DirectX renderer for (visual) consistency");
+        static_assert(
+            shadowMappingPointLightColorTargetFormat == VK_FORMAT_R32_SFLOAT,
+            "also change format in DirectX renderer for (visual) consistency");
 
         // Self check for light culling compute shader:
         static_assert(
@@ -1412,7 +1415,7 @@ namespace ne {
             // (there's no need to re-create it when render settings change
             // moreover framebuffers in shadow maps will reference this render pass
             // and expect that it will not be re-created).
-            auto optionalError = createShadowMappingRenderPass();
+            auto optionalError = createShadowMappingRenderPasses();
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -1690,7 +1693,9 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanRenderer::createShadowMappingRenderPass() {
+    std::optional<Error> VulkanRenderer::createShadowMappingRenderPasses() {
+        std::vector<VkAttachmentDescription> vAttachments;
+
         // Describe depth image attachment.
         VkAttachmentDescription depthAttachment{};
         depthAttachment.format = shadowMapFormat;
@@ -1701,17 +1706,18 @@ namespace ne {
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        vAttachments.push_back(depthAttachment);
 
         // Create depth image reference in write layout for depth subpass.
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment = 0;
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // layout during subpass
 
-        // Describe depth only subpass.
-        VkSubpassDescription depthSubpass{};
-        depthSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        depthSubpass.colorAttachmentCount = 0;
-        depthSubpass.pDepthStencilAttachment = &depthAttachmentRef;
+        // Describe subpass.
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 0;
+        subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
         // Use subpass dependencies for layout transitions
         std::array<VkSubpassDependency, 2> vDependencies{};
@@ -1752,16 +1758,48 @@ namespace ne {
         // Describe depth render pass.
         VkRenderPassCreateInfo shadowMappingRenderPassInfo{};
         shadowMappingRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        shadowMappingRenderPassInfo.attachmentCount = 1;
-        shadowMappingRenderPassInfo.pAttachments = &depthAttachment;
+        shadowMappingRenderPassInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+        shadowMappingRenderPassInfo.pAttachments = vAttachments.data();
         shadowMappingRenderPassInfo.subpassCount = 1;
-        shadowMappingRenderPassInfo.pSubpasses = &depthSubpass;
+        shadowMappingRenderPassInfo.pSubpasses = &subpass;
         shadowMappingRenderPassInfo.dependencyCount = static_cast<uint32_t>(vDependencies.size());
         shadowMappingRenderPassInfo.pDependencies = vDependencies.data();
 
-        // Create shadow mapping render pass.
-        const auto result = vkCreateRenderPass(
-            pLogicalDevice, &shadowMappingRenderPassInfo, nullptr, &pShadowMappingRenderPass);
+        // Create render pass.
+        auto result = vkCreateRenderPass(
+            pLogicalDevice, &shadowMappingRenderPassInfo, nullptr, &pShadowMappingDirectionalSpotRenderPass);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
+        }
+
+        // Describe attachment for point light render pass.
+        VkAttachmentDescription pointColorAttachment{};
+        pointColorAttachment.format = shadowMappingPointLightColorTargetFormat;
+        pointColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        pointColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        pointColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save for main pass
+        pointColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        pointColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        pointColorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        pointColorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        vAttachments.push_back(pointColorAttachment);
+
+        // Create ref.
+        VkAttachmentReference pointColorAttachmentRef{};
+        pointColorAttachmentRef.attachment = static_cast<uint32_t>(vAttachments.size() - 1);
+        pointColorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // layout during subpass
+
+        // Update subpass.
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &pointColorAttachmentRef;
+
+        // Update render pass info.
+        shadowMappingRenderPassInfo.attachmentCount = static_cast<uint32_t>(vAttachments.size());
+        shadowMappingRenderPassInfo.pAttachments = vAttachments.data();
+
+        // Create render pass.
+        result = vkCreateRenderPass(
+            pLogicalDevice, &shadowMappingRenderPassInfo, nullptr, &pShadowMappingPointRenderPass);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
@@ -1804,8 +1842,10 @@ namespace ne {
         pDepthOnlyRenderPass = nullptr;
         if (bDestroyPipelineManager) {
             // Renderer is being destroyed.
-            vkDestroyRenderPass(pLogicalDevice, pShadowMappingRenderPass, nullptr);
-            pShadowMappingRenderPass = nullptr;
+            vkDestroyRenderPass(pLogicalDevice, pShadowMappingDirectionalSpotRenderPass, nullptr);
+            pShadowMappingDirectionalSpotRenderPass = nullptr;
+            vkDestroyRenderPass(pLogicalDevice, pShadowMappingPointRenderPass, nullptr);
+            pShadowMappingPointRenderPass = nullptr;
         }
 
         // Destroy swap chain image views.
@@ -1964,7 +2004,7 @@ namespace ne {
 
         return {};
     }
-
+    
     std::optional<Error> VulkanRenderer::createShadowTextureSampler() {
         // Make sure logical device is valid.
         if (pLogicalDevice == nullptr) [[unlikely]] {
@@ -2012,7 +2052,7 @@ namespace ne {
         samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
         // Create sampler.
-        const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pShadowTextureSampler);
+        auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pShadowTextureSampler);
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
         }
@@ -2530,7 +2570,10 @@ namespace ne {
     }
 
     void VulkanRenderer::startShadowMappingRenderPass(
-        VkCommandBuffer pCommandBuffer, VkFramebuffer pFramebufferToUse, uint32_t iShadowMapSize) {
+        VkRenderPass pShadowMappingRenderPass,
+        VkCommandBuffer pCommandBuffer,
+        VkFramebuffer pFramebufferToUse,
+        uint32_t iShadowMapSize) {
         PROFILE_FUNC;
 
         // Prepare to begin render pass.
@@ -2545,8 +2588,9 @@ namespace ne {
         renderPassInfo.renderArea.extent.height = iShadowMapSize;
 
         // Specify clear color for attachments.
-        std::array<VkClearValue, 1> vClearValues{};
+        std::array<VkClearValue, 2> vClearValues{};
         vClearValues[0].depthStencil = {getMaxDepth(), 0};
+        vClearValues[1].color = {0.0F, 0.0F, 0.0F, 0.0F};
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
         renderPassInfo.pClearValues = vClearValues.data();
@@ -2657,7 +2701,12 @@ namespace ne {
 
     VkRenderPass VulkanRenderer::getDepthOnlyRenderPass() const { return pDepthOnlyRenderPass; }
 
-    VkRenderPass VulkanRenderer::getShadowMappingRenderPass() const { return pShadowMappingRenderPass; }
+    VkRenderPass VulkanRenderer::getShadowMappingRenderPass(bool bIsForPointLights) const {
+        if (bIsForPointLights) {
+            return pShadowMappingPointRenderPass;
+        }
+        return pShadowMappingDirectionalSpotRenderPass;
+    }
 
     VkCommandPool VulkanRenderer::getCommandPool() const { return pCommandPool; }
 
@@ -2903,8 +2952,10 @@ namespace ne {
             reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource)->pCommandBuffer;
 
         // Get pipelines to iterate over.
-        const auto& shadowMappingPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING));
+        const auto& shadowMappingDirectionalSpotPipelines = pGraphicsPipelines->vPipelineTypes.at(
+            static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT));
+        const auto& shadowMappingPointPipelines =
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_POINT));
 
         // Prepare lambda to set viewport size according to shadow map size.
         const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {
@@ -2932,183 +2983,170 @@ namespace ne {
         };
 
         // Prepare lambda to draw scene to shadow map.
-        const auto drawSceneToShadowMap = [&](ShadowMapHandle* pShadowMapHandle,
-                                              unsigned int iIndexIntoLightViewProjectionMatrixArray,
-                                              size_t iCubemapFaceIndex = 0) {
-            // Get shadow map texture.
-            const auto pMtxShadowMap = pShadowMapHandle->getResource();
-            std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
+        const auto drawSceneToShadowMap =
+            [&](VkRenderPass pRenderPass,
+                const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToRender,
+                ShadowMapHandle* pShadowMapHandle,
+                unsigned int iIndexIntoShadowPassInfoArray,
+                size_t iCubemapFaceIndex = 0) {
+                // Get shadow map texture.
+                const auto pMtxShadowResources = pShadowMapHandle->getResources();
+                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
 
-            // Convert resource type.
-            const auto pShadowMapTexture = reinterpret_cast<VulkanResource*>(pMtxShadowMap->second);
+                // Start shadow mapping render pass with light's framebuffer.
+                startShadowMappingRenderPass(
+                    pRenderPass,
+                    pCommandBuffer,
+                    pMtxShadowResources->second.vShadowMappingFramebuffers[iCubemapFaceIndex],
+                    static_cast<uint32_t>(pShadowMapHandle->getShadowMapSize()));
 
-            // Start shadow mapping render pass with light's framebuffer.
-            startShadowMappingRenderPass(
-                pCommandBuffer,
-                pShadowMapTexture->getShadowMappingFramebuffer(iCubemapFaceIndex),
-                static_cast<uint32_t>(pShadowMapHandle->getShadowMapSize()));
+                // Set viewport size.
+                setViewportSizeToShadowMap(pShadowMapHandle);
 
-            // Set viewport size.
-            setViewportSizeToShadowMap(pShadowMapHandle);
+                // Iterate over all shadow mapping pipelines that have different vertex shaders.
+                for (const auto& [sShaderNames, pipelines] : pipelinesToRender) {
+                    // Iterate over all shadow mapping pipelines that use the same vertex shader but different
+                    // shader macros (if there are different macro variations).
+                    for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                        // Convert pipeline type.
+                        const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
 
-            // Iterate over all shadow mapping pipelines that have different vertex shaders.
-            for (const auto& [sShaderNames, pipelines] : shadowMappingPipelines) {
-                // Iterate over all shadow mapping pipelines that use the same vertex shader but different
-                // shader macros (if there are different macro variations).
-                for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
-                    // Convert pipeline type.
-                    const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
+                        // Get push constants and pipeline's resources.
+                        const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
+                        auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
 
-                    // Get push constants and pipeline's resources.
-                    const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
-                    auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+                        // Lock both.
+                        std::scoped_lock guardPipelineResources(
+                            pMtxPipelineResources->first, pMtxPushConstants->first);
 
-                    // Lock both.
-                    std::scoped_lock guardPipelineResources(
-                        pMtxPipelineResources->first, pMtxPushConstants->first);
+                        // Bind pipeline.
+                        vkCmdBindPipeline(
+                            pCommandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pMtxPipelineResources->second.pPipeline);
 
-                    // Bind pipeline.
-                    vkCmdBindPipeline(
-                        pCommandBuffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        pMtxPipelineResources->second.pPipeline);
-
-                    // Bind descriptor sets.
-                    vkCmdBindDescriptorSets(
-                        pCommandBuffer,
-                        VK_PIPELINE_BIND_POINT_GRAPHICS,
-                        pMtxPipelineResources->second.pPipelineLayout,
-                        0,
-                        1,
-                        &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
-                        0,
-                        nullptr);
+                        // Bind descriptor sets.
+                        vkCmdBindDescriptorSets(
+                            pCommandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pMtxPipelineResources->second.pPipelineLayout,
+                            0,
+                            1,
+                            &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
+                            0,
+                            nullptr);
 
 #if defined(DEBUG)
-                    // Self check: make sure push constants are used.
-                    if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
-                        Error error(std::format(
-                            "expected push constants to be used on the pipeline \"{}\"",
-                            pVulkanPipeline->getPipelineIdentifier()));
-                        error.showError();
-                        throw std::runtime_error(error.getFullErrorMessage());
-                    }
+                        // Self check: make sure push constants are used.
+                        if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
+                            Error error(std::format(
+                                "expected push constants to be used on the pipeline \"{}\"",
+                                pVulkanPipeline->getPipelineIdentifier()));
+                            error.showError();
+                            throw std::runtime_error(error.getFullErrorMessage());
+                        }
 #endif
 
-                    // Get push constants manager.
-                    const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
-                    auto& pushConstantsOffsets = pMtxPushConstants->second->uintConstantsOffsets;
+                        // Copy shadow pass info index to constants.
+                        pMtxPushConstants->second->findOffsetAndCopySpecialValueToConstant(
+                            pPipeline.get(),
+                            PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
+                            iIndexIntoShadowPassInfoArray);
 
-                    // Get offset of root constant.
-                    const auto lightViewProjectionIndexIt =
-                        pushConstantsOffsets.find(PipelineShaderConstantsManager::SpecialConstantsNames::
-                                                      pLightViewProjectionMatrixIndex);
+                        // Get push constants manager to be used later.
+                        const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
+
+                        // Get materials.
+                        const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                        std::scoped_lock materialsGuard(pMtxMaterials->first);
+
+                        for (const auto& pMaterial : pMtxMaterials->second) {
+                            // No need to bind material's shader resources since they are not used in vertex
+                            // shader (since we are in shadow mapping pass).
+
+                            // Get meshes.
+                            const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                            std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+
+                            // Iterate over all visible mesh nodes that use this material.
+                            for (const auto& [pMeshNode, vIndexBuffers] :
+                                 pMtxMeshNodes->second.visibleMeshNodes) {
+                                // Get mesh data.
+                                auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+
+                                // Note: if you will ever need it - don't lock mesh node's spawning/despawning
+                                // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
+                                // example).
+                                std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
+
+                                // Find and bind mesh data resource since only it is used in vertex shader.
+                                const auto& meshDataIt =
+                                    pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                        MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
-                    // Make sure it's valid.
-                    if (lightViewProjectionIndexIt == pushConstantsOffsets.end()) [[unlikely]] {
-                        Error error(std::format(
-                            "expected root constant \"{}\" to be used on pipeline \"{}\"",
-                            PipelineShaderConstantsManager::SpecialConstantsNames::
-                                pLightViewProjectionMatrixIndex,
-                            pPipeline->getPipelineIdentifier()));
-                        error.showError();
-                        throw std::runtime_error(error.getFullErrorMessage());
-                    }
+                                if (meshDataIt == pMtxMeshGpuResources->second.shaderResources
+                                                      .shaderCpuWriteResources.end()) [[unlikely]] {
+                                    Error error(std::format(
+                                        "expected to find \"{}\" shader resource",
+                                        MeshNode::getMeshShaderConstantBufferName()));
+                                    error.showError();
+                                    throw std::runtime_error(error.getFullErrorMessage());
+                                }
 #endif
+                                reinterpret_cast<GlslShaderCpuWriteResource*>(
+                                    meshDataIt->second.getResource())
+                                    ->copyResourceIndexOfPipelineToPushConstants(
+                                        pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
 
-                    // Copy light's index into viewProjection matrix array to push constants.
-                    pPushConstantsManager->copyValueToShaderConstant(
-                        lightViewProjectionIndexIt->second, iIndexIntoLightViewProjectionMatrixArray);
-
-                    // Get materials.
-                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                    std::scoped_lock materialsGuard(pMtxMaterials->first);
-
-                    for (const auto& pMaterial : pMtxMaterials->second) {
-                        // No need to bind material's shader resources since they are not used in vertex
-                        // shader (since we are in shadow mapping pass).
-
-                        // Get meshes.
-                        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-                        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-
-                        // Iterate over all visible mesh nodes that use this material.
-                        for (const auto& [pMeshNode, vIndexBuffers] :
-                             pMtxMeshNodes->second.visibleMeshNodes) {
-                            // Get mesh data.
-                            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-
-                            // Note: if you will ever need it - don't lock mesh node's spawning/despawning
-                            // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
-                            // example).
-                            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
-
-                            // Find and bind mesh data resource since only it is used in vertex shader.
-                            const auto& meshDataIt =
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
-                                    MeshNode::getMeshShaderConstantBufferName());
-#if defined(DEBUG)
-                            if (meshDataIt ==
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
-                                [[unlikely]] {
-                                Error error(std::format(
-                                    "expected to find \"{}\" shader resource",
-                                    MeshNode::getMeshShaderConstantBufferName()));
-                                error.showError();
-                                throw std::runtime_error(error.getFullErrorMessage());
-                            }
-#endif
-                            reinterpret_cast<GlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
-                                ->copyResourceIndexOfPipelineToPushConstants(
-                                    pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
-
-                            // Bind vertex buffer.
-                            vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
-                                                     pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
-                                                     ->getInternalBufferResource()};
-                            vkCmdBindVertexBuffers(
-                                pCommandBuffer,
-                                0,
-                                static_cast<uint32_t>(vVertexBuffers.size()),
-                                vVertexBuffers.data(),
-                                vOffsets.data());
-
-                            // Set push constants.
-                            vkCmdPushConstants(
-                                pCommandBuffer,
-                                pMtxPipelineResources->second.pPipelineLayout,
-                                VK_SHADER_STAGE_ALL_GRAPHICS,
-                                0,
-                                pPushConstantsManager->getTotalSizeInBytes(),
-                                pPushConstantsManager->getData());
-
-                            // Iterate over all index buffers of a specific mesh node that use this material.
-                            for (const auto& indexBufferInfo : vIndexBuffers) {
-                                // Bind index buffer.
-                                static_assert(
-                                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
-                                    "change `indexTypeFormat`");
-                                vkCmdBindIndexBuffer(
+                                // Bind vertex buffer.
+                                vVertexBuffers[0] = {
+                                    reinterpret_cast<VulkanResource*>(
+                                        pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                        ->getInternalBufferResource()};
+                                vkCmdBindVertexBuffers(
                                     pCommandBuffer,
-                                    reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
-                                        ->getInternalBufferResource(),
                                     0,
-                                    indexTypeFormat);
+                                    static_cast<uint32_t>(vVertexBuffers.size()),
+                                    vVertexBuffers.data(),
+                                    vOffsets.data());
 
-                                // Add a draw command.
-                                vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+                                // Set push constants.
+                                vkCmdPushConstants(
+                                    pCommandBuffer,
+                                    pMtxPipelineResources->second.pPipelineLayout,
+                                    VK_SHADER_STAGE_ALL_GRAPHICS,
+                                    0,
+                                    pPushConstantsManager->getTotalSizeInBytes(),
+                                    pPushConstantsManager->getData());
 
-                                // Increment draw call counter.
-                                pDrawCallCounter->fetch_add(1);
+                                // Iterate over all index buffers of a specific mesh node that use this
+                                // material.
+                                for (const auto& indexBufferInfo : vIndexBuffers) {
+                                    // Bind index buffer.
+                                    static_assert(
+                                        sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
+                                        "change `indexTypeFormat`");
+                                    vkCmdBindIndexBuffer(
+                                        pCommandBuffer,
+                                        reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
+                                            ->getInternalBufferResource(),
+                                        0,
+                                        indexTypeFormat);
+
+                                    // Add a draw command.
+                                    vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                                    // Increment draw call counter.
+                                    pDrawCallCounter->fetch_add(1);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Finish shadow mapping render pass with light's framebuffer.
-            vkCmdEndRenderPass(pCommandBuffer);
-        };
+                // Finish shadow mapping render pass with light's framebuffer.
+                vkCmdEndRenderPass(pCommandBuffer);
+            };
 
         {
             // Get directional lights.
@@ -3124,12 +3162,16 @@ namespace ne {
 
                 // Get light info.
                 ShadowMapHandle* pShadowMapHandle = nullptr;
-                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-                getDirectionalLightNodeShadowMappingInfo(
-                    pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                unsigned int iIndexIntoShadowPassInfoArray = 0;
+                Renderer::getDirectionalLightNodeShadowMappingInfo(
+                    pDirectionalLightNode, pShadowMapHandle, iIndexIntoShadowPassInfoArray);
 
                 // Draw to shadow map.
-                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                drawSceneToShadowMap(
+                    getShadowMappingRenderPass(false),
+                    shadowMappingDirectionalSpotPipelines,
+                    pShadowMapHandle,
+                    iIndexIntoShadowPassInfoArray);
             }
         }
 
@@ -3146,12 +3188,16 @@ namespace ne {
 
                 // Get light info.
                 ShadowMapHandle* pShadowMapHandle = nullptr;
-                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-                getSpotlightNodeShadowMappingInfo(
-                    pSpotlightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                unsigned int iIndexIntoShadowPassInfoArray = 0;
+                Renderer::getSpotlightNodeShadowMappingInfo(
+                    pSpotlightNode, pShadowMapHandle, iIndexIntoShadowPassInfoArray);
 
                 // Draw to shadow map.
-                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                drawSceneToShadowMap(
+                    getShadowMappingRenderPass(false),
+                    shadowMappingDirectionalSpotPipelines,
+                    pShadowMapHandle,
+                    iIndexIntoShadowPassInfoArray);
             }
         }
 
@@ -3166,16 +3212,22 @@ namespace ne {
                 // Convert node type.
                 const auto pPointLightNode = reinterpret_cast<PointLightNode*>(pLightNode);
 
+                // Get shadow handle.
+                const auto pShadowMapHandle = Renderer::getPointLightNodeShadowMapHandle(pPointLightNode);
+
                 // Draw to each cube shadow map face.
                 for (size_t i = 0; i < 6; i++) { // NOLINT: cubemap has 6 faces
-                    // Get light info.
-                    ShadowMapHandle* pShadowMapHandle = nullptr;
-                    unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-                    getPointLightNodeShadowMappingInfo(
-                        pPointLightNode, pShadowMapHandle, i, iIndexIntoLightViewProjectionMatrixArray);
+                    // Get index into shadow pass info array.
+                    const auto iIndexIntoShadowPassInfoArray =
+                        Renderer::getPointLightShadowPassLightInfoArrayIndex(pPointLightNode, i);
 
                     // Draw to cubemap's face.
-                    drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray, i);
+                    drawSceneToShadowMap(
+                        getShadowMappingRenderPass(true),
+                        shadowMappingPointPipelines,
+                        pShadowMapHandle,
+                        iIndexIntoShadowPassInfoArray,
+                        i);
                 }
             }
         }

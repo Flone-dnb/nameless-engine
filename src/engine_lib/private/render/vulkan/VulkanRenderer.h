@@ -53,6 +53,16 @@ namespace ne {
         static constexpr VkFormat getShadowMapFormat() { return shadowMapFormat; }
 
         /**
+         * Returns texture format used for point lights as "color" target (does not actually store
+         * color) during shadow pass.
+         *
+         * @return Shadow map format.
+         */
+        static constexpr VkFormat getShadowMappingPointLightColorTargetFormat() {
+            return shadowMappingPointLightColorTargetFormat;
+        }
+
+        /**
          * Creates a new DirectX renderer.
          *
          * @param pGameManager GameManager object that owns this renderer.
@@ -217,9 +227,13 @@ namespace ne {
         /**
          * Returns render pass used for shadow mapping.
          *
+         * @param bIsForPointLights Specify `false` if you need render pass for shadow mapping of
+         * directional and spot lights, otherwise specify `true` to get render pass for shadow mapping
+         * of point lights.
+         *
          * @return `nullptr` if render pass is not created yet, otherwise valid pointer.
          */
-        VkRenderPass getShadowMappingRenderPass() const;
+        VkRenderPass getShadowMappingRenderPass(bool bIsForPointLights) const;
 
         /**
          * Returns Vulkan command pool used in the renderer.
@@ -649,13 +663,13 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createDepthOnlyRenderPass();
 
         /**
-         * Creates @ref pShadowMappingRenderPass.
+         * Creates render passes used in shadow mapping.
          *
          * @warning Expects @ref pLogicalDevice to be valid.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> createShadowMappingRenderPass();
+        [[nodiscard]] std::optional<Error> createShadowMappingRenderPasses();
 
         /**
          * Destroys swap chain, framebuffers, graphics pipeline, render pass, image views,
@@ -689,7 +703,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> createComputeTextureSampler();
 
         /**
-         * Creates @ref pShadowTextureSampler.
+         * Creates sampler for shadow mapping.
          *
          * @warning Expects that @ref pLogicalDevice is valid.
          *
@@ -779,14 +793,20 @@ namespace ne {
         void startDepthOnlyRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
 
         /**
-         * Adds render pass start commands to the specified command buffer with @ref pShadowMappingRenderPass.
+         * Adds render pass start commands to the specified command buffer with the specified
+         * shadow mapping render pass.
          *
-         * @param pCommandBuffer    Command buffer to modify.
-         * @param pFramebufferToUse Framebuffer to use.
-         * @param iShadowMapSize    Size of the framebuffer image.
+         * @param pShadowMappingRenderPass @ref pShadowMappingDirectionalSpotRenderPass or @ref
+         * pShadowMappingPointRenderPass.
+         * @param pCommandBuffer           Command buffer to modify.
+         * @param pFramebufferToUse        Framebuffer to use.
+         * @param iShadowMapSize           Size of the framebuffer image.
          */
         void startShadowMappingRenderPass(
-            VkCommandBuffer pCommandBuffer, VkFramebuffer pFramebufferToUse, uint32_t iShadowMapSize);
+            VkRenderPass pShadowMappingRenderPass,
+            VkCommandBuffer pCommandBuffer,
+            VkFramebuffer pFramebufferToUse,
+            uint32_t iShadowMapSize);
 
         /**
          * Submits commands to draw world from the perspective of all spawned light sources to capture
@@ -928,8 +948,11 @@ namespace ne {
         /** Render pass for main pass. */
         VkRenderPass pMainRenderPass = nullptr;
 
-        /** Render pass for shadow mapping. */
-        VkRenderPass pShadowMappingRenderPass = nullptr;
+        /** Render pass for shadow mapping of directional and spot lights. */
+        VkRenderPass pShadowMappingDirectionalSpotRenderPass = nullptr;
+
+        /** Render pass for shadow mapping of point lights. */
+        VkRenderPass pShadowMappingPointRenderPass = nullptr;
 
         /** Used to create command buffers. */
         VkCommandPool pCommandPool = nullptr;
@@ -945,7 +968,7 @@ namespace ne {
         VkSampler pComputeTextureSampler = nullptr;
 
         /**
-         * Texture sampler for shadow maps.
+         * Texture sampler for directional and spot shadow maps.
          *
          * @remark Always valid and not re-created when texture filtering (render setting) is changed.
          */
@@ -1069,6 +1092,11 @@ namespace ne {
 
         /** Format used for shadow maps. */
         static constexpr auto shadowMapFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+
+        /**
+         * Format used for point lights as "color" target (does not actually store color) during shadow pass.
+         */
+        static constexpr auto shadowMappingPointLightColorTargetFormat = VK_FORMAT_R32_SFLOAT;
 
         /** Tiling option for @ref pDepthImage. */
         static constexpr auto depthImageTiling = VK_IMAGE_TILING_OPTIMAL;

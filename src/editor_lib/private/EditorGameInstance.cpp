@@ -27,7 +27,7 @@ namespace ne {
     void EditorGameInstance::onGameStarted() {
         // Create and setup camera.
         pEditorCamera = std::make_shared<TransientCamera>();
-        pEditorCamera->setLocation(glm::vec3(-2.0F, -1.0F, 1.0F));
+        pEditorCamera->setLocation(glm::vec3(-5.0F, 0.0F, 3.0F));
         updateCameraSpeed();
 
         // Make it active.
@@ -54,22 +54,22 @@ namespace ne {
             const auto pDirectionalLightNode = gc_new<DirectionalLightNode>();
             getWorldRootNode()->addChildNode(pDirectionalLightNode);
             pDirectionalLightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
-                glm::normalize(glm::vec3(0.5F, -1.0F, -1.0F)))); // NOLINT
-            pDirectionalLightNode->setLightIntensity(0.5F);      // NOLINT
-            pDirectionalLightNode->setLightColor(glm::vec3(0.5F, 0.5F, 1.0F));
+                glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F)))); // NOLINT
+            pDirectionalLightNode->setLightIntensity(0.1F);      // NOLINT
+            pDirectionalLightNode->setLightColor(glm::vec3(0.0F, 0.0F, 1.0F));
 
             // Spawn point light.
             const auto pPointLightNode = gc_new<PointLightNode>();
             getWorldRootNode()->addChildNode(pPointLightNode);
             pPointLightNode->setLightColor(glm::vec3(1.0F, 0.0F, 0.0F));
-            pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 4.0F));
+            pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 3.0F));
 
             // Spawn floor.
             const auto pFloorNode = gc_new<MeshNode>();
             pFloorNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
             getWorldRootNode()->addChildNode(pFloorNode);
             pFloorNode->setWorldScale(glm::vec3(100.0F, 100.0F, 1.0F)); // NOLINT
-            pFloorNode->getMaterial()->setRoughness(0.9F);
+            pFloorNode->getMaterial()->setRoughness(0.8F);
 
             // Spawn spotlight.
             const auto pSpotlightNode = gc_new<SpotlightNode>();
@@ -80,7 +80,6 @@ namespace ne {
                 MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
             pSpotlightNode->setLightInnerConeAngle(10.0F);
             pSpotlightNode->setLightInnerConeAngle(20.0F);
-            pSpotlightNode->setLightIntensity(0.5F);
 
             {
                 // Spawn cube 1.
@@ -88,6 +87,7 @@ namespace ne {
                 pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pCubeNode);
                 pCubeNode->setWorldLocation(glm::vec3(0.0F, 0.0F, 1.0F)); // NOLINT
+                pCubeNode->setWorldScale(glm::vec3(3.0F, 3.0F, 1.0F));    // NOLINT
             }
             {
                 // Spawn cube 2.
@@ -95,6 +95,15 @@ namespace ne {
                 pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pCubeNode);
                 pCubeNode->setWorldLocation(glm::vec3(10.0F, 0.0F, 1.0F)); // NOLINT
+                pCubeNode->setWorldScale(glm::vec3(1.0F, 1.0F, 3.0F));     // NOLINT
+            }
+            {
+                // Spawn cube 3.
+                const auto pCubeNode = gc_new<MeshNode>();
+                pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pCubeNode);
+                pCubeNode->setWorldLocation(glm::vec3(3.0F, -1.0F, 4.0F)); // NOLINT
+                pCubeNode->setWorldScale(glm::vec3(1.0F, 1.0F, 5.0F));     // NOLINT
             }
         });
     }

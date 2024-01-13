@@ -50,8 +50,7 @@ namespace ne {
 
         // Reserve a slot in the point light shader data array
         // so that our parameters will be available in the shaders.
-        const auto pPointLightDataArray = pLightingShaderResourceManager->getPointLightDataArray();
-        auto result = pPointLightDataArray->reserveNewSlot(
+        auto result = pLightingShaderResourceManager->getPointLightDataArray()->reserveNewSlot(
             this,
             sizeof(PointLightShaderData),
             [this]() { return onStartedUpdatingShaderData(); },
@@ -67,14 +66,13 @@ namespace ne {
         mtxShaderData.second.pPointLightArraySlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
 
-        for (size_t i = 0; i < mtxShaderData.second.vViewProjectionMatrixGroups.size(); i++) {
-            // Reserve a slot to copy our `viewProjection` matrices
-            // so that it will be available in the shaders.
-            result = pLightingShaderResourceManager->getLightViewProjectionMatricesArray()->reserveNewSlot(
+        for (size_t i = 0; i < mtxShaderData.second.vShadowPassDataGroup.size(); i++) {
+            // Reserve a slot to copy our shadow pass data.
+            result = pLightingShaderResourceManager->getShadowPassLightInfoArray()->reserveNewSlot(
                 this,
-                sizeof(glm::mat4x4),
-                [this, i]() { return onStartedUpdatingViewProjectionMatrix(i); },
-                [this]() { onFinishedUpdatingViewProjectionMatrix(); });
+                sizeof(ShadowPassLightShaderInfo),
+                [this, i]() { return onStartedUpdatingShadowPassData(i); },
+                [this]() { onFinishedUpdatingShadowPassData(); });
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -83,7 +81,7 @@ namespace ne {
             }
 
             // Save received slot.
-            mtxShaderData.second.vViewProjectionMatrixGroups[i].pSlot =
+            mtxShaderData.second.vShadowPassDataGroup[i].pSlot =
                 std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
         }
     }
@@ -94,14 +92,14 @@ namespace ne {
         // Mark slot as unused.
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Mark light slot as unused.
+        // Mark light slots as unused.
         mtxShaderData.second.pPointLightArraySlot = nullptr;
 
         // Free shadow map.
         pShadowMapHandle = nullptr;
 
         // Free matrix slots.
-        for (auto& group : mtxShaderData.second.vViewProjectionMatrixGroups) {
+        for (auto& group : mtxShaderData.second.vShadowPassDataGroup) {
             group.pSlot = nullptr;
         }
     }
@@ -136,17 +134,17 @@ namespace ne {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Save new parameter.
-        this->distance = std::max(distance, minLightDistance);
+        this->distance = std::max(distance, 0.0F);
 
         // Update shader data.
         mtxShaderData.second.shaderData.distance = this->distance;
 
         // Update matrices for shadow mapping.
-        recalculateViewProjectionMatricesForShadowMapping();
+        recalculateShadowPassShaderData();
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
-        markViewProjectionMatricesToBeCopiedToGpu();
+        markShadowPassDataToBeCopiedToGpu();
     }
 
     void PointLightNode::onAfterDeserialized() {
@@ -156,7 +154,7 @@ namespace ne {
         intensity = std::clamp(intensity, 0.0F, 1.0F);
 
         // Make sure distance is valid.
-        distance = std::max(distance, minLightDistance);
+        distance = std::max(distance, 0.0F);
 
 #if defined(DEBUG)
         static_assert(sizeof(PointLightShaderData) == 48, "consider clamping new parameters here");
@@ -171,13 +169,13 @@ namespace ne {
 
     void PointLightNode::onFinishedUpdatingShaderData() { mtxShaderData.first.unlock(); }
 
-    void* PointLightNode::onStartedUpdatingViewProjectionMatrix(size_t iMatrixIndex) {
+    void* PointLightNode::onStartedUpdatingShadowPassData(size_t iCubemapFaceIndex) {
         mtxShaderData.first.lock(); // don't unlock until finished with update
 
-        return &mtxShaderData.second.vViewProjectionMatrixGroups[iMatrixIndex].matrix;
+        return &mtxShaderData.second.vShadowPassDataGroup[iCubemapFaceIndex].shaderData;
     }
 
-    void PointLightNode::onFinishedUpdatingViewProjectionMatrix() { mtxShaderData.first.unlock(); }
+    void PointLightNode::onFinishedUpdatingShadowPassData() { mtxShaderData.first.unlock(); }
 
     void PointLightNode::markShaderDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
@@ -190,7 +188,7 @@ namespace ne {
         // Mark as "needs update".
         mtxShaderData.second.pPointLightArraySlot->markAsNeedsUpdate();
 
-        // Recalculate sphere shape.
+        // Recalculate sphere shape and use updated shader data.
         recalculateShape();
     }
 
@@ -209,11 +207,11 @@ namespace ne {
         mtxShaderData.second.shaderData.position = glm::vec4(getWorldLocation(), 1.0F);
 
         // Update matrices for shadow mapping.
-        recalculateViewProjectionMatricesForShadowMapping();
+        recalculateShadowPassShaderData();
 
         // Mark updated shader data to be later copied to the GPU resource.
         markShaderDataToBeCopiedToGpu();
-        markViewProjectionMatricesToBeCopiedToGpu();
+        markShadowPassDataToBeCopiedToGpu();
     }
 
     void PointLightNode::recalculateShape() {
@@ -247,78 +245,100 @@ namespace ne {
         markShaderDataToBeCopiedToGpu();
     }
 
-    void PointLightNode::recalculateViewProjectionMatricesForShadowMapping() {
+    void PointLightNode::recalculateShadowPassShaderData() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Prepare some constants.
         const auto worldLocation = getWorldLocation();
-        const auto farClipPlane = distance;
+        const auto farClipPlane = distance; // the fact that far clip plane is lit distance is used in shaders
         const auto nearClipPlane = distance * ShadowMapManager::getVisibleDistanceToNearClipPlaneRatio();
 
         // Prepare a short reference.
-        auto& matrixGroups = mtxShaderData.second.vViewProjectionMatrixGroups;
+        auto& dataGroups = mtxShaderData.second.vShadowPassDataGroup;
 
         // Calculate projection matrix.
-        const auto projectionMatrix = glm::perspectiveLH(90.0F, 1.0F, nearClipPlane, farClipPlane);
+        const auto projectionMatrix =
+            glm::perspectiveLH(glm::radians(90.0F), 1.0F, nearClipPlane, farClipPlane);
 
-        // +X cubemap face.
-        matrixGroups[0].matrix =
+        // Save world location.
+        for (auto& data : dataGroups) {
+            data.shaderData.position = glm::vec4(worldLocation, 1.0F);
+        }
+
+        // Update matrices.
+
+        // Cubemap face 0:
+        // +X axis should be forward (in our case it's forward)
+        // +Y axis should be up (in our case it's right)
+        dataGroups[0].shaderData.viewProjectionMatrix =
+            projectionMatrix * glm::lookAtLH(
+                                   worldLocation,
+                                   worldLocation + Globals::WorldDirection::forward,
+                                   Globals::WorldDirection::right);
+
+        // Cubemap face 1:
+        // -X axis should be forward (in our case it's minus forward)
+        // +Y axis should be up (in our case it's right)
+        dataGroups[1].shaderData.viewProjectionMatrix =
+            projectionMatrix * glm::lookAtLH(
+                                   worldLocation,
+                                   worldLocation - Globals::WorldDirection::forward,
+                                   Globals::WorldDirection::right);
+
+        // Cubemap face 2:
+        // +Y axis should be forward (in our case it's right)
+        // -Z axis should be up (in our case it's minus up)
+        dataGroups[2].shaderData.viewProjectionMatrix =
             projectionMatrix *
             glm::lookAtLH(
-                worldLocation, worldLocation + getWorldForwardDirection(), Globals::WorldDirection::up);
+                worldLocation, worldLocation + Globals::WorldDirection::right, -Globals::WorldDirection::up);
 
-        // -X cubemap face.
-        matrixGroups[1].matrix =
+        // Cubemap face 3:
+        // -Y axis should be forward (in our case it's minus right)
+        // +Z axis should be up (in our case it's up)
+        dataGroups[3].shaderData.viewProjectionMatrix =
             projectionMatrix *
             glm::lookAtLH(
-                worldLocation, worldLocation - getWorldForwardDirection(), Globals::WorldDirection::up);
+                worldLocation, worldLocation - Globals::WorldDirection::right, Globals::WorldDirection::up);
 
-        // +Y cubemap face.
-        matrixGroups[2].matrix =
+        // Cubemap face 4:
+        // +Z axis should be forward (in our case it's up)
+        // +Y axis should be up (in our case it's right)
+        dataGroups[4].shaderData.viewProjectionMatrix =
             projectionMatrix *
             glm::lookAtLH(
-                worldLocation, worldLocation + getWorldRightDirection(), Globals::WorldDirection::up);
+                worldLocation, worldLocation + Globals::WorldDirection::up, Globals::WorldDirection::right);
 
-        // -Y cubemap face.
-        matrixGroups[3].matrix =
+        // Cubemap face 5:
+        // -Z axis should be forward (in our case it's minus up)
+        // +Y axis should be up (in our case it's right)
+        dataGroups[5].shaderData.viewProjectionMatrix =
             projectionMatrix *
             glm::lookAtLH(
-                worldLocation, worldLocation - getWorldRightDirection(), Globals::WorldDirection::up);
-
-        // +Z cubemap face.
-        matrixGroups[4].matrix =
-            projectionMatrix *
-            glm::lookAtLH(
-                worldLocation, worldLocation + getWorldUpDirection(), Globals::WorldDirection::right);
-
-        // -Z cubemap face.
-        matrixGroups[5].matrix =
-            projectionMatrix *
-            glm::lookAtLH(
-                worldLocation, worldLocation - getWorldUpDirection(), -Globals::WorldDirection::right);
+                worldLocation, worldLocation - Globals::WorldDirection::up, Globals::WorldDirection::right);
     }
 
-    void PointLightNode::markViewProjectionMatricesToBeCopiedToGpu() {
+    void PointLightNode::markShadowPassDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Make sure at least one slot exists.
-        if (mtxShaderData.second.vViewProjectionMatrixGroups[0].pSlot == nullptr) {
+        if (mtxShaderData.second.vShadowPassDataGroup[0].pSlot == nullptr) {
             return; // quit, other slots also not created
         }
 
         // Mark as "needs update".
-        for (auto& group : mtxShaderData.second.vViewProjectionMatrixGroups) {
+        for (auto& group : mtxShaderData.second.vShadowPassDataGroup) {
             group.pSlot->markAsNeedsUpdate();
         }
     }
 
     ShadowMapHandle* PointLightNode::getShadowMapHandle() const { return pShadowMapHandle.get(); }
 
-    unsigned int PointLightNode::getIndexIntoLightViewProjectionShaderArray(size_t iCubemapFaceIndex) {
+    unsigned int PointLightNode::getIndexIntoShadowPassInfoShaderArray(size_t iCubemapFaceIndex) {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Prepare a short reference.
-        auto& groups = mtxShaderData.second.vViewProjectionMatrixGroups;
+        auto& groups = mtxShaderData.second.vShadowPassDataGroup;
 
         // Make sure index is not out of bounds.
         if (iCubemapFaceIndex >= groups.size()) [[unlikely]] {
@@ -332,8 +352,7 @@ namespace ne {
 
         // Make sure the slot exists.
         if (groups[iCubemapFaceIndex].pSlot == nullptr) [[unlikely]] {
-            Error error(std::format(
-                "expected viewProjectionMatrix slot to be valid on light node \"{}\"", getNodeName()));
+            Error error(std::format("expected slot to be valid on light node \"{}\"", getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -343,10 +362,8 @@ namespace ne {
 
         // Make sure we won't reach uint limit.
         if (iIndex > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
-            Error error(std::format(
-                "viewProjectionMatrix slot index on light node \"{}\" reached type limit: {}",
-                getNodeName(),
-                iIndex));
+            Error error(
+                std::format("slot index on light node \"{}\" reached type limit: {}", getNodeName(), iIndex));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -354,5 +371,4 @@ namespace ne {
         // Cast to uint because Vulkan and DirectX operate on `uint`s.
         return static_cast<unsigned int>(iIndex);
     }
-
 }

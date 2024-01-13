@@ -202,6 +202,9 @@ namespace ne {
         // Notifies the heap about range being destroyed.
         friend class ContinuousDirectXDescriptorRange;
 
+        // Only resource can request descriptors.
+        friend class DirectXResource;
+
     public:
         /** Groups mutex guarded data. */
         struct InternalData {
@@ -289,25 +292,6 @@ namespace ne {
         std::variant<std::unique_ptr<ContinuousDirectXDescriptorRange>, Error>
         allocateContinuousDescriptorRange(
             const std::string& sRangeName, const std::function<void()>& onRangeIndicesChanged);
-
-        /**
-         * Creates a new descriptor that points to the given resource,
-         * the descriptor is saved in the resource.
-         *
-         * @remark You can use this function to assign a different descriptor to already created resource.
-         * For example: create SRV resource using resource manager and use RTV heap to assign
-         * a RTV descriptor to this resource so it will have 2 different descriptors.
-         *
-         * @param pResource      Resource to point new descriptor to.
-         * @param descriptorType Type of the new descriptor.
-         * @param pRange         Specify in order to allocate a descriptor from this range.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> assignDescriptor(
-            DirectXResource* pResource,
-            DirectXDescriptorType descriptorType,
-            ContinuousDirectXDescriptorRange* pRange = nullptr);
 
         /**
          * Returns current heap capacity (allocated heap size).
@@ -406,14 +390,14 @@ namespace ne {
          * @param heapHandle        A place in the heap to create view.
          * @param pResource         Resource to bind to the new view.
          * @param descriptorType    Descriptor type.
-         * @param iCubemapFaceIndex Specify zero if creating a view for a non-cubemap resource, otherwise
+         * @param cubemapFaceIndex  Specify empty if creating a view for the entire resource, otherwise
          * specify index of the cubemap face to bind the descriptor to.
          */
         void createView(
             CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
             const DirectXResource* pResource,
             DirectXDescriptorType descriptorType,
-            size_t iCubemapFaceIndex) const;
+            std::optional<size_t> cubemapFaceIndex) const;
 
         /**
          * Re-creates the heap to expand its capacity to support @ref iHeapGrowSize more descriptors.
@@ -478,6 +462,29 @@ namespace ne {
         [[nodiscard]] std::optional<Error> rebindViewsUpdateIndices();
 
     private:
+        /**
+         * Creates a new descriptor that points to the given resource,
+         * the descriptor is saved in the resource.
+         *
+         * @remark You can use this function to assign a different descriptor to already created resource.
+         * For example: create SRV resource using resource manager and use RTV heap to assign
+         * a RTV descriptor to this resource so it will have 2 different descriptors.
+         *
+         * @param pResource      Resource to point new descriptor to.
+         * @param descriptorType Type of the new descriptor.
+         * @param pRange         Specify in order to allocate a descriptor from this range.
+         * @param bDontBindDescriptorToCubemapFaces If this resource is a cubemap, specify `false`
+         * to also bind descriptors that reference cubemap faces, specify `true` to only bind 1
+         * descriptor that references the entire resource.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> assignDescriptor(
+            DirectXResource* pResource,
+            DirectXDescriptorType descriptorType,
+            ContinuousDirectXDescriptorRange* pRange = nullptr,
+            bool bDontBindDescriptorToCubemapFaces = false);
+
         /**
          * Checks shrink condition: if capacity can be decremented by grow size with the current size.
          *

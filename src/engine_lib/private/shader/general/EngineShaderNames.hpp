@@ -27,6 +27,17 @@ namespace ne {
             static inline std::string getFragmentShaderName() { return "engine.meshnode.fs"; }
         };
 
+        /** Groups shader names used for point lights. */
+        struct PointLight {
+            /**
+             * Returns a globally unique name of the pixel/fragment shader used by point lights
+             * in shadow passes.
+             *
+             * @return Shader name.
+             */
+            static inline std::string getFragmentShaderName() { return "engine.pointlight.fs"; }
+        };
+
         /** Groups info about shaders used in Forward+ light culling process. */
         struct ForwardPlus {
             /**

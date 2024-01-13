@@ -98,8 +98,6 @@ namespace ne {
          * @param imageUsage        Image usage.
          * @param viewDescription   If specified also creates an image view that references the image.
          * @param bIsCubeMap        `true` if you need a cubemap, `false` if a single texture.
-         * @param bCreateShadowMappingFramebuffer Specify `true` if you want this resource to create a
-         * framebuffer for shadow mapping render pass for the underlying image view, `false` otherwise.
          *
          * @return Created image.
          */
@@ -113,8 +111,7 @@ namespace ne {
             VkImageTiling imageTilingMode,
             VkImageUsageFlags imageUsage,
             std::optional<VkImageAspectFlags> viewDescription,
-            bool bIsCubeMap = false,
-            bool bCreateShadowMappingFramebuffer = false);
+            bool bIsCubeMap = false);
 
         /**
          * Loads a texture from a KTX file in the GPU memory.
@@ -274,13 +271,15 @@ namespace ne {
          * @param sResourceName  Resource name, used for logging.
          * @param iTextureSize   Size of one dimension of the texture in pixels.
          * Must be power of 2 (128, 256, 512, 1024, 2048, etc.).
-         * @param bIsCubeTexture `false` is you need a single 2D texture resource or `true` to have
-         * 6 2D textures arranged as a cube map.
+         * @param bPointLightColorCubemap `false` is you need a single 2D texture resource or `true` to have
+         * 6 2D textures arranged as a cube map specifically for point lights.
          *
          * @return Error if something went wrong, otherwise created texture resource.
          */
         virtual std::variant<std::unique_ptr<GpuResource>, Error> createShadowMapTexture(
-            const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) override;
+            const std::string& sResourceName,
+            unsigned int iTextureSize,
+            bool bPointLightColorCubemap) override;
 
         /**
          * Creates a new buffer and allocates a new memory for it.

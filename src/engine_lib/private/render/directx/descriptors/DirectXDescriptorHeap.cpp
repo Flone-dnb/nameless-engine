@@ -47,7 +47,8 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::assignDescriptor(
         DirectXResource* pResource,
         DirectXDescriptorType descriptorType,
-        ContinuousDirectXDescriptorRange* pRange) {
+        ContinuousDirectXDescriptorRange* pRange,
+        bool bDontBindDescriptorToCubemapFaces) {
         // Check if this heap handles the specified descriptor type.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
         const auto descriptorIt = std::ranges::find_if(
@@ -70,53 +71,8 @@ namespace ne {
         // Lock heap, resource descriptors and range together to avoid deadlocks.
         std::scoped_lock guard(mtxInternalData.first, pResource->mtxHeapDescriptors.first, *pRangeMutex);
 
-        // Check if the resource already has descriptor of this type.
-        auto& vDescriptorsSameType = pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)];
-
-        // Check if this resource is a cubemap.
-        D3D12_RESOURCE_DESC desc;
-        desc = pResource->pInternalResource->GetDesc();
-        const auto bIsCubeMap = desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-
-        // Make sure we won't double assign descriptors (we have this check in resource and it return empty
-        // (no error) if already binded but I will also do it here just to be extra sure if some genius will
-        // use the heap directly and will return an error instead of empty).
-        if (!bIsCubeMap) {
-            // Check if we already have descriptor of this type binded.
-            if (vDescriptorsSameType[0] != nullptr) [[unlikely]] {
-                // Already binded.
-                return Error(std::format(
-                    "resource \"{}\" already has a descriptor of this type binded",
-                    pResource->getResourceName()));
-            }
-        } else {
-            // Either none or all descriptors should be binded.
-            size_t iBindedDescriptorCount = 0;
-            for (const auto& pDescriptor : vDescriptorsSameType) {
-                if (pDescriptor == nullptr) {
-                    continue;
-                }
-                iBindedDescriptorCount += 1;
-            }
-
-            if (iBindedDescriptorCount == vDescriptorsSameType.size()) [[unlikely]] {
-                // Already binded.
-                return Error(std::format(
-                    "resource \"{}\" already has descriptors of this type binded",
-                    pResource->getResourceName()));
-            } else if (iBindedDescriptorCount > 0) [[unlikely]] {
-                return Error(std::format(
-                    "cubemap resource \"{}\" attempted to bind descriptors to cubemap faces but there are "
-                    "already {} descriptors somehow binded although expected to have {} binded descriptors "
-                    "(descriptor per cubemap face)",
-                    pResource->getResourceName(),
-                    iBindedDescriptorCount,
-                    vDescriptorsSameType.size()));
-            }
-        }
-
-        const size_t iDescriptorCount = bIsCubeMap ? 6 : 1;
-        for (size_t iDescriptorIndex = 0; iDescriptorIndex < iDescriptorCount; iDescriptorIndex++) {
+        // Prepare a lambda to allocate a descriptor.
+        const auto allocateDescriptor = [&](std::optional<size_t> cubemapFaceIndex) -> std::optional<Error> {
             // Prepare to create a new view.
             INT iFreeDescriptorIndexInHeap = 0;
 
@@ -202,11 +158,11 @@ namespace ne {
             heapHandle.Offset(iFreeDescriptorIndexInHeap, iDescriptorSize);
 
             // Create view.
-            createView(heapHandle, pResource, descriptorType, iDescriptorIndex);
+            createView(heapHandle, pResource, descriptorType, cubemapFaceIndex);
 
             // Create descriptor.
             auto pDescriptor = std::unique_ptr<DirectXDescriptor>(new DirectXDescriptor(
-                this, descriptorType, pResource, iFreeDescriptorIndexInHeap, iDescriptorIndex, pRange));
+                this, descriptorType, pResource, iFreeDescriptorIndexInHeap, cubemapFaceIndex, pRange));
 
             // Save descriptor.
             if (pRange != nullptr) {
@@ -215,9 +171,39 @@ namespace ne {
                 mtxInternalData.second.bindedSingleDescriptors.insert(pDescriptor.get());
             }
 
-            // Assign descriptor.
-            pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)][iDescriptorIndex] =
-                std::move(pDescriptor);
+            // Save descriptor in resource.
+            auto& descriptorsSameType =
+                pResource->mtxHeapDescriptors.second[static_cast<int>(descriptorType)];
+            if (cubemapFaceIndex.has_value()) {
+                descriptorsSameType.vCubemapFaces[cubemapFaceIndex.value()] = std::move(pDescriptor);
+            } else {
+                descriptorsSameType.pResource = std::move(pDescriptor);
+            }
+
+            return {};
+        };
+
+        // Check if this resource is a cubemap.
+        D3D12_RESOURCE_DESC desc;
+        desc = pResource->pInternalResource->GetDesc();
+        const auto bIsCubeMap = desc.DepthOrArraySize == 6; // NOLINT: cubemap face count
+
+        // Bind a descriptor to the entire resource.
+        auto optionalError = allocateDescriptor({});
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
+        if (bIsCubeMap && !bDontBindDescriptorToCubemapFaces) {
+            // Bind a descriptor to each cubemap face.
+            for (size_t iDescriptorIndex = 0; iDescriptorIndex < desc.DepthOrArraySize; iDescriptorIndex++) {
+                auto optionalError = allocateDescriptor(iDescriptorIndex);
+                if (optionalError.has_value()) [[unlikely]] {
+                    optionalError->addCurrentLocationToErrorStack();
+                    return optionalError;
+                }
+            }
         }
 
         return {};
@@ -611,45 +597,91 @@ namespace ne {
         CD3DX12_CPU_DESCRIPTOR_HANDLE heapHandle,
         const DirectXResource* pResource,
         DirectXDescriptorType descriptorType,
-        size_t iCubemapFaceIndex) const {
+        std::optional<size_t> cubemapFaceIndex) const {
         // Get resource description.
         const auto resourceDesc = pResource->getInternalResource()->GetDesc();
 
         switch (descriptorType) {
         case (DirectXDescriptorType::RTV): {
+            // Prepare description.
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+            rtvDesc.Format = resourceDesc.Format;
+
+            if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
+                Error error(std::format(
+                    "unable to create DSV for resource \"{}\": 3D texture support not implemented",
+                    pResource->getResourceName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            } else if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+                // Set dimension.
+                rtvDesc.ViewDimension = resourceDesc.SampleDesc.Count > 1 ? D3D12_RTV_DIMENSION_TEXTURE2DMS
+                                                                          : D3D12_RTV_DIMENSION_TEXTURE2D;
+                rtvDesc.Texture2D.MipSlice = 0;
+                rtvDesc.Texture2D.PlaneSlice = 0;
+
+                if (resourceDesc.DepthOrArraySize > 1) {
+                    // Reference the whole texture array in one view.
+                    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+                    rtvDesc.Texture2DArray.MipSlice = 0;
+
+                    // Reference all textures.
+                    rtvDesc.Texture2DArray.FirstArraySlice = 0;
+                    rtvDesc.Texture2DArray.ArraySize = resourceDesc.DepthOrArraySize;
+                }
+
+                if (cubemapFaceIndex.has_value()) {
+                    // Specify which cubemap face to reference in the view.
+                    rtvDesc.Texture2DArray.FirstArraySlice = static_cast<UINT>(cubemapFaceIndex.value());
+                    rtvDesc.Texture2DArray.ArraySize = 1;
+                }
+            } else [[unlikely]] {
+                Error error(std::format(
+                    "unexpected resource dimension for RTV of resource \"{}\": {}",
+                    static_cast<int>(resourceDesc.Dimension),
+                    pResource->getResourceName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
             pRenderer->getD3dDevice()->CreateRenderTargetView(
-                pResource->getInternalResource(), nullptr, heapHandle);
+                pResource->getInternalResource(), &rtvDesc, heapHandle);
             break;
         }
         case (DirectXDescriptorType::DSV): {
             // Prepare DSV description.
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-            dsvDesc.Texture2D.MipSlice = 0;
             dsvDesc.Format = resourceDesc.Format;
 
             if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
-                // Cubemap.
-                // Make sure it's not using multisampling.
-                if (resourceDesc.SampleDesc.Count > 1) [[unlikely]] {
-                    Error error(std::format(
-                        "unable to create DSV for resource \"{}\": support for multisampled cubemaps not "
-                        "implemented",
-                        pResource->getResourceName()));
-                    error.showError();
-                    throw std::runtime_error(error.getFullErrorMessage());
-                }
-
-                // Set dimension.
-                dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-
-                // Specify which cubemap face to reference in the view.
-                dsvDesc.Texture2DArray.FirstArraySlice = static_cast<UINT>(iCubemapFaceIndex);
-                dsvDesc.Texture2DArray.ArraySize = 1;
+                Error error(std::format(
+                    "unable to create DSV for resource \"{}\": 3D texture support not implemented",
+                    pResource->getResourceName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
             } else if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
                 // Set dimension.
                 dsvDesc.ViewDimension = resourceDesc.SampleDesc.Count > 1 ? D3D12_DSV_DIMENSION_TEXTURE2DMS
                                                                           : D3D12_DSV_DIMENSION_TEXTURE2D;
+
+                dsvDesc.Texture2D.MipSlice = 0;
+
+                if (resourceDesc.DepthOrArraySize > 1) {
+                    // Reference the whole texture array in one view.
+                    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+                    dsvDesc.Texture2DArray.MipSlice = 0;
+
+                    // Reference all textures.
+                    dsvDesc.Texture2DArray.FirstArraySlice = 0;
+                    dsvDesc.Texture2DArray.ArraySize = resourceDesc.DepthOrArraySize;
+                }
+
+                if (cubemapFaceIndex.has_value()) {
+                    // Specify which cubemap face to reference in the view.
+                    dsvDesc.Texture2DArray.FirstArraySlice = static_cast<UINT>(cubemapFaceIndex.value());
+                    dsvDesc.Texture2DArray.ArraySize = 1;
+                }
             } else [[unlikely]] {
                 Error error(std::format(
                     "unexpected resource dimension for DSV of resource \"{}\": {}",
@@ -681,11 +713,16 @@ namespace ne {
 
             // Setup SRV depending on the dimension.
             switch (resourceDesc.Dimension) {
-            case (D3D12_RESOURCE_DIMENSION_TEXTURE2D):
             case (D3D12_RESOURCE_DIMENSION_TEXTURE3D): {
-                srvDesc.ViewDimension = resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D
-                                            ? D3D12_SRV_DIMENSION_TEXTURE3D
-                                            : D3D12_SRV_DIMENSION_TEXTURE2D;
+                Error error(std::format(
+                    "unable to create SRV for resource \"{}\": 3D texture support not implemented",
+                    pResource->getResourceName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+                break;
+            }
+            case (D3D12_RESOURCE_DIMENSION_TEXTURE2D): {
+                srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
                 srvDesc.Texture2D.MostDetailedMip = 0;
                 srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
                 if (resourceDesc.Format == DirectXRenderer::getDepthStencilBufferFormat()) {
@@ -694,6 +731,28 @@ namespace ne {
                 } else {
                     srvDesc.Format = resourceDesc.Format;
                 }
+
+                if (resourceDesc.DepthOrArraySize > 1) {
+                    // Reference the whole texture array in one view.
+                    srvDesc.ViewDimension = resourceDesc.DepthOrArraySize == 6 // NOLINT
+                                                ? D3D12_SRV_DIMENSION_TEXTURECUBE
+                                                : D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+
+                    srvDesc.Texture2DArray.PlaneSlice = 0;
+                    srvDesc.Texture2DArray.MostDetailedMip = 0;
+                    srvDesc.Texture2DArray.MipLevels = resourceDesc.MipLevels;
+
+                    // Reference all textures.
+                    srvDesc.Texture2DArray.FirstArraySlice = 0;
+                    srvDesc.Texture2DArray.ArraySize = resourceDesc.DepthOrArraySize;
+                }
+
+                if (cubemapFaceIndex.has_value()) {
+                    // Specify which cubemap face to reference in the view.
+                    srvDesc.Texture2DArray.FirstArraySlice = static_cast<UINT>(cubemapFaceIndex.value());
+                    srvDesc.Texture2DArray.ArraySize = 1;
+                }
+
                 break;
             }
             case (D3D12_RESOURCE_DIMENSION_BUFFER): {
@@ -888,7 +947,7 @@ namespace ne {
                 heapHandle,
                 pDescriptor->pResource,
                 pDescriptor->descriptorType,
-                pDescriptor->iReferencedCubemapFaceIndex);
+                pDescriptor->referencedCubemapFaceIndex);
 
             // Update descriptor index.
             pDescriptor->iDescriptorOffsetInDescriptors = iCurrentHeapIndex;

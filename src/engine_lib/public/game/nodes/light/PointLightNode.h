@@ -150,20 +150,20 @@ namespace ne RNAMESPACE() {
 
         /** Groups data related to shaders. */
         struct ShaderData {
-            /** Groups data related to `viewProjection` matrix of cubemap's face for shadow mapping. */
-            struct ViewProjectionMatrixGroup {
-                /** Slot to store @ref matrix. */
+            /** Groups used in shadow pass. */
+            struct ShadowPassDataGroup {
+                /** Slot to store @ref shaderData. */
                 std::unique_ptr<ShaderLightArraySlot> pSlot;
 
-                /** Matrix that transforms data from world space to projection space of a cubemap's face. */
-                glm::mat4 matrix;
+                /** Data to copy to shaders. */
+                ShadowPassLightShaderInfo shaderData;
             };
 
             /** Slot in the array with data of all spawned point lights. */
             std::unique_ptr<ShaderLightArraySlot> pPointLightArraySlot;
 
-            /** Matrices and slots in the array with `viewProjectionMatrix` of all spawned lights. */
-            std::array<ViewProjectionMatrixGroup, 6> vViewProjectionMatrixGroups;
+            /** Data used in shadow pass. */
+            std::array<ShadowPassDataGroup, 6> vShadowPassDataGroup;
 
             /** Groups data that will be directly copied to the GPU resource. */
             PointLightShaderData shaderData;
@@ -180,13 +180,13 @@ namespace ne RNAMESPACE() {
 
         /**
          * Used by renderer and returns the current index (because it may change later) into the shader array
-         * that stores viewProjection matrices of spawned light sources.
+         * that stores shadow pass info of spawned lights.
          *
-         * @param iCubemapFaceIndex Index of the cubemap face to get `viewProjection` matrix for.
+         * @param iCubemapFaceIndex Index of the cubemap face to get info for.
          *
          * @return Index into array.
          */
-        unsigned int getIndexIntoLightViewProjectionShaderArray(size_t iCubemapFaceIndex = 0);
+        unsigned int getIndexIntoShadowPassInfoShaderArray(size_t iCubemapFaceIndex = 0);
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
@@ -204,19 +204,19 @@ namespace ne RNAMESPACE() {
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
-         * `viewProjectionMatrix` of the light source to the GPU resource.
+         * shadow pass data of the light source to the GPU resource.
          *
-         * @param iMatrixIndex Index of the matrix (i.e. cubemap face index).
+         * @param iCubemapFaceIndex Index of the cubemap face to copy the data.
          *
-         * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
+         * @return Pointer to shadow pass data at @ref mtxShaderData.
          */
-        void* onStartedUpdatingViewProjectionMatrix(size_t iMatrixIndex);
+        void* onStartedUpdatingShadowPassData(size_t iCubemapFaceIndex);
 
         /**
-         * Called after @ref onStartedUpdatingViewProjectionMatrix to notify this node that the renderer has
+         * Called after @ref onStartedUpdatingShadowPassData to notify this node that the renderer has
          * finished copying the data to the GPU resource.
          */
-        void onFinishedUpdatingViewProjectionMatrix();
+        void onFinishedUpdatingShadowPassData();
 
         /**
          * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)
@@ -227,12 +227,12 @@ namespace ne RNAMESPACE() {
         void markShaderDataToBeCopiedToGpu();
 
         /**
-         * Marks array slots at @ref mtxShaderData for `viewProjectionMatrix` as "needs
+         * Marks array slots at @ref mtxShaderData for shadow pass data as "needs
          * update" (if the slots were created) to later be copied to the GPU resource.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
-        void markViewProjectionMatricesToBeCopiedToGpu();
+        void markShadowPassDataToBeCopiedToGpu();
 
         /**
          * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
@@ -242,11 +242,11 @@ namespace ne RNAMESPACE() {
         void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
 
         /**
-         * (Re)calculates viewProjection matrices used for shadow mapping.
+         * (Re)calculates data used in shadow pass.
          *
-         * @remark Does not call @ref markViewProjectionMatricesToBeCopiedToGpu.
+         * @remark Does not call @ref markShadowPassDataToBeCopiedToGpu.
          */
-        void recalculateViewProjectionMatricesForShadowMapping();
+        void recalculateShadowPassShaderData();
 
         /**
          * Recalculates @ref mtxShaderData according to the current parameters (state).
@@ -283,12 +283,6 @@ namespace ne RNAMESPACE() {
         /** Lit distance. */
         RPROPERTY(Serialize)
         float distance = 10.0F; // NOLINT: seems like a pretty good default value
-
-        /**
-         * Minimum value for @ref distance to avoid zero because we divide by this value in shaders for shadow
-         * mapping.
-         */
-        static constexpr float minLightDistance = 0.0001F;
 
         ne_PointLightNode_GENERATED
     };

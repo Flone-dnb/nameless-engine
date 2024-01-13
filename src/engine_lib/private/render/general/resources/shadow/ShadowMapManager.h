@@ -37,10 +37,22 @@ namespace ne {
         friend class PipelineManager;
 
     public:
+        /** Groups resources that a shadow map handle references. */
+        struct ShadowMapHandleResources {
+            /** Depth image. */
+            std::unique_ptr<GpuResource> pDepthTexture;
+
+            /**
+             * Optional (may be `nullptr`) "color" target, used for point lights to store additional
+             * information.
+             */
+            std::unique_ptr<GpuResource> pColorTexture;
+        };
+
         /** Groups mutex guarded data. */
         struct InternalResources {
             /** All allocated shadow maps. */
-            std::unordered_map<ShadowMapHandle*, std::unique_ptr<GpuResource>> shadowMaps;
+            std::unordered_map<ShadowMapHandle*, ShadowMapHandleResources> shadowMaps;
 
             /**
              * Array index managers for various light source types.
@@ -64,7 +76,15 @@ namespace ne {
          *
          * @return Constant depth bias.
          */
-        static constexpr int getShadowMappingDepthBias() { return iShadowMappingDepthBias; }
+        static int getShadowPassDepthBias();
+
+        /**
+         * Constant depth slope bias (multiplier) to apply when rendering depth to shadow maps to avoid an
+         * effect known as "shadow acne" (stair-stepping).
+         *
+         * @return Constant depth slope factor.
+         */
+        static float getShadowPassDepthSlopeFactor();
 
         /**
          * Returns name of the shader resource (from shader code) that stores all directional light shadow
@@ -83,6 +103,15 @@ namespace ne {
          */
         static constexpr const char* getSpotShadowMapsShaderResourceName() {
             return pSpotShadowMapsShaderResourceName;
+        }
+
+        /**
+         * Returns name of the shader resource (from shader code) that stores all point light shadow maps.
+         *
+         * @return Shader resource name.
+         */
+        static constexpr const char* getPointShadowMapsShaderResourceName() {
+            return pPointShadowMapsShaderResourceName;
         }
 
         /**
@@ -134,6 +163,13 @@ namespace ne {
         inline std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
             return &mtxInternalResources;
         }
+
+        /**
+         * Returns renderer.
+         *
+         * @return Renderer.
+         */
+        Renderer* getRenderer() const;
 
     private:
         /**
@@ -218,12 +254,6 @@ namespace ne {
 
         /** Do not delete (free) this pointer. GPU resource manager that owns this object. */
         GpuResourceManager* pResourceManager = nullptr;
-
-        /**
-         * Constant depth bias (offset) to apply when rendering depth to shadow maps to avoid an
-         * effect known as "shadow acne" (stair-stepping).
-         */
-        static constexpr int iShadowMappingDepthBias = 40000; // NOLINT
 
         /** Constant used to convert visible (non-clipped) distance to near clip plane for shadow mapping. */
         static constexpr float visibleDistanceToNearClipPlaneRatio = 0.004F; // NOLINT

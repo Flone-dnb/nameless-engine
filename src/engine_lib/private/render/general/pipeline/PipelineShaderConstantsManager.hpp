@@ -22,8 +22,8 @@ namespace ne {
 
         /** Groups names of special (some non-user specified) push/root constants. */
         struct SpecialConstantsNames {
-            /** Index into array of viewProjection matrices of spawned light sources (for shadow mapping). */
-            static constexpr auto pLightViewProjectionMatrixIndex = "iLightViewProjectionMatrixIndex";
+            /** Index into array of shadow pass infos. */
+            static constexpr auto pShadowPassLightInfoIndex = "iShadowPassLightInfoIndex";
         };
 
         /**

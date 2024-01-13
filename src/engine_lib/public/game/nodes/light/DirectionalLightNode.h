@@ -125,11 +125,20 @@ namespace ne RNAMESPACE() {
 
         /** Groups data related to shaders. */
         struct ShaderData {
+            /** Groups used in shadow pass. */
+            struct ShadowPassDataGroup {
+                /** Slot to store @ref shaderData. */
+                std::unique_ptr<ShaderLightArraySlot> pSlot;
+
+                /** Data to copy to shaders. */
+                ShadowPassLightShaderInfo shaderData;
+            };
+
             /** Slot in the array with data of all spawned directional lights. */
             std::unique_ptr<ShaderLightArraySlot> pDirectionalLightArraySlot;
 
-            /** Slot in the array with `viewProjectionMatrix` of all spawned lights. */
-            std::unique_ptr<ShaderLightArraySlot> pViewProjectionMatrixSlot;
+            /** Groups data used in shadow pass. */
+            ShadowPassDataGroup shadowPassData;
 
             /** Groups data that will be directly copied to the GPU resource. */
             DirecionalLightShaderData shaderData;
@@ -146,11 +155,11 @@ namespace ne RNAMESPACE() {
 
         /**
          * Used by renderer and returns the current index (because it may change later) into the shader array
-         * that stores viewProjection matrices of spawned light sources.
+         * that stores shadow pass info of spawned light sources.
          *
          * @return Index into array.
          */
-        unsigned int getIndexIntoLightViewProjectionShaderArray();
+        unsigned int getIndexIntoShadowPassInfoShaderArray();
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
@@ -168,25 +177,25 @@ namespace ne RNAMESPACE() {
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
-         * `viewProjectionMatrix` of the light source to the GPU resource.
+         * shadow pass data of the light source to the GPU resource.
          *
-         * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
+         * @return Pointer to the shadow pass data at @ref mtxShaderData.
          */
-        void* onStartedUpdatingViewProjectionMatrix();
+        void* onStartedUpdatingShadowPassData();
 
         /**
-         * Called after @ref onStartedUpdatingViewProjectionMatrix to notify this node that the renderer has
+         * Called after @ref onStartedUpdatingShadowPassData to notify this node that the renderer has
          * finished copying the data to the GPU resource.
          */
-        void onFinishedUpdatingViewProjectionMatrix();
+        void onFinishedUpdatingShadowPassData();
 
         /**
-         * Marks array slot at @ref mtxShaderData for `viewProjectionMatrix` as "needs
+         * Marks array slot at @ref mtxShaderData for shadow pass data as "needs
          * update" (if the slot is created) to later be copied to the GPU resource.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
-        void markViewProjectionMatrixToBeCopiedToGpu();
+        void markShadowPassDataToBeCopiedToGpu();
 
         /**
          * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)
@@ -204,11 +213,11 @@ namespace ne RNAMESPACE() {
         void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
 
         /**
-         * (Re)calculates viewProjection matrix used for shadow mapping.
+         * (Re)calculates data used by shaders in shadow pass and shadow mapping.
          *
-         * @remark Does not call @ref markViewProjectionMatrixToBeCopiedToGpu.
+         * @remark Does not call @ref markShadowPassDataToBeCopiedToGpu or @ref markShaderDataToBeCopiedToGpu.
          */
-        void recalculateViewProjectionMatrixForShadowMapping();
+        void recalculateShadowMappingShaderData();
 
         /** Only valid while spawned. Up to date data that will be copied to the GPU. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;

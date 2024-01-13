@@ -277,44 +277,54 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::createShadowMapTexture(
-        const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) {
+        const std::string& sResourceName, unsigned int iTextureSize, bool bPointLightColorCubemap) {
         // Check that texture size is power of 2.
         if (!std::has_single_bit(iTextureSize)) [[unlikely]] {
             return Error(std::format(
                 "shadow map size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.)", iTextureSize));
         }
 
-        // Prepare texture format.
-        const auto textureFormat = DirectXRenderer::getShadowMapFormat();
+        // Prepare format.
+        auto textureFormat = DirectXRenderer::getShadowMapFormat();
+
+        // Prepare initial state.
+        auto initialState = D3D12_RESOURCE_STATE_DEPTH_READ;
+        auto flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+        // Prepare clear value.
+        D3D12_CLEAR_VALUE clear;
+
+        // Prepare depth / array size.
+        UINT16 iArraySize = 1;
+
+        if (bPointLightColorCubemap) {
+            textureFormat = DirectXRenderer::getShadowMappingPointLightColorTargetFormat();
+            initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
+            flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            clear.Color[0] = 0.0F;
+            iArraySize = 6; // NOLINT: cubemap has 6 faces
+        } else {
+            clear.DepthStencil.Depth = Renderer::getMaxDepth();
+            clear.DepthStencil.Stencil = 0;
+        }
+
+        // Set clear value format.
+        clear.Format = textureFormat;
 
         // Prepare resource description.
         auto resourceDescription = CD3DX12_RESOURCE_DESC::Tex2D(
             textureFormat,
             iTextureSize,
             iTextureSize,
-            1, // depth / array size
-            1, // mip levels
-            1, // sample count
-            0, // sample quality
-            D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-        if (bIsCubeTexture) {
-            CD3DX12_RESOURCE_DESC::Tex3D(
-                textureFormat,
-                iTextureSize,
-                iTextureSize,
-                1, // depth / array size
-                1, // mip levels
-                D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-        }
+            iArraySize, // depth / array size
+            1,          // mip levels
+            1,          // sample count
+            0,          // sample quality
+            flags);
 
         // Prepare allocation heap.
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-        D3D12_CLEAR_VALUE depthClear;
-        depthClear.Format = textureFormat;
-        depthClear.DepthStencil.Depth = Renderer::getMaxDepth();
-        depthClear.DepthStencil.Stencil = 0;
 
         // Create resource.
         auto result = DirectXResource::create(
@@ -323,8 +333,8 @@ namespace ne {
             pMemoryAllocator.Get(),
             allocationDesc,
             resourceDescription,
-            D3D12_RESOURCE_STATE_DEPTH_READ, // will be transitioned to write in `draw`
-            depthClear,
+            initialState,
+            clear,
             0,
             0);
         if (std::holds_alternative<Error>(result)) {

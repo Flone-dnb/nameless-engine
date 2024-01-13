@@ -401,20 +401,23 @@ namespace ne {
         }
 
         // Make sure fields have unique offsets.
-        std::unordered_set<size_t> fieldOffsets;
+        std::unordered_map<size_t, std::string> fieldOffsets;
         for (const auto& [sFieldName, iOffsetInUints] : rootConstantOffsets) {
             // Make sure this offset was not used before.
             const auto it = fieldOffsets.find(iOffsetInUints);
             if (it != fieldOffsets.end()) [[unlikely]] {
                 return Error(std::format(
                     "found 2 fields in root constants with different names but the same "
-                    "offsets from struct start, conflicting offset: {} (found on field: {})",
+                    "offsets from struct start, conflicting offset {} was already used on field \"{}\" but "
+                    "the field \"{}\" is also using it, this might mean that your vertex and fragment "
+                    "shaders use different root constants",
                     iOffsetInUints,
+                    it->second,
                     sFieldName));
             }
 
             // Add offset as used.
-            fieldOffsets.insert(iOffsetInUints);
+            fieldOffsets[iOffsetInUints] = sFieldName;
         }
 
         // Get current render settings to query texture filtering for static sampler.
@@ -734,10 +737,10 @@ namespace ne {
         addSpecialResourceRootParameter(
             "transparentSpotLightGrid", SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID);
 
-        // Add lights view projection matrices array.
+        // Add light infos for shadow pass.
         addSpecialResourceRootParameter(
-            LightingShaderResourceManager::getLightViewProjectionMatricesShaderResourceName(),
-            SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES);
+            LightingShaderResourceManager::getShadowPassLightInfoArrayShaderResourceName(),
+            SpecialRootParameterSlot::SHADOW_PASS_LIGHT_INFO);
 
         // Add root constants.
         addSpecialResourceRootParameter(sRootConstantsVariableName, SpecialRootParameterSlot::ROOT_CONSTANTS);
@@ -751,6 +754,11 @@ namespace ne {
         addSpecialResourceRootParameter(
             ShadowMapManager::getSpotShadowMapsShaderResourceName(),
             SpecialRootParameterSlot::SPOT_SHADOW_MAPS);
+
+        // Add point shadow maps.
+        addSpecialResourceRootParameter(
+            ShadowMapManager::getPointShadowMapsShaderResourceName(),
+            SpecialRootParameterSlot::POINT_SHADOW_MAPS);
     }
 
     std::optional<Error> RootSignatureGenerator::addUniquePairResourceNameRootParameterIndex(

@@ -34,6 +34,15 @@ namespace ne {
     class ComputeShaderInterface;
     class VulkanPipeline;
 
+    /** Data that will be directly copied into shaders. */
+    struct ShadowPassLightShaderInfo {
+        /** Matrix that transforms data from world space to projection space light. */
+        alignas(iVkVec4Alignment) glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
+
+        /** World location of the light source. 4th component is not used. */
+        alignas(iVkVec4Alignment) glm::vec4 position = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
+    };
+
     /**
      * Manages GPU resources that store lighting related data (such as data of all spawned light sources
      * (data such as color, intensity, position, etc.)).
@@ -126,12 +135,19 @@ namespace ne {
          *
          * @return Name of the shader resource.
          */
-        static std::string getLightViewProjectionMatricesShaderResourceName();
+        static std::string getShadowPassLightInfoArrayShaderResourceName();
+
+        /**
+         * Returns name of the shader resource that stores array of world positions for all point lights (used
+         * for shadow mapping).
+         *
+         * @return Name of the shader resource.
+         */
+        static std::string getPointLightWorldLocationsShaderResourceName();
 
 #if defined(WIN32)
         /**
-         * Sets views SRV of buffer that stored array of view projection matrices of spawned lights to the
-         * specified command list.
+         * Sets views SRV of buffer that stored array of info of spawned lights for shadow pass.
          *
          * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
          *
@@ -142,7 +158,7 @@ namespace ne {
          * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
          * submit a new frame.
          */
-        inline void setLightsViewProjectionMatricesBufferViewToCommandList(
+        inline void setShadowPassLightInfoViewToCommandList(
             DirectXPso* pPso,
             const ComPtr<ID3D12GraphicsCommandList>& pCommandList,
             size_t iCurrentFrameResourceIndex) {
@@ -153,12 +169,12 @@ namespace ne {
 
 #if defined(DEBUG)
             // Self check: make sure this resource is actually being used in the PSO.
-            if (pipelineData.rootParameterIndices.find(sLightViewProjectionMatricesShaderResourceName) ==
+            if (pipelineData.rootParameterIndices.find(sShadowPassLightInfoShaderResourceName) ==
                 pipelineData.rootParameterIndices.end()) [[unlikely]] {
                 Error error(std::format(
                     "shader resource \"{}\" is not used in the shaders of the specified PSO \"{}\" "
                     "but you are attempting to set this resource to a command list",
-                    sLightViewProjectionMatricesShaderResourceName,
+                    sShadowPassLightInfoShaderResourceName,
                     pPso->getPipelineIdentifier()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
@@ -170,10 +186,10 @@ namespace ne {
                 pPso,
                 pCommandList,
                 iCurrentFrameResourceIndex,
-                lightArrays.pLightViewProjectionMatrices,
-                sLightViewProjectionMatricesShaderResourceName,
+                lightArrays.pShadowPassLightInfoArray,
+                sShadowPassLightInfoShaderResourceName,
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::LIGHT_VIEW_PROJECTION_MATRICES)]);
+                    SpecialRootParameterSlot::SHADOW_PASS_LIGHT_INFO)]);
         }
 #endif
 
@@ -233,7 +249,7 @@ namespace ne {
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Array that stores data of all spawned point lights.
+         * @return Shader array.
          */
         ShaderLightArray* getPointLightDataArray() const;
 
@@ -242,7 +258,7 @@ namespace ne {
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Array that stores data of all spawned directional lights.
+         * @return Shader array.
          */
         ShaderLightArray* getDirectionalLightDataArray() const;
 
@@ -251,19 +267,18 @@ namespace ne {
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Array that stores data of all spawned spotlights.
+         * @return Shader array.
          */
         ShaderLightArray* getSpotlightDataArray() const;
 
         /**
-         * Returns a non-owning reference to an array that stores `viewProjection` matrices of all spawned
-         * lights (used for shadow mapping).
+         * Returns a non-owning reference to an array that stores info for shadow pass of spawned lights.
          *
          * @warning Do not delete (free) returned pointer.
          *
-         * @return Array that stores matrices of all spawned lights.
+         * @return Shader array.
          */
-        ShaderLightArray* getLightViewProjectionMatricesArray() const;
+        ShaderLightArray* getShadowPassLightInfoArray() const;
 
         /**
          * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
@@ -491,8 +506,8 @@ namespace ne {
             /** Stores data of all spawned spotlights. */
             std::unique_ptr<ShaderLightArray> pSpotlightDataArray;
 
-            /** `viewProjectionMatrix` for all spawned light sources, used for shadow mapping. */
-            std::unique_ptr<ShaderLightArray> pLightViewProjectionMatrices;
+            /** Light info for all spawned lights, used in shadow pass. */
+            std::unique_ptr<ShaderLightArray> pShadowPassLightInfoArray;
         };
 
         /** Groups shader data for compute shaders that operate on light-related data. */
@@ -1035,11 +1050,10 @@ namespace ne {
             "spotlightsInCameraFrustumIndices";
 
         /**
-         * Name of the resource that stores array of `viewProjectionMatrix` for all light sources (used for
-         * shadow mapping).
+         * Name of the resource that stores array light infos for all spawned lights (used in
+         * shadow pass).
          */
-        static inline const std::string sLightViewProjectionMatricesShaderResourceName =
-            "lightViewProjectionMatrices";
+        static inline const std::string sShadowPassLightInfoShaderResourceName = "shadowPassLightInfo";
 
         /** Type of the descriptor used to store data from @ref mtxGpuData. */
         static constexpr auto generalLightingDataDescriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;

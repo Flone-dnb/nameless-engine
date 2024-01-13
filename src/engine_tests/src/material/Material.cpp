@@ -152,7 +152,7 @@ TEST_CASE("create engine default materials") {
                 REQUIRE(Material::getCurrentAliveMaterialCount() == 2);
                 REQUIRE(
                     getWindow()->getRenderer()->getPipelineManager()->getCurrentGraphicsPipelineCount() ==
-                    4); // 1 opaque PSO + 1 depth only PSO + 1 shadow mapping PSO + 1 transparent PSO
+                    5); // 1 opaque PSO + 1 depth only PSO + 2 shadow mapping PSOs + 1 transparent PSO
 
                 // Despawn one node.
                 pMeshNodeOpaque->detachFromParentAndDespawn();
@@ -398,22 +398,23 @@ TEST_CASE("unused materials unload shaders from memory") {
                         REQUIRE(
                             Shader::getCurrentAmountOfShadersInMemory() ==
                             iInitialShaderCount +
-                                3); // 1 pixel + 1 vertex + 1 vertex with shadow mapping macro
+                                4); // 1 pixel + 1 vertex + 1 shadow mapping vertex + 1 point light pixel
 
                         getWorldRootNode()->addChildNode(pCustomMeshNode1);
                         getWorldRootNode()->addChildNode(pCustomMeshNode2);
 
                         REQUIRE(
                             Shader::getCurrentAmountOfShadersInMemory() ==
-                            iInitialShaderCount + 3 + 3); // same thing but with new vertex/pixel shaders
+                            iInitialShaderCount + 4 + 3); // same thing but with new vertex/pixel shaders
+                                                          // (point light pixel is the same)
 
                         // Despawn the first custom mesh.
                         pCustomMeshNode1->detachFromParentAndDespawn();
-                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount + 3 + 3);
+                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount + 4 + 3);
 
                         // Despawn the second custom mesh.
                         pCustomMeshNode2->detachFromParentAndDespawn();
-                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount + 3);
+                        REQUIRE(Shader::getCurrentAmountOfShadersInMemory() == iInitialShaderCount + 4);
 
                         // Despawn default mesh.
                         pMeshNode->detachFromParentAndDespawn();
@@ -505,9 +506,8 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                     pMeshNode1->getMaterial()->getPathToDiffuseTextureResource() !=
                     pMeshNode2->getMaterial()->getPathToDiffuseTextureResource());
 
-                // Only 3 pipelines should exist (1 opaque + 1 depth only + 1 shadow mapping pipeline) (2
-                // materials with different textures).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
+                // 1 opaque + 1 depth only + 2 shadow mapping pipelines) (2 materials with different textures.
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
 
                 // Remove diffuse texture from one mesh.
                 pMeshNode1->getMaterial()->setDiffuseTexture("");
@@ -515,15 +515,15 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 // Make sure texture is removed.
                 REQUIRE(pMeshNode1->getMaterial()->getPathToDiffuseTextureResource().empty());
 
-                // There should now be 4 pipelines (1 opaque no diffuse + 1 opaque with diffuse + 1 depth only
-                // pipeline + 1 shadow mapping) (2 materials one with diffuse texture and one without).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
+                // 1 opaque no diffuse + 1 opaque with diffuse + 1 depth only
+                // pipeline + 2 shadow mapping (2 materials one with diffuse texture and one without).
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 5);
 
                 // Now despawn 1 mesh.
                 pMeshNode1->detachFromParentAndDespawn();
 
-                // There should now be just 3 pipelines (1 opaque + 1 depth only + 1 shadow mapping).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
+                // 1 opaque + 1 depth only + 2 shadow mapping.
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
 
                 // Despawn second mesh.
                 pMeshNode2->detachFromParentAndDespawn();
@@ -611,10 +611,10 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 getWorldRootNode()->addChildNode(pMeshNode2);
                 pMeshNode2->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
-                // There should now be 4 pipelines (2 materials one with transparency and one without)
-                // (1 opaque pipeline + 1 depth only pipeline + 1 shadow mapping pipeline + 1 transparent
+                // 2 materials one with transparency and one without
+                // (1 opaque pipeline + 1 depth only pipeline + 2 shadow mapping pipelines + 1 transparent
                 // pipeline).
-                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
+                REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 5);
 
                 {
                     const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
@@ -874,8 +874,8 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                     REQUIRE(
                         pRenderer->getResourceManager()->getTextureManager()->getTextureInMemoryCount() == 2);
 
-                    // Make sure there's only 3 pipelines (1 opaque + 1 depth only + 1 shadow mapping).
-                    REQUIRE(pRenderer->getPipelineManager()->getCurrentGraphicsPipelineCount() == 3);
+                    // 1 opaque + 1 depth only + 2 shadow mapping.
+                    REQUIRE(pRenderer->getPipelineManager()->getCurrentGraphicsPipelineCount() == 4);
 
                     getWindow()->close();
                 });

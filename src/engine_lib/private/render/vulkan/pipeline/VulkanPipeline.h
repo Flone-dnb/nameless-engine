@@ -170,6 +170,8 @@ namespace ne {
          * configuration.
          * @param sComputeShaderName  Name of the compiled compute shader to use (empty if not used).
          * @param bEnableDepthBias    Whether depth bias (offset) is enabled or not.
+         * @param bIsUsedForPointLightsShadowMapping Whether this pipeline is used for shadow mapping of point
+         * lights or not.
          * @param bUsePixelBlending   Whether the pixels of the mesh that uses this pipeline should blend with
          * existing pixels on back buffer or not (for transparency).
          */
@@ -182,6 +184,7 @@ namespace ne {
             const std::set<ShaderMacro>& additionalFragmentShaderMacros = {},
             const std::string& sComputeShaderName = "",
             bool bEnableDepthBias = false,
+            bool bIsUsedForPointLightsShadowMapping = false,
             bool bUsePixelBlending = false);
 
         /**

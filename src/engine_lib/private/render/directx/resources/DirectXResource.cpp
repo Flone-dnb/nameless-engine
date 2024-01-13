@@ -92,24 +92,49 @@ namespace ne {
         return pCreatedResource;
     }
 
-    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DirectXResource::getBindedDescriptorCpuHandle(
-        DirectXDescriptorType descriptorType, size_t iDescriptorIndex) {
+    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
+    DirectXResource::getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType) {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
         // Get descriptors of the specified type.
-        const auto& vDescriptorsSameType = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+        const auto& descriptorsSameType = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+
+        // Get descriptor.
+        const auto& pDescriptor = descriptorsSameType.pResource;
+
+        // Quit if no such descriptor was binded.
+        if (pDescriptor == nullptr) {
+            return {};
+        }
+
+        // Get heap that this descriptor uses.
+        const auto pHeap = pDescriptor->getDescriptorHeap();
+
+        // Construct descriptor handle.
+        return CD3DX12_CPU_DESCRIPTOR_HANDLE(
+            pHeap->getInternalHeap()->GetCPUDescriptorHandleForHeapStart(),
+            pDescriptor->getDescriptorOffsetInDescriptors(),
+            pHeap->getDescriptorSize());
+    }
+
+    std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DirectXResource::getBindedCubemapFaceDescriptorCpuHandle(
+        DirectXDescriptorType descriptorType, size_t iCubemapFaceIndex) {
+        std::scoped_lock guard(mtxHeapDescriptors.first);
+
+        // Get descriptors of the specified type.
+        const auto& descriptorsSameType = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
         // Make sure the specified index is not out of bounds.
-        if (iDescriptorIndex >= vDescriptorsSameType.size()) [[unlikely]] {
+        if (iCubemapFaceIndex >= descriptorsSameType.vCubemapFaces.size()) [[unlikely]] {
             Error error(std::format(
                 "unable to get binded descriptor for resource \"{}\" because the specified descriptor index "
                 "{} is out of bounds",
                 getResourceName(),
-                iDescriptorIndex));
+                iCubemapFaceIndex));
         }
 
         // Get descriptor.
-        const auto& pDescriptor = vDescriptorsSameType[0];
+        const auto& pDescriptor = descriptorsSameType.vCubemapFaces[iCubemapFaceIndex];
 
         // Quit if no such descriptor was binded.
         if (pDescriptor == nullptr) {
@@ -131,10 +156,10 @@ namespace ne {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
         // Get descriptors of the specified type.
-        const auto& vDescriptorsSameType = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
+        const auto& descriptorsSameType = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
         // Get descriptor.
-        const auto& pDescriptor = vDescriptorsSameType[0];
+        const auto& pDescriptor = descriptorsSameType.pResource;
 
         // Quit if no such descriptor was binded.
         if (pDescriptor == nullptr) {
@@ -157,10 +182,7 @@ namespace ne {
         // Get descriptors of the specified type.
         const auto& descriptorsSameType = mtxHeapDescriptors.second[static_cast<size_t>(descriptorType)];
 
-        // Get descriptor.
-        const auto& pDescriptor = descriptorsSameType[0];
-
-        return pDescriptor.get();
+        return descriptorsSameType.pResource.get();
     }
 
     DirectXResource::DirectXResource(
@@ -169,9 +191,10 @@ namespace ne {
         UINT iElementSizeInBytes,
         UINT iElementCount)
         : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount) {
-        // Initialize descriptor pointers.
-        for (auto& vDescriptorsSameType : mtxHeapDescriptors.second) {
-            for (auto& pDescriptor : vDescriptorsSameType) {
+        // Initialize descriptor pointers (just in case).
+        for (auto& descriptorsSameType : mtxHeapDescriptors.second) {
+            descriptorsSameType.pResource = nullptr;
+            for (auto& pDescriptor : descriptorsSameType.vCubemapFaces) {
                 pDescriptor = nullptr;
             }
         }
@@ -185,43 +208,14 @@ namespace ne {
     }
 
     std::optional<Error> DirectXResource::bindDescriptor(
-        DirectXDescriptorType descriptorType, ContinuousDirectXDescriptorRange* pRange) {
+        DirectXDescriptorType descriptorType,
+        ContinuousDirectXDescriptorRange* pRange,
+        bool bDontBindDescriptorToCubemapFaces) {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
-        // Check if this resource is a cubemap.
-        D3D12_RESOURCE_DESC desc;
-        desc = pInternalResource->GetDesc();
-        const auto bIsCubeMap = desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-
-        if (!bIsCubeMap) {
-            // Check if we already have descriptor of this type binded.
-            if (mtxHeapDescriptors.second[static_cast<int>(descriptorType)][0] != nullptr) {
-                // Nothing to do.
-                return {};
-            }
-        } else {
-            // Either none or all descriptors should be binded.
-            const auto& vDescriptorsSameType = mtxHeapDescriptors.second[static_cast<int>(descriptorType)];
-            size_t iBindedDescriptorCount = 0;
-            for (const auto& pDescriptor : vDescriptorsSameType) {
-                if (pDescriptor == nullptr) {
-                    continue;
-                }
-                iBindedDescriptorCount += 1;
-            }
-
-            if (iBindedDescriptorCount == vDescriptorsSameType.size()) {
-                // Nothing to do.
-                return {};
-            } else if (iBindedDescriptorCount > 0) [[unlikely]] {
-                return Error(std::format(
-                    "cubemap resource \"{}\" attempted to bind descriptors to cubemap faces but there are "
-                    "already {} descriptors somehow binded although expected to have {} binded descriptors "
-                    "(descriptor per cubemap face)",
-                    getResourceName(),
-                    iBindedDescriptorCount,
-                    vDescriptorsSameType.size()));
-            }
+        if (getDescriptor(descriptorType) != nullptr) {
+            // Nothing to do, already initialized.
+            return {};
         }
 
         // Get resource manager.
@@ -260,7 +254,8 @@ namespace ne {
         }
 
         // Assign descriptor.
-        auto optionalError = pHeap->assignDescriptor(this, descriptorType, pRange);
+        auto optionalError =
+            pHeap->assignDescriptor(this, descriptorType, pRange, bDontBindDescriptorToCubemapFaces);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

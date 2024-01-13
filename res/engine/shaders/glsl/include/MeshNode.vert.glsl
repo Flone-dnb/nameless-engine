@@ -2,8 +2,8 @@
 #include "../../include/MeshData.glsl"
 #include "../../include/shader_constants/MeshNodeShaderConstants.glsl"
 #ifdef VS_SHADOW_MAPPING_PASS
-#include "../../include/Lighting.glsl"
-#include "../../include/shader_constants/LightingConstants.glsl"
+#include "../../include/ShadowPassLightInfoData.glsl"
+#include "../../include/shader_constants/ShadowPassConstants.glsl"
 #endif
 
 /** Input parameters. */
@@ -29,7 +29,7 @@ void vsMeshNode(){
 
     // Transform position to homogeneous clip space.
 #ifdef VS_SHADOW_MAPPING_PASS
-    gl_Position = lightViewProjectionMatrices.array[constants.iLightViewProjectionMatrixIndex] * fragmentWorldPosition;
+    gl_Position = shadowPassLightInfo.array[constants.iShadowPassLightInfoIndex].viewProjectionMatrix * fragmentWorldPosition;
 #else
     gl_Position = frameData.viewProjectionMatrix * fragmentWorldPosition;
 #endif

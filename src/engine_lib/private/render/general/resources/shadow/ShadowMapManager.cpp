@@ -71,17 +71,35 @@ namespace ne {
 
         // Create shadow map.
         auto result = pResourceManager->createShadowMapTexture(
-            sResourceName, iShadowMapSize, type == ShadowMapType::POINT);
+            sResourceName, iShadowMapSize, false); // create depth texture first (not cubemap)
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        auto pShadowMapResource = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+        auto pShadowDepthTexture = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+
+        // Prepare "color" target to store additional information (only for point lights).
+        std::unique_ptr<GpuResource> pShadowColorTexture;
+        if (type == ShadowMapType::POINT) {
+            // Now create a "color" cubemap for point lights.
+            result = pResourceManager->createShadowMapTexture(sResourceName, iShadowMapSize, true);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            pShadowColorTexture = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+        }
 
         // Create handle.
-        auto pShadowMapHandle = std::unique_ptr<ShadowMapHandle>(
-            new ShadowMapHandle(this, pShadowMapResource.get(), type, iShadowMapSize, onArrayIndexChanged));
+        auto pShadowMapHandle = std::unique_ptr<ShadowMapHandle>(new ShadowMapHandle(
+            this,
+            pShadowDepthTexture.get(),
+            type,
+            iShadowMapSize,
+            onArrayIndexChanged,
+            pShadowColorTexture.get()));
 
         // Get array index manager.
         const auto pShadowMapArrayIndexManager = getArrayIndexManagerBasedOnShadowMapType(type);
@@ -97,10 +115,15 @@ namespace ne {
         }
 
         // Add to the map of allocated shadow maps.
-        mtxInternalResources.second.shadowMaps[pShadowMapHandle.get()] = std::move(pShadowMapResource);
+        ShadowMapHandleResources resources;
+        resources.pDepthTexture = std::move(pShadowDepthTexture);
+        resources.pColorTexture = std::move(pShadowColorTexture);
+        mtxInternalResources.second.shadowMaps[pShadowMapHandle.get()] = std::move(resources);
 
         return pShadowMapHandle;
     }
+
+    Renderer* ShadowMapManager::getRenderer() const { return pResourceManager->getRenderer(); }
 
     ShadowMapArrayIndexManager*
     ShadowMapManager::getArrayIndexManagerBasedOnShadowMapType(ShadowMapType type) {
@@ -167,12 +190,12 @@ namespace ne {
         unsigned int iRenderSettingsShadowMapSize =
             static_cast<unsigned int>(pMtxRenderSettings->second->getShadowQuality());
 
-        for (auto& [pShadowMapHandle, pShadowMap] : mtxInternalResources.second.shadowMaps) {
+        for (auto& [pShadowMapHandle, shadowResources] : mtxInternalResources.second.shadowMaps) {
             // Get shadow map type.
             const auto shadowMapType = pShadowMapHandle->getShadowMapType();
 
             // Get resource name.
-            const auto sResourceName = pShadowMap->getResourceName();
+            const auto sResourceName = shadowResources.pDepthTexture->getResourceName();
 
             // Correct for the specified shadow map type.
             const auto iShadowMapSize = correctShadowMapResolutionForType(
@@ -185,7 +208,7 @@ namespace ne {
                 return Error("unsupported shadow map type");
             }
 
-            std::scoped_lock handleResourceGuard(pShadowMapHandle->mtxResource.first);
+            std::scoped_lock handleResourceGuard(pShadowMapHandle->mtxResources.first);
 
             // Unregister this handle because the resource will now be deleted.
             auto optionalError = pShadowMapArrayIndexManager->unregisterShadowMapResource(pShadowMapHandle);
@@ -194,22 +217,33 @@ namespace ne {
                 return optionalError;
             }
 
-            // Destroy old resource.
-            pShadowMap = nullptr;
+            // Destroy old resources.
+            shadowResources = {};
 
             // Re-create the shadow map.
             auto result = pResourceManager->createShadowMapTexture(
-                sResourceName, iShadowMapSize, shadowMapType == ShadowMapType::POINT);
+                sResourceName, iShadowMapSize, false); // create depth texture first (not cubemap)
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            pShadowMap = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+            shadowResources.pDepthTexture = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+
+            if (shadowMapType == ShadowMapType::POINT) {
+                // Now create a "color" target for point lights.
+                result = pResourceManager->createShadowMapTexture(sResourceName, iShadowMapSize, true);
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+                shadowResources.pColorTexture = std::get<std::unique_ptr<GpuResource>>(std::move(result));
+            }
 
             // Update handle.
-            pShadowMapHandle->mtxResource.second = pShadowMap.get();
-            pShadowMapHandle->iShadowMapSize = iShadowMapSize;
+            pShadowMapHandle->setUpdatedResources(
+                shadowResources.pDepthTexture.get(), iShadowMapSize, shadowResources.pColorTexture.get());
 
             // Register newly created resource to bind the new GPU resource to descriptor.
             optionalError = pShadowMapArrayIndexManager->registerShadowMapResource(pShadowMapHandle);
@@ -251,10 +285,10 @@ namespace ne {
         if (!mtxInternalResources.second.shadowMaps.empty()) [[unlikely]] {
             // Prepare their names and count.
             std::unordered_map<std::string, size_t> leftResources;
-            for (const auto& [pRawResource, pResource] : mtxInternalResources.second.shadowMaps) {
-                const auto it = leftResources.find(pResource->getResourceName());
+            for (const auto& [pShadowHandle, shadowResources] : mtxInternalResources.second.shadowMaps) {
+                const auto it = leftResources.find(shadowResources.pDepthTexture->getResourceName());
                 if (it == leftResources.end()) {
-                    leftResources[pResource->getResourceName()] = 1;
+                    leftResources[shadowResources.pDepthTexture->getResourceName()] = 1;
                 } else {
                     it->second += 1;
                 }
@@ -275,6 +309,14 @@ namespace ne {
             error.showError();
             return; // don't throw in destructor, just quit
         }
+    }
+
+    int ShadowMapManager::getShadowPassDepthBias() {
+        return 2500; // NOLINT
+    }
+
+    float ShadowMapManager::getShadowPassDepthSlopeFactor() {
+        return 2.5F; // NOLINT
     }
 
     std::variant<std::unique_ptr<ShadowMapManager>, Error>

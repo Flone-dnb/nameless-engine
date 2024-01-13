@@ -217,11 +217,20 @@ namespace ne RNAMESPACE() {
 
         /** Groups data related to shaders. */
         struct ShaderData {
+            /** Groups used in shadow pass. */
+            struct ShadowPassDataGroup {
+                /** Slot to store @ref shaderData. */
+                std::unique_ptr<ShaderLightArraySlot> pSlot;
+
+                /** Data to copy to shaders. */
+                ShadowPassLightShaderInfo shaderData;
+            };
+
             /** Slot in the array with data of all spawned spotlights. */
             std::unique_ptr<ShaderLightArraySlot> pSpotlightArraySlot;
 
-            /** Slot in the array with `viewProjectionMatrix` of all spawned lights. */
-            std::unique_ptr<ShaderLightArraySlot> pViewProjectionMatrixSlot;
+            /** Groups data used in shadow pass. */
+            ShadowPassDataGroup shadowPassData;
 
             /** Groups data that will be directly copied to the GPU resource. */
             SpotlightShaderData shaderData;
@@ -238,11 +247,11 @@ namespace ne RNAMESPACE() {
 
         /**
          * Used by renderer and returns the current index (because it may change later) into the shader array
-         * that stores viewProjection matrices of spawned light sources.
+         * that stores shadow pass info of spawned light sources.
          *
          * @return Index into array.
          */
-        unsigned int getIndexIntoLightViewProjectionShaderArray();
+        unsigned int getIndexIntoShadowPassInfoShaderArray();
 
         /**
          * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
@@ -271,20 +280,20 @@ namespace ne RNAMESPACE() {
          *
          * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
          */
-        void* onStartedUpdatingViewProjectionMatrix();
+        void* onStartedUpdatingShadowPassData();
 
         /**
-         * Called after @ref onStartedUpdatingViewProjectionMatrix to notify this node that the renderer has
+         * Called after @ref onStartedUpdatingShadowPassData to notify this node that the renderer has
          * finished copying the data to the GPU resource.
          */
-        void onFinishedUpdatingViewProjectionMatrix();
+        void onFinishedUpdatingShadowPassData();
 
         /**
-         * (Re)calculates viewProjection matrix used for shadow mapping.
+         * (Re)calculates data used for shadow pass and shadow mapping mapping.
          *
          * @remark Does not call @ref markShaderDataToBeCopiedToGpu.
          */
-        void recalculateViewProjectionMatrixForShadowMapping();
+        void recalculateShadowMappingShaderData();
 
         /**
          * Recalculates shader data according to the current spotlight data and calls @ref

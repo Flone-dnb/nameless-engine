@@ -67,6 +67,26 @@ namespace ne {
             }
         };
 
+        /** Groups shaders used by point lights. */
+        struct PointLight {
+            /**
+             * Returns fragment shader used in point light shadow passes.
+             *
+             * @param bIsHlsl `true` to construct a path to the HLSL file, `false` to GLSL.
+             *
+             * @return Shader description.
+             */
+            static inline ShaderDescription getFragmentShader(bool bIsHlsl) {
+                return ShaderDescription(
+                    EngineShaderNames::PointLight::getFragmentShaderName(),
+                    constructPathToShaderSourceFile(bIsHlsl, "PointLight.frag"),
+                    ShaderType::FRAGMENT_SHADER,
+                    "main",
+                    {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro(),
+                     {"POINT_LIGHT_SHADOW_PASS", ""}});
+            }
+        };
+
         /** Groups shaders used in light culling process. */
         struct ForwardPlus {
             /**

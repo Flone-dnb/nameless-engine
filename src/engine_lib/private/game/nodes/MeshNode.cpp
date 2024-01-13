@@ -707,11 +707,19 @@ namespace ne {
                 depthOnlyPipelines.insert(pDepthOnlyPipeline);
             }
 
-            // Check if this material also has shadow mapping pipeline.
-            const auto pShadowMappingPipeline = pMaterial->getShadowMappingPipeline();
-            if (pShadowMappingPipeline != nullptr) {
+            // Check shadow mapping pipeline for directional/spot lights.
+            const auto pShadowMappingDirectionalSpotPipeline =
+                pMaterial->getShadowMappingDirectionalSpotPipeline();
+            if (pShadowMappingDirectionalSpotPipeline != nullptr) {
                 // Add it to later bind some special resources to it.
-                shadowMappingPipelines.insert(pShadowMappingPipeline);
+                shadowMappingPipelines.insert(pShadowMappingDirectionalSpotPipeline);
+            }
+
+            // Check shadow mapping pipeline for point lights.
+            const auto pShadowMappingPointPipeline = pMaterial->getShadowMappingPointPipeline();
+            if (pShadowMappingPointPipeline != nullptr) {
+                // Add it to later bind some special resources to it.
+                shadowMappingPipelines.insert(pShadowMappingPointPipeline);
             }
         }
 

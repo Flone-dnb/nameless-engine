@@ -36,9 +36,9 @@ namespace ne {
     std::optional<Error>
     VulkanShadowMapArrayIndexManager::registerShadowMapResource(ShadowMapHandle* pShadowMapHandle) {
         // Get resource.
-        const auto pMtxResource = pShadowMapHandle->getResource();
+        const auto pMtxResources = pShadowMapHandle->getResources();
 
-        std::scoped_lock guard(mtxInternalData.first, pMtxResource->first);
+        std::scoped_lock guard(mtxInternalData.first, pMtxResources->first);
 
         // Self check: make sure this resource was not registered yet.
         if (mtxInternalData.second.registeredShadowMaps.find(pShadowMapHandle) !=
@@ -47,7 +47,7 @@ namespace ne {
                 "\"{}\" was requested to register a shadow map handle \"{}\" but this shadow map was already "
                 "registered",
                 *getShaderArrayResourceName(),
-                pMtxResource->second->getResourceName()));
+                pMtxResources->second.pDepthTexture->getResourceName()));
         }
 
         // Reserve a new index.
@@ -237,13 +237,18 @@ namespace ne {
         std::array<VkImageView, FrameResourcesManager::getFrameResourcesCount()> vImagesToBind;
 
         // Get resource.
-        const auto pMtxResource = pShadowMapHandle->getResource();
-        std::scoped_lock guard(pMtxResource->first);
+        const auto pMtxResources = pShadowMapHandle->getResources();
+        std::scoped_lock guard(pMtxResources->first);
 
         // Convert to Vulkan resource.
-        const auto pVulkanResource = dynamic_cast<VulkanResource*>(pMtxResource->second);
+        auto pVulkanResource = dynamic_cast<VulkanResource*>(pMtxResources->second.pDepthTexture);
         if (pVulkanResource == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource");
+        }
+        if (pMtxResources->second.pColorTexture != nullptr) {
+            // Bind point light's cubemap instead (because for point lights "color" cubemap is used and not
+            // depth image).
+            pVulkanResource = reinterpret_cast<VulkanResource*>(pMtxResources->second.pColorTexture);
         }
 
         // Fill array of images.
@@ -262,7 +267,7 @@ namespace ne {
         for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
             // Prepare info to bind an image view to descriptor.
             VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             imageInfo.imageView = vImagesToBind[i];
             imageInfo.sampler = pSampler;
 

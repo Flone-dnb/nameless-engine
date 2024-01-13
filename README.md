@@ -273,10 +273,13 @@ Here is the list of base features that needs to be implemented in order for you 
     - [X] Z-prepass
     - [X] Forward+ (Tiled Forward) rendering
     - [X] Light sources
-        - [X] Point light
-        - [X] Spot light
         - [X] Directional light
-    - [ ] Shadow mapping (for all light sources)
+        - [X] Spot light
+        - [X] Point light
+    - [X] Shadow mapping
+        - [X] Directional lights
+        - [X] Spot lights
+        - [X] Point lights
     - [ ] Cascading shadow maps
     - [ ] Space partitioning and multi-threading for frustum culling
     - [ ] Post-processing effects

@@ -64,6 +64,9 @@ namespace ne {
         static_assert(
             shadowMapFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
             "also change format in Vulkan renderer for (visual) consistency");
+        static_assert(
+            shadowMappingPointLightColorTargetFormat == DXGI_FORMAT_R32_FLOAT,
+            "also change format in Vulkan renderer for (visual) consistency");
 
         // Self check for light culling compute shader:
         static_assert(
@@ -746,8 +749,10 @@ namespace ne {
         const auto pDrawCallCounter = getDrawCallCounter();
 
         // Get pipelines to iterate over.
-        const auto& shadowMappingPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING));
+        const auto& shadowMappingDirectionalSpotPipelines = pGraphicsPipelines->vPipelineTypes.at(
+            static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT));
+        const auto& shadowMappingPointPipelines =
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_POINT));
 
         // Prepare lambda to set viewport size according to shadow map size.
         const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {
@@ -773,30 +778,18 @@ namespace ne {
             pCommandList->RSSetScissorRects(1, &shadowMapScissorRect);
         };
 
-        // Prepare lambda to draw scene to shadow map.
-        const auto drawSceneToShadowMap = [&](ShadowMapHandle* pShadowMapHandle,
-                                              unsigned int iIndexIntoLightViewProjectionMatrixArray,
-                                              size_t iDsvIndex = 0) {
-            // Get shadow map texture.
-            const auto pMtxShadowMap = pShadowMapHandle->getResource();
-            std::scoped_lock shadowMapGuard(pMtxShadowMap->first);
-
-            // Convert resource type.
-            const auto pShadowMapTexture = reinterpret_cast<DirectXResource*>(pMtxShadowMap->second);
-
-            // Set viewport size.
-            setViewportSizeToShadowMap(pShadowMapHandle);
-
+        // Prepare lambda for render targets.
+        const auto transitionDirectionalSpotTargetsToWrite = [&](DirectXResource* pDepthTexture) {
             // Transition shadow map to write state.
-            CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
-                pShadowMapTexture->getInternalResource(),
+            const auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthTexture->getInternalResource(),
                 D3D12_RESOURCE_STATE_DEPTH_READ,
                 D3D12_RESOURCE_STATE_DEPTH_WRITE);
             pCommandList->ResourceBarrier(1, &transition);
 
             // Get DSV handle.
             const auto depthDescriptorHandle =
-                *pShadowMapTexture->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV, iDsvIndex);
+                *pDepthTexture->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
 
             // Clear depth.
             pCommandList->ClearDepthStencilView(
@@ -804,175 +797,233 @@ namespace ne {
 
             // Bind only DSV.
             pCommandList->OMSetRenderTargets(0, nullptr, FALSE, &depthDescriptorHandle);
+        };
 
-            // Iterate over all shadow mapping pipelines that have different vertex shaders.
-            for (const auto& [sShaderNames, pipelines] : shadowMappingPipelines) {
-
-                // Iterate over all shadow mapping pipelines that use the same vertex shader but different
-                // shader macros (if there are different macro variations).
-                for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
-                    // Convert pipeline type.
-                    const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
-
-                    // Get root constants manager.
-                    const auto pMtxRootConstantsManager = pPipeline->getShaderConstants();
-
-                    // Get pipeline's resources.
-                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
-                    std::scoped_lock guardPsoResources(
-                        pMtxPsoResources->first, pMtxRootConstantsManager->first);
-
-                    // Set PSO and root signature.
-                    pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
-                    pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
-
-                    // After setting root signature we can set root parameters.
-
-                    // Don't set frame data buffer because it's not used in shadow mapping.
-
-                    // Bind array of viewProjection matrix array for lights.
-                    getLightingShaderResourceManager()
-                        ->setLightsViewProjectionMatricesBufferViewToCommandList(
-                            pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
-
-#if defined(DEBUG)
-                    // Self check: make sure root constants are used.
-                    if (!pMtxRootConstantsManager->second.has_value()) [[unlikely]] {
-                        Error error(std::format(
-                            "expected root constants to be used on pipeline \"{}\"",
-                            pPipeline->getPipelineIdentifier()));
-                        error.showError();
-                        throw std::runtime_error(error.getFullErrorMessage());
-                    }
-#endif
-
-                    // Get root constants manager.
-                    const auto pRootConstantsManager =
-                        pMtxRootConstantsManager->second->pConstantsManager.get();
-                    auto& rootConstantsOffsets = pMtxRootConstantsManager->second->uintConstantsOffsets;
-
-                    // Get offset of root constant.
-                    const auto lightViewProjectionIndexIt =
-                        rootConstantsOffsets.find(PipelineShaderConstantsManager::SpecialConstantsNames::
-                                                      pLightViewProjectionMatrixIndex);
-#if defined(DEBUG)
-                    // Make sure it's valid.
-                    if (lightViewProjectionIndexIt == rootConstantsOffsets.end()) [[unlikely]] {
-                        Error error(std::format(
-                            "expected root constant \"{}\" to be used on pipeline \"{}\"",
-                            PipelineShaderConstantsManager::SpecialConstantsNames::
-                                pLightViewProjectionMatrixIndex,
-                            pPipeline->getPipelineIdentifier()));
-                        error.showError();
-                        throw std::runtime_error(error.getFullErrorMessage());
-                    }
-#endif
-
-                    // Copy light's index into viewProjection matrix array to root constants.
-                    pRootConstantsManager->copyValueToShaderConstant(
-                        lightViewProjectionIndexIt->second, iIndexIntoLightViewProjectionMatrixArray);
-
-                    // Bind root constants.
-                    pCommandList->SetGraphicsRoot32BitConstants(
-                        pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
-                            SpecialRootParameterSlot::ROOT_CONSTANTS)],
-                        pRootConstantsManager->getVariableCount(),
-                        pRootConstantsManager->getData(),
-                        0);
-
-                    // Get materials.
-                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                    std::scoped_lock materialsGuard(pMtxMaterials->first);
-
-                    for (const auto& pMaterial : pMtxMaterials->second) {
-                        // No need to bind material's shader resources since they are not used in vertex
-                        // shader (since we are in shadow mapping pass).
-
-                        // Get meshes.
-                        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-                        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
-
-                        // Iterate over all visible mesh nodes that use this material.
-                        for (const auto& [pMeshNode, vIndexBuffers] :
-                             pMtxMeshNodes->second.visibleMeshNodes) {
-                            // Get mesh data.
-                            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-                            auto mtxMeshData = pMeshNode->getMeshData();
-
-                            // Note: if you will ever need it - don't lock mesh node's spawning/despawning
-                            // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
-                            // example).
-                            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
-
-                            // Find and bind mesh data resource since only it is used in vertex shader.
-                            const auto& meshDataIt =
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
-                                    MeshNode::getMeshShaderConstantBufferName());
-#if defined(DEBUG)
-                            if (meshDataIt ==
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
-                                [[unlikely]] {
-                                Error error(std::format(
-                                    "expected to find \"{}\" shader resource",
-                                    MeshNode::getMeshShaderConstantBufferName()));
-                                error.showError();
-                                throw std::runtime_error(error.getFullErrorMessage());
-                            }
-#endif
-                            // Set resource.
-                            reinterpret_cast<HlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
-                                ->setConstantBufferViewOfPipeline(
-                                    pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
-
-                            // Prepare vertex buffer view.
-                            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-                            vertexBufferView.BufferLocation =
-                                reinterpret_cast<DirectXResource*>(
-                                    pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
-                                    ->getInternalResource()
-                                    ->GetGPUVirtualAddress();
-                            vertexBufferView.StrideInBytes = sizeof(MeshVertex);
-                            vertexBufferView.SizeInBytes = static_cast<UINT>(
-                                mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
-
-                            // Set vertex buffer view.
-                            pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-
-                            // Iterate over all index buffers of a specific mesh node that use this material.
-                            for (const auto& indexBufferInfo : vIndexBuffers) {
-                                // Prepare index buffer view.
-                                static_assert(
-                                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
-                                D3D12_INDEX_BUFFER_VIEW indexBufferView;
-                                indexBufferView.BufferLocation =
-                                    reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
-                                        ->getInternalResource()
-                                        ->GetGPUVirtualAddress();
-                                indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-                                indexBufferView.SizeInBytes = static_cast<UINT>(
-                                    indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
-
-                                // Set vertex/index buffer.
-                                pCommandList->IASetIndexBuffer(&indexBufferView);
-
-                                // Add a draw command.
-                                pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
-
-                                // Increment draw call counter.
-                                pDrawCallCounter->fetch_add(1);
-                            }
-                        }
-                    }
-                }
-            }
-
+        // Prepare lambda for render targets.
+        const auto transitionDirectionalSpotTargetsToRead = [&](DirectXResource* pDepthTexture) {
             // Transition shadow map to read state.
-            transition = CD3DX12_RESOURCE_BARRIER::Transition(
-                pShadowMapTexture->getInternalResource(),
+            const auto transition = CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthTexture->getInternalResource(),
                 D3D12_RESOURCE_STATE_DEPTH_WRITE,
                 D3D12_RESOURCE_STATE_DEPTH_READ);
             pCommandList->ResourceBarrier(1, &transition);
         };
+
+        // Prepare lambda for render targets.
+        const auto transitionPointTargetsToWrite = [&](DirectXResource* pDepthTexture,
+                                                       DirectXResource* pColorTexture) {
+            // Transition shadow map to write state.
+            std::array<CD3DX12_RESOURCE_BARRIER, 2> vBarriers;
+            vBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthTexture->getInternalResource(),
+                D3D12_RESOURCE_STATE_DEPTH_READ,
+                D3D12_RESOURCE_STATE_DEPTH_WRITE);
+            vBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+                pColorTexture->getInternalResource(),
+                D3D12_RESOURCE_STATE_GENERIC_READ,
+                D3D12_RESOURCE_STATE_RENDER_TARGET);
+            pCommandList->ResourceBarrier(static_cast<UINT>(vBarriers.size()), vBarriers.data());
+        };
+
+        // Prepare lambda for render targets.
+        const auto setPointLightTargets =
+            [&](DirectXResource* pDepthTexture, DirectXResource* pColorTexture, size_t iCubemapFaceIndex) {
+                // Get handles.
+                const auto depthDescriptorHandle =
+                    *pDepthTexture->getBindedDescriptorCpuHandle(DirectXDescriptorType::DSV);
+                const auto renderDescriptorHandle = *pColorTexture->getBindedCubemapFaceDescriptorCpuHandle(
+                    DirectXDescriptorType::RTV, iCubemapFaceIndex);
+
+                // Clear depth.
+                pCommandList->ClearDepthStencilView(
+                    depthDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH, getMaxDepth(), 0, 0, nullptr);
+
+                // Clear color.
+                std::array<float, 1> vClearColor = {0.0F};
+                pCommandList->ClearRenderTargetView(renderDescriptorHandle, vClearColor.data(), 0, nullptr);
+
+                // Bind DSV and RTV.
+                pCommandList->OMSetRenderTargets(1, &renderDescriptorHandle, FALSE, &depthDescriptorHandle);
+            };
+
+        // Prepare lambda for render targets.
+        const auto transitionPointTargetsToRead = [&](DirectXResource* pDepthTexture,
+                                                      DirectXResource* pColorTexture) {
+            // Transition shadow map to read state.
+            std::array<CD3DX12_RESOURCE_BARRIER, 2> vBarriers;
+            vBarriers[0] = CD3DX12_RESOURCE_BARRIER::Transition(
+                pDepthTexture->getInternalResource(),
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                D3D12_RESOURCE_STATE_DEPTH_READ);
+            vBarriers[1] = CD3DX12_RESOURCE_BARRIER::Transition(
+                pColorTexture->getInternalResource(),
+                D3D12_RESOURCE_STATE_RENDER_TARGET,
+                D3D12_RESOURCE_STATE_GENERIC_READ);
+            pCommandList->ResourceBarrier(static_cast<UINT>(vBarriers.size()), vBarriers.data());
+        };
+
+        // Prepare lambda to draw scene to shadow map.
+        const auto drawSceneToShadowMap =
+            [&](const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToRender,
+                ShadowMapHandle* pShadowMapHandle,
+                unsigned int iIndexIntoShadowPassLightInfoArray,
+                size_t iCubemapFaceIndex = 0) {
+                // Get shadow map texture.
+                const auto pMtxShadowResources = pShadowMapHandle->getResources();
+                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
+
+                // Set viewport size.
+                setViewportSizeToShadowMap(pShadowMapHandle);
+
+                // Iterate over all shadow mapping pipelines that have different vertex shaders.
+                for (const auto& [sShaderNames, pipelines] : pipelinesToRender) {
+
+                    // Iterate over all shadow mapping pipelines that use the same vertex shader but different
+                    // shader macros (if there are different macro variations).
+                    for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                        // Convert pipeline type.
+                        const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
+
+                        // Get root constants manager.
+                        const auto pMtxRootConstantsManager = pPipeline->getShaderConstants();
+
+                        // Get pipeline's resources.
+                        auto pMtxPsoResources = pDirectXPso->getInternalResources();
+                        std::scoped_lock guardPsoResources(
+                            pMtxPsoResources->first, pMtxRootConstantsManager->first);
+
+                        // Set PSO and root signature.
+                        pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
+                        pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+
+                        // After setting root signature we can set root parameters.
+
+                        // Don't set frame data buffer because it's not used in shadow mapping.
+
+                        // Bind array of viewProjection matrix array for lights.
+                        getLightingShaderResourceManager()->setShadowPassLightInfoViewToCommandList(
+                            pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
+
+#if defined(DEBUG)
+                        // Self check: make sure root constants are used.
+                        if (!pMtxRootConstantsManager->second.has_value()) [[unlikely]] {
+                            Error error(std::format(
+                                "expected root constants to be used on pipeline \"{}\"",
+                                pPipeline->getPipelineIdentifier()));
+                            error.showError();
+                            throw std::runtime_error(error.getFullErrorMessage());
+                        }
+#endif
+
+                        // Copy shadow pass info index to constants.
+                        pMtxRootConstantsManager->second->findOffsetAndCopySpecialValueToConstant(
+                            pPipeline.get(),
+                            PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
+                            iIndexIntoShadowPassLightInfoArray);
+
+                        // Get root constants manager.
+                        const auto pRootConstantsManager =
+                            pMtxRootConstantsManager->second->pConstantsManager.get();
+
+                        // Bind root constants.
+                        pCommandList->SetGraphicsRoot32BitConstants(
+                            pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                                SpecialRootParameterSlot::ROOT_CONSTANTS)],
+                            pRootConstantsManager->getVariableCount(),
+                            pRootConstantsManager->getData(),
+                            0);
+
+                        // Get materials.
+                        const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                        std::scoped_lock materialsGuard(pMtxMaterials->first);
+
+                        for (const auto& pMaterial : pMtxMaterials->second) {
+                            // No need to bind material's shader resources since they are not used in vertex
+                            // shader (since we are in shadow mapping pass).
+
+                            // Get meshes.
+                            const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                            std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+
+                            // Iterate over all visible mesh nodes that use this material.
+                            for (const auto& [pMeshNode, vIndexBuffers] :
+                                 pMtxMeshNodes->second.visibleMeshNodes) {
+                                // Get mesh data.
+                                auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                                auto mtxMeshData = pMeshNode->getMeshData();
+
+                                // Note: if you will ever need it - don't lock mesh node's spawning/despawning
+                                // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
+                                // example).
+                                std::scoped_lock geometryGuard(
+                                    pMtxMeshGpuResources->first, *mtxMeshData.first);
+
+                                // Find and bind mesh data resource since only it is used in vertex shader.
+                                const auto& meshDataIt =
+                                    pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                        MeshNode::getMeshShaderConstantBufferName());
+#if defined(DEBUG)
+                                if (meshDataIt == pMtxMeshGpuResources->second.shaderResources
+                                                      .shaderCpuWriteResources.end()) [[unlikely]] {
+                                    Error error(std::format(
+                                        "expected to find \"{}\" shader resource",
+                                        MeshNode::getMeshShaderConstantBufferName()));
+                                    error.showError();
+                                    throw std::runtime_error(error.getFullErrorMessage());
+                                }
+#endif
+                                // Set resource.
+                                reinterpret_cast<HlslShaderCpuWriteResource*>(
+                                    meshDataIt->second.getResource())
+                                    ->setConstantBufferViewOfPipeline(
+                                        pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+
+                                // Prepare vertex buffer view.
+                                D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+                                vertexBufferView.BufferLocation =
+                                    reinterpret_cast<DirectXResource*>(
+                                        pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                        ->getInternalResource()
+                                        ->GetGPUVirtualAddress();
+                                vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+                                vertexBufferView.SizeInBytes = static_cast<UINT>(
+                                    mtxMeshData.second->getVertices()->size() *
+                                    vertexBufferView.StrideInBytes);
+
+                                // Set vertex buffer view.
+                                pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+                                // Iterate over all index buffers of a specific mesh node that use this
+                                // material.
+                                for (const auto& indexBufferInfo : vIndexBuffers) {
+                                    // Prepare index buffer view.
+                                    static_assert(
+                                        sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
+                                        "change `Format`");
+                                    D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                                    indexBufferView.BufferLocation =
+                                        reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
+                                            ->getInternalResource()
+                                            ->GetGPUVirtualAddress();
+                                    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                                    indexBufferView.SizeInBytes = static_cast<UINT>(
+                                        indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
+
+                                    // Set vertex/index buffer.
+                                    pCommandList->IASetIndexBuffer(&indexBufferView);
+
+                                    // Add a draw command.
+                                    pCommandList->DrawIndexedInstanced(
+                                        indexBufferInfo.iIndexCount, 1, 0, 0, 0);
+
+                                    // Increment draw call counter.
+                                    pDrawCallCounter->fetch_add(1);
+                                }
+                            }
+                        }
+                    }
+                }
+            };
 
         {
             // Get directional lights.
@@ -988,12 +1039,27 @@ namespace ne {
 
                 // Get light info.
                 ShadowMapHandle* pShadowMapHandle = nullptr;
-                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-                getDirectionalLightNodeShadowMappingInfo(
-                    pDirectionalLightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                unsigned int iIndexIntoShadowPassInfo = 0;
+                Renderer::getDirectionalLightNodeShadowMappingInfo(
+                    pDirectionalLightNode, pShadowMapHandle, iIndexIntoShadowPassInfo);
+
+                // Get shadow map texture.
+                const auto pMtxShadowResources = pShadowMapHandle->getResources();
+                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
+
+                // Get resource.
+                const auto pDepthTexture =
+                    reinterpret_cast<DirectXResource*>(pMtxShadowResources->second.pDepthTexture);
+
+                // Transition targets to write.
+                transitionDirectionalSpotTargetsToWrite(pDepthTexture);
 
                 // Draw to shadow map.
-                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                drawSceneToShadowMap(
+                    shadowMappingDirectionalSpotPipelines, pShadowMapHandle, iIndexIntoShadowPassInfo);
+
+                // Transition targets to read.
+                transitionDirectionalSpotTargetsToRead(pDepthTexture);
             }
         }
 
@@ -1010,12 +1076,27 @@ namespace ne {
 
                 // Get light info.
                 ShadowMapHandle* pShadowMapHandle = nullptr;
-                unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-                getSpotlightNodeShadowMappingInfo(
-                    pSpotlightNode, pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                unsigned int iIndexIntoShadowPassInfo = 0;
+                Renderer::getSpotlightNodeShadowMappingInfo(
+                    pSpotlightNode, pShadowMapHandle, iIndexIntoShadowPassInfo);
+
+                // Get shadow map texture.
+                const auto pMtxShadowResources = pShadowMapHandle->getResources();
+                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
+
+                // Get resource.
+                const auto pDepthTexture =
+                    reinterpret_cast<DirectXResource*>(pMtxShadowResources->second.pDepthTexture);
+
+                // Transition targets to write.
+                transitionDirectionalSpotTargetsToWrite(pDepthTexture);
 
                 // Draw to shadow map.
-                drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray);
+                drawSceneToShadowMap(
+                    shadowMappingDirectionalSpotPipelines, pShadowMapHandle, iIndexIntoShadowPassInfo);
+
+                // Transition targets to read.
+                transitionDirectionalSpotTargetsToRead(pDepthTexture);
             }
         }
 
@@ -1030,17 +1111,38 @@ namespace ne {
                 // Convert node type.
                 const auto pPointLightNode = reinterpret_cast<PointLightNode*>(pLightNode);
 
+                // Get shadow handle.
+                const auto pShadowMapHandle = Renderer::getPointLightNodeShadowMapHandle(pPointLightNode);
+
+                // Get shadow map texture.
+                const auto pMtxShadowResources = pShadowMapHandle->getResources();
+                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
+
+                // Get resources.
+                const auto pDepthTexture =
+                    reinterpret_cast<DirectXResource*>(pMtxShadowResources->second.pDepthTexture);
+                const auto pColorTexture =
+                    reinterpret_cast<DirectXResource*>(pMtxShadowResources->second.pColorTexture);
+
+                // Transition targets to write.
+                transitionPointTargetsToWrite(pDepthTexture, pColorTexture);
+
                 // Draw to each cube shadow map face.
                 for (size_t i = 0; i < 6; i++) { // NOLINT: cubemap has 6 faces
-                    // Get light info.
-                    ShadowMapHandle* pShadowMapHandle = nullptr;
-                    unsigned int iIndexIntoLightViewProjectionMatrixArray = 0;
-                    getPointLightNodeShadowMappingInfo(
-                        pPointLightNode, pShadowMapHandle, i, iIndexIntoLightViewProjectionMatrixArray);
+                    // Get index into shadow pass info.
+                    const auto iIndexIntoShadowPassInfoArray =
+                        Renderer::getPointLightShadowPassLightInfoArrayIndex(pPointLightNode, i);
+
+                    // Set render targets.
+                    setPointLightTargets(pDepthTexture, pColorTexture, i);
 
                     // Draw to cubemap's face.
-                    drawSceneToShadowMap(pShadowMapHandle, iIndexIntoLightViewProjectionMatrixArray, i);
+                    drawSceneToShadowMap(
+                        shadowMappingPointPipelines, pShadowMapHandle, iIndexIntoShadowPassInfoArray, i);
                 }
+
+                // Transitions targets to read.
+                transitionPointTargetsToRead(pDepthTexture, pColorTexture);
             }
         }
 
@@ -1091,6 +1193,11 @@ namespace ne {
             pMtxShadowMaps->second.vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::SPOT)]
                 .get());
 
+        // Get point shadow map array.
+        const auto pPointShadowMapArray = reinterpret_cast<DirectXShadowMapArrayIndexManager*>(
+            pMtxShadowMaps->second.vShadowMapArrayIndexManagers[static_cast<size_t>(ShadowMapType::POINT)]
+                .get());
+
         // Get GPU handles to shadow map arrays.
         // Handles will be valid because while we are inside the `draw` function descriptor heap won't be
         // re-created.
@@ -1098,6 +1205,8 @@ namespace ne {
             pDirectionalShadowMapArray->getSrvDescriptorRange()->getGpuDescriptorHandleToRangeStart();
         const auto spotShadowMapsGpuHandle =
             pSpotShadowMapArray->getSrvDescriptorRange()->getGpuDescriptorHandleToRangeStart();
+        const auto pointShadowMapsGpuHandle =
+            pPointShadowMapArray->getSrvDescriptorRange()->getGpuDescriptorHandleToRangeStart();
 
         // Prepare command list for main pass.
         resetCommandListForGraphics(pDirectXFrameResource);
@@ -1130,6 +1239,7 @@ namespace ne {
             vOpaquePipelines,
             directionalShadowMapsGpuHandle,
             spotShadowMapsGpuHandle,
+            pointShadowMapsGpuHandle,
             false);
 
         // Draw transparent meshes.
@@ -1139,6 +1249,7 @@ namespace ne {
             vTransparentPipelines,
             directionalShadowMapsGpuHandle,
             spotShadowMapsGpuHandle,
+            pointShadowMapsGpuHandle,
             true);
 
         if (bIsUsingMsaaRenderTarget) {
@@ -1204,6 +1315,7 @@ namespace ne {
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
         D3D12_GPU_DESCRIPTOR_HANDLE directionalShadowMapsHandle,
         D3D12_GPU_DESCRIPTOR_HANDLE spotShadowMapsHandle,
+        D3D12_GPU_DESCRIPTOR_HANDLE pointShadowMapsGpuHandle,
         const bool bIsDrawingTransparentMeshes) {
         PROFILE_FUNC;
 
@@ -1245,6 +1357,12 @@ namespace ne {
                 pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
                     SpecialRootParameterSlot::SPOT_SHADOW_MAPS)],
                 spotShadowMapsHandle);
+
+            // Bind point shadow maps.
+            pCommandList->SetGraphicsRootDescriptorTable(
+                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
+                    SpecialRootParameterSlot::POINT_SHADOW_MAPS)],
+                pointShadowMapsGpuHandle);
 
             // Bind lighting resources.
             getLightingShaderResourceManager()->setResourceViewToCommandList(

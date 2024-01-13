@@ -52,24 +52,40 @@ namespace ne {
          *
          * @param descriptorType Type of descriptor to bind.
          * @param pRange         Specify in order to allocate a descriptor from this range.
+         * @param bDontBindDescriptorToCubemapFaces If this resource is a cubemap, specify `false`
+         * to also bind descriptors that reference cubemap faces, specify `true` to only bind 1
+         * descriptor that references the entire resource.
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> bindDescriptor(
-            DirectXDescriptorType descriptorType, ContinuousDirectXDescriptorRange* pRange = nullptr);
+            DirectXDescriptorType descriptorType,
+            ContinuousDirectXDescriptorRange* pRange = nullptr,
+            bool bDontBindDescriptorToCubemapFaces = false);
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.
          *
-         * @param descriptorType   Type of descriptor to get.
-         * @param iDescriptorIndex Index of a descriptor to get. Use non-zero index for cubemaps to access
-         * descriptors to different cubemap faces.
+         * @param descriptorType  Type of descriptor to get.
          *
          * @return Empty if descriptor if this type was not binded to this resource, otherwise
          * descriptor handle.
          */
         std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>
-        getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType, size_t iDescriptorIndex = 0);
+        getBindedDescriptorCpuHandle(DirectXDescriptorType descriptorType);
+
+        /**
+         * Returns descriptor handle to a cubemap face that was previously binded using @ref
+         * bindDescriptor.
+         *
+         * @param descriptorType    Type of descriptor to get.
+         * @param iCubemapFaceIndex Index of the cubemap face to get descriptor handle to.
+         *
+         * @return Empty this is not a cubemap resource or descriptor was not binded previously, otherwise
+         * descriptor handle.
+         */
+        std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> getBindedCubemapFaceDescriptorCpuHandle(
+            DirectXDescriptorType descriptorType, size_t iCubemapFaceIndex);
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.
@@ -106,6 +122,22 @@ namespace ne {
         DirectXDescriptor* getDescriptor(DirectXDescriptorType descriptorType);
 
     private:
+        /**
+         * Groups descriptors of the same type (only SRVs or DSVs, etc.)
+         * that point to different parts of the resource.
+         */
+        struct DescriptorsSameType {
+            /** Descriptor that references the entire resource. */
+            std::unique_ptr<DirectXDescriptor> pResource;
+
+            /**
+             * If the resource is a cubemap (otherwise descriptors here will be `nullptr`), descriptors here
+             * will reference specific cubemap faces.
+             */
+            std::array<std::unique_ptr<DirectXDescriptor>, 6> // NOLINT: 1 per cubemap face (if cubemap)
+                vCubemapFaces;
+        };
+
         /**
          * Constructor. Creates an empty resource.
          *
@@ -178,9 +210,7 @@ namespace ne {
          */
         std::pair<
             std::recursive_mutex,
-            std::array<
-                std::array<std::unique_ptr<DirectXDescriptor>, 6>, // NOLINT: 1 per cubemap face (if cubemap)
-                static_cast<size_t>(DirectXDescriptorType::END)>>
+            std::array<DescriptorsSameType, static_cast<size_t>(DirectXDescriptorType::END)>>
             mtxHeapDescriptors;
 
         /** Created resource (can be empty if @ref pSwapChainBuffer is used). */

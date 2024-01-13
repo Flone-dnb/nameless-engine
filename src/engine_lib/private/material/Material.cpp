@@ -372,8 +372,12 @@ namespace ne {
         return mtxInternalResources.second.pDepthOnlyPipeline.getPipeline();
     }
 
-    Pipeline* Material::getShadowMappingPipeline() const {
-        return mtxInternalResources.second.pShadowMappingPipeline.getPipeline();
+    Pipeline* Material::getShadowMappingDirectionalSpotPipeline() const {
+        return mtxInternalResources.second.pShadowMappingDirectionalSpotPipeline.getPipeline();
+    }
+
+    Pipeline* Material::getShadowMappingPointPipeline() const {
+        return mtxInternalResources.second.pShadowMappingPointPipeline.getPipeline();
     }
 
     void Material::allocateShaderResources() {
@@ -972,10 +976,10 @@ namespace ne {
         mtxInternalResources.second.pColorPipeline = std::get<PipelineSharedPtr>(std::move(result));
 
         if (!bUseTransparency) {
-            // Get depth only pipeline.
+            // Get depth only pipeline for depth prepass.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
                 std::unique_ptr<DepthPipelineCreationSettings>(
-                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, false)),
+                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, {})),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
@@ -984,22 +988,37 @@ namespace ne {
             }
             mtxInternalResources.second.pDepthOnlyPipeline = std::get<PipelineSharedPtr>(std::move(result));
 
-            // Get shadow mapping pipeline.
+            // Get shadow mapping pipeline for directional and spot lights.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
-                std::unique_ptr<DepthPipelineCreationSettings>(
-                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, true)),
+                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(
+                    sVertexShaderName,
+                    materialVertexMacros,
+                    PipelineShadowMappingUsage::DIRECTIONAL_AND_SPOT_LIGHTS)),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            mtxInternalResources.second.pShadowMappingPipeline =
+            mtxInternalResources.second.pShadowMappingDirectionalSpotPipeline =
+                std::get<PipelineSharedPtr>(std::move(result));
+
+            // Get shadow mapping pipeline for point lights.
+            result = pPipelineManager->getGraphicsPipelineForMaterial(
+                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(
+                    sVertexShaderName, materialVertexMacros, PipelineShadowMappingUsage::POINT_LIGHTS)),
+                this);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            mtxInternalResources.second.pShadowMappingPointPipeline =
                 std::get<PipelineSharedPtr>(std::move(result));
         }
 
 #if defined(DEBUG)
-        static_assert(sizeof(InternalResources) == 96, "consider adding new pipelines here"); // NOLINT
+        static_assert(sizeof(InternalResources) == 128, "consider adding new pipelines here"); // NOLINT
 #endif
 
         return {};
@@ -1012,10 +1031,11 @@ namespace ne {
 
         mtxInternalResources.second.pColorPipeline.clear();
         mtxInternalResources.second.pDepthOnlyPipeline.clear();
-        mtxInternalResources.second.pShadowMappingPipeline.clear();
+        mtxInternalResources.second.pShadowMappingDirectionalSpotPipeline.clear();
+        mtxInternalResources.second.pShadowMappingPointPipeline.clear();
 
 #if defined(DEBUG)
-        static_assert(sizeof(InternalResources) == 96, "consider adding new pipelines here"); // NOLINT
+        static_assert(sizeof(InternalResources) == 128, "consider adding new pipelines here"); // NOLINT
 #endif
     }
 
@@ -1036,5 +1056,4 @@ namespace ne {
     }
 
     std::set<ShaderMacro> Material::getVertexShaderMacrosForCurrentState() { return {}; }
-
 } // namespace ne

@@ -1,5 +1,8 @@
 #include "PipelineCreationSettings.h"
 
+// Custom.
+#include "shader/general/EngineShaderNames.hpp"
+
 namespace ne {
 
     ColorPipelineCreationSettings::ColorPipelineCreationSettings(
@@ -31,24 +34,42 @@ namespace ne {
     DepthPipelineCreationSettings::DepthPipelineCreationSettings(
         const std::string& sVertexShaderName,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        bool bUsedForShadowMapping)
+        std::optional<PipelineShadowMappingUsage> shadowMappingUsage)
         : PipelineCreationSettings(sVertexShaderName, additionalVertexShaderMacros),
-          bUsedForShadowMapping(bUsedForShadowMapping) {
+          shadowMappingUsage(shadowMappingUsage) {
         // Add shadow mapping macro if enabled.
-        if (bUsedForShadowMapping) {
+        if (shadowMappingUsage.has_value()) {
             this->additionalVertexShaderMacros.insert(ShaderMacro::VS_SHADOW_MAPPING_PASS);
         }
     }
 
     PipelineType DepthPipelineCreationSettings::getType() {
-        if (bUsedForShadowMapping) {
-            return PipelineType::PT_SHADOW_MAPPING;
+        if (shadowMappingUsage.has_value()) {
+            if (shadowMappingUsage.value() == PipelineShadowMappingUsage::DIRECTIONAL_AND_SPOT_LIGHTS) {
+                return PipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT;
+            }
+
+            return PipelineType::PT_SHADOW_MAPPING_POINT;
         }
 
         return PipelineType::PT_DEPTH_ONLY;
     }
 
-    bool DepthPipelineCreationSettings::isDepthBiasEnabled() { return bUsedForShadowMapping; }
+    bool DepthPipelineCreationSettings::isDepthBiasEnabled() { return shadowMappingUsage.has_value(); }
+
+    std::string DepthPipelineCreationSettings::getPixelShaderName() {
+        if (shadowMappingUsage.has_value() &&
+            shadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS) {
+            // Usage a special fragment shader for shadow passes.
+            return EngineShaderNames::PointLight::getFragmentShaderName();
+        }
+
+        return ""; // no pixel/fragment shader
+    }
+
+    std::optional<PipelineShadowMappingUsage> DepthPipelineCreationSettings::getShadowMappingUsage() {
+        return shadowMappingUsage;
+    }
 
     PipelineCreationSettings::PipelineCreationSettings(
         const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros)

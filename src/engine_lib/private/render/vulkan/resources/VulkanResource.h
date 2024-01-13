@@ -55,6 +55,35 @@ namespace ne {
         inline VkImageView getInternalImageView() const { return pImageView; }
 
         /**
+         * Returns internal image view for cubemap textures.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @remark Returned pointer is only valid while this object is valid.
+         *
+         * @param iCubemapFaceIndex Index of the cubemap face to get the view to.
+         *
+         * @return `nullptr` if this resource uses buffer as internal resource not an image or not a cubemap,
+         * otherwise internal image view.
+         */
+        inline VkImageView getInternalCubemapImageView(size_t iCubemapFaceIndex = 0) {
+            // Make sure we won't access out of bounds.
+            if (iCubemapFaceIndex >= vCubeMapViews.size()) [[unlikely]] { // <- remove if no log
+                // Log an error because this case is marked as unlikely.
+                // ! REMOVE [[unlikely]] IF REMOVING LOG !
+                Logger::get().error(std::format(
+                    "cubemap view was requested on resource \"{}\" with an out of bounds index "
+                    "{} while cubemap view count is {}",
+                    getResourceName(),
+                    iCubemapFaceIndex,
+                    vCubeMapViews.size()));
+                return nullptr;
+            }
+
+            return vCubeMapViews[iCubemapFaceIndex];
+        }
+
+        /**
          * Returns internal image view that only references depth aspect of the image.
          *
          * @remark Do not delete (free) returned pointer.
@@ -77,33 +106,6 @@ namespace ne {
          * otherwise internal image.
          */
         inline VkImage getInternalImage() const { return pImageResource; }
-
-        /**
-         * Framebuffer that references @ref getInternalImageView and shadow mapping render pass if this is an
-         * image resource that was requested to create a framebuffer.
-         *
-         * @param iFramebufferIndex Index of the framebuffer to query, non-zero index is used for cube maps
-         * where each face has a separate framebuffer.
-         *
-         * @return `nullptr` if this resource is a buffer or an image that was not requested to create
-         * a framebuffer at resource creation.
-         */
-        inline VkFramebuffer getShadowMappingFramebuffer(size_t iFramebufferIndex = 0) const {
-            // Make sure we won't access out of bounds.
-            if (iFramebufferIndex >= vShadowMappingFramebuffers.size()) [[unlikely]] { // <- remove if no log
-                // Log an error because this case is marked as unlikely.
-                // ! REMOVE [[unlikely]] IF REMOVING LOG !
-                Logger::get().error(std::format(
-                    "shadow mapping framebuffer was requested on resource \"{}\" with an out of bounds index "
-                    "{} while framebuffer count is {}",
-                    getResourceName(),
-                    iFramebufferIndex,
-                    vShadowMappingFramebuffers.size()));
-                return nullptr;
-            }
-
-            return vShadowMappingFramebuffers[iFramebufferIndex];
-        }
 
         /**
          * Returns memory allocation of the internal resource.
@@ -200,8 +202,6 @@ namespace ne {
          * @param viewDescription  If specified also creates an image view that references the image.
          * @param bIsCubeMapView   `true` to create a view to a cubemap, `false` to create a 2D texture
          * view. Ignored if view description is not specified.
-         * @param bCreateShadowMappingFramebuffer Specify `true` if you want this resource to create a
-         * framebuffer for shadow mapping render pass for the underlying image view, `false` otherwise.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -212,8 +212,7 @@ namespace ne {
             const VkImageCreateInfo& imageInfo,
             const VmaAllocationCreateInfo& allocationInfo,
             std::optional<VkImageAspectFlags> viewDescription,
-            bool bIsCubeMapView = false,
-            bool bCreateShadowMappingFramebuffer = false);
+            bool bIsCubeMapView = false);
 
         /**
          * Creates a new image resource.
@@ -259,14 +258,6 @@ namespace ne {
 
         /** Views to each face of the cubemap texture (only valid if the resource is a cubemap texture). */
         std::vector<VkImageView> vCubeMapViews;
-
-        /**
-         * Framebuffers that references @ref pImageView and shadow mapping render pass if this is an image
-         * resource that was requested to create a framebuffer at resource creation.
-         *
-         * @remark Stores only 1 framebuffer for non cube maps and 6 framebuffers for cube maps.
-         */
-        std::vector<VkFramebuffer> vShadowMappingFramebuffers;
 
         /**
          * Allocated memory for created resource.

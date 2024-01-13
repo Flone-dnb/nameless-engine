@@ -387,6 +387,50 @@ namespace ne {
         }
 
         /**
+         * Returns information needed to capture/update a shadow map for a specific node.
+         *
+         * @param pNode                           Directional light to update its shadow map.
+         * @param pShadowMapHandle                Shadow map handle of the specified light.
+         * @param iShadowPassLightInfoArrayIndex  Index into the array of shadow pass light infos.
+         */
+        static void getDirectionalLightNodeShadowMappingInfo(
+            DirectionalLightNode* pNode,
+            ShadowMapHandle*& pShadowMapHandle,
+            unsigned int& iShadowPassLightInfoArrayIndex);
+
+        /**
+         * Returns information needed to capture/update a shadow map for a specific node.
+         *
+         * @param pNode                           Spotlight to update its shadow map.
+         * @param pShadowMapHandle                Shadow map handle of the specified light.
+         * @param iShadowPassLightInfoArrayIndex  Index into the array of shadow pass light infos.
+         */
+        static void getSpotlightNodeShadowMappingInfo(
+            SpotlightNode* pNode,
+            ShadowMapHandle*& pShadowMapHandle,
+            unsigned int& iShadowPassLightInfoArrayIndex);
+
+        /**
+         * Returns information needed to capture/update a shadow map for a specific node.
+         *
+         * @param pNode             Point light to update its shadow map.
+         * @param iCubemapFaceIndex Index of the cubemap to get matrix index.
+         *
+         * @return Index into the array of shadow pass light infos.
+         */
+        static unsigned int
+        getPointLightShadowPassLightInfoArrayIndex(PointLightNode* pNode, size_t iCubemapFaceIndex);
+
+        /**
+         * Returns shadow map handle of the specified point light node.
+         *
+         * @param pNode Point light node.
+         *
+         * @return Shadow map handle.
+         */
+        static ShadowMapHandle* getPointLightNodeShadowMapHandle(PointLightNode* pNode);
+
+        /**
          * Constructor.
          *
          * @param pGameManager pGameManager object that owns this renderer.
@@ -669,47 +713,6 @@ namespace ne {
          */
         void cullLightsOutsideCameraFrustum(
             CameraProperties* pActiveCameraProperties, size_t iCurrentFrameResourceIndex);
-
-        /**
-         * Returns information needed to capture/update a shadow map for a specific node.
-         *
-         * @param pNode                           Directional light to update its shadow map.
-         * @param pShadowMapHandle                Shadow map handle of the specified light.
-         * @param iViewProjectionMatrixArrayIndex Index into the array of viewProjection matrices of spawned
-         * light sources of the specified light.
-         */
-        void getDirectionalLightNodeShadowMappingInfo(
-            DirectionalLightNode* pNode,
-            ShadowMapHandle*& pShadowMapHandle,
-            unsigned int& iViewProjectionMatrixArrayIndex);
-
-        /**
-         * Returns information needed to capture/update a shadow map for a specific node.
-         *
-         * @param pNode                           Spotlight to update its shadow map.
-         * @param pShadowMapHandle                Shadow map handle of the specified light.
-         * @param iViewProjectionMatrixArrayIndex Index into the array of viewProjection matrices of spawned
-         * light sources of the specified light.
-         */
-        void getSpotlightNodeShadowMappingInfo(
-            SpotlightNode* pNode,
-            ShadowMapHandle*& pShadowMapHandle,
-            unsigned int& iViewProjectionMatrixArrayIndex);
-
-        /**
-         * Returns information needed to capture/update a shadow map for a specific node.
-         *
-         * @param pNode                           Point light to update its shadow map.
-         * @param pShadowMapHandle                Shadow map handle of the specified light.
-         * @param iCubemapFaceIndex               Index of the cubemap to get matrix index.
-         * @param iViewProjectionMatrixArrayIndex Index into the array of viewProjection matrices of spawned
-         * light sources of the specified light.
-         */
-        void getPointLightNodeShadowMappingInfo(
-            PointLightNode* pNode,
-            ShadowMapHandle*& pShadowMapHandle,
-            size_t iCubemapFaceIndex,
-            unsigned int& iViewProjectionMatrixArrayIndex);
 
         /**
          * Returns frame constants.

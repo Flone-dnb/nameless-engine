@@ -14,6 +14,7 @@ namespace ne {
     class PipelineManager;
     class Material;
     class ComputeShaderInterface;
+    class Pipeline;
 
     /** Base class for render specific pipeline objects. */
     class Pipeline : public ShaderUser {
@@ -32,6 +33,24 @@ namespace ne {
 
         /** Groups information related to push/root constants. */
         struct ShaderConstantsData {
+            /**
+             * Looks for and index of the specified shader constant in the specified pipeline
+             * and copies the specified value into the constant's slot.
+             *
+             * @warning In debug builds shows an error and throws an exception if the specified constant is
+             * not used in the pipeline, otherwise in release builds does not check this and will probably
+             * crash if the specified constant is not used.
+             *
+             * @remark Named "special" because this function is generally used for special shader constants
+             * (not used-defined).
+             *
+             * @param pPipeline     Pipeline to look for offset of the constant.
+             * @param pConstantName Name of the constant from shader code.
+             * @param iValueToCopy  Value to copy as constant.
+             */
+            void findOffsetAndCopySpecialValueToConstant(
+                Pipeline* pPipeline, const char* pConstantName, unsigned int iValueToCopy);
+
             /** Stores push constants. `nullptr` if push/root constants are not used. */
             std::unique_ptr<PipelineShaderConstantsManager> pConstantsManager;
 
@@ -103,6 +122,13 @@ namespace ne {
         bool isDepthBiasEnabled() const;
 
         /**
+         * Tells whether this pipeline is used for shadow mapping of point lights.
+         *
+         * @return `true` if used, `false` otherwise.
+         */
+        bool isUsedForPointLightsShadowMapping() const;
+
+        /**
          * Returns an array of materials that currently reference this Pipeline.
          * Must be used with mutex.
          *
@@ -161,10 +187,12 @@ namespace ne {
          * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
          * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
          * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
+         * @param bIsUsedForPointLightsShadowMapping Whether this pipeline is used for shadow mapping of point
+         * lights or not.
          * @param bUsePixelBlending  Whether the pixels of the mesh that uses this Pipeline should blend
          * with existing pixels on back buffer or not (for transparency).
          */
-        Pipeline(
+        explicit Pipeline(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
@@ -173,6 +201,7 @@ namespace ne {
             const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
             const std::string& sComputeShaderName = "",
             bool bEnableDepthBias = false,
+            bool bIsUsedForPointLightsShadowMapping = false,
             bool bUsePixelBlending = false);
 
         /**
@@ -351,5 +380,8 @@ namespace ne {
 
         /** Whether depth bias (offset) should be used or not (generally used for shadow map pipelines). */
         bool bEnableDepthBias = false;
+
+        /** Whether this pipeline is used for shadow mapping of point lights or not. */
+        bool bIsUsedForPointLightsShadowMapping = false;
     };
 } // namespace ne

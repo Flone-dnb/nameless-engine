@@ -64,7 +64,7 @@ namespace ne {
          * @param pResource                      Owner resource of this descriptor.
          * @param iDescriptorOffsetInDescriptors Offset of this descriptor from the heap start
          * (offset is specified in descriptors, not an actual index).
-         * @param iReferencedCubemapFaceIndex    Specify zero if this descriptor does not reference
+         * @param referencedCubemapFaceIndex     Specify empty if this descriptor does not reference
          * a cubemap, otherwise index of cubemap's face that it references.
          * @param pRange                         Range that this descriptor was allocated from.
          * `nullptr` if allocated as a single descriptor (not part of some range).
@@ -74,7 +74,7 @@ namespace ne {
             DirectXDescriptorType descriptorType,
             DirectXResource* pResource,
             int iDescriptorOffsetInDescriptors,
-            size_t iReferencedCubemapFaceIndex,
+            std::optional<size_t> referencedCubemapFaceIndex,
             ContinuousDirectXDescriptorRange* pRange = nullptr);
 
     private:
@@ -96,8 +96,8 @@ namespace ne {
          */
         ContinuousDirectXDescriptorRange* const pRange = nullptr;
 
-        /** Only valid if this descriptor references a cubemap's face. */
-        const size_t iReferencedCubemapFaceIndex = 0;
+        /** Not empty if this descriptor references a cubemap's face. */
+        const std::optional<size_t> referencedCubemapFaceIndex;
 
         /** Type of this descriptor. */
         const DirectXDescriptorType descriptorType;

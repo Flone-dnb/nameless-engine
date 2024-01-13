@@ -17,6 +17,7 @@ namespace ne {
         const std::set<ShaderMacro>& additionalPixelShaderMacros,
         const std::string& sComputeShaderName,
         bool bEnableDepthBias,
+        bool bIsUsedForPointLightsShadowMapping,
         bool bUsePixelBlending)
         : Pipeline(
               pRenderer,
@@ -27,6 +28,7 @@ namespace ne {
               additionalPixelShaderMacros,
               sComputeShaderName,
               bEnableDepthBias,
+              bIsUsedForPointLightsShadowMapping,
               bUsePixelBlending) {}
 
     DirectXPso::~DirectXPso() {
@@ -48,6 +50,9 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
+        // Get shadow mapping usage.
+        const auto optionalShadowMappingUsage = pPipelineCreationSettings->getShadowMappingUsage();
+
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(new DirectXPso(
             pRenderer,
@@ -58,6 +63,8 @@ namespace ne {
             pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
             "", // no compute shader
             pPipelineCreationSettings->isDepthBiasEnabled(),
+            optionalShadowMappingUsage.has_value() &&
+                optionalShadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS,
             pPipelineCreationSettings->isPixelBlendingEnabled()));
 
         // Generate graphics PSO.
@@ -264,9 +271,9 @@ namespace ne {
 
         // Specify depth bias settings.
         if (isDepthBiasEnabled()) {
-            psoDesc.RasterizerState.DepthBias = ShadowMapManager::getShadowMappingDepthBias();
+            psoDesc.RasterizerState.DepthBias = ShadowMapManager::getShadowPassDepthBias();
             psoDesc.RasterizerState.DepthBiasClamp = 0.0F;
-            psoDesc.RasterizerState.SlopeScaledDepthBias = 1.0F;
+            psoDesc.RasterizerState.SlopeScaledDepthBias = ShadowMapManager::getShadowPassDepthSlopeFactor();
         }
 
         // Setup pixel blend description (if needed).
@@ -289,7 +296,9 @@ namespace ne {
 
         // Describe depth stencil state.
         psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-        if (!bDepthOnlyPipeline) {
+        if (!isDepthBiasEnabled() && !bDepthOnlyPipeline) {
+            // This is main pass pipeline.
+
             // Disable depth writes because depth buffer will be filled during depth prepass
             // and depth buffer will be in read-only state during the main pass.
             psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
@@ -326,7 +335,12 @@ namespace ne {
         // Specify render target.
         if (!bDepthOnlyPipeline) {
             psoDesc.NumRenderTargets = 1;
-            psoDesc.RTVFormats[0] = DirectXRenderer::getBackBufferFormat();
+
+            if (isUsedForPointLightsShadowMapping()) {
+                psoDesc.RTVFormats[0] = DirectXRenderer::getShadowMappingPointLightColorTargetFormat();
+            } else {
+                psoDesc.RTVFormats[0] = DirectXRenderer::getBackBufferFormat();
+            }
         } else {
             psoDesc.NumRenderTargets = 0;
         }

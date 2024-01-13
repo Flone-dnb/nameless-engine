@@ -2,12 +2,19 @@
 
 // Standard.
 #include <set>
+#include <optional>
 
 // Custom.
 #include "render/general/pipeline/PipelineType.hpp"
 #include "shader/general/ShaderMacro.h"
 
 namespace ne {
+    /** Defines which light sources will be used with the pipeline in shadow mapping. */
+    enum class PipelineShadowMappingUsage {
+        DIRECTIONAL_AND_SPOT_LIGHTS,
+        POINT_LIGHTS,
+    };
+
     /**
      * Base class for pipeline creation options.
      *
@@ -80,6 +87,14 @@ namespace ne {
          * @return `true` to enable, `false` to disable.
          */
         virtual bool isDepthBiasEnabled() { return false; }
+
+        /**
+         * Tells if this pipeline is used in shadow mapping.
+         *
+         * @return Empty if not used in shadow mapping, otherwise light sources that can use the pipeline
+         * for shadow mapping.
+         */
+        virtual std::optional<PipelineShadowMappingUsage> getShadowMappingUsage() { return {}; }
 
     protected:
         /** Additional macros to enable for vertex shader configuration. */
@@ -162,13 +177,14 @@ namespace ne {
          *
          * @param sVertexShaderName            Name of the compiled vertex shader to use.
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param bUsedForShadowMapping        Specify `true` if the pipeline will be used for shadow mapping
-         * and thus shadow bias should be used, otherwise `false`.
+         * @param shadowMappingUsage           Specify empty if this pipeline is not used in the shadow
+         * mapping, otherwise specify which light sources will be able to use this pipeline in shadow mapping
+         * and thus shadow bias should be used.
          */
-        DepthPipelineCreationSettings(
+        explicit DepthPipelineCreationSettings(
             const std::string& sVertexShaderName,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            bool bUsedForShadowMapping);
+            std::optional<PipelineShadowMappingUsage> shadowMappingUsage);
 
         /**
          * Returns type of the pipeline that the object describes.
@@ -184,8 +200,23 @@ namespace ne {
          */
         virtual bool isDepthBiasEnabled() override;
 
+        /**
+         * Returns name of the pixel/fragment shader that should be used.
+         *
+         * @return Empty string of pixel/fragment shader is not used, otherwise name of the compiled shader.
+         */
+        virtual std::string getPixelShaderName() override;
+
+        /**
+         * Tells if this pipeline is used in shadow mapping.
+         *
+         * @return Empty if not used in shadow mapping, otherwise light sources that can use the pipeline
+         * for shadow mapping.
+         */
+        virtual std::optional<PipelineShadowMappingUsage> getShadowMappingUsage() override;
+
     protected:
-        /** `true` to enable shadow bias, `false` otherwise. */
-        const bool bUsedForShadowMapping;
+        /** Empty if not used for shadow mapping, otherwise light sources that can use it. */
+        const std::optional<PipelineShadowMappingUsage> shadowMappingUsage;
     };
 }

@@ -688,14 +688,14 @@ TEST_CASE("check the number of pipelines on spawned mesh material slots") {
                     getWorldRootNode()->addChildNode(pMeshNode);
                     pMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
 
-                    // There should only be 3 pipelines (1 opaque + depth only + shadow mapping).
-                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 3);
+                    // 1 opaque + depth only + 2 shadow mapping.
+                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
 
                     // Enable transparency on the second material slot.
                     pMeshNode->getMaterial(1)->setEnableTransparency(true);
 
-                    // There should now be 4 pipelines (1 opaque + depth only + shadow mapping + transparent).
-                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
+                    // 1 opaque + depth only + 2 shadow mapping + transparent.
+                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 5);
                 }
 
                 {
@@ -707,8 +707,8 @@ TEST_CASE("check the number of pipelines on spawned mesh material slots") {
                     getWorldRootNode()->addChildNode(pMeshNode);
                     pMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
 
-                    // There should still be 4 pipelines.
-                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 4);
+                    // There should still be 5 pipelines.
+                    REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 5);
                 }
 
                 getWindow()->close();

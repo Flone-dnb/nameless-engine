@@ -551,20 +551,23 @@ namespace ne {
         }
 
         // Make sure fields have unique offsets.
-        std::unordered_set<size_t> fieldOffsets;
+        std::unordered_map<size_t, std::string> fieldOffsets;
         for (const auto& [sFieldName, iOffsetInUints] : pushConstantUintFieldOffsets) {
             // Make sure this offset was not used before.
             const auto it = fieldOffsets.find(iOffsetInUints);
             if (it != fieldOffsets.end()) [[unlikely]] {
                 return Error(std::format(
                     "found 2 fields in push constants with different names but the same "
-                    "offsets from struct start, conflicting offset: {} (found on field: {})",
+                    "offsets from struct start, conflicting offset {} was already used on field \"{}\" but "
+                    "the field \"{}\" is also using it, this might mean that your vertex and fragment "
+                    "shaders use different push constants",
                     iOffsetInUints,
+                    it->second,
                     sFieldName));
             }
 
             // Add offset as used.
-            fieldOffsets.insert(iOffsetInUints);
+            fieldOffsets[iOffsetInUints] = sFieldName;
         }
 
         // Save push constants.

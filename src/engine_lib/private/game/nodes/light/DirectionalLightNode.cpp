@@ -32,13 +32,13 @@ namespace ne {
 
     void DirectionalLightNode::onFinishedUpdatingShaderData() { mtxShaderData.first.unlock(); }
 
-    void* DirectionalLightNode::onStartedUpdatingViewProjectionMatrix() {
+    void* DirectionalLightNode::onStartedUpdatingShadowPassData() {
         mtxShaderData.first.lock(); // don't unlock until finished with update
 
-        return &mtxShaderData.second.shaderData.viewProjectionMatrix;
+        return &mtxShaderData.second.shadowPassData.shaderData;
     }
 
-    void DirectionalLightNode::onFinishedUpdatingViewProjectionMatrix() { mtxShaderData.first.unlock(); }
+    void DirectionalLightNode::onFinishedUpdatingShadowPassData() { mtxShaderData.first.unlock(); }
 
     void DirectionalLightNode::markShaderDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
@@ -57,14 +57,12 @@ namespace ne {
 
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Mark light slot as unused.
+        // Mark slots as unused.
         mtxShaderData.second.pDirectionalLightArraySlot = nullptr;
+        mtxShaderData.second.shadowPassData.pSlot = nullptr;
 
         // Free shadow map.
         pShadowMapHandle = nullptr;
-
-        // Free matrix slot.
-        mtxShaderData.second.pViewProjectionMatrixSlot = nullptr;
     }
 
     void DirectionalLightNode::onSpawning() {
@@ -91,7 +89,7 @@ namespace ne {
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
         mtxShaderData.second.shaderData.color = glm::vec4(color, 1.0F);
         mtxShaderData.second.shaderData.intensity = intensity;
-        recalculateViewProjectionMatrixForShadowMapping();
+        recalculateShadowMappingShaderData();
 #if defined(DEBUG)
         static_assert(sizeof(DirecionalLightShaderData) == 112, "consider copying new parameters here");
 #endif
@@ -119,13 +117,12 @@ namespace ne {
         mtxShaderData.second.pDirectionalLightArraySlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
 
-        // Reserve a slot to copy our `viewProjectionMatrix`
-        // so that it will be available in the shaders.
-        result = pLightingShaderResourceManager->getLightViewProjectionMatricesArray()->reserveNewSlot(
+        // Reserve a slot to copy our shadow pass data.
+        result = pLightingShaderResourceManager->getShadowPassLightInfoArray()->reserveNewSlot(
             this,
-            sizeof(glm::mat4x4),
-            [this]() { return onStartedUpdatingViewProjectionMatrix(); },
-            [this]() { onFinishedUpdatingViewProjectionMatrix(); });
+            sizeof(ShadowPassLightShaderInfo),
+            [this]() { return onStartedUpdatingShadowPassData(); },
+            [this]() { onFinishedUpdatingShadowPassData(); });
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -134,7 +131,7 @@ namespace ne {
         }
 
         // Save received slot.
-        mtxShaderData.second.pViewProjectionMatrixSlot =
+        mtxShaderData.second.shadowPassData.pSlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
     }
 
@@ -176,11 +173,11 @@ namespace ne {
         // Update direction for shaders.
         mtxShaderData.second.shaderData.direction = glm::vec4(getWorldForwardDirection(), 0.0F);
 
-        // Update matrices for shaders.
-        recalculateViewProjectionMatrixForShadowMapping();
+        // Update shadow pass data.
+        recalculateShadowMappingShaderData();
 
         // Mark matrices and shader data to be copied to the GPU.
-        markViewProjectionMatrixToBeCopiedToGpu();
+        markShadowPassDataToBeCopiedToGpu();
         markShaderDataToBeCopiedToGpu();
     }
 
@@ -206,7 +203,7 @@ namespace ne {
         markShaderDataToBeCopiedToGpu();
     }
 
-    void DirectionalLightNode::recalculateViewProjectionMatrixForShadowMapping() {
+    void DirectionalLightNode::recalculateShadowMappingShaderData() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Prepare some constants.
@@ -238,42 +235,46 @@ namespace ne {
         mtxShaderData.second.shaderData.viewProjectionMatrix =
             glm::orthoLH(frustumLeft, frustumRight, frustumBottom, frustumTop, frustumNear, frustumFar) *
             viewMatrix;
+
+        // Create a short reference.
+        auto& shaderPassData = mtxShaderData.second.shadowPassData.shaderData;
+
+        // Update shadow pass data.
+        shaderPassData.viewProjectionMatrix = mtxShaderData.second.shaderData.viewProjectionMatrix;
+        shaderPassData.position = glm::vec4(getWorldLocation(), 1.0F);
     }
 
-    void DirectionalLightNode::markViewProjectionMatrixToBeCopiedToGpu() {
+    void DirectionalLightNode::markShadowPassDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Make sure the slot exists.
-        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) {
+        if (mtxShaderData.second.shadowPassData.pSlot == nullptr) {
             return;
         }
 
         // Mark as "needs update".
-        mtxShaderData.second.pViewProjectionMatrixSlot->markAsNeedsUpdate();
+        mtxShaderData.second.shadowPassData.pSlot->markAsNeedsUpdate();
     }
 
     ShadowMapHandle* DirectionalLightNode::getShadowMapHandle() const { return pShadowMapHandle.get(); }
 
-    unsigned int DirectionalLightNode::getIndexIntoLightViewProjectionShaderArray() {
+    unsigned int DirectionalLightNode::getIndexIntoShadowPassInfoShaderArray() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Make sure the slot exists.
-        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) [[unlikely]] {
-            Error error(std::format(
-                "expected viewProjectionMatrix slot to be valid on light node \"{}\"", getNodeName()));
+        if (mtxShaderData.second.shadowPassData.pSlot == nullptr) [[unlikely]] {
+            Error error(std::format("expected slot to be valid on light node \"{}\"", getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Get index.
-        const auto iIndex = mtxShaderData.second.pViewProjectionMatrixSlot->getCurrentIndexIntoArray();
+        const auto iIndex = mtxShaderData.second.shadowPassData.pSlot->getCurrentIndexIntoArray();
 
         // Make sure we won't reach uint limit.
         if (iIndex > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
-            Error error(std::format(
-                "viewProjectionMatrix slot index on light node \"{}\" reached type limit: {}",
-                getNodeName(),
-                iIndex));
+            Error error(
+                std::format("slot index on light node \"{}\" reached type limit: {}", getNodeName(), iIndex));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }

@@ -1,8 +1,8 @@
 #include "../../include/Base.glsl"
 #include "../../include/MeshData.glsl"
 #ifdef VS_SHADOW_MAPPING_PASS
-#include "../../include/Lighting.glsl"
-#include "../../include/shader_constants/LightingConstants.glsl"
+#include "../../include/ShadowPassLightInfoData.glsl"
+#include "../../include/shader_constants/ShadowPassConstants.glsl"
 #endif
 
 /** Vertex shader. */
@@ -19,7 +19,7 @@ VertexOut vsMeshNode(VertexIn vertexIn)
 
     // Transform position to homogeneous clip space.
 #ifdef VS_SHADOW_MAPPING_PASS
-    vertexOut.position = mul(lightViewProjectionMatrices[constants.iLightViewProjectionMatrixIndex], vertexOut.worldPosition);
+    vertexOut.position = mul(shadowPassLightInfo[constants.iShadowPassLightInfoIndex].viewProjectionMatrix, vertexOut.worldPosition);
 #else
     vertexOut.position = mul(frameData.viewProjectionMatrix, vertexOut.worldPosition);
 #endif

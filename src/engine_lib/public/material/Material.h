@@ -275,14 +275,26 @@ namespace ne RNAMESPACE() {
         Pipeline* getDepthOnlyPipeline() const;
 
         /**
-         * Returns pipeline that only has vertex shader and depth bias enabled (used for shadow passes).
+         * Returns pipeline that only has vertex shader and depth bias enabled, used for shadow passes
+         * of directional and spot lights.
          *
          * @warning Do not delete returned pointer.
          *
          * @return `nullptr` if pipeline was not initialized yet or if @ref isUsingTransparency is enabled,
          * otherwise used pipeline.
          */
-        Pipeline* getShadowMappingPipeline() const;
+        Pipeline* getShadowMappingDirectionalSpotPipeline() const;
+
+        /**
+         * Returns pipeline that only has vertex shader and depth bias enabled, used for shadow passes
+         * of point lights.
+         *
+         * @warning Do not delete returned pointer.
+         *
+         * @return `nullptr` if pipeline was not initialized yet or if @ref isUsingTransparency is enabled,
+         * otherwise used pipeline.
+         */
+        Pipeline* getShadowMappingPointPipeline() const;
 
         /**
          * Returns GPU resources that this material uses.
@@ -337,13 +349,21 @@ namespace ne RNAMESPACE() {
             PipelineSharedPtr pDepthOnlyPipeline;
 
             /**
-             * @ref pColorPipeline but with only vertex shader and depth bias enabled (used for shadow
-             * passes).
+             * @ref pDepthOnlyPipeline but with depth bias enabled (used for shadow
+             * passes of directional and spot lights).
              *
              * @remark Only valid when the mesh that is using this material is spawned.
              * @remark Only valid when material does not use transparency.
              */
-            PipelineSharedPtr pShadowMappingPipeline;
+            PipelineSharedPtr pShadowMappingDirectionalSpotPipeline;
+
+            /**
+             * @ref pShadowMappingDirectionalSpotPipeline but with a special fragment shader.
+             *
+             * @remark Only valid when the mesh that is using this material is spawned.
+             * @remark Only valid when material does not use transparency.
+             */
+            PipelineSharedPtr pShadowMappingPointPipeline;
         };
 
         /**

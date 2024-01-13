@@ -6,7 +6,7 @@
 #include "../../include/Lighting.glsl"
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-   SamplerState textureSampler : register(s0, space5);
+#hlsl SamplerState textureSampler : register(s0, space5);
 #endif
 
 #ifdef PS_USE_DIFFUSE_TEXTURE

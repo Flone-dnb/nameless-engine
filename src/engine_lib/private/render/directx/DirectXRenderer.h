@@ -86,6 +86,16 @@ namespace ne {
         static constexpr DXGI_FORMAT getShadowMapFormat() { return shadowMapFormat; }
 
         /**
+         * Returns texture format used for point lights as "color" target (does not actually store
+         * color) during shadow pass.
+         *
+         * @return Shadow map format.
+         */
+        static constexpr DXGI_FORMAT getShadowMappingPointLightColorTargetFormat() {
+            return shadowMappingPointLightColorTargetFormat;
+        }
+
+        /**
          * Looks for video adapters (GPUs) that support this renderer.
          *
          * @remark Note that returned array might differ depending on the used renderer.
@@ -280,6 +290,7 @@ namespace ne {
          * @param pipelinesOfSpecificType     Pipelines to use.
          * @param directionalShadowMapsHandle GPU handle to array of directional shadow maps.
          * @param spotShadowMapsHandle        GPU handle to array of spot shadow maps.
+         * @param pointShadowMapsGpuHandle    GPU handle to array of point shadow maps.
          * @param bIsDrawingTransparentMeshes `true` if transparent pipelines are used, `false` otherwise.
          */
         void drawMeshesMainPassSpecificPipelines(
@@ -288,6 +299,7 @@ namespace ne {
             const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
             D3D12_GPU_DESCRIPTOR_HANDLE directionalShadowMapsHandle,
             D3D12_GPU_DESCRIPTOR_HANDLE spotShadowMapsHandle,
+            D3D12_GPU_DESCRIPTOR_HANDLE pointShadowMapsGpuHandle,
             const bool bIsDrawingTransparentMeshes);
 
         /**
@@ -600,6 +612,11 @@ namespace ne {
 
         /** Format used for shadow maps. */
         static constexpr DXGI_FORMAT shadowMapFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        /**
+         * Format used for point lights as "color" target (does not actually store color) during shadow pass.
+         */
+        static constexpr DXGI_FORMAT shadowMappingPointLightColorTargetFormat = DXGI_FORMAT_R32_FLOAT;
 
         /**
          * Depth buffer format for @ref pDepthBufferNoMultisampling.

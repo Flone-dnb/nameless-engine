@@ -21,10 +21,10 @@ namespace ne {
         DirectXDescriptorType descriptorType,
         DirectXResource* pResource,
         int iDescriptorOffsetInDescriptors,
-        size_t iReferencedCubemapFaceIndex,
+        std::optional<size_t> referencedCubemapFaceIndex,
         ContinuousDirectXDescriptorRange* pRange)
         : pResource(pResource), pHeap(pHeap), pRange(pRange),
-          iReferencedCubemapFaceIndex(iReferencedCubemapFaceIndex), descriptorType(descriptorType) {
+          referencedCubemapFaceIndex(referencedCubemapFaceIndex), descriptorType(descriptorType) {
         // Save index.
         this->iDescriptorOffsetInDescriptors = iDescriptorOffsetInDescriptors;
     }

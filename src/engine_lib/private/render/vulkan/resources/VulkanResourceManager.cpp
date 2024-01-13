@@ -519,11 +519,22 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<GpuResource>, Error> VulkanResourceManager::createShadowMapTexture(
-        const std::string& sResourceName, unsigned int iTextureSize, bool bIsCubeTexture) {
+        const std::string& sResourceName, unsigned int iTextureSize, bool bPointLightColorCubemap) {
         // Check that texture size is power of 2.
         if (!std::has_single_bit(iTextureSize)) [[unlikely]] {
             return Error(std::format(
                 "shadow map size {} should be power of 2 (128, 256, 512, 1024, 2048, etc.)", iTextureSize));
+        }
+
+        // Prepare description for a usual 2D depth texture.
+        auto textureFormat = VulkanRenderer::getShadowMapFormat();
+        auto usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        auto aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        if (bPointLightColorCubemap) {
+            textureFormat = VulkanRenderer::getShadowMappingPointLightColorTargetFormat();
+            usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            aspect = VK_IMAGE_ASPECT_COLOR_BIT;
         }
 
         // Create image.
@@ -533,12 +544,11 @@ namespace ne {
             iTextureSize,
             1,
             VK_SAMPLE_COUNT_1_BIT,
-            VulkanRenderer::getShadowMapFormat(),
+            textureFormat,
             VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            VK_IMAGE_ASPECT_DEPTH_BIT,
-            bIsCubeTexture,
-            true); // create framebuffer
+            usage,
+            aspect,
+            bPointLightColorCubemap);
         if (std::holds_alternative<Error>(resourceResult)) {
             auto error = std::get<Error>(std::move(resourceResult));
             error.addCurrentLocationToErrorStack();
@@ -558,8 +568,7 @@ namespace ne {
         VkImageTiling imageTilingMode,
         VkImageUsageFlags imageUsage,
         std::optional<VkImageAspectFlags> viewDescription,
-        bool bIsCubeMap,
-        bool bCreateShadowMappingFramebuffer) {
+        bool bIsCubeMap) {
         // Describe an image object.
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -584,14 +593,7 @@ namespace ne {
 
         // Create resource.
         auto result = VulkanResource::create(
-            this,
-            sResourceName,
-            pMemoryAllocator,
-            imageInfo,
-            allocationInfo,
-            viewDescription,
-            bIsCubeMap,
-            bCreateShadowMappingFramebuffer);
+            this, sResourceName, pMemoryAllocator, imageInfo, allocationInfo, viewDescription, bIsCubeMap);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

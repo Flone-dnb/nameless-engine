@@ -131,10 +131,12 @@ namespace ne {
          * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
          * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
          * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
+         * @param bIsUsedForPointLightsShadowMapping Whether this pipeline is used for shadow mapping of point
+         * lights or not.
          * @param bUsePixelBlending  Whether the pixels of the mesh that uses this PSO should blend with
          * existing pixels on back buffer or not (for transparency).
          */
-        DirectXPso(
+        explicit DirectXPso(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             const std::string& sVertexShaderName,
@@ -143,6 +145,7 @@ namespace ne {
             const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
             const std::string& sComputeShaderName = "",
             bool bEnableDepthBias = false,
+            bool bIsUsedForPointLightsShadowMapping = false,
             bool bUsePixelBlending = false);
 
         /**

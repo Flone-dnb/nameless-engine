@@ -7,6 +7,9 @@
 // Custom.
 #include "ShadowMapType.hpp"
 
+// External.
+#include "vulkan/vulkan_core.h"
+
 namespace ne {
     class ShadowMapManager;
     class GpuResource;
@@ -25,6 +28,27 @@ namespace ne {
         friend class ShadowMapArrayIndexManager;
 
     public:
+        /** Groups GPU resources that a shadow map handle references. */
+        struct InternalResources {
+            /** Depth image. */
+            GpuResource* pDepthTexture = nullptr;
+
+            /**
+             * Optional (may be `nullptr`) "color" target, used for point lights to store additional
+             * information.
+             */
+            GpuResource* pColorTexture = nullptr;
+
+            /**
+             * Framebuffers that reference @ref pDepthTexture and @ref pColorTexture (if it's valid),
+             * these framebuffers are used by the Vulkan renderer during the shadow pass.
+             *
+             * @remark Stores only 1 framebuffer if @ref pColorTexture is `nullptr` otherwise 6 framebuffers
+             * (because @ref pColorTexture is a cubemap for point lights).
+             */
+            std::vector<VkFramebuffer> vShadowMappingFramebuffers;
+        };
+
         ShadowMapHandle() = delete;
 
         ShadowMapHandle(const ShadowMapHandle&) = delete;
@@ -47,7 +71,7 @@ namespace ne {
          *
          * @return Valid pointer to resource.
          */
-        inline std::pair<std::recursive_mutex, GpuResource*>* getResource() { return &mtxResource; }
+        inline std::pair<std::recursive_mutex, InternalResources>* getResources() { return &mtxResources; }
 
         /**
          * Returns type of a shadow map that this handle references.
@@ -68,18 +92,21 @@ namespace ne {
          * Constructs a new handle.
          *
          * @param pManager                    Manager that owns the resource.
-         * @param pResource                   Resource to point to.
+         * @param pDepthTexture               Resource to point to.
          * @param type                        Type of the shadow map this handle references.
          * @param iTextureSize                Size (in pixels) of the shadow map.
          * @param onArrayIndexChanged Called after the index of the shadow map into the
          * descriptor array of shadow maps was initialized/changed.
+         * @param pColorTexture               Optional "color" target, used for point
+         * lights to store additional information.
          */
         ShadowMapHandle(
             ShadowMapManager* pManager,
-            GpuResource* pResource,
+            GpuResource* pDepthTexture,
             ShadowMapType type,
             size_t iTextureSize,
-            const std::function<void(unsigned int)>& onArrayIndexChanged);
+            const std::function<void(unsigned int)>& onArrayIndexChanged,
+            GpuResource* pColorTexture = nullptr);
 
         /**
          * Called by array index manager to notify the shadow map user about array index changed.
@@ -88,13 +115,28 @@ namespace ne {
          */
         void changeArrayIndex(unsigned int iNewArrayIndex);
 
+        /**
+         * Called by shadow map manager after GPU resources were re-created (due to some render settings
+         * changed for example) to assign new resources.
+         *
+         * @param pDepthTexture  Resource to point to.
+         * @param iShadowMapSize Size (in pixels) of the shadow map.
+         * @param pColorTexture  Optional "color" target, used for point lights to store additional
+         * information.
+         */
+        void setUpdatedResources(
+            GpuResource* pDepthTexture, size_t iShadowMapSize, GpuResource* pColorTexture = nullptr);
+
+        /** (Re)creates framebuffers from @ref mtxResources if running Vulkan renderer. */
+        void recreateFramebuffers();
+
         /** Manager that owns the resource we are pointing to. */
         ShadowMapManager* pManager = nullptr;
 
         /** Resource that this handle references. */
-        std::pair<std::recursive_mutex, GpuResource*> mtxResource;
+        std::pair<std::recursive_mutex, InternalResources> mtxResources;
 
-        /** Size (in pixels) of the @ref mtxResource texture, used for fast access. */
+        /** Size (in pixels) of the @ref mtxResources texture, used for fast access. */
         size_t iShadowMapSize = 0;
 
         /**

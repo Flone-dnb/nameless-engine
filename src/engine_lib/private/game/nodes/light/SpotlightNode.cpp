@@ -56,13 +56,12 @@ namespace ne {
         mtxShaderData.second.pSpotlightArraySlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
 
-        // Reserve a slot to copy our `viewProjectionMatrix`
-        // so that it will be available in the shaders.
-        result = pLightingShaderResourceManager->getLightViewProjectionMatricesArray()->reserveNewSlot(
+        // Reserve a slot to copy our shadow pass data.
+        result = pLightingShaderResourceManager->getShadowPassLightInfoArray()->reserveNewSlot(
             this,
-            sizeof(glm::mat4x4),
-            [this]() { return onStartedUpdatingViewProjectionMatrix(); },
-            [this]() { onFinishedUpdatingViewProjectionMatrix(); });
+            sizeof(ShadowPassLightShaderInfo),
+            [this]() { return onStartedUpdatingShadowPassData(); },
+            [this]() { onFinishedUpdatingShadowPassData(); });
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -71,7 +70,7 @@ namespace ne {
         }
 
         // Save received slot.
-        mtxShaderData.second.pViewProjectionMatrixSlot =
+        mtxShaderData.second.shadowPassData.pSlot =
             std::get<std::unique_ptr<ShaderLightArraySlot>>(std::move(result));
 
         // Update shader data.
@@ -83,14 +82,12 @@ namespace ne {
 
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Mark light slot as unused.
+        // Mark slots as unused.
         mtxShaderData.second.pSpotlightArraySlot = nullptr;
+        mtxShaderData.second.shadowPassData.pSlot = nullptr;
 
         // Free shadow map.
         pShadowMapHandle = nullptr;
-
-        // Free matrix slot.
-        mtxShaderData.second.pViewProjectionMatrixSlot = nullptr;
     }
 
     void SpotlightNode::setLightColor(const glm::vec3& color) {
@@ -170,19 +167,19 @@ namespace ne {
 
     void SpotlightNode::onFinishedUpdatingShaderData() { mtxShaderData.first.unlock(); }
 
-    void* SpotlightNode::onStartedUpdatingViewProjectionMatrix() {
+    void* SpotlightNode::onStartedUpdatingShadowPassData() {
         mtxShaderData.first.lock(); // don't unlock until finished with update
 
-        return &mtxShaderData.second.shaderData.viewProjectionMatrix;
+        return &mtxShaderData.second.shadowPassData.shaderData;
     }
 
-    void SpotlightNode::onFinishedUpdatingViewProjectionMatrix() { mtxShaderData.first.unlock(); }
+    void SpotlightNode::onFinishedUpdatingShadowPassData() { mtxShaderData.first.unlock(); }
 
     void SpotlightNode::recalculateAndMarkShaderDataToBeCopiedToGpu() {
         std::scoped_lock guard(mtxShaderData.first);
 
-        // Recalculate viewProjection matrix.
-        recalculateViewProjectionMatrixForShadowMapping();
+        // Recalculate shadow mapping data.
+        recalculateShadowMappingShaderData();
 
         // Copy up to date parameters.
         mtxShaderData.second.shaderData.position = glm::vec4(getWorldLocation(), 1.0F);
@@ -225,12 +222,12 @@ namespace ne {
         mtxShaderData.second.pSpotlightArraySlot->markAsNeedsUpdate();
 
         // Make sure the slot exists.
-        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) {
+        if (mtxShaderData.second.shadowPassData.pSlot == nullptr) {
             return;
         }
 
         // Mark as "needs update".
-        mtxShaderData.second.pViewProjectionMatrixSlot->markAsNeedsUpdate();
+        mtxShaderData.second.shadowPassData.pSlot->markAsNeedsUpdate();
     }
 
     glm::vec3 SpotlightNode::getLightColor() const { return color; }
@@ -263,26 +260,23 @@ namespace ne {
 
     ShadowMapHandle* SpotlightNode::getShadowMapHandle() const { return pShadowMapHandle.get(); }
 
-    unsigned int SpotlightNode::getIndexIntoLightViewProjectionShaderArray() {
+    unsigned int SpotlightNode::getIndexIntoShadowPassInfoShaderArray() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Make sure the slot exists.
-        if (mtxShaderData.second.pViewProjectionMatrixSlot == nullptr) [[unlikely]] {
-            Error error(std::format(
-                "expected viewProjectionMatrix slot to be valid on light node \"{}\"", getNodeName()));
+        if (mtxShaderData.second.shadowPassData.pSlot == nullptr) [[unlikely]] {
+            Error error(std::format("expected slot to be valid on light node \"{}\"", getNodeName()));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Get index.
-        const auto iIndex = mtxShaderData.second.pViewProjectionMatrixSlot->getCurrentIndexIntoArray();
+        const auto iIndex = mtxShaderData.second.shadowPassData.pSlot->getCurrentIndexIntoArray();
 
         // Make sure we won't reach uint limit.
         if (iIndex > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
-            Error error(std::format(
-                "viewProjectionMatrix slot index on light node \"{}\" reached type limit: {}",
-                getNodeName(),
-                iIndex));
+            Error error(
+                std::format("slot index on light node \"{}\" reached type limit: {}", getNodeName(), iIndex));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
@@ -313,7 +307,7 @@ namespace ne {
         markShaderDataToBeCopiedToGpu();
     }
 
-    void SpotlightNode::recalculateViewProjectionMatrixForShadowMapping() {
+    void SpotlightNode::recalculateShadowMappingShaderData() {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Prepare some constants.
@@ -322,8 +316,8 @@ namespace ne {
         const auto nearClipPlane = distance * ShadowMapManager::getVisibleDistanceToNearClipPlaneRatio();
 
         // Calculate view matrix.
-        const auto viewMatrix = glm::lookAtLH(
-            worldLocation, worldLocation + getWorldForwardDirection(), Globals::WorldDirection::up);
+        const auto viewMatrix =
+            glm::lookAtLH(worldLocation, worldLocation + getWorldForwardDirection(), getWorldUpDirection());
 
         // Prepare FOV for shadow map capture.
         static_assert(maxConeAngle <= 90.0F, "change FOV for shadow map capture");
@@ -332,6 +326,13 @@ namespace ne {
         // Calculate projection matrix.
         mtxShaderData.second.shaderData.viewProjectionMatrix =
             glm::perspectiveLH(fovY, 1.0F, nearClipPlane, farClipPlane) * viewMatrix;
+
+        // Create a short reference.
+        auto& shadowPassData = mtxShaderData.second.shadowPassData.shaderData;
+
+        // Update shadow pass data.
+        shadowPassData.viewProjectionMatrix = mtxShaderData.second.shaderData.viewProjectionMatrix;
+        shadowPassData.position = glm::vec4(getWorldLocation(), 1.0F);
     }
 
 }

@@ -77,14 +77,6 @@ namespace ne {
 
         std::scoped_lock guard(mtxResourceMemory.first);
 
-        if (!vShadowMappingFramebuffers.empty()) {
-            // Destroy shadow mapping framebuffer.
-            for (const auto pFramebuffer : vShadowMappingFramebuffers) {
-                vkDestroyFramebuffer(pLogicalDevice, pFramebuffer, nullptr);
-            }
-            vShadowMappingFramebuffers.clear();
-        }
-
         if (!vCubeMapViews.empty()) {
             // Destroy cube map face views.
             for (const auto pCubeMapFaceView : vCubeMapViews) {
@@ -156,8 +148,7 @@ namespace ne {
         const VkImageCreateInfo& imageInfo,
         const VmaAllocationCreateInfo& allocationInfo,
         std::optional<VkImageAspectFlags> viewDescription,
-        bool bIsCubeMapView,
-        bool bCreateShadowMappingFramebuffer) {
+        bool bIsCubeMapView) {
         // Prepare variables for created data.
         VkImage pCreatedImage = nullptr;
         VmaAllocation pCreatedMemory = nullptr;
@@ -238,85 +229,26 @@ namespace ne {
                 }
             }
 
-            if (bCreateShadowMappingFramebuffer) {
-                // Get shadow mapping render pass.
-                const auto pShadowMappingRenderPass = pVulkanRenderer->getShadowMappingRenderPass();
-                if (pShadowMappingRenderPass == nullptr) [[unlikely]] {
-                    return Error(std::format(
-                        "expected shadow mapping render pass to be valid when creation image \"{}\"",
-                        sResourceName));
-                }
+            if (bIsCubeMapView) {
+                // Create image views to each cubemap face.
+                pCreatedImageResource->vCubeMapViews.resize(6); // NOLINT: number of cubemap faces
+                for (size_t i = 0; i < pCreatedImageResource->vCubeMapViews.size(); i++) {
+                    // Set face info.
+                    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                    viewInfo.subresourceRange.baseArrayLayer = static_cast<uint32_t>(i);
+                    viewInfo.subresourceRange.layerCount = 1;
 
-                if (bIsCubeMapView) {
-                    // Create image views to each cubemap face.
-                    pCreatedImageResource->vCubeMapViews.resize(6); // NOLINT: number of cubemap faces
-                    for (size_t i = 0; i < pCreatedImageResource->vCubeMapViews.size(); i++) {
-                        // Set face info.
-                        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-                        viewInfo.subresourceRange.baseArrayLayer = static_cast<uint32_t>(i);
-                        viewInfo.subresourceRange.layerCount = 1;
-
-                        // Create image view.
-                        auto result = vkCreateImageView(
-                            pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->vCubeMapViews[i]);
-                        if (result != VK_SUCCESS) [[unlikely]] {
-                            return Error(std::format(
-                                "failed to create image view for image \"{}\", error: {}",
-                                sResourceName,
-                                string_VkResult(result)));
-                        }
-                    }
-                }
-
-                // Describe framebuffer.
-                VkFramebufferCreateInfo framebufferInfo{};
-                framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                framebufferInfo.renderPass = pShadowMappingRenderPass;
-                framebufferInfo.attachmentCount = 1;
-                framebufferInfo.pAttachments = &pCreatedImageResource->pImageView;
-                framebufferInfo.width = imageInfo.extent.width;
-                framebufferInfo.height = imageInfo.extent.height;
-                framebufferInfo.layers = 1;
-
-                if (bIsCubeMapView) {
-                    // Create framebuffer to each cubemap face.
-                    pCreatedImageResource->vShadowMappingFramebuffers.resize(6); // NOLINT
-                    for (size_t i = 0; i < pCreatedImageResource->vShadowMappingFramebuffers.size(); i++) {
-                        // Set cubemap face image view.
-                        framebufferInfo.pAttachments = &pCreatedImageResource->vCubeMapViews[i];
-
-                        // Create framebuffer.
-                        const auto result = vkCreateFramebuffer(
-                            pLogicalDevice,
-                            &framebufferInfo,
-                            nullptr,
-                            &pCreatedImageResource->vShadowMappingFramebuffers[i]);
-                        if (result != VK_SUCCESS) [[unlikely]] {
-                            return Error(std::format(
-                                "failed to create a framebuffer for a swapchain image view, error: {}",
-                                string_VkResult(result)));
-                        }
-                    }
-                } else {
-                    // Create framebuffer.
-                    pCreatedImageResource->vShadowMappingFramebuffers.resize(1);
-                    const auto result = vkCreateFramebuffer(
-                        pLogicalDevice,
-                        &framebufferInfo,
-                        nullptr,
-                        &pCreatedImageResource->vShadowMappingFramebuffers[0]);
+                    // Create image view.
+                    auto result = vkCreateImageView(
+                        pLogicalDevice, &viewInfo, nullptr, &pCreatedImageResource->vCubeMapViews[i]);
                     if (result != VK_SUCCESS) [[unlikely]] {
                         return Error(std::format(
-                            "failed to create a framebuffer for a swapchain image view, error: {}",
+                            "failed to create image view for image \"{}\", error: {}",
+                            sResourceName,
                             string_VkResult(result)));
                     }
                 }
             }
-        } else if (bCreateShadowMappingFramebuffer) [[unlikely]] {
-            return Error(std::format(
-                "possible error found during image \"{}\" creation: image view creation info is not "
-                "specified but a framebuffer creation was requested",
-                sResourceName));
         }
 
         return pCreatedImageResource;

@@ -11,6 +11,9 @@
 /** Sampler for shadow maps. */
 #hlsl SamplerComparisonState shadowSampler : register(s1, space5);
 
+/** Bias that we use in point light shadow mapping. */
+#define POINT_LIGHT_SHADOW_BIAS 0.04F
+
 /** Stores general lighting related data. */
 #glsl layout(binding = 50) uniform GeneralLightingData{
 #hlsl struct GeneralLightingData{
@@ -153,16 +156,6 @@ layout(std430, binding = 55) readonly buffer SpotlightsInCameraFrustumBuffer{
 }
 #hlsl StructuredBuffer<uint> spotlightsInCameraFrustumIndices : register(t4, space7);
 
-#ifdef VS_SHADOW_MAPPING_PASS
-/** `viewProjectionMatrix` for all spawned light sources, used for shadow mapping. */
-#glsl{
-layout(std140, binding = 56) readonly buffer ViewProjectionMatricesForLightSourcesBuffer{
-    mat4 array[];
-} lightViewProjectionMatrices;
-}
-#hlsl StructuredBuffer<float4x4> lightViewProjectionMatrices : register(t5, space7);
-#endif
-
 /** Array of shadow maps for all directional light sources. */
 #glsl layout(binding = 57) uniform sampler2DShadow directionalShadowMaps[];
 #hlsl Texture2D directionalShadowMaps[] : register(t6, space7);
@@ -204,7 +197,7 @@ vec3 transformWorldPositionToShadowMapSpace(vec3 worldPosition, mat4 viewProject
  * @param viewProjectionMatrix  Matrix that transforms positions to light's projection space.
  * @param shadowMapArray        Array with shadow maps to use.
  */
-#define DEFINE_SHADOW_FACTOR_FOR_LIGHT(fragmentWorldPosition, iShadowMapIndex, viewProjectionMatrix, shadowMapArray)                                 \
+#define DEFINE_SHADOW_FACTOR_DIRECTIONAL_SPOT_LIGHT(fragmentWorldPosition, iShadowMapIndex, viewProjectionMatrix, shadowMapArray) \
 /** Get shadow map size. */                                                                                          \
 uint iShadowMapWidth = 0;                                                                                            \
 uint iShadowMapHeight = 0;                                                                                           \
@@ -241,6 +234,30 @@ for(uint i = 0; i < iShadowFilteringOffsetCount; i++){                          
 const float shadowFactor = shadowPercentLit /                                                                        \
 #hlsl     (float)iShadowFilteringOffsetCount;
 #glsl     float(iShadowFilteringOffsetCount);
+
+/**
+ * Calculates a value in range [0.0; 1.0] where 0.0 means that the fragment is fully in the shadow
+ * created by the light source and 1.0 means that the fragment is not in the shadow created by the light source.
+ * 
+ * @param fragmentWorldPosition Position of the fragment in world space.
+ * @param light                 Point light to calculate shadow factor for.
+ *
+ * @return Shadow factor.
+ */
+float calculateShadowFactorForPointLight(vec3 fragmentWorldPosition, PointLight light){
+    // Calculate direction from light to fragment.
+    const vec3 lightToFragmentDirection = fragmentWorldPosition - light.position.xyz;
+
+    // Calculate distance between light and fragment.
+    const float distanceToLight = length(lightToFragmentDirection) - POINT_LIGHT_SHADOW_BIAS;
+
+    // Sample length (distance) from cubemap and compare with our distance.
+    const float shadowPercentLit =
+#hlsl pointShadowMaps[light.iShadowMapIndex].SampleCmpLevelZero(shadowSampler, lightToFragmentDirection, distanceToLight);
+#glsl texture(pointShadowMaps[light.iShadowMapIndex], vec4(lightToFragmentDirection, distanceToLight));
+
+    return shadowPercentLit;
+}
 
 /**
  * Calculates light reflected to the camera (Fresnel effect).
@@ -510,6 +527,10 @@ vec3 calculateColorFromLights(
     uint iPointLightIndexListOffset = POINT_LIGHT_GRID_TILE.x;
     uint iPointLightIndexListCount = POINT_LIGHT_GRID_TILE.y;
 
+    // Prepare helper macro.
+#glsl #define POINT_LIGHTS_ARRAY pointLights.array
+#hlsl #define POINT_LIGHTS_ARRAY pointLights
+
     // Calculate light from point lights.
     for (uint i = 0; i < iPointLightIndexListCount; i++){
         // Get light index.
@@ -517,16 +538,24 @@ vec3 calculateColorFromLights(
 #glsl                          .array
                                [iPointLightIndexListOffset + i];
 
+        // Get light source.
+        PointLight lightSource = POINT_LIGHTS_ARRAY[iLightIndex];
+
+        // Calculate shadow from this light.
+        const float shadowFactor = calculateShadowFactorForPointLight(fragmentPositionWorldSpace, lightSource);
+
         // Calculate light.
-        outputColor += calculateColorFromPointLight(
-#glsl       pointLights.array[iLightIndex],
-#hlsl       pointLights[iLightIndex],
+        const vec3 light = calculateColorFromPointLight(
+            lightSource,
             cameraPosition,
             fragmentPositionWorldSpace,
             fragmentNormalUnit,
             fragmentDiffuseColor,
             fragmentSpecularColor,
             materialRoughness);
+
+        // Combine light with shadow.
+        outputColor += light * shadowFactor;
     }
 
     // Get index into non-culled spotlights.
@@ -548,7 +577,7 @@ vec3 calculateColorFromLights(
         Spotlight lightSource = SPOT_LIGHTS_ARRAY[iLightIndex];
 
         // Calculate shadow from this light.
-        DEFINE_SHADOW_FACTOR_FOR_LIGHT(
+        DEFINE_SHADOW_FACTOR_DIRECTIONAL_SPOT_LIGHT(
             fragmentPositionWorldSpace,
             lightSource.iShadowMapIndex,
             lightSource.viewProjectionMatrix,
@@ -578,7 +607,7 @@ vec3 calculateColorFromLights(
         DirectionalLight lightSource = DIRECTIONAL_LIGHTS_ARRAY[iLightIndex];
 
         // Calculate shadow from this light.
-        DEFINE_SHADOW_FACTOR_FOR_LIGHT(
+        DEFINE_SHADOW_FACTOR_DIRECTIONAL_SPOT_LIGHT(
             fragmentPositionWorldSpace,
             lightSource.iShadowMapIndex,
             lightSource.viewProjectionMatrix,

@@ -26,8 +26,8 @@ namespace ne {
         return lightArrays.pSpotlightDataArray.get();
     }
 
-    ShaderLightArray* LightingShaderResourceManager::getLightViewProjectionMatricesArray() const {
-        return lightArrays.pLightViewProjectionMatrices.get();
+    ShaderLightArray* LightingShaderResourceManager::getShadowPassLightInfoArray() const {
+        return lightArrays.pShadowPassLightInfoArray.get();
     }
 
     std::optional<Error> LightingShaderResourceManager::bindDescriptorsToRecreatedPipelineResources() {
@@ -53,7 +53,7 @@ namespace ne {
         }
 
         // Notify matrices array.
-        optionalError = lightArrays.pLightViewProjectionMatrices->updateBindingsInAllPipelines();
+        optionalError = lightArrays.pShadowPassLightInfoArray->updateBindingsInAllPipelines();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -98,8 +98,8 @@ namespace ne {
             return optionalError;
         }
 
-        // Notify matrices array.
-        optionalError = lightArrays.pLightViewProjectionMatrices->updatePipelineBinding(pPipeline);
+        // Notify view projection matrices array.
+        optionalError = lightArrays.pShadowPassLightInfoArray->updatePipelineBinding(pPipeline);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -134,7 +134,7 @@ namespace ne {
         lightArrays.pPointLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         lightArrays.pDirectionalLightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
         lightArrays.pSpotlightDataArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
-        lightArrays.pLightViewProjectionMatrices->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
+        lightArrays.pShadowPassLightInfoArray->updateSlotsMarkedAsNeedsUpdate(iCurrentFrameResourceIndex);
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(LightArrays) == 32, "consider notifying new arrays here"); // NOLINT
@@ -723,9 +723,9 @@ namespace ne {
             throw std::runtime_error(optionalError->getFullErrorMessage());
         }
 
-        // Create array to store view and projection matrices of light sources (for shadow mapping).
-        lightArrays.pLightViewProjectionMatrices = ShaderLightArray::create(
-            pRenderer, sLightViewProjectionMatricesShaderResourceName, [](size_t) {}, {});
+        // Create array to store info of light sources (for shadow pass).
+        lightArrays.pShadowPassLightInfoArray =
+            ShaderLightArray::create(pRenderer, sShadowPassLightInfoShaderResourceName, [](size_t) {}, {});
 
         // Create point light array.
         lightArrays.pPointLightDataArray = ShaderLightArray::create(
@@ -1412,7 +1412,7 @@ namespace ne {
         lightArrays.pPointLightDataArray = nullptr;
         lightArrays.pDirectionalLightDataArray = nullptr;
         lightArrays.pSpotlightDataArray = nullptr;
-        lightArrays.pLightViewProjectionMatrices = nullptr;
+        lightArrays.pShadowPassLightInfoArray = nullptr;
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(LightArrays) == 32, "consider resetting new arrays here"); // NOLINT
@@ -1450,8 +1450,8 @@ namespace ne {
         return sSpotlightsInCameraFrustumIndicesShaderResourceName;
     }
 
-    std::string LightingShaderResourceManager::getLightViewProjectionMatricesShaderResourceName() {
-        return sLightViewProjectionMatricesShaderResourceName;
+    std::string LightingShaderResourceManager::getShadowPassLightInfoArrayShaderResourceName() {
+        return sShadowPassLightInfoShaderResourceName;
     }
 
     std::unique_ptr<LightingShaderResourceManager>

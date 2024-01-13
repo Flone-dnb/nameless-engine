@@ -65,6 +65,7 @@ namespace ne {
         std::vector vEngineShaders = {
             EngineShaders::MeshNode::getVertexShader(bIsHlsl),
             EngineShaders::MeshNode::getFragmentShader(bIsHlsl),
+            EngineShaders::PointLight::getFragmentShader(bIsHlsl),
             EngineShaders::ForwardPlus::getCalculateGridFrustumComputeShader(bIsHlsl),
             EngineShaders::ForwardPlus::getPrepareLightCullingComputeShader(bIsHlsl),
             EngineShaders::ForwardPlus::getLightCullingComputeShader(bIsHlsl),
@@ -1182,27 +1183,26 @@ namespace ne {
     void Renderer::getDirectionalLightNodeShadowMappingInfo(
         DirectionalLightNode* pNode,
         ShadowMapHandle*& pShadowMapHandle,
-        unsigned int& iViewProjectionMatrixArrayIndex) {
+        unsigned int& iShadowPassLightInfoArrayIndex) {
         pShadowMapHandle = pNode->getShadowMapHandle();
-        iViewProjectionMatrixArrayIndex = pNode->getIndexIntoLightViewProjectionShaderArray();
+        iShadowPassLightInfoArrayIndex = pNode->getIndexIntoShadowPassInfoShaderArray();
     }
 
     void Renderer::getSpotlightNodeShadowMappingInfo(
         SpotlightNode* pNode,
         ShadowMapHandle*& pShadowMapHandle,
-        unsigned int& iViewProjectionMatrixArrayIndex) {
+        unsigned int& iShadowPassLightInfoArrayIndex) {
         pShadowMapHandle = pNode->getShadowMapHandle();
-        iViewProjectionMatrixArrayIndex = pNode->getIndexIntoLightViewProjectionShaderArray();
+        iShadowPassLightInfoArrayIndex = pNode->getIndexIntoShadowPassInfoShaderArray();
     }
 
-    void Renderer::getPointLightNodeShadowMappingInfo(
-        PointLightNode* pNode,
-        ShadowMapHandle*& pShadowMapHandle,
-        size_t iCubemapFaceIndex,
-        unsigned int& iViewProjectionMatrixArrayIndex) {
-        pShadowMapHandle = pNode->getShadowMapHandle();
-        iViewProjectionMatrixArrayIndex =
-            pNode->getIndexIntoLightViewProjectionShaderArray(iCubemapFaceIndex);
+    unsigned int
+    Renderer::getPointLightShadowPassLightInfoArrayIndex(PointLightNode* pNode, size_t iCubemapFaceIndex) {
+        return pNode->getIndexIntoShadowPassInfoShaderArray(iCubemapFaceIndex);
+    }
+
+    ShadowMapHandle* Renderer::getPointLightNodeShadowMapHandle(PointLightNode* pNode) {
+        return pNode->getShadowMapHandle();
     }
 
 } // namespace ne

@@ -59,6 +59,9 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
+        // Get shadow mapping usage.
+        const auto optionalShadowMappingUsage = pPipelineCreationSettings->getShadowMappingUsage();
+
         // Create pipeline.
         auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
             pRenderer,
@@ -69,6 +72,8 @@ namespace ne {
             pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
             "", // no compute shader
             pPipelineCreationSettings->isDepthBiasEnabled(),
+            optionalShadowMappingUsage.has_value() &&
+                optionalShadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS,
             pPipelineCreationSettings->isPixelBlendingEnabled()));
 
         // Generate Vulkan pipeline.
@@ -210,6 +215,7 @@ namespace ne {
         const std::set<ShaderMacro>& additionalFragmentShaderMacros,
         const std::string& sComputeShaderName,
         bool bEnableDepthBias,
+        bool bIsUsedForPointLightsShadowMapping,
         bool bUsePixelBlending)
         : Pipeline(
               pRenderer,
@@ -220,6 +226,7 @@ namespace ne {
               additionalFragmentShaderMacros,
               sComputeShaderName,
               bEnableDepthBias,
+              bIsUsedForPointLightsShadowMapping,
               bUsePixelBlending) {}
 
     std::optional<Error> VulkanPipeline::generateGraphicsPipeline() {
@@ -558,10 +565,10 @@ namespace ne {
         if (isDepthBiasEnabled()) {
             rasterizerStateInfo.depthBiasEnable = VK_TRUE;
             rasterizerStateInfo.depthBiasConstantFactor = static_cast<float>(
-                ShadowMapManager::getShadowMappingDepthBias() /
+                ShadowMapManager::getShadowPassDepthBias() /
                 2); // NOLINT: this gives results similar to DirectX
             rasterizerStateInfo.depthBiasClamp = 0.0F;
-            rasterizerStateInfo.depthBiasSlopeFactor = 1.0F;
+            rasterizerStateInfo.depthBiasSlopeFactor = ShadowMapManager::getShadowPassDepthSlopeFactor();
         }
 
         // Get settings.
@@ -592,7 +599,9 @@ namespace ne {
         depthStencilStateInfo.front = {}; // for stencil
         depthStencilStateInfo.back = {};  // for stencil
 
-        if (pFragmentShader != nullptr) {
+        if (!isDepthBiasEnabled() && pFragmentShader != nullptr) {
+            // This is main pass pipeline.
+
             // Disable depth writes because depth buffer will be filled during depth prepass
             // and depth buffer will be in read-only state during the main pass.
             depthStencilStateInfo.depthWriteEnable = VK_FALSE;
@@ -689,10 +698,14 @@ namespace ne {
         // Specify render pass.
         pipelineInfo.subpass = 0;
         if (pFragmentShader != nullptr) {
-            pipelineInfo.renderPass = pVulkanRenderer->getMainRenderPass();
+            if (isUsedForPointLightsShadowMapping()) {
+                pipelineInfo.renderPass = pVulkanRenderer->getShadowMappingRenderPass(true);
+            } else {
+                pipelineInfo.renderPass = pVulkanRenderer->getMainRenderPass();
+            }
         } else {
             if (isDepthBiasEnabled()) {
-                pipelineInfo.renderPass = pVulkanRenderer->getShadowMappingRenderPass();
+                pipelineInfo.renderPass = pVulkanRenderer->getShadowMappingRenderPass(false);
             } else {
                 pipelineInfo.renderPass = pVulkanRenderer->getDepthOnlyRenderPass();
             }

@@ -23,12 +23,14 @@ namespace ne {
         const std::set<ShaderMacro>& additionalPixelShaderMacros,
         const std::string& sComputeShaderName,
         bool bEnableDepthBias,
+        bool bIsUsedForPointLightsShadowMapping,
         bool bUsePixelBlending)
         : ShaderUser(pRenderer->getShaderManager()), sVertexShaderName(sVertexShaderName),
           sPixelShaderName(sPixelShaderName), sComputeShaderName(sComputeShaderName) {
         this->pRenderer = pRenderer;
         this->pPipelineManager = pPipelineManager;
         this->bEnableDepthBias = bEnableDepthBias;
+        this->bIsUsedForPointLightsShadowMapping = bIsUsedForPointLightsShadowMapping;
 
         this->additionalVertexShaderMacros = additionalVertexShaderMacros;
         this->additionalPixelShaderMacros = additionalPixelShaderMacros;
@@ -87,6 +89,8 @@ namespace ne {
     bool Pipeline::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
 
     bool Pipeline::isDepthBiasEnabled() const { return bEnableDepthBias; }
+
+    bool Pipeline::isUsedForPointLightsShadowMapping() const { return bIsUsedForPointLightsShadowMapping; }
 
     std::pair<std::mutex, std::unordered_set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
         return &mtxMaterialsThatUseThisPipeline;
@@ -286,5 +290,26 @@ namespace ne {
     }
 
     Renderer* Pipeline::getRenderer() const { return pRenderer; }
+
+    void Pipeline::ShaderConstantsData::findOffsetAndCopySpecialValueToConstant(
+        Pipeline* pPipeline, const char* pConstantName, unsigned int iValueToCopy) {
+        // Get offset of root constant.
+        const auto indexIt = uintConstantsOffsets.find(pConstantName);
+
+#if defined(DEBUG)
+        // Make sure it's valid.
+        if (indexIt == uintConstantsOffsets.end()) [[unlikely]] {
+            Error error(std::format(
+                "expected shader constant \"{}\" to be used on pipeline \"{}\"",
+                pConstantName,
+                pPipeline->getPipelineIdentifier()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+#endif
+
+        // Copy to constants.
+        pConstantsManager->copyValueToShaderConstant(indexIt->second, iValueToCopy);
+    }
 
 } // namespace ne

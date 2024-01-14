@@ -316,7 +316,7 @@ namespace ne {
     }
 
     float ShadowMapManager::getShadowPassDepthSlopeFactor() {
-        return 2.5F; // NOLINT
+        return 2.75F; // NOLINT
     }
 
     std::variant<std::unique_ptr<ShadowMapManager>, Error>

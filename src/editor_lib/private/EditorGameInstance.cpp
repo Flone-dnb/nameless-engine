@@ -54,7 +54,7 @@ namespace ne {
             const auto pDirectionalLightNode = gc_new<DirectionalLightNode>();
             getWorldRootNode()->addChildNode(pDirectionalLightNode);
             pDirectionalLightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
-                glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F)))); // NOLINT
+                glm::normalize(glm::vec3(1.0F, -0.5F, -1.0F)))); // NOLINT
             pDirectionalLightNode->setLightIntensity(0.1F);      // NOLINT
             pDirectionalLightNode->setLightColor(glm::vec3(0.0F, 0.0F, 1.0F));
 
@@ -62,24 +62,26 @@ namespace ne {
             const auto pPointLightNode = gc_new<PointLightNode>();
             getWorldRootNode()->addChildNode(pPointLightNode);
             pPointLightNode->setLightColor(glm::vec3(1.0F, 0.0F, 0.0F));
-            pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 3.0F));
+            pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 2.5F)); // NOLINT
+            pPointLightNode->setLightDistance(15.0F);
 
             // Spawn floor.
             const auto pFloorNode = gc_new<MeshNode>();
             pFloorNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
             getWorldRootNode()->addChildNode(pFloorNode);
             pFloorNode->setWorldScale(glm::vec3(100.0F, 100.0F, 1.0F)); // NOLINT
-            pFloorNode->getMaterial()->setRoughness(0.8F);
+            pFloorNode->getMaterial()->setRoughness(0.8F);              // NOLINT
 
             // Spawn spotlight.
             const auto pSpotlightNode = gc_new<SpotlightNode>();
             getWorldRootNode()->addChildNode(pSpotlightNode);
             pSpotlightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));
-            pSpotlightNode->setWorldLocation(glm::vec3(7.0F, 4.0F, 3.0F));
+            pSpotlightNode->setWorldLocation(glm::vec3(12.0F, 4.0F, 2.5F)); // NOLINT
             pSpotlightNode->setWorldRotation(
-                MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
-            pSpotlightNode->setLightInnerConeAngle(10.0F);
-            pSpotlightNode->setLightInnerConeAngle(20.0F);
+                MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(-0.5F, -1.0F, -1.0F))));
+            pSpotlightNode->setLightInnerConeAngle(10.0F); // NOLINT
+            pSpotlightNode->setLightInnerConeAngle(20.0F); // NOLINT
+            pSpotlightNode->setLightDistance(15.0F);       // NOLINT
 
             {
                 // Spawn cube 1.
@@ -104,6 +106,30 @@ namespace ne {
                 getWorldRootNode()->addChildNode(pCubeNode);
                 pCubeNode->setWorldLocation(glm::vec3(3.0F, -1.0F, 4.0F)); // NOLINT
                 pCubeNode->setWorldScale(glm::vec3(1.0F, 1.0F, 5.0F));     // NOLINT
+            }
+            {
+                // Spawn cube 4.
+                const auto pCubeNode = gc_new<MeshNode>();
+                pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pCubeNode);
+                pCubeNode->setWorldLocation(glm::vec3(3.0F, 4.5F, 0.75F)); // NOLINT
+                pCubeNode->setWorldScale(glm::vec3(0.5F, 0.5F, 0.5F));     // NOLINT
+            }
+            {
+                // Spawn cube 5.
+                const auto pCubeNode = gc_new<MeshNode>();
+                pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pCubeNode);
+                pCubeNode->setWorldLocation(glm::vec3(3.0F, 5.5F, 10.0F)); // NOLINT
+                pCubeNode->setWorldScale(glm::vec3(3.0F, 1.0F, 18.0F));    // NOLINT
+            }
+            {
+                // Spawn cube 6.
+                const auto pCubeNode = gc_new<MeshNode>();
+                pCubeNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                getWorldRootNode()->addChildNode(pCubeNode);
+                pCubeNode->setWorldLocation(glm::vec3(9.0F, -8.0F, 1.0F)); // NOLINT
+                pCubeNode->setWorldScale(glm::vec3(1.0F, 1.0F, 1.0F));     // NOLINT
             }
         });
     }

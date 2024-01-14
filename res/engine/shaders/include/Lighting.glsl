@@ -12,7 +12,8 @@
 #hlsl SamplerComparisonState shadowSampler : register(s1, space5);
 
 /** Bias that we use in point light shadow mapping. */
-#define POINT_LIGHT_SHADOW_BIAS 0.04F
+#define POINT_LIGHT_SHADOW_BIAS         0.03F
+#define POINT_LIGHT_SHADOW_SLOPE_FACTOR 2.75F
 
 /** Stores general lighting related data. */
 #glsl layout(binding = 50) uniform GeneralLightingData{
@@ -244,12 +245,34 @@ const float shadowFactor = shadowPercentLit /                                   
  *
  * @return Shadow factor.
  */
-float calculateShadowFactorForPointLight(vec3 fragmentWorldPosition, PointLight light){
+float calculateShadowFactorForPointLight(vec3 fragmentWorldPosition, vec3 fragmentNormalUnit, PointLight light){
+    // Get shadow map size.
+    uint iShadowMapWidth = 0;
+    uint iShadowMapHeight = 0;
+    uint iShadowMapMipCount = 0;
+#hlsl pointShadowMaps[light.iShadowMapIndex].GetDimensions(0, iShadowMapWidth, iShadowMapHeight, iShadowMapMipCount);
+#glsl iShadowMapWidth = textureSize(pointShadowMaps[light.iShadowMapIndex], 0).x;
+
+    // Calcualte texel size.
+    const float texelSize = 1.0F /
+#hlsl     (float)iShadowMapWidth;
+#glsl     float(iShadowMapWidth);
+
     // Calculate direction from light to fragment.
     const vec3 lightToFragmentDirection = fragmentWorldPosition - light.position.xyz;
 
+    // Calculate additional point light specific slope based bias factor.
+    const float biasSlopeFactor = 1.0F - abs(dot(normalize(lightToFragmentDirection), fragmentNormalUnit));
+
+    // Calculate bias that changes according to the lit distance.
+    const float baseBias = POINT_LIGHT_SHADOW_BIAS * (light.distance / 11.0F); // magic number
+
+    // Calculate the final bias.
+    const float finalBias
+        = baseBias + (baseBias * POINT_LIGHT_SHADOW_SLOPE_FACTOR * biasSlopeFactor) + baseBias * 1500.0F * texelSize;
+
     // Calculate distance between light and fragment.
-    const float distanceToLight = length(lightToFragmentDirection) - POINT_LIGHT_SHADOW_BIAS;
+    const float distanceToLight = length(lightToFragmentDirection) - finalBias;
 
     // Sample length (distance) from cubemap and compare with our distance.
     const float shadowPercentLit =
@@ -542,7 +565,7 @@ vec3 calculateColorFromLights(
         PointLight lightSource = POINT_LIGHTS_ARRAY[iLightIndex];
 
         // Calculate shadow from this light.
-        const float shadowFactor = calculateShadowFactorForPointLight(fragmentPositionWorldSpace, lightSource);
+        const float shadowFactor = calculateShadowFactorForPointLight(fragmentPositionWorldSpace, fragmentNormalUnit, lightSource);
 
         // Calculate light.
         const vec3 light = calculateColorFromPointLight(

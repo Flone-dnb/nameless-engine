@@ -59,7 +59,7 @@ namespace ne {
         iShadowMapSize = iNewShadowMapSize;
 
         // Notify renderer.
-        notifyRendererAboutChangedSettings();
+        notifyRendererAboutChangedSettings(true);
 
         // Save.
         auto optionalError = saveConfigurationToDisk();

@@ -2004,7 +2004,7 @@ namespace ne {
 
         return {};
     }
-    
+
     std::optional<Error> VulkanRenderer::createShadowTextureSampler() {
         // Make sure logical device is valid.
         if (pLogicalDevice == nullptr) [[unlikely]] {
@@ -2527,7 +2527,7 @@ namespace ne {
         std::array<VkClearValue, 1> vClearValues;
 
         static_assert(iMainRenderPassColorAttachmentIndex == 0);
-        vClearValues[iMainRenderPassColorAttachmentIndex].color = {0.0F, 0.0F, 0.0F, 1.0F};
+        vClearValues[iMainRenderPassColorAttachmentIndex].color = {{0.0F, 0.0F, 0.0F, 1.0F}};
 
         // no clear value for depth attachment because we load depth from depth prepass
 
@@ -2590,7 +2590,7 @@ namespace ne {
         // Specify clear color for attachments.
         std::array<VkClearValue, 2> vClearValues{};
         vClearValues[0].depthStencil = {getMaxDepth(), 0};
-        vClearValues[1].color = {0.0F, 0.0F, 0.0F, 0.0F};
+        vClearValues[1].color = {{0.0F, 0.0F, 0.0F, 0.0F}};
 
         renderPassInfo.clearValueCount = static_cast<uint32_t>(vClearValues.size());
         renderPassInfo.pClearValues = vClearValues.data();

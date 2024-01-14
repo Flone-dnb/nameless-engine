@@ -578,7 +578,7 @@ func copy_ext_licenses(ext_directory string, build_directory string) {
 	copy(engine_license_file_path, filepath.Join(build_directory, "nameless-engine.txt"))
 	copied_licenses_count += 1
 
-	fmt.Println(log_prefix, "copied", copied_licenses_count, "license file(-s)")
+	fmt.Println(log_prefix, "copied", copied_licenses_count, "license file(s)")
 }
 
 // Copies the `src` file's contents into the `dst` file.

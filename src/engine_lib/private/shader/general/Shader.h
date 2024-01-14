@@ -28,6 +28,15 @@ namespace ne {
         virtual ~Shader() = default;
 
         /**
+         * Returns name of the shader resource that stores frame-global constants.
+         *
+         * @return Shader resource name.
+         */
+        static constexpr const char* getFrameConstantsShaderResourceName() {
+            return pFrameConstantBufferName;
+        }
+
+        /**
          * Returns the current amount shaders (vertex, pixel, etc.) loaded into the memory (RAM/VRAM).
          *
          * @return Current amount of shaders loaded into the memory (RAM/VRAM).
@@ -227,5 +236,8 @@ namespace ne {
 
         /** Name of the key used to store compiled bytecode hash in the metadata file. */
         static inline const auto sCompiledBytecodeHashKeyName = "compiled_bytecode_hash";
+
+        /** Name of the `cbuffer`/`uniform` resource used to store frame data in shaders. */
+        static constexpr auto pFrameConstantBufferName = "frameData";
     };
 } // namespace ne

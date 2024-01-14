@@ -296,9 +296,9 @@ namespace ne {
 
     std::variant<std::filesystem::path, Error> Shader::getPathToCompiledShader() {
         if (!std::filesystem::exists(pathToCompiledShader)) [[unlikely]] {
-            const Error err(std::format(
+            Error error(std::format(
                 "path to compiled shader \"{}\" no longer exists", pathToCompiledShader.string()));
-            return err;
+            return error;
         }
         return pathToCompiledShader;
     }

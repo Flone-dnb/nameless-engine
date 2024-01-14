@@ -11,6 +11,7 @@
 #include "shader/general/EngineShaderConstantMacros.hpp"
 #include "shader/general/EngineShaderNames.hpp"
 #include "misc/Profiler.hpp"
+#include "shader/general/Shader.h"
 
 namespace ne {
 
@@ -1179,7 +1180,7 @@ namespace ne {
             GpuResource* pPointLightArray,
             GpuResource* pSpotlightArray,
             GpuResource* pNonCulledPointLightsIndicesArray,
-            GpuResource* pNonCulledSpotlightsIndicesArray) {
+            GpuResource* pNonCulledSpotlightsIndicesArray) const {
         PROFILE_FUNC;
 
         // Resources that store:
@@ -1212,7 +1213,7 @@ namespace ne {
         // (Re)bind current frame resource (because the resource will change every frame).
         optionalError = pComputeInterface->bindResource(
             pCurrentFrameResource->pFrameConstantBuffer->getInternalResource(),
-            "frameData",
+            Shader::getFrameConstantsShaderResourceName(),
             ComputeResourceUsage::CONSTANT_BUFFER,
             true);
         if (optionalError.has_value()) [[unlikely]] {

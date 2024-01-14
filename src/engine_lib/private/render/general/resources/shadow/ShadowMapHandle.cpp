@@ -162,7 +162,7 @@ namespace ne {
 
             // Create framebuffer.
             const auto result =
-                vkCreateFramebuffer(pLogicalDevice, &framebufferInfo, nullptr, &vFramebuffers[0]);
+                vkCreateFramebuffer(pLogicalDevice, &framebufferInfo, nullptr, vFramebuffers.data());
             if (result != VK_SUCCESS) [[unlikely]] {
                 Error error(
                     std::format("failed to create a framebuffer, error: {}", string_VkResult(result)));

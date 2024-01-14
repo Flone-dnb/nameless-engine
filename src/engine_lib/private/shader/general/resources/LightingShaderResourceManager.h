@@ -799,7 +799,7 @@ namespace ne {
                         GpuResource* pPointLightArray,
                         GpuResource* pSpotlightArray,
                         GpuResource* pNonCulledPointLightsIndicesArray,
-                        GpuResource* pNonCulledSpotlightsIndicesArray);
+                        GpuResource* pNonCulledSpotlightsIndicesArray) const;
 
                     /** Compute interface. */
                     std::unique_ptr<ComputeShaderInterface> pComputeInterface;

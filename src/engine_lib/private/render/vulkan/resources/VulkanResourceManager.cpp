@@ -577,7 +577,7 @@ namespace ne {
         imageInfo.extent.height = static_cast<uint32_t>(iImageHeight);
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = iTextureMipLevelCount;
-        imageInfo.arrayLayers = bIsCubeMap ? 6 : 1;
+        imageInfo.arrayLayers = bIsCubeMap ? 6 : 1; // NOLINT: cubemap face count
         imageInfo.format = imageFormat;
         imageInfo.tiling = imageTilingMode;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;

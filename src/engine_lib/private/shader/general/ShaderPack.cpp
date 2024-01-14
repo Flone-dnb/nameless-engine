@@ -24,7 +24,7 @@ namespace ne {
             pathToShaderDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
 
         // Create an empty shader pack.
-        const auto pShaderPack = std::shared_ptr<ShaderPack>(
+        auto pShaderPack = std::shared_ptr<ShaderPack>(
             new ShaderPack(shaderDescription.sShaderName, shaderDescription.shaderType));
 
         // Choose valid configurations depending on the shader type.

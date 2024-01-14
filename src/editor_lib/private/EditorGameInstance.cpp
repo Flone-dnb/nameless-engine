@@ -27,7 +27,7 @@ namespace ne {
     void EditorGameInstance::onGameStarted() {
         // Create and setup camera.
         pEditorCamera = std::make_shared<TransientCamera>();
-        pEditorCamera->setLocation(glm::vec3(-5.0F, 0.0F, 3.0F));
+        pEditorCamera->setLocation(glm::vec3(-5.0F, 0.0F, 3.0F)); // NOLINT
         updateCameraSpeed();
 
         // Make it active.
@@ -63,7 +63,7 @@ namespace ne {
             getWorldRootNode()->addChildNode(pPointLightNode);
             pPointLightNode->setLightColor(glm::vec3(1.0F, 0.0F, 0.0F));
             pPointLightNode->setWorldLocation(glm::vec3(3.0F, 4.0F, 2.5F)); // NOLINT
-            pPointLightNode->setLightDistance(15.0F);
+            pPointLightNode->setLightDistance(15.0F);                       // NOLINT
 
             // Spawn floor.
             const auto pFloorNode = gc_new<MeshNode>();
@@ -77,11 +77,11 @@ namespace ne {
             getWorldRootNode()->addChildNode(pSpotlightNode);
             pSpotlightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));
             pSpotlightNode->setWorldLocation(glm::vec3(12.0F, 4.0F, 2.5F)); // NOLINT
-            pSpotlightNode->setWorldRotation(
-                MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(-0.5F, -1.0F, -1.0F))));
-            pSpotlightNode->setLightInnerConeAngle(10.0F); // NOLINT
-            pSpotlightNode->setLightInnerConeAngle(20.0F); // NOLINT
-            pSpotlightNode->setLightDistance(15.0F);       // NOLINT
+            pSpotlightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
+                glm::normalize(glm::vec3(-0.5F, -1.0F, -1.0F)))); // NOLINT
+            pSpotlightNode->setLightInnerConeAngle(10.0F);        // NOLINT
+            pSpotlightNode->setLightInnerConeAngle(20.0F);        // NOLINT
+            pSpotlightNode->setLightDistance(15.0F);              // NOLINT
 
             {
                 // Spawn cube 1.

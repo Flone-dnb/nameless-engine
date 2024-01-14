@@ -563,7 +563,7 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        const auto sMissingSwapChainDetailDescription = std::get<std::string>(std::move(result));
+        auto sMissingSwapChainDetailDescription = std::get<std::string>(std::move(result));
         if (!sMissingSwapChainDetailDescription.empty()) {
             return sMissingSwapChainDetailDescription;
         }
@@ -3958,7 +3958,7 @@ namespace ne {
         // Make sure all required device extensions are available on this GPU.
         for (const auto& pRequiredExtensionName : vUsedDeviceExtensionNames) {
             bool bFound = false;
-            const auto sRequiredExtensionName = std::string(pRequiredExtensionName);
+            auto sRequiredExtensionName = std::string(pRequiredExtensionName);
 
             for (const auto& availableExtensionInfo : vAvailableDeviceExtensions) {
                 if (sRequiredExtensionName == availableExtensionInfo.extensionName) {

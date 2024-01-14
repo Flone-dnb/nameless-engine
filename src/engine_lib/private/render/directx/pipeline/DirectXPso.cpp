@@ -249,7 +249,7 @@ namespace ne {
         mtxInternalResources.second.rootParameterIndices =
             std::move(generatedRootSignature.rootParameterIndices);
         mtxInternalResources.second.vSpecialRootParameterIndices =
-            std::move(generatedRootSignature.vSpecialRootParameterIndices);
+            generatedRootSignature.vSpecialRootParameterIndices; // trivially-copyable type
 
         // Prepare to create a PSO using these shaders.
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -419,7 +419,7 @@ namespace ne {
         mtxInternalResources.second.rootParameterIndices =
             std::move(generatedRootSignature.rootParameterIndices);
         mtxInternalResources.second.vSpecialRootParameterIndices =
-            std::move(generatedRootSignature.vSpecialRootParameterIndices);
+            generatedRootSignature.vSpecialRootParameterIndices; // trivially-copyable type
 
         // Prepare to create a PSO using these shaders.
         D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};

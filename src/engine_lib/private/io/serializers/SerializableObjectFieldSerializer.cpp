@@ -57,13 +57,12 @@ namespace ne {
         const auto pFromGuid = fromArchetype.getProperty<Guid>(false);
         const auto pToGuid = toArchetype.getProperty<Guid>(false);
         if (pFromGuid == nullptr) {
-            const Error err(
+            Error err(
                 std::format("The type {} does not have a GUID assigned to it", fromArchetype.getName()));
             return err;
         }
         if (pToGuid == nullptr) {
-            const Error err(
-                std::format("The type {} does not have a GUID assigned to it", toArchetype.getName()));
+            Error err(std::format("The type {} does not have a GUID assigned to it", toArchetype.getName()));
             return err;
         }
 

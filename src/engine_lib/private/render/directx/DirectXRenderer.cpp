@@ -78,7 +78,7 @@ namespace ne {
 
     DirectXRenderer::~DirectXRenderer() {
         // Just in case, wait for all work to be finished.
-        waitForGpuToFinishWorkUpToThisPoint();
+        DirectXRenderer::waitForGpuToFinishWorkUpToThisPoint();
 
         // Explicitly destroy some GPU resources.
         resetLightingShaderResourceManager();

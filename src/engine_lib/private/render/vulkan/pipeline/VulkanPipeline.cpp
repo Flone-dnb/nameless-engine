@@ -300,14 +300,6 @@ namespace ne {
                 ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
         }
 
-        // Bind "frameData" descriptors to frame uniform buffer.
-        optionalError = bindFrameDataDescriptors();
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = std::move(optionalError.value());
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-
         // Get Vulkan resource manager.
         const auto pVulkanResourceManager =
             dynamic_cast<VulkanResourceManager*>(pVulkanRenderer->getResourceManager());
@@ -324,6 +316,14 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
+        }
+
+        // Bind "frameData" descriptors to frame uniform buffer.
+        optionalError = bindFrameDataDescriptors();
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
 
         return {};
@@ -912,6 +912,17 @@ namespace ne {
             return Error("expected a Vulkan renderer");
         }
 
+        // Lock internal resources.
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // See if this pipeline uses the resource.
+        const auto it =
+            mtxInternalResources.second.resourceBindings.find(Shader::getFrameConstantsShaderResourceName());
+        if (it == mtxInternalResources.second.resourceBindings.end()) {
+            return {}; // not used
+        }
+        const auto iBindingIndex = it->second;
+
         // Get logical device.
         const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
         if (pLogicalDevice == nullptr) [[unlikely]] {
@@ -966,8 +977,7 @@ namespace ne {
             descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             descriptorUpdateInfo.dstSet =
                 mtxInternalResources.second.vDescriptorSets[i]; // descriptor set to update
-            descriptorUpdateInfo.dstBinding =
-                DescriptorSetLayoutGenerator::getFrameUniformBufferBindingIndex();
+            descriptorUpdateInfo.dstBinding = iBindingIndex;
             descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
             descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update

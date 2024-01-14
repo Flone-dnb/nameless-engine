@@ -320,7 +320,7 @@ namespace ne {
             glm::lookAtLH(worldLocation, worldLocation + getWorldForwardDirection(), getWorldUpDirection());
 
         // Prepare FOV for shadow map capture.
-        static_assert(maxConeAngle <= 90.0F, "change FOV for shadow map capture");
+        static_assert(maxConeAngle <= 90.0F, "change FOV for shadow map capture"); // NOLINT
         const auto fovY = glm::radians(outerConeAngle * 2.0F); // x2 to convert [0..90] degree to [0..180] FOV
 
         // Calculate projection matrix.

@@ -131,7 +131,7 @@ namespace ne {
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> bindShadowMapToPipeline(
+        [[nodiscard]] static std::optional<Error> bindShadowMapToPipeline(
             ShadowMapHandle* pShadowMapHandle,
             ShaderArrayIndex* pArrayIndex,
             Pipeline* pPipeline,

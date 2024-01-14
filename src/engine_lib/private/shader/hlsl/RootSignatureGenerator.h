@@ -349,9 +349,6 @@ namespace ne {
             std::vector<RootParameter>& vRootParameters,
             std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices);
 
-        /** Name of the `cbuffer` resource used to store frame data in HLSL shaders. */
-        static inline const std::string sFrameConstantBufferName = "frameData";
-
         /** Name of the shader `cbuffer` that will be considered as buffer that stores root constants. */
         static inline const std::string sRootConstantsVariableName = "constants";
 

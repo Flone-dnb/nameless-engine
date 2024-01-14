@@ -155,15 +155,15 @@ namespace ne RNAMESPACE() {
          * @remark Should be exactly the same as constant buffer in shaders.
          */
         struct MeshShaderConstants {
-            /** Matrix to transform positions from model space to world space. */
-            alignas(iVkMat4Alignment) glm::mat4x4 world = glm::identity<glm::mat4x4>();
+            /** Matrix to transform positions from model space to worldMatrix space. */
+            alignas(iVkMat4Alignment) glm::mat4x4 worldMatrix = glm::identity<glm::mat4x4>();
 
             /**
              * 3x3 matrix for transforming normals from model space to world space.
              *
              * @remark Using 4x4 matrix for shader alignment/packing simplicity.
              */
-            alignas(iVkMat4Alignment) glm::mat4x4 normal = glm::identity<glm::mat4x4>();
+            alignas(iVkMat4Alignment) glm::mat4x4 normalMatrix = glm::identity<glm::mat4x4>();
         };
 
         /** Stores internal GPU resources. */

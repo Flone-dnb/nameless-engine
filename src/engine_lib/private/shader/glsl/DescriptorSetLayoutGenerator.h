@@ -96,22 +96,6 @@ namespace ne {
         DescriptorSetLayoutGenerator& operator=(const DescriptorSetLayoutGenerator&) = delete;
 
         /**
-         * Returns binding index that shaders should use for "frameData" uniform buffer.
-         *
-         * @return Binding index in descriptor set layout.
-         */
-        static constexpr uint32_t getFrameUniformBufferBindingIndex() {
-            return iFrameUniformBufferBindingIndex;
-        }
-
-        /**
-         * Returns binding name that shaders should use for "frameData" uniform buffer.
-         *
-         * @return Binding name in descriptor set layout.
-         */
-        static constexpr const char* getFrameUniformBufferBindingName() { return pFrameUniformBufferName; }
-
-        /**
          * Collection information from the specified SPIR-V bytecode that can be used to generate
          * a descriptor set layout.
          *
@@ -170,11 +154,5 @@ namespace ne {
             uint32_t iBindingIndex,
             const Collected::DescriptorSetLayoutBindingInfo& bindingInfo,
             bool bIsComputeShader);
-
-        /** Name of the `uniform` buffer used to store frame data in GLSL shaders. */
-        static constexpr auto pFrameUniformBufferName = "frameData";
-
-        /** Binding index that shaders should use for "frameData" uniform buffer. */
-        static constexpr uint32_t iFrameUniformBufferBindingIndex = 0;
     };
 } // namespace ne

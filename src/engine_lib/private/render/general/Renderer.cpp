@@ -1003,7 +1003,7 @@ namespace ne {
 
                                 // Make sure mesh is in frustum.
                                 if (!pCameraFrustum->isAabbInFrustum(
-                                        *pMeshNode->getAABB(), pMtxMeshShaderConstants->second.world)) {
+                                        *pMeshNode->getAABB(), pMtxMeshShaderConstants->second.worldMatrix)) {
                                     renderStats.frameTemporaryStatistics.iCulledMeshCount.fetch_add(1);
                                     continue;
                                 }

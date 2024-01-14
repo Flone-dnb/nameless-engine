@@ -75,11 +75,11 @@ namespace ne {
 
     std::optional<std::filesystem::path>
     FileDialog::selectDirectory(const std::string& sTitle, const std::filesystem::path& directory) {
-        const auto sResult = pfd::select_folder( // NOLINT: potential memory leak in `pfd`
-                                 sTitle,
-                                 directory.string(),
-                                 pfd::opt::none)
-                                 .result();
+        auto sResult = pfd::select_folder( // NOLINT: potential memory leak in `pfd`
+                           sTitle,
+                           directory.string(),
+                           pfd::opt::none)
+                           .result();
 
         if (sResult.empty()) {
             return {};

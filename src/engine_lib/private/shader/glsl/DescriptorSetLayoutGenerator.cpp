@@ -244,18 +244,6 @@ namespace ne {
         }
         auto& vertexShaderDescriptorLayoutInfo = pMtxVertexDescriptorLayoutInfo->second.value();
 
-        // Make sure that vertex shader uses frame uniform buffer on expected binding index.
-        auto vertexFrameBufferIt =
-            vertexShaderDescriptorLayoutInfo.bindingInfo.find(iFrameUniformBufferBindingIndex);
-        if (vertexFrameBufferIt == vertexShaderDescriptorLayoutInfo.bindingInfo.end()) [[unlikely]] {
-            return Error(std::format(
-                "expected to find a `uniform` buffer named \"{}\" at binding {} to be used in vertex "
-                "shader \"{}\"",
-                pFrameUniformBufferName,
-                iFrameUniformBufferBindingIndex,
-                pVertexShader->getShaderName()));
-        }
-
         // Prepare some data to be used.
         struct LayoutBindingInfo {
             uint32_t iBindingIndex = 0;
@@ -391,19 +379,6 @@ namespace ne {
             info.iBindingIndex = iBindingIndex;
             info.descriptorType = bindingInfo.resourceType;
             resourceBindings[bindingInfo.sResourceName] = info;
-        }
-
-        // Make sure we have a "frameData" binding at expected index.
-        const auto frameDataBindingIt = resourceBindings.find(pFrameUniformBufferName);
-        if (frameDataBindingIt == resourceBindings.end()) [[unlikely]] {
-            return Error(std::format("expected to find \"{}\" binding", pFrameUniformBufferName));
-        }
-        if (frameDataBindingIt->second.iBindingIndex != iFrameUniformBufferBindingIndex) [[unlikely]] {
-            return Error(std::format(
-                "expected \"{}\" resource to use the following binding index: {} (actual: {})",
-                pFrameUniformBufferName,
-                iFrameUniformBufferBindingIndex,
-                frameDataBindingIt->second.iBindingIndex));
         }
 
         // Self check: make sure bindings and binding flags arrays have equal size.

@@ -556,8 +556,7 @@ namespace ne {
         }
 
         // Calculate hash of the reflection file.
-        const auto sReflectionFileHash =
-            ShaderDescription::getFileHash(pathToReflectionFile, getShaderName());
+        auto sReflectionFileHash = ShaderDescription::getFileHash(pathToReflectionFile, getShaderName());
         if (sReflectionFileHash.empty()) [[unlikely]] {
             return Error(
                 std::format("failed to calculate hash of the file at \"{}\"", pathToReflectionFile.string()));

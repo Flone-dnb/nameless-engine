@@ -16,11 +16,14 @@ namespace ne {
         : pRenderer(pRenderer), sShaderArrayResourceName(sShaderArrayResourceName) {}
 
     std::variant<std::unique_ptr<ShadowMapArrayIndexManager>, Error> ShadowMapArrayIndexManager::create(
-        Renderer* pRenderer, GpuResourceManager* pResourceManager, const std::string& sArrayName) {
+        Renderer* pRenderer,
+        GpuResourceManager* pResourceManager,
+        const std::string& sShaderArrayResourceName) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Create DirectX manager.
-            auto result = DirectXShadowMapArrayIndexManager::create(pRenderer, pResourceManager, sArrayName);
+            auto result = DirectXShadowMapArrayIndexManager::create(
+                pRenderer, pResourceManager, sShaderArrayResourceName);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -33,7 +36,7 @@ namespace ne {
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             // Create Vulkan manager.
             return std::unique_ptr<VulkanShadowMapArrayIndexManager>(
-                new VulkanShadowMapArrayIndexManager(pRenderer, sArrayName));
+                new VulkanShadowMapArrayIndexManager(pRenderer, sShaderArrayResourceName));
         }
 
         return Error("unsupported renderer");

@@ -461,7 +461,7 @@ namespace ne {
             const auto pathToOriginalFile = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
                                             getPathDeserializedFromRelativeToRes().value().first;
             if (!std::filesystem::exists(pathToOriginalFile)) {
-                const Error error(std::format(
+                Error error(std::format(
                     "object of type \"{}\" has the path it was deserialized from ({}, ID {}) but this "
                     "file \"{}\" does not exist",
                     getArchetype().getName(),

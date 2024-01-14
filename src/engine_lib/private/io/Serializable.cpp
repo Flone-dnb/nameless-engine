@@ -361,7 +361,7 @@ namespace ne {
         // to the file they were deserialized from.
 
         // Create section.
-        const auto sSectionName = std::format("{}.{}", sEntityId, pGuid->getGuid());
+        auto sSectionName = std::format("{}.{}", sEntityId, pGuid->getGuid());
 
         // Prepare data.
         struct Data {

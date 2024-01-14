@@ -396,7 +396,7 @@ namespace ne {
 
     void GameManager::createWorld(
         const std::function<void(const std::optional<Error>&)>& onCreated, size_t iWorldSize) {
-        addDeferredTask([=]() {
+        addDeferredTask([this, onCreated, iWorldSize]() {
             std::scoped_lock guard(mtxWorld.first);
 
             destroyAndCleanExistingWorld();
@@ -416,7 +416,7 @@ namespace ne {
         const std::function<void(const std::optional<Error>&)>& onLoaded,
         const std::filesystem::path& pathToNodeTree,
         size_t iWorldSize) {
-        addDeferredTask([=]() {
+        addDeferredTask([this, onLoaded, pathToNodeTree, iWorldSize]() {
             std::scoped_lock guard(mtxWorld.first);
 
             destroyAndCleanExistingWorld();

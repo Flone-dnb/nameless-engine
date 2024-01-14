@@ -613,7 +613,9 @@ namespace ne {
                     pResource->getResourceName()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
-            } else if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+            }
+
+            if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
                 // Set dimension.
                 rtvDesc.ViewDimension = resourceDesc.SampleDesc.Count > 1 ? D3D12_RTV_DIMENSION_TEXTURE2DMS
                                                                           : D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -660,7 +662,9 @@ namespace ne {
                     pResource->getResourceName()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
-            } else if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+            }
+
+            if (resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
                 // Set dimension.
                 dsvDesc.ViewDimension = resourceDesc.SampleDesc.Count > 1 ? D3D12_DSV_DIMENSION_TEXTURE2DMS
                                                                           : D3D12_DSV_DIMENSION_TEXTURE2D;

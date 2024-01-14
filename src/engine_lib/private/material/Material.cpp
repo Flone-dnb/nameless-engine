@@ -1055,5 +1055,9 @@ namespace ne {
         return pixelMacros;
     }
 
-    std::set<ShaderMacro> Material::getVertexShaderMacrosForCurrentState() { return {}; }
+    std::set<ShaderMacro>
+    Material::getVertexShaderMacrosForCurrentState() { // NOLINT: should not be static (since it will later
+                                                       // contain some logic)
+        return {};
+    }
 } // namespace ne

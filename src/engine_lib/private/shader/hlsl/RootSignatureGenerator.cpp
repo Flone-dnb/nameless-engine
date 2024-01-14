@@ -298,14 +298,15 @@ namespace ne {
                 iRootParameterIndex;
             vRootParameters.push_back(rootParameter.generateSingleDescriptorDescription());
 
-            addedRootParameterNames.insert(sFrameConstantBufferName);
-            rootParameterIndices[sFrameConstantBufferName] = iRootParameterIndex;
+            addedRootParameterNames.insert(Shader::getFrameConstantsShaderResourceName());
+            rootParameterIndices[Shader::getFrameConstantsShaderResourceName()] = iRootParameterIndex;
 
             bAddedFrameData = true;
         };
 
         // Check if vertex shader uses frame data cbuffer.
-        auto frameDataIndexIt = vertexRootSigInfo.rootParameterIndices.find(sFrameConstantBufferName);
+        auto frameDataIndexIt =
+            vertexRootSigInfo.rootParameterIndices.find(Shader::getFrameConstantsShaderResourceName());
         if (frameDataIndexIt != vertexRootSigInfo.rootParameterIndices.end()) {
             // Add root parameter.
             addFrameDataParameter(frameDataIndexIt->second.second);
@@ -313,7 +314,8 @@ namespace ne {
 
         if (!bAddedFrameData && pPixelRootSigInfo != nullptr) {
             // Check for pixel shader.
-            frameDataIndexIt = pPixelRootSigInfo->rootParameterIndices.find(sFrameConstantBufferName);
+            frameDataIndexIt =
+                pPixelRootSigInfo->rootParameterIndices.find(Shader::getFrameConstantsShaderResourceName());
             if (frameDataIndexIt != pPixelRootSigInfo->rootParameterIndices.end()) {
                 // Add root parameter.
                 addFrameDataParameter(frameDataIndexIt->second.second);
@@ -389,7 +391,7 @@ namespace ne {
                 "(expected "
                 "the shader to have at least `cbuffer` \"{}\")",
                 pVertexShader->getShaderName(),
-                sFrameConstantBufferName));
+                Shader::getFrameConstantsShaderResourceName()));
         }
 
         // Merge root constants (if used).
@@ -490,7 +492,7 @@ namespace ne {
         Generated merged;
         merged.pRootSignature = std::move(pRootSignature);
         merged.rootParameterIndices = std::move(rootParameterIndices);
-        merged.vSpecialRootParameterIndices = std::move(vSpecialRootParameterIndices);
+        merged.vSpecialRootParameterIndices = vSpecialRootParameterIndices; // trivially-copyable type
         merged.rootConstantOffsets = std::move(rootConstantOffsets);
         return merged;
     }

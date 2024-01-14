@@ -312,7 +312,7 @@ namespace ne {
         // Cubemap face 5:
         // -Z axis should be forward (in our case it's minus up)
         // +Y axis should be up (in our case it's right)
-        dataGroups[5].shaderData.viewProjectionMatrix =
+        dataGroups[5].shaderData.viewProjectionMatrix = // NOLINT
             projectionMatrix *
             glm::lookAtLH(
                 worldLocation, worldLocation - Globals::WorldDirection::up, Globals::WorldDirection::right);

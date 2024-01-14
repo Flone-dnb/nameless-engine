@@ -437,6 +437,22 @@ namespace ne {
         static std::variant<std::string, Error>
         isGpuSupportsUsedDeviceExtensions(VkPhysicalDevice pGpuDevice);
 
+        /**
+         * Adds render pass start commands to the specified command buffer with the specified
+         * shadow mapping render pass.
+         *
+         * @param pShadowMappingRenderPass @ref pShadowMappingDirectionalSpotRenderPass or @ref
+         * pShadowMappingPointRenderPass.
+         * @param pCommandBuffer           Command buffer to modify.
+         * @param pFramebufferToUse        Framebuffer to use.
+         * @param iShadowMapSize           Size of the framebuffer image.
+         */
+        static void startShadowMappingRenderPass(
+            VkRenderPass pShadowMappingRenderPass,
+            VkCommandBuffer pCommandBuffer,
+            VkFramebuffer pFramebufferToUse,
+            uint32_t iShadowMapSize);
+
 #if defined(DEBUG)
         /**
          * Makes sure that @ref vUsedValidationLayerNames are supported.
@@ -791,22 +807,6 @@ namespace ne {
          * @param iAcquiredImageIndex Index of the framebuffer to use.
          */
         void startDepthOnlyRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
-
-        /**
-         * Adds render pass start commands to the specified command buffer with the specified
-         * shadow mapping render pass.
-         *
-         * @param pShadowMappingRenderPass @ref pShadowMappingDirectionalSpotRenderPass or @ref
-         * pShadowMappingPointRenderPass.
-         * @param pCommandBuffer           Command buffer to modify.
-         * @param pFramebufferToUse        Framebuffer to use.
-         * @param iShadowMapSize           Size of the framebuffer image.
-         */
-        void startShadowMappingRenderPass(
-            VkRenderPass pShadowMappingRenderPass,
-            VkCommandBuffer pCommandBuffer,
-            VkFramebuffer pFramebufferToUse,
-            uint32_t iShadowMapSize);
 
         /**
          * Submits commands to draw world from the perspective of all spawned light sources to capture

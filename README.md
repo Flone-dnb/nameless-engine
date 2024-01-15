@@ -1,6 +1,6 @@
 # nameless-engine
 
-TODO: screenshot game/editor
+![](screenshot.png?raw=true)
 
 ### Supported platforms
 

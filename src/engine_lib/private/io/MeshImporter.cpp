@@ -65,29 +65,38 @@ namespace ne {
         const std::string sTexturesDirectoryName = "textures";
         const std::string sImageExtension = ".png";
         const std::string sDiffuseTextureName = "diffuse";
-        std::string sPathToImportTexturesRelativeRes = sPathToOutputDirRelativeRes;
-        if (!sPathToImportTexturesRelativeRes.ends_with('/')) {
-            sPathToImportTexturesRelativeRes += "/";
+        std::string sBasePathToImportTexturesRelativeRes = sPathToOutputDirRelativeRes;
+        if (!sBasePathToImportTexturesRelativeRes.ends_with('/')) {
+            sBasePathToImportTexturesRelativeRes += "/";
         }
-        sPathToImportTexturesRelativeRes += sTexturesDirectoryName;
+        sBasePathToImportTexturesRelativeRes +=
+            sTexturesDirectoryName + "_" +
+            std::to_string(iGltfNodeProcessedCount); // to make sure directory names are unique
 
-        // Prepare paths.
+        // Clear temp directory.
         const std::filesystem::path pathToTempFiles =
             ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sPathToOutputDirRelativeRes /
             "temp";
-        const std::filesystem::path pathToImportTextures =
-            ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sPathToImportTexturesRelativeRes;
         if (std::filesystem::exists(pathToTempFiles)) {
             std::filesystem::remove_all(pathToTempFiles);
         }
         std::filesystem::create_directory(pathToTempFiles);
-        if (std::filesystem::exists(pathToImportTextures)) {
-            std::filesystem::remove_all(pathToImportTextures);
-        }
-        std::filesystem::create_directory(pathToImportTextures);
 
         // Go through each mesh in this node.
         for (size_t iPrimitive = 0; iPrimitive < mesh.primitives.size(); iPrimitive++) {
+            // Append primitive index for unique names.
+            const auto sPathToImportTexturesRelativeRes =
+                sBasePathToImportTexturesRelativeRes + "_" + std::to_string(iPrimitive);
+
+            // Prepare textures directory.
+            const std::filesystem::path pathToImportTextures =
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
+                sPathToImportTexturesRelativeRes;
+            if (std::filesystem::exists(pathToImportTextures)) {
+                std::filesystem::remove_all(pathToImportTextures);
+            }
+            std::filesystem::create_directory(pathToImportTextures);
+
             auto& primitive = mesh.primitives[iPrimitive];
 
             // Allocate a new mesh data.
@@ -388,7 +397,7 @@ namespace ne {
             vMeshNodes->push_back(std::move(pMeshNode));
         }
 
-        // Cleanup.
+        // Delete temp directory.
         std::filesystem::remove_all(pathToTempFiles);
 
         return vMeshNodes;

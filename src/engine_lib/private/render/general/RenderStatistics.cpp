@@ -70,7 +70,13 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(FrameTemporaryStatistics) == 200, "save and reset new statistics here"); // NOLINT
+            sizeof(FrameTemporaryStatistics) ==
+#if defined(WIN32)
+                200, // NOLINT: current size
+#else
+                120, // NOLINT: current size
+#endif
+            "save and reset new statistics here");
 #endif
     }
 

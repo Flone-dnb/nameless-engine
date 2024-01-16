@@ -1,5 +1,8 @@
 #pragma once
 
+// Standard.
+#include <cstddef>
+
 namespace ne {
     /** Describes various pipeline types. */
     enum class PipelineType : size_t {

@@ -234,12 +234,12 @@ namespace ne {
 
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
-            sizeof(RenderSettings) == 200,
-            "consider updating old / adding new checks here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 200, // NOLINT: current class size
+            "consider updating old / adding new checks here");
 #elif defined(DEBUG)
         static_assert(
-            sizeof(RenderSettings) == 168,
-            "consider updating old / adding new checks here"); // NOLINT: current class size
+            sizeof(RenderSettings) == 176, // NOLINT: current class size
+            "consider updating old / adding new checks here");
 #endif
     }
 

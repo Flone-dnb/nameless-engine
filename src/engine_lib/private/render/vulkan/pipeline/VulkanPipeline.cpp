@@ -151,7 +151,7 @@ namespace ne {
             "release new resources here");
 #elif defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 216, // NOLINT: current struct size
+            sizeof(InternalResources) == 168, // NOLINT: current struct size
             "release new resources here");
 #endif
 

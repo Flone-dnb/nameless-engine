@@ -5,6 +5,7 @@
 #include <memory>
 #include <filesystem>
 #include <optional>
+#include <atomic>
 
 // Custom.
 #include "misc/Error.h"

@@ -53,6 +53,7 @@ set(PROJECT_SOURCES
     src/game/nodes/SpatialNode.cpp
     src/game/nodes/MeshNode.cpp
     src/game/nodes/CameraNode.cpp
+    src/game/nodes/LightNodes.cpp
     src/game/nodes/EnvironmentNode.cpp
     src/game/camera/CameraManager.cpp
     src/game/World.cpp

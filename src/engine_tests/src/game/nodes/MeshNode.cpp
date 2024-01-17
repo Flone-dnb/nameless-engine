@@ -574,8 +574,6 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
                 pMeshNode->getMaterial(1)->setDiffuseColor(glm::vec3(0.0F, 1.0F, 0.0F));
 
                 iFrameCount = 0;
-
-                getWindow()->close();
             });
         }
         virtual ~TestGameInstance() override {}

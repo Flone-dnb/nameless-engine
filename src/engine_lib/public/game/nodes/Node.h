@@ -140,6 +140,13 @@ namespace ne RNAMESPACE() {
             AttachmentRule scaleRule = AttachmentRule::KEEP_WORLD);
 
         /**
+         * Sets if this node (and node's child nodes) should be serialized as part of a node tree or not.
+         *
+         * @param bSerialize `true` to serialize, `false` ignore when serializing as part of a node tree.
+         */
+        void setSerialize(bool bSerialize);
+
+        /**
          * Serializes the node and all child nodes (hierarchy information will also be saved) into a file.
          * Node tree can later be deserialized using @ref deserializeNodeTree.
          *
@@ -306,6 +313,14 @@ namespace ne RNAMESPACE() {
          * @return `true` if the specified node was found as a parent of this node, `false` otherwise.
          */
         bool isChildOf(Node* pNode);
+
+        /**
+         * Tells whether or not this node (and node's child nodes) will be serialized as part of a node tree.
+         *
+         * @return `false` if this node and its child nodes will be ignored when being serialized as part of a
+         * node tree, `true` otherwise.
+         */
+        bool isSerialized() const;
 
     protected:
         /**
@@ -801,6 +816,18 @@ namespace ne RNAMESPACE() {
         std::pair<std::recursive_mutex, std::vector<std::unique_ptr<NodeNotificationBroadcasterBase>>>
             mtxCreatedBroadcasters;
 
+        /** Whether this node is spawned in the world or not. */
+        std::pair<std::recursive_mutex, bool> mtxIsSpawned;
+
+        /** Determines if the @ref onBeforeNewFrame should be called each frame or not. */
+        std::pair<std::recursive_mutex, bool> mtxIsCalledEveryFrame;
+
+        /**
+         * Determines if the input related functions, such as @ref onMouseMove, @ref onMouseScrollMove,
+         * @ref onInputActionEvent and @ref onInputAxisEvent will be called or not.
+         */
+        std::pair<std::recursive_mutex, bool> mtxIsReceivingInput;
+
         /**
          * Do not delete this pointer. World object that owns this node.
          *
@@ -814,17 +841,11 @@ namespace ne RNAMESPACE() {
         /** Unique ID of the spawned node (initialized after the node is spawned). */
         std::optional<size_t> iNodeId;
 
-        /** Whether this node is spawned in the world or not. */
-        std::pair<std::recursive_mutex, bool> mtxIsSpawned;
-
-        /** Determines if the @ref onBeforeNewFrame should be called each frame or not. */
-        std::pair<std::recursive_mutex, bool> mtxIsCalledEveryFrame;
-
         /**
-         * Determines if the input related functions, such as @ref onMouseMove, @ref onMouseScrollMove,
-         * @ref onInputActionEvent and @ref onInputAxisEvent will be called or not.
+         * Defines whether or not this node (and node's child nodes) should be serialized
+         * as part of a node tree.
          */
-        std::pair<std::recursive_mutex, bool> mtxIsReceivingInput;
+        bool bSerialize = true;
 
         /** Name of the attribute we use to serialize information about parent node. */
         static inline const auto sParentNodeIdAttributeName = "parent_node_id";

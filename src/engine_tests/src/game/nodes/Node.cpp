@@ -2269,3 +2269,113 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 }
+
+TEST_CASE("serialize node tree while some nodes marked as not serialize") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Prepare path.
+                const std::filesystem::path pathToFile =
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "temp" /
+                    "TESTING_MixedNodeTree_TESTING.toml";
+
+                {
+                    // Prepare serialized nodes.
+                    const auto pParentNode = gc_new<Node>("serialized parent node");
+                    const auto pChildNode = gc_new<Node>("serialized child node");
+                    pParentNode->addChildNode(pChildNode);
+
+                    // Spawn serialized nodes.
+                    getWorldRootNode()->addChildNode(pParentNode);
+                }
+
+                {
+                    // Prepare nodes that won't be serialized.
+                    const auto pParentNode = gc_new<Node>("not serialized parent node");
+                    pParentNode->setSerialize(false);
+
+                    const auto pChildNode = gc_new<Node>("not serialized child node");
+                    pChildNode->setSerialize(true); // explicitly mark to be serialized to make sure it won't
+                                                    // be serialized because parent is not serialized
+
+                    pParentNode->addChildNode(pChildNode);
+
+                    // Spawn non-serialized nodes.
+                    getWorldRootNode()->addChildNode(pParentNode);
+                }
+
+                {
+                    // Serialize node tree.
+                    auto optionalError = getWorldRootNode()->serializeNodeTree(pathToFile, false);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        INFO(optionalError->getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                }
+
+                {
+                    // Deserialize node tree.
+                    auto result = Node::deserializeNodeTree(pathToFile);
+                    if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                        auto error = std::get<Error>(std::move(result));
+                        error.addCurrentLocationToErrorStack();
+                        INFO(error.getFullErrorMessage());
+                        REQUIRE(false);
+                    }
+                    const auto pRootNode = std::get<gc<Node>>(std::move(result));
+
+                    // Get root's child nodes.
+                    const auto pMtxRootChildNodes = pRootNode->getChildNodes();
+                    std::scoped_lock rootChildNodesGuard(pMtxRootChildNodes->first);
+
+                    // Make sure we have only 1 child node under root.
+                    REQUIRE(pMtxRootChildNodes->second->size() == 1);
+                    const auto pParentNode = pMtxRootChildNodes->second->at(0);
+
+                    // Make sure the name is correct.
+                    REQUIRE(pParentNode->getNodeName() == "serialized parent node");
+
+                    // Get parent's child nodes.
+                    const auto pMtxParentChildNodes = pParentNode->getChildNodes();
+                    std::scoped_lock parentChildNodesGuard(pMtxParentChildNodes->first);
+
+                    // Make sure we have only 1 child node under root.
+                    REQUIRE(pMtxParentChildNodes->second->size() == 1);
+                    const auto pChildNode = pMtxParentChildNodes->second->at(0);
+
+                    // Make sure the name is correct.
+                    REQUIRE(pChildNode->getNodeName() == "serialized child node");
+                }
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+    private:
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}

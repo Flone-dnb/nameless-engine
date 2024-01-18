@@ -396,7 +396,15 @@ namespace ne {
 
     std::optional<Error>
     Node::serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup) {
-        lockChildren(); // make sure nothing is deleted while we are serializing
+        // Self check: make sure this node is marked to be serialized.
+        if (!bSerialize) [[unlikely]] {
+            return Error(std::format(
+                "node \"{}\" is marked to be ignored when serializing as part of a node tree but "
+                "this node was explicitly requested to be serialized as a node tree",
+                sNodeName));
+        }
+
+        lockChildren(); // make sure nothing is changed/deleted while we are serializing
         {
             // Collect information for serialization.
             size_t iId = 0;
@@ -449,9 +457,13 @@ namespace ne {
             selfInfo.customAttributes[sParentNodeIdAttributeName] = std::to_string(iParentId.value());
         }
 
-        // Add original object.
+        // Add original object (if was specified).
         bool bIncludeInformationAboutChildNodes = true;
         if (getPathDeserializedFromRelativeToRes().has_value()) {
+            // Get path and ID.
+            const auto sPathDeserializedFromRelativeRes = getPathDeserializedFromRelativeToRes()->first;
+            const auto sObjectIdInDeserializedFile = getPathDeserializedFromRelativeToRes()->second;
+
             // This entity was deserialized from the `res` directory.
             // We should only serialize fields with changed values and additionally serialize
             // the path to the original file so that the rest
@@ -459,22 +471,21 @@ namespace ne {
 
             // Check that entity file exists.
             const auto pathToOriginalFile = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
-                                            getPathDeserializedFromRelativeToRes().value().first;
-            if (!std::filesystem::exists(pathToOriginalFile)) {
+                                            sPathDeserializedFromRelativeRes;
+            if (!std::filesystem::exists(pathToOriginalFile)) [[unlikely]] {
                 Error error(std::format(
                     "object of type \"{}\" has the path it was deserialized from ({}, ID {}) but this "
                     "file \"{}\" does not exist",
                     getArchetype().getName(),
-                    getPathDeserializedFromRelativeToRes().value().first,
-                    getPathDeserializedFromRelativeToRes().value().second,
+                    sPathDeserializedFromRelativeRes,
+                    sObjectIdInDeserializedFile,
                     pathToOriginalFile.string()));
                 return error;
             }
 
             // Deserialize the original entity.
-            auto result = deserialize<gc, Node>(
-                pathToOriginalFile, getPathDeserializedFromRelativeToRes().value().second);
-            if (std::holds_alternative<Error>(result)) {
+            auto result = deserialize<gc, Node>(pathToOriginalFile, sObjectIdInDeserializedFile);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(result);
                 error.addCurrentLocationToErrorStack();
                 return error;
@@ -486,14 +497,14 @@ namespace ne {
             // Check if child nodes are located in the same file
             // (i.e. check if this node is a root of some external node tree).
             if (!mtxChildNodes.second->empty() &&
-                isTreeDeserializedFromOneFile(getPathDeserializedFromRelativeToRes().value().first)) {
+                isTreeDeserializedFromOneFile(sPathDeserializedFromRelativeRes)) {
                 // Don't serialize information about child nodes,
                 // when referencing an external node tree, we should only
                 // allow modifying the root node, thus, because only root node
                 // can have changed fields, we don't include child nodes here.
                 bIncludeInformationAboutChildNodes = false;
                 selfInfo.customAttributes[sExternalNodeTreePathAttributeName] =
-                    getPathDeserializedFromRelativeToRes().value().first;
+                    sPathDeserializedFromRelativeRes;
             }
         }
         vNodesInfo.push_back(std::move(selfInfo));
@@ -504,9 +515,15 @@ namespace ne {
             // Get information about child nodes.
             std::scoped_lock guard(mtxChildNodes.first);
             for (const auto& pChildNode : *mtxChildNodes.second) {
+                // Skip node (and its child nodes) if it should not be serialized.
+                if (!pChildNode->isSerialized()) {
+                    continue;
+                }
+
+                // Get serialization info.
                 auto result = pChildNode->getInformationForSerialization(iId, iMyId);
-                if (std::holds_alternative<Error>(result)) {
-                    auto error = std::get<Error>(result);
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(result));
                     return error;
                 }
                 auto vChildArray =
@@ -988,5 +1005,9 @@ namespace ne {
     std::optional<size_t> Node::getNodeId() const { return iNodeId; }
 
     std::recursive_mutex* Node::getSpawnDespawnMutex() { return &mtxIsSpawned.first; }
+
+    void Node::setSerialize(bool bSerialize) { this->bSerialize = bSerialize; }
+
+    bool Node::isSerialized() const { return bSerialize; }
 
 } // namespace ne

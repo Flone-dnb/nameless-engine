@@ -34,7 +34,7 @@ TEST_CASE("make camera node to be the active camera") {
                 {
                     const auto pMtxActiveCamera = getCameraManager()->getActiveCamera();
                     std::scoped_lock guard(pMtxActiveCamera->first);
-                    REQUIRE(pMtxActiveCamera->second.pCameraNode == pCameraNode);
+                    REQUIRE(pMtxActiveCamera->second == pCameraNode);
                 }
 
                 // Check that no warnings/errors will be logged.

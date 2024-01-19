@@ -22,7 +22,7 @@
 #include "game/nodes/light/PointLightNode.h"
 #include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/SpotlightNode.h"
-#include "misc/shapes/AABB.h"
+#include "game/nodes/CameraNode.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -309,12 +309,14 @@ namespace ne {
             pMtxCurrentFrameResource->first,
             *mtxQueuedComputeShader.first);
 
-        // Get camera properties of the active camera.
-        const auto pActiveCameraProperties = pMtxActiveCamera->second.getCameraProperties();
-        if (pActiveCameraProperties == nullptr) {
+        // Make sure there is an active camera.
+        if (pMtxActiveCamera->second == nullptr) {
             // No active camera.
             return;
         }
+
+        // Get camera properties of the active camera.
+        const auto pActiveCameraProperties = pMtxActiveCamera->second->getCameraProperties();
 
         // don't unlock active camera mutex until finished submitting the next frame for drawing
 
@@ -423,12 +425,14 @@ namespace ne {
         // Lock camera.
         std::scoped_lock guard(pMtxActiveCamera->first);
 
-        // Get camera properties of the active camera.
-        const auto pActiveCameraProperties = pMtxActiveCamera->second.getCameraProperties();
-        if (pActiveCameraProperties == nullptr) {
+        // Make sure there is an active camera.
+        if (pMtxActiveCamera->second == nullptr) {
             // No active camera, no need to notify lighting manager.
             return {};
         }
+
+        // Get camera properties of the active camera.
+        const auto pActiveCameraProperties = pMtxActiveCamera->second->getCameraProperties();
 
         // Get inverse projection matrix.
         const glm::mat4 inverseProjectionMatrix =

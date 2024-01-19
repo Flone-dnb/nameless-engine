@@ -26,6 +26,7 @@ set(PROJECT_WIN32_SOURCES
 
 set(PROJECT_SOURCES
     src/main.cpp
+    src/TestHelpers.hpp
     src/game/Window.cpp
     src/io/ConfigManager.cpp
     src/io/ReflectionTest.h
@@ -86,7 +87,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_${PROJECT_CXX_STANDARD_VE
 message(STATUS "${PROJECT_NAME}: using the following C++ standard: ${CMAKE_CXX_STANDARD}")
 
 # Add includes.
-target_include_directories(${PROJECT_NAME} PUBLIC ${TESTS_RELATIVE_PATH})
+target_include_directories(${PROJECT_NAME} PUBLIC src)
 
 # Add a post build script.
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

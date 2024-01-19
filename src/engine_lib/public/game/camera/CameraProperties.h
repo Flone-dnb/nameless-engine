@@ -20,9 +20,8 @@ namespace ne {
 
     /** Defines camera settings, base axis, location, modes, etc. */
     class CameraProperties {
-        // Only camera node or transient camera can control internal data.
+        // Only camera node can control internal data.
         friend class CameraNode;
-        friend class TransientCamera;
 
         // Renderer sets render target size and also looks if projection matrix was changed or
         // not to recalculate grid of frustums for light culling.

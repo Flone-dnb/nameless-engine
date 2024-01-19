@@ -361,8 +361,7 @@ namespace ne RNAMESPACE() {
          * @remark Typically you should call this function in your node's constructor to determine
          * if this node should receive input or not.
          * @remark Nodes do not receive input by default.
-         *
-         * @warning Calling this function while the node is spawned will cause an error to be shown.
+         * @remark Safe to call any time (while spawned/despawned).
          *
          * @param bEnable Whether the input function should be enabled or not.
          */

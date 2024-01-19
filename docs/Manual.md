@@ -918,7 +918,7 @@ void MyGameInstance::onGameStarted(){
 
 Note that your world can only have 1 active environment node. If you will spawn another environment node you will get a warning in the logs that will tell you that settings of your newly spawned environment node will be ignored.
 
-# Creating a character for your game
+# Creating a character and working with input
 
 ## Creating a simple flying character node
 
@@ -1017,7 +1017,7 @@ File_FlyingCharacter_GENERATED
 ```
 
 Note
-> `FlyingCharacterNode_GENERATED` and `File_FlyingCharacter_GENERATED` are different, one describes a `Node` class and one defines a file name.
+> `FlyingCharacterNode_GENERATED` and `File_FlyingCharacter_GENERATED` are different, one defines a `Node` class and the other defines a file name.
 
 We followed instructions from one of the previous sections in the manual where we discussed reflection. Also don't forget to update our `.cpp` file:
 
@@ -1242,18 +1242,59 @@ Note
 
 Mouse movement is handled using `GameInstance::onMouseMove` function or `Node::onMouseMove` function. There are other mouse related functions like `onMouseScrollMove` that you might find useful.
 
+### Handling input event IDs
+
+In the next sections you will learn that you can bind to input events in game instance and in nodes. As it was said earlier input events use IDs to be distinguished. This means that you need to have an application-global collection of unique IDs for input events.
+
+Prefer to describe input event IDs of your application in a separate file using enums, for example:
+
+```Cpp
+// GameInputEventIds.hpp
+
+#pragma once
+
+/** Stores unique IDs of input events. */
+struct GameInputEventIds {
+    /** Groups action events. */
+    enum class Action : unsigned int {
+        CAPTURE_MOUSE_CURSOR = 0, //< Capture mouse cursor.
+        INCREASE_CAMERA_SPEED,    //< Increase camera's speed.
+        DECREASE_CAMERA_SPEED,    //< Decrease camera's speed.
+    };
+
+    /** Groups axis events. */
+     enum class Axis : unsigned int {
+        MOVE_CAMERA_FORWARD = 0, //< Move camera forward/back.
+        MOVE_CAMERA_RIGHT,       //< Move camera right/left.
+        MOVE_CAMERA_UP,          //< Move camera up/down.
+    };
+};
+```
+
+This file will store all input IDs that your game needs, even if you have switchable controls like "walking" or "in vehice" all input event IDs should be generally stored like that to make sure they all have unique IDs because all your input events will be registered in the same input manager.
+
+Note
+> We will talk about switchable controls like "walking" or "in vehice" and how to handle them in one of the next sections.
+
 ### Binding to input events in game instance
 
 Since input events are identified using unique IDs we should create a special struct for our input IDs:
 
 ```Cpp
-struct InputEventIds {
-    struct Action {
-        static constexpr unsigned int iActionEvent1 = 0;
+// GameInputEventIds.hpp
+
+#pragma once
+
+/** Stores unique IDs of input events. */
+struct GameInputEventIds {
+    /** Groups action events. */
+    enum class Action : unsigned int {
+        ACTION_EVENT1 = 0,
     };
 
-    struct Axis {
-        static constexpr unsigned int iAxisEvent1 = 0;
+    /** Groups axis events. */
+     enum class Axis : unsigned int {
+        AXIS_EVENT1 = 0,
     };
 };
 ```
@@ -1263,47 +1304,59 @@ Let's see how we can bind to input events in our `GameInstance` class.
 ```Cpp
 // MyGameInstance.cpp
 
-void MyGameInstance::onGameStarted() {
+#include "GameInputEventIds.hpp"
+
+void MyGameInstance::MyGameInstance(
+    Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
+    : GameInstance(pWindow, pGameManager, pInputManager) {
     // Register action event.
-    auto optionalError = getInputManager()->addActionEvent(InputEventIds::Action::iActionEvent1, {KeyboardKey::KEY_F});
+    auto optionalError = pInputManager->addActionEvent(
+        static_cast<unsigned int>(GameInputEventIds::Action::ACTION_EVENT1),
+        {KeyboardKey::KEY_F});
     if (optionalError.has_value()) [[unlikely]] {
         // ... handle error ...
     }
     
     // Register axis event.
-    optionalError = getInputManager()->addAxisEvent(InputEventIds::Axis::iAxisEvent1, {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
+    optionalError = pInputManager->addAxisEvent(
+        static_cast<unsigned int>(GameInputEventIds::Action::AXIS_EVENT1),
+        {{KeyboardKey::KEY_A, KeyboardKey::KEY_D}});
     if (optionalError.has_value()) [[unlikely]] {
         // ... handle error ...
     }
 
     // Now let's bind callback functions to our events.
 
-    // Bind to action events.
+    // Bind action events.
     {
         const auto pActionEvents = getActionEventBindings();
         std::scoped_lock guard(pActionEvents->first);
 
-        pActionEvents->second[InputEventIds::Action::iActionEvent1] = [](KeyboardModifiers modifiers, bool bIsPressedDown) {
+        pActionEvents->second[static_cast<unsigned int>(GameInputEventIds::Action::ACTION_EVENT1)]
+            = [](KeyboardModifiers modifiers, bool bIsPressedDown) {
             Logger::get().info(std::format("action event triggered, state: {}", bIsPressedDown));
         };
     }
 
-    // Bind to axis events.
+    // Bind axis events.
     {
         const auto pAxisEvents = getAxisEventBindings();
         std::scoped_lock guard(pAxisEvents->first);
 
-        pAxisEvents->second[InputEventIds::Axis::iAxisEvent1] = [](KeyboardModifiers modifiers, float input) {
+        pAxisEvents->second[static_cast<unsigned int>(GameInputEventIds::Action::AXIS_EVENT1)]
+            = [](KeyboardModifiers modifiers, float input) {
             Logger::get().info(std::format("axis event triggered, value: {}", input));
         };
     }
 }
 ```
 
+As you can see we are using game instance constructor and we don't create a separate function to "add" our input events. This is done intentionally because once input events were added you should not add the same input events again, thus no function - we don't want anybody to accidentally add input events again.
+
 At this point you will be able to trigger registered action/axis events by pressing the specified keyboard buttons.
 
 Note
-> Although you can process input events in `GameInstance` it's not really recommended because input events should generally be processed in nodes such as in your character node so that your nodes will be self-contained.
+> Although you can process input events in `GameInstance` it's not really recommended because input events should generally be processed in nodes such as in your character node so that your nodes will be self-contained and modular.
 
 Note
 > You can register/bind input events even when world does not exist or not created yet.
@@ -1314,48 +1367,61 @@ Note
 ### Binding to input events in nodes
 
 This is the most common use case for input events. The usual workflow goes like this:
-1. Register action/axis events with some default keys in your `GameInstance`.
+1. Register action/axis events with some default keys in your `GameInstance` constructor.
 2. Bind to input processing callbacks in your nodes.
 
-Let's register 2 axis events in our game instance: one for moving right/left and one for moving forward/backward:
+Let's define 2 axis events in our game instance: one for moving right/left and one for moving forward/backward:
 
 ```Cpp
-struct InputEventIds {
-    struct Action {
-        static constexpr unsigned int iCloseApp = 0;
+// GameInputEventIds.hpp
+
+#pragma once
+
+/** Stores unique IDs of input events. */
+struct GameInputEventIds {
+    /** Groups action events. */
+    enum class Action : unsigned int {
+        CLOSE_APP = 0,
     };
 
-    struct Axis {
-        static constexpr unsigned int iMoveRight = 0;
-        static constexpr unsigned int iMoveForward = 1;
+    /** Groups axis events. */
+     enum class Axis : unsigned int {
+        MOVE_RIGHT = 0,
+        MOVE_FORWARD,
     };
 };
+```
 
-void MyGameInstance::onGameStarted() {
+Now let's register and bind to those events:
+
+```Cpp
+#include "GameInputEventIds.hpp"
+
+void MyGameInstance::MyGameInstance(
+    Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
+    : GameInstance(pWindow, pGameManager, pInputManager) {
     // Register "moveRight" axis event.
-    auto optionalError =
-        getInputManager()->addAxisEvent(InputEventIds::Axis::iMoveRight, {{KeyboardKey::KEY_D, KeyboardKey::KEY_A}});
+    auto optionalError = pInputManager->addAxisEvent(
+        static_cast<unsigned int>(GameInputEventIds::Axis::MOVE_RIGHT),
+        {{KeyboardKey::KEY_D, KeyboardKey::KEY_A}});
     if (optionalError.has_value()) [[unlikely]] {
-        optionalError->addCurrentLocationToErrorStack();
-        optionalError->showError();
-        throw std::runtime_error(optionalError->getFullErrorMessage());
+        // ... handle error ...
     }
 
     // Register "moveForward" axis event.
-    optionalError =
-        getInputManager()->addAxisEvent(InputEventIds::Axis::iMoveForward, {{KeyboardKey::KEY_W, KeyboardKey::KEY_S}});
+    optionalError = pInputManager->addAxisEvent(
+        static_cast<unsigned int>(GameInputEventIds::Axis::MOVE_FORWARD),
+        {{KeyboardKey::KEY_W, KeyboardKey::KEY_S}});
     if (optionalError.has_value()) [[unlikely]] {
-        optionalError->addCurrentLocationToErrorStack();
-        optionalError->showError();
-        throw std::runtime_error(optionalError->getFullErrorMessage());
+        // ... handle error ...
     }
 
     // Register "closeApp" action event.
-    optionalError = getInputManager()->addActionEvent(InputEventIds::Action::iCloseApp, {KeyboardKey::KEY_ESCAPE});
+    optionalError = pInputManager->addActionEvent(
+        static_cast<unsigned int>(GameInputEventIds::Action::CLOSE_APP),
+        {KeyboardKey::KEY_ESCAPE});
     if (optionalError.has_value()) [[unlikely]] {
-        optionalError->addCurrentLocationToErrorStack();
-        optionalError->showError();
-        throw std::runtime_error(optionalError->getFullErrorMessage());
+        // ... handle error ...
     }
 }
 ```
@@ -1369,10 +1435,10 @@ protected:
 private:
     glm::vec2 lastInputDirection = glm::vec2(0.0F, 0.0F);
 
-    static constexpr float movementSpeed = 10.0F;
+    static constexpr float movementSpeed = 5.0F;
 ```
 
-Now in our node's constructor let's bind to input events. We don't need to care about register/bind order because as we already said earlier you can bind to input events before registering input events - this is perfectly fine.
+Now in our node's constructor let's bind to input events. We don't need to care about register/bind order because you can bind to input events before registering input events - this is perfectly fine.
 
 ```Cpp
 // FlyingCharacter.cpp
@@ -1381,6 +1447,7 @@ Now in our node's constructor let's bind to input events. We don't need to care 
 
 // Custom.
 #include "game/nodes/CameraNode.h"
+#include "GameInputEventIds.hpp"
 
 #include "FlyingCharacter.generated_impl.h"
 
@@ -1405,11 +1472,13 @@ FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : Spatial
         const auto pAxisEvents = getAxisEventBindings();
         std::scoped_lock guard(pAxisEvents->first);
 
-        pAxisEvents->second[InputEventIds::Axis::iMoveRight] = [this](KeyboardModifiers modifiers, float input) {
+        pAxisEvents->second[static_cast<unsigned int>(GameInputEventIds::Axis::MOVE_FORWARD)]
+            = [this](KeyboardModifiers modifiers, float input) {
             lastInputDirection.x = input;
         };
 
-        pAxisEvents->second[InputEventIds::Axis::iMoveForward] = [this](KeyboardModifiers modifiers, float input) {
+        pAxisEvents->second[static_cast<unsigned int>(GameInputEventIds::Axis::MOVE_RIGHT)]
+            = [this](KeyboardModifiers modifiers, float input) {
             lastInputDirection.y = input;
         };
     }
@@ -1435,15 +1504,15 @@ void FlyingCharacterNode::onBeforeNewFrame(float timeSincePrevFrameInSec) {
     auto newWorldLocation = getWorldLocation();
 
     // Calculate new world location.
-    newWorldLocation += getWorldRightDirection() * movementDirection.x;
-    newWorldLocation += getWorldForwardDirection() * movementDirection.y;
+    newWorldLocation += getWorldForwardDirection() * movementDirection.x;
+    newWorldLocation += getWorldRightDirection() * movementDirection.y;
 
     // Apply movement.
     setWorldLocation(newWorldLocation);
 }
 ```
 
-As you can see we have decided to apply input movement not instantly but once a frame. The motivation for this is that we now have `timeSincePrevFrameInSec` (also known as deltatime - time in seconds that has passed since the last frame was rendered) and we can eliminate a speed up on diagonal movement (length of the vector becomes ~1.41 on diagonal movement while we expect the length of the vector to be in the range [0.0; 1.0]).
+As you can see we have decided to apply input movement not instantly but once a frame. The motivation for this is that we now have `timeSincePrevFrameInSec` (also known as deltatime - time in seconds that has passed since the last frame was rendered) to eliminate a speed up that occurs on diagonal movement (length of the vector becomes ~1.41 on diagonal movement while we expect the length of the vector to be in the range [0.0; 1.0]).
 
 In addition to this it may happen that a button is pressed/released multiple times during one frame (this is even more likely when use have a gamepad and use thumbsticks for movement) which will cause our input callbacks to be triggered multiple times during one frame, so if we process the movement instantly this might affect the performance. **Note that movement input is special because we can process it like that but it does not mean that all other input should be handled like this, for example an action to Fire/Shoot should be processed instantly or an action Open/Interact should also be processed instantly, in addition "look" or "rotation" mouse events should also be processed instantly.**
 
@@ -1464,8 +1533,10 @@ And implementation:
 ```Cpp
 void FlyingCharacterNode::onMouseMove(double xOffset, double yOffset) {
     auto currentRotation = getRelativeRotation();
+
     currentRotation.z += static_cast<float>(xOffset * rotationSpeed); // modify "yaw"
     currentRotation.y -= static_cast<float>(yOffset * rotationSpeed); // modify "pitch"
+
     setRelativeRotation(currentRotation);
 }
 ```
@@ -1479,7 +1550,7 @@ And let's hide the cursor.
 void FlyingCharacterNode::onChildNodesSpawned() {
     SpatialNode::onChildNodesSpawned();
 
-    // Hide (lock) cursor.
+    // Hide (capture) mouse cursor.
     getGameInstance()->getWindow()->setCursorVisibility(false);
 
     // Enable camera.
@@ -1503,7 +1574,8 @@ FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : Spatial
         const auto pActionEvents = getActionEventBindings();
         std::scoped_lock guard(pActionEvents->first);
 
-        pActionEvents->second[InputEventIds::Action::iCloseApp] = [](KeyboardModifiers modifiers, bool bIsPressed) {
+        pActionEvents->second[static_cast<unsigned int>(GameInputEventIds::Action::CLOSE_APP)]
+            = [](KeyboardModifiers modifiers, bool bIsPressed) {
             getGameInstance()->getWindow()->close();
         };
     }
@@ -1709,10 +1781,13 @@ using namespace ne;
 void MyGameInstance::onGameStarted(){
     // On each game start, create action/axis events with default keys.
     const std::vector<std::pair<KeyboardKey, KeyboardKey>> vMoveForwardKeys = {
-    std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
-    std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)};
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_W, KeyboardKey::KEY_S),
+        std::make_pair<KeyboardKey, KeyboardKey>(KeyboardKey::KEY_UP, KeyboardKey::KEY_DOWN)
+    };
 
-    auto optionalError = getInputManager()->addAxisEvent(InputEventIds::Axis::iMoveForward, vMoveForwardKeys);
+    auto optionalError = getInputManager()->addAxisEvent(
+        static_cast<unsigned int>(GameInputEventIds::Axis::MOVE_FORWARD),
+        vMoveForwardKeys);
     if (optionalError.has_value()){
         // ... handle error ...
     }
@@ -1736,7 +1811,10 @@ void MyGameInstance::onGameStarted(){
 }
 
 // Later, the user modifies some keys:
-optionalError = getInputManager()->modifyAxisEventKey(InputEventIds::Axis::iMoveForward, oldKey, newKey);
+optionalError = getInputManager()->modifyAxisEventKey(
+    static_cast<unsigned int>(GameInputEventIds::Axis::MOVE_FORWARD),
+    oldKey,
+    newKey);
 if (optionalError.has_value()){
     // ... handle error ...
 }

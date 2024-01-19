@@ -1,11 +1,12 @@
 // Custom.
-#include "game/camera/TransientCamera.h"
 #include "game/nodes/MeshNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/camera/CameraManager.h"
 #include "render/RenderSettings.h"
+#include "game/nodes/CameraNode.h"
+#include "TestHelpers.hpp"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -37,12 +38,10 @@ TEST_CASE(
                     REQUIRE(false);
                 }
 
-                // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
-
-                // Make it active.
-                getCameraManager()->setActiveCamera(pCamera);
+                // Create camera.
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Create node and initialize.
                 const auto pMeshNode = gc_new<MeshNode>();
@@ -56,7 +55,7 @@ TEST_CASE(
             iTickCount += 1;
 
             if (iTickCount > 1) {
-                REQUIRE(getTotalSpawnedNodeCount() == 2);
+                REQUIRE(getTotalSpawnedNodeCount() == 3);
             }
 
             if (iTickCount == 2) {

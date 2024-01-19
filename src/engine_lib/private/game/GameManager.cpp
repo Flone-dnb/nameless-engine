@@ -342,9 +342,6 @@ namespace ne {
             callTick(&pCalledEveryFrameNodes->mtxFirstTickGroup);
             callTick(&pCalledEveryFrameNodes->mtxSecondTickGroup);
         }
-
-        // Call on camera manager.
-        pCameraManager->onBeforeNewFrame(timeSincePrevCallInSec);
     }
 
     void GameManager::executeDeferredTasks() {

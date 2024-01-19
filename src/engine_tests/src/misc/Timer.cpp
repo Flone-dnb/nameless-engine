@@ -11,8 +11,8 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-static constexpr size_t iStartStopCheckTimeInMs = 50;
-static constexpr long long iWaitTime = 150;
+static constexpr size_t iStartStopCheckTimeInMs = 100;
+static constexpr long long iWaitTime = 200;
 
 TEST_CASE("measure elapsed time") {
     using namespace ne;

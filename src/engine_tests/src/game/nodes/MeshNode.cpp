@@ -3,11 +3,12 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/camera/CameraManager.h"
-#include "game/camera/TransientCamera.h"
+#include "game/nodes/CameraNode.h"
 #include "material/Material.h"
 #include "shader/general/EngineShaderNames.hpp"
-#include "../../io/ReflectionTest.h"
+#include "io/ReflectionTest.h"
 #include "misc/PrimitiveMeshGenerator.h"
+#include "TestHelpers.hpp"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -545,12 +546,9 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
                     REQUIRE(false);
                 }
 
-                // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
-
-                // Make it active.
-                getCameraManager()->setActiveCamera(pCamera);
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Spawn sample mesh.
                 pMeshNode = gc_new<MeshNode>();
@@ -835,8 +833,10 @@ TEST_CASE("check draw call count with invisibility") {
                 }
 
                 // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+                // Create camera.
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Make it active.
                 getCameraManager()->setActiveCamera(pCamera);
@@ -915,11 +915,9 @@ TEST_CASE("check draw call count with frustum culling") {
                 }
 
                 // Create and setup camera.
-                pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
-
-                // Make it active.
-                getCameraManager()->setActiveCamera(pCamera);
+                // Create camera.
+                pCamera = TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Spawn sample mesh.
                 const auto pMeshNode = gc_new<MeshNode>();
@@ -942,7 +940,7 @@ TEST_CASE("check draw call count with frustum culling") {
                 REQUIRE(pRenderer->getRenderStatistics()->getLastFrameCulledMeshCount() == 0);
 
                 // Rotate the camera 180 degrees.
-                pCamera->setFreeCameraRotation(glm::vec3(0.0F, 0.0F, 180.0F));
+                pCamera->setRelativeRotation(glm::vec3(0.0F, 0.0F, 180.0F));
             }
 
             if (iFrameCount == 3) {
@@ -955,7 +953,7 @@ TEST_CASE("check draw call count with frustum culling") {
 
     private:
         size_t iFrameCount = 0;
-        std::shared_ptr<TransientCamera> pCamera;
+        gc<CameraNode> pCamera;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

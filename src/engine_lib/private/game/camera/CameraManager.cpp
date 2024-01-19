@@ -6,28 +6,12 @@
 // Custom.
 #include "io/Logger.h"
 #include "game/nodes/CameraNode.h"
-#include "game/camera/TransientCamera.h"
 #include "misc/Profiler.hpp"
 #include "render/Renderer.h"
 
 namespace ne {
 
     CameraManager::CameraManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
-
-    void CameraManager::setActiveCamera(std::shared_ptr<TransientCamera> pTransientCamera) {
-        if (pTransientCamera == nullptr) [[unlikely]] {
-            Error error("`nullptr` is not a valid camera");
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        std::scoped_lock guard(mtxActiveCamera.first);
-
-        markPreviousCameraAsInactive();
-
-        mtxActiveCamera.second.pCameraNode = nullptr;
-        mtxActiveCamera.second.pTransientCamera = std::move(pTransientCamera);
-    }
 
     void CameraManager::setActiveCamera(const gc<CameraNode>& pCameraNode) {
         if (pCameraNode == nullptr) [[unlikely]] {
@@ -50,7 +34,11 @@ namespace ne {
 
         // don't unlock the node mutex yet
 
-        markPreviousCameraAsInactive();
+        if (mtxActiveCamera.second != nullptr) {
+            // Mark previous as inactive.
+            std::scoped_lock cameraGuard(mtxActiveCamera.second->mtxIsActive.first);
+            mtxActiveCamera.second->mtxIsActive.second = false;
+        }
 
         {
             // Mark new camera node as active.
@@ -58,8 +46,7 @@ namespace ne {
             pCameraNode->mtxIsActive.second = true;
         }
 
-        mtxActiveCamera.second.pCameraNode = pCameraNode;
-        mtxActiveCamera.second.pTransientCamera = nullptr;
+        mtxActiveCamera.second = pCameraNode;
 
         // Notify renderer.
         pRenderer->onActiveCameraChanged();
@@ -68,16 +55,20 @@ namespace ne {
     void CameraManager::clearActiveCamera() {
         std::scoped_lock guard(mtxActiveCamera.first);
 
-        markPreviousCameraAsInactive();
+        if (mtxActiveCamera.second != nullptr) {
+            // Mark previous as inactive.
+            std::scoped_lock cameraGuard(mtxActiveCamera.second->mtxIsActive.first);
+            mtxActiveCamera.second->mtxIsActive.second = false;
+        }
 
-        mtxActiveCamera.second.pCameraNode = nullptr;
-        mtxActiveCamera.second.pTransientCamera = nullptr;
+        // Clear pointer.
+        mtxActiveCamera.second = nullptr;
 
         // Notify renderer.
         pRenderer->onActiveCameraChanged();
     }
 
-    std::pair<std::recursive_mutex, CameraManager::ActiveCamera>* CameraManager::getActiveCamera() {
+    std::pair<std::recursive_mutex, gc<CameraNode>>* CameraManager::getActiveCamera() {
         return &mtxActiveCamera;
     }
 
@@ -85,7 +76,7 @@ namespace ne {
         std::scoped_lock guard(mtxActiveCamera.first);
 
         // Make sure there's an active camera.
-        if (mtxActiveCamera.second.pCameraNode == nullptr) [[unlikely]] {
+        if (mtxActiveCamera.second == nullptr) [[unlikely]] {
             Logger::get().error(std::format(
                 "the camera node \"{}\" notified the camera manager about it being despawned because "
                 "it thinks that it's the active camera but the camera manager has no active camera node",
@@ -93,8 +84,8 @@ namespace ne {
             return;
         }
 
-        // See if this camera is used as the active one.
-        if (&*mtxActiveCamera.second.pCameraNode != pCameraNode) [[unlikely]] {
+        // See if this camera is indeed used as the active one.
+        if (&*mtxActiveCamera.second != pCameraNode) [[unlikely]] {
             Logger::get().error(std::format(
                 "the camera node \"{}\" notified the camera manager about it being despawned because "
                 "it thinks that it's the active camera but it's not the active camera node",
@@ -102,49 +93,14 @@ namespace ne {
             return;
         }
 
-        // Mark the camera as inactive.
-        std::scoped_lock cameraGuard(mtxActiveCamera.second.pCameraNode->mtxIsActive.first);
-        mtxActiveCamera.second.pCameraNode->mtxIsActive.second = false;
+        {
+            // Mark the camera as inactive.
+            std::scoped_lock cameraGuard(mtxActiveCamera.second->mtxIsActive.first);
+            mtxActiveCamera.second->mtxIsActive.second = false;
+        }
 
         // No active camera now.
-        mtxActiveCamera.second.pCameraNode = nullptr;
-    }
-
-    void CameraManager::onBeforeNewFrame(float timeSincePrevCallInSec) {
-        PROFILE_FUNC;
-
-        std::scoped_lock guard(mtxActiveCamera.first);
-
-        // Call on the currently active transient camera.
-        if (mtxActiveCamera.second.pTransientCamera != nullptr) {
-            mtxActiveCamera.second.pTransientCamera->onBeforeNewFrame(timeSincePrevCallInSec);
-        }
-    }
-
-    void CameraManager::markPreviousCameraAsInactive() {
-        std::scoped_lock guard(mtxActiveCamera.first);
-
-        if (mtxActiveCamera.second.pCameraNode != nullptr) {
-            // Mark as inactive.
-            std::scoped_lock cameraGuard(mtxActiveCamera.second.pCameraNode->mtxIsActive.first);
-            mtxActiveCamera.second.pCameraNode->mtxIsActive.second = false;
-        } else if (mtxActiveCamera.second.pTransientCamera != nullptr) {
-            // Clear any saved input.
-            mtxActiveCamera.second.pTransientCamera->clearInput();
-        }
-    }
-
-    CameraProperties* CameraManager::ActiveCamera::getCameraProperties() {
-        if (pCameraNode != nullptr) {
-            return pCameraNode->getCameraProperties();
-        }
-
-        if (pTransientCamera != nullptr) {
-            return pTransientCamera->getCameraProperties();
-        }
-
-        // No active camera.
-        return nullptr;
+        mtxActiveCamera.second = nullptr;
     }
 
 } // namespace ne

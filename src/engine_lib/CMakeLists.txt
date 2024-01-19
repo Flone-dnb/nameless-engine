@@ -232,8 +232,6 @@ set(PROJECT_SOURCES
     public/io/Serializable.h
     public/game/camera/CameraProperties.h
     private/game/camera/CameraProperties.cpp
-    public/game/camera/TransientCamera.h
-    private/game/camera/TransientCamera.cpp
     public/game/camera/CameraManager.h
     private/game/camera/CameraManager.cpp
     public/game/callbacks/NodeFunction.hpp

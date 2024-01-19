@@ -20,6 +20,10 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 set(PROJECT_SOURCES
     public/EditorGameInstance.h
     private/EditorGameInstance.cpp
+    public/misc/EditorNodeCreationHelpers.hpp
+    public/nodes/EditorCameraNode.h
+    private/nodes/EditorCameraNode.cpp
+    public/input/EditorInputEventIds.hpp
     # add your .h/.cpp files here
 )
 

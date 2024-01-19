@@ -2,7 +2,8 @@
 #include "material/Material.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
-#include "game/camera/TransientCamera.h"
+#include "game/nodes/CameraNode.h"
+#include "TestHelpers.hpp"
 #include "game/nodes/MeshNode.h"
 #include "misc/ProjectPaths.h"
 #include "shader/general/EngineShaderNames.hpp"
@@ -670,9 +671,10 @@ TEST_CASE("change texture while spawned") {
                     REQUIRE(false);
                 }
 
-                // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+                // Create camera.
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Make it active.
                 getCameraManager()->setActiveCamera(pCamera);
@@ -917,8 +919,10 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                 }
 
                 // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
+                // Create camera.
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Make it active.
                 getCameraManager()->setActiveCamera(pCamera);

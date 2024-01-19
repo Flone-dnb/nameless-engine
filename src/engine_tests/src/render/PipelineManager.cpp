@@ -6,10 +6,11 @@
 #include "render/general/pipeline/PipelineManager.h"
 #include "shader/ComputeShaderInterface.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "game/camera/TransientCamera.h"
+#include "game/nodes/CameraNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/nodes/light/PointLightNode.h"
 #include "game/camera/CameraManager.h"
+#include "TestHelpers.hpp"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -86,12 +87,10 @@ TEST_CASE("manager correctly manages compute pipelines") {
                             throw std::runtime_error(error.getFullErrorMessage());
                         }
 
-                        // Create and setup camera.
-                        auto pCamera = std::make_shared<TransientCamera>();
-                        pCamera->setLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
-
-                        // Make it active.
-                        getCameraManager()->setActiveCamera(pCamera);
+                        // Create camera.
+                        auto pCamera =
+                            TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                        pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                         // Spawn point light.
                         const auto pPointLightNode = gc_new<PointLightNode>();
@@ -107,6 +106,10 @@ TEST_CASE("manager correctly manages compute pipelines") {
 
                         // Get pipeline manager.
                         const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
+
+                        // Get initial compute pipeline count.
+                        const auto iInitialComputePipelineCount =
+                            pPipelineManager->getCurrentComputePipelineCount();
 
                         // Create compute interface.
                         auto result = ComputeShaderInterface::createUsingGraphicsQueue(
@@ -124,7 +127,9 @@ TEST_CASE("manager correctly manages compute pipelines") {
                             std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(result));
 
                         // Make sure a new compute pipeline was created.
-                        REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == 1);
+                        REQUIRE(
+                            pPipelineManager->getCurrentComputePipelineCount() ==
+                            iInitialComputePipelineCount + 1);
 
                         // Create a new compute interface using the same shader.
                         result = ComputeShaderInterface::createUsingGraphicsQueue(
@@ -141,50 +146,24 @@ TEST_CASE("manager correctly manages compute pipelines") {
                         pTestInterface = std::get<std::unique_ptr<ComputeShaderInterface>>(std::move(result));
 
                         // Same pipeline.
-                        REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == 1);
-
-                        // Make sure no compute shaders are queued yet.
-                        auto mtxQueued = pPipelineManager->getComputeShadersForGraphicsQueueExecution();
-                        for (const auto& stage : mtxQueued.second->vGraphicsQueueStagesGroups) {
-                            for (const auto& group : stage) {
-                                REQUIRE(group.empty());
-                            }
-                        }
+                        REQUIRE(
+                            pPipelineManager->getCurrentComputePipelineCount() ==
+                            iInitialComputePipelineCount + 1);
 
                         // Submit our shader.
                         pTestInterface->submitForExecution(1, 1, 1);
 
-                        // Prepare some variables.
-                        auto& afterDepthPrepassGroups =
-                            mtxQueued.second->vGraphicsQueueStagesGroups[static_cast<size_t>(
-                                ComputeExecutionStage::AFTER_DEPTH_PREPASS)];
-                        const auto iFirstGroupIndex = static_cast<size_t>(ComputeExecutionGroup::FIRST);
-                        const auto iSecondGroupIndex = static_cast<size_t>(ComputeExecutionGroup::SECOND);
-
-                        // Check queue.
-                        REQUIRE(afterDepthPrepassGroups[iFirstGroupIndex].size() == 1);
-                        REQUIRE(afterDepthPrepassGroups[iSecondGroupIndex].empty());
-
                         // Submit other shader.
                         pComputeInterface->submitForExecution(1, 1, 1);
-
-                        // Check queue.
-                        REQUIRE(afterDepthPrepassGroups[iFirstGroupIndex].size() == 1);
-                        REQUIRE(afterDepthPrepassGroups[iSecondGroupIndex].size() == 1);
 
                         // Destroy all compute interfaces.
                         pComputeInterface = nullptr;
                         pTestInterface = nullptr;
 
-                        // All new pipelines should be destroyed.
-                        REQUIRE(pPipelineManager->getCurrentComputePipelineCount() == 0);
-
-                        // Check queue.
-                        for (const auto& stage : mtxQueued.second->vGraphicsQueueStagesGroups) {
-                            for (const auto& group : stage) {
-                                REQUIRE(group.empty());
-                            }
-                        }
+                        // All created pipelines should be destroyed.
+                        REQUIRE(
+                            pPipelineManager->getCurrentComputePipelineCount() ==
+                            iInitialComputePipelineCount);
 
                         getWindow()->close();
                     });

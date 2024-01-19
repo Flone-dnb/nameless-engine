@@ -6,10 +6,14 @@
 namespace ne {
     class Window;
     class GameManager;
-    class TransientCamera;
-    class InputManager;
+    class EditorCameraNode;
 
-    /** Defines editor game. */
+    /**
+     * Defines editor game.
+     *
+     * @remark This node expects to be a child of the world's root node so that parent rotations will not
+     * affect the camera.
+     */
     class EditorGameInstance : public GameInstance {
     public:
         /**
@@ -35,9 +39,9 @@ namespace ne {
         /**
          * Returns camera that's used for editor's viewport.
          *
-         * @return Camera.
+         * @return Camera node.
          */
-        std::shared_ptr<TransientCamera> getEditorCamera();
+        gc<EditorCameraNode> getEditorCamera();
 
         virtual ~EditorGameInstance() override = default;
 
@@ -51,16 +55,6 @@ namespace ne {
         virtual void onGameStarted() override;
 
         /**
-         * Called when the window received mouse movement.
-         *
-         * @param xOffset  Mouse X movement delta in pixels (plus if moved to the right,
-         * minus if moved to the left).
-         * @param yOffset  Mouse Y movement delta in pixels (plus if moved up,
-         * minus if moved down).
-         */
-        virtual void onMouseMove(double xOffset, double yOffset) override;
-
-        /**
          * Called before a new frame is rendered.
          *
          * @remark Called before nodes that should be called every frame.
@@ -71,62 +65,17 @@ namespace ne {
         virtual void onBeforeNewFrame(float timeSincePrevCallInSec) override;
 
     private:
-        /** Stores unique IDs of input events. */
-        struct InputEventIds {
-            /** Groups action events. */
-            struct Action {
-                /** ID of the action event for capturing mouse cursor. */
-                static constexpr unsigned int iCaptureMouseCursor = 0;
-
-                /** ID of the action event for increasing camera's speed. */
-                static constexpr unsigned int iIncreaseCameraSpeed = 1;
-
-                /** ID of the action event for decreasing camera's speed. */
-                static constexpr unsigned int iDecreaseCameraSpeed = 2;
-            };
-
-            /** Groups axis events. */
-            struct Axis {
-                /** ID of the axis event for moving camera forward. */
-                static constexpr unsigned int iMoveForward = 0;
-
-                /** ID of the axis event for moving camera right. */
-                static constexpr unsigned int iMoveRight = 1;
-
-                /** ID of the axis event for moving camera up. */
-                static constexpr unsigned int iMoveUp = 2;
-            };
+        /** Groups all GC pointers that the editor holds. */
+        struct EditorGcPointers {
+            /** Camera used in the editor. */
+            gc<EditorCameraNode> pCameraNode;
         };
 
-        /** Binds input events to control @ref pEditorCamera. */
-        void bindCameraInput();
+        /** Called after a new world was created to create editor-specific nodes such as camera and etc. */
+        void spawnEditorNodesForNewWorld();
 
-        /** Updates @ref pEditorCamera speed based on the current settings. */
-        void updateCameraSpeed();
-
-        /** Camera used in the editor. */
-        std::shared_ptr<TransientCamera> pEditorCamera;
-
-        /** @ref pEditorCamera movement speed. */
-        float cameraMovementSpeed = 3.0F; // NOLINT: default value
-
-        /** Rotation multiplier for @ref pEditorCamera. */
-        double cameraRotationSensitivity = 0.1; // NOLINT: default value
-
-        /** Determines whether @ref cameraSpeedIncreaseMultiplier should be used or not. */
-        bool bShouldIncreaseCameraSpeed = false;
-
-        /** Determines whether @ref cameraSpeedDecreaseMultiplier should be used or not. */
-        bool bShouldDecreaseCameraSpeed = false;
-
-        /** Determines whether we can move and rotate @ref pEditorCamera or not. */
-        bool bIsMouseCursorCaptured = false;
-
-        /** Camera speed multiplier when fast movement mode is enabled (for ex. Shift is pressed). */
-        const float cameraSpeedIncreaseMultiplier = 2.0F;
-
-        /** Camera speed multiplier when slow movement mode is enabled (for ex. Ctrl is pressed). */
-        const float cameraSpeedDecreaseMultiplier = 0.5F;
+        /** All GC pointer that the editor holds. */
+        EditorGcPointers gcPointers;
 
         /** Title of the editor's window. */
         static constexpr auto pEditorWindowTitle = "Nameless Editor";

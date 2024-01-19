@@ -2,7 +2,8 @@
 #include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/PointLightNode.h"
 #include "game/nodes/light/SpotlightNode.h"
-#include "game/camera/TransientCamera.h"
+#include "game/nodes/CameraNode.h"
+#include "TestHelpers.hpp"
 #include "game/camera/CameraManager.h"
 #include "game/nodes/MeshNode.h"
 #include "game/GameInstance.h"
@@ -29,11 +30,9 @@ TEST_CASE("spawn light sources and then a mesh") {
                 }
 
                 // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
-
-                // Make it active.
-                getCameraManager()->setActiveCamera(pCamera);
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                 // Spawn some light sources.
                 getWorldRootNode()->addChildNode(gc_new<DirectionalLightNode>());
@@ -94,11 +93,9 @@ TEST_CASE("spawn mesh and then light sources") {
                 }
 
                 // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
-
-                // Make it active.
-                getCameraManager()->setActiveCamera(pCamera);
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                 // Spawn a mesh.
                 getWorldRootNode()->addChildNode(gc_new<MeshNode>());
@@ -159,11 +156,9 @@ TEST_CASE("change render settings with lights spawned") {
                 }
 
                 // Create and setup camera.
-                auto pCamera = std::make_shared<TransientCamera>();
-                pCamera->setLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
-
-                // Make it active.
-                getCameraManager()->setActiveCamera(pCamera);
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                 // Spawn a mesh.
                 const auto pFloorMesh = gc_new<MeshNode>();

@@ -4,7 +4,6 @@
 #include <format>
 
 // Custom.
-#include "game/camera/TransientCamera.h"
 #include "game/camera/CameraManager.h"
 #include "game/nodes/MeshNode.h"
 #include "game/Window.h"
@@ -13,29 +12,104 @@
 #include "game/nodes/EnvironmentNode.h"
 #include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/PointLightNode.h"
+#include "math/MathHelpers.hpp"
 #include "game/nodes/light/SpotlightNode.h"
+#include "misc/EditorNodeCreationHelpers.hpp"
+#include "nodes/EditorCameraNode.h"
+#include "input/EditorInputEventIds.hpp"
 
 namespace ne {
     const char* EditorGameInstance::getEditorWindowTitle() { return pEditorWindowTitle; }
 
     EditorGameInstance::EditorGameInstance(
         Window* pWindow, GameManager* pGameManager, InputManager* pInputManager)
-        : GameInstance(pWindow, pGameManager, pInputManager) {}
+        : GameInstance(pWindow, pGameManager, pInputManager) {
+        // Move forward.
+        auto optionalError = pInputManager->addAxisEvent(
+            static_cast<unsigned int>(EditorInputEventIds::Axis::MOVE_CAMERA_FORWARD),
+            {std::make_pair(KeyboardKey::KEY_W, KeyboardKey::KEY_S)});
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
 
-    std::shared_ptr<TransientCamera> EditorGameInstance::getEditorCamera() { return pEditorCamera; }
+        // Move right.
+        optionalError = pInputManager->addAxisEvent(
+            static_cast<unsigned int>(EditorInputEventIds::Axis::MOVE_CAMERA_RIGHT),
+            {std::make_pair(KeyboardKey::KEY_D, KeyboardKey::KEY_A)});
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Move up.
+        optionalError = pInputManager->addAxisEvent(
+            static_cast<unsigned int>(EditorInputEventIds::Axis::MOVE_CAMERA_UP),
+            {std::make_pair(KeyboardKey::KEY_E, KeyboardKey::KEY_Q)});
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Capture mouse.
+        optionalError = pInputManager->addActionEvent(
+            static_cast<unsigned int>(EditorInputEventIds::Action::CAPTURE_MOUSE_CURSOR),
+            {MouseButton::RIGHT});
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Increase camera speed.
+        optionalError = pInputManager->addActionEvent(
+            static_cast<unsigned int>(EditorInputEventIds::Action::INCREASE_CAMERA_SPEED),
+            {KeyboardKey::KEY_LEFT_SHIFT});
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Decrease camera speed.
+        optionalError = pInputManager->addActionEvent(
+            static_cast<unsigned int>(EditorInputEventIds::Action::DECREASE_CAMERA_SPEED),
+            {KeyboardKey::KEY_LEFT_CONTROL});
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Bind action events.
+        {
+            const auto pMtxActionEventBindings = getActionEventBindings();
+            std::scoped_lock guard(pMtxActionEventBindings->first);
+
+            pMtxActionEventBindings
+                ->second[static_cast<unsigned int>(EditorInputEventIds::Action::CAPTURE_MOUSE_CURSOR)] =
+                [this](KeyboardModifiers modifiers, bool bIsPressed) {
+                    // Set cursor visibility.
+                    getWindow()->setCursorVisibility(!bIsPressed);
+
+                    // Notify editor camera.
+                    gcPointers.pCameraNode->setIgnoreInput(!bIsPressed);
+                };
+        }
+    }
+
+    gc<EditorCameraNode> EditorGameInstance::getEditorCamera() { return gcPointers.pCameraNode; }
 
     void EditorGameInstance::onGameStarted() {
-        // Create and setup camera.
-        pEditorCamera = std::make_shared<TransientCamera>();
-        pEditorCamera->setLocation(glm::vec3(-5.0F, 0.0F, 3.0F)); // NOLINT
-        updateCameraSpeed();
-
-        // Make it active.
-        getCameraManager()->setActiveCamera(pEditorCamera);
-
-        // Bind camera to input.
-        bindCameraInput();
-
         // Create world.
         createWorld([this](const std::optional<Error>& optionalWorldError) {
             if (optionalWorldError.has_value()) [[unlikely]] {
@@ -44,6 +118,9 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+
+            // Spawn editor nodes.
+            spawnEditorNodesForNewWorld();
 
             // Spawn environment node.
             const auto pEnvironmentNode = gc_new<EnvironmentNode>();
@@ -134,17 +211,6 @@ namespace ne {
         });
     }
 
-    void EditorGameInstance::onMouseMove(double xOffset, double yOffset) {
-        if (!bIsMouseCursorCaptured) {
-            return;
-        }
-
-        auto currentRotation = pEditorCamera->getFreeCameraRotation();
-        currentRotation.z += static_cast<float>(xOffset * cameraRotationSensitivity);
-        currentRotation.y -= static_cast<float>(yOffset * cameraRotationSensitivity);
-        pEditorCamera->setFreeCameraRotation(currentRotation);
-    }
-
     void EditorGameInstance::onBeforeNewFrame(float timeSincePrevCallInSec) {
         // Get window and renderer.
         const auto pWindow = getWindow();
@@ -179,143 +245,18 @@ namespace ne {
             pRenderStats->getTimeSpentLastFrameWaitingForGpu()));
     }
 
-    void EditorGameInstance::bindCameraInput() {
-        const auto pInputManager = getInputManager();
+    void EditorGameInstance::spawnEditorNodesForNewWorld() {
+        // Create camera.
+        gcPointers.pCameraNode =
+            EditorNodeCreationHelpers::createEditorNode<EditorCameraNode>("Editor's camera");
 
-        // Register events.
+        // Setup camera.
+        gcPointers.pCameraNode->setRelativeLocation(glm::vec3(-5.0F, 0.0F, 3.0F)); // NOLINT
 
-        // Move forward.
-        auto optionalError = pInputManager->addAxisEvent(
-            InputEventIds::Axis::iMoveForward, {std::make_pair(KeyboardKey::KEY_W, KeyboardKey::KEY_S)});
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
+        // Spawn camera.
+        getWorldRootNode()->addChildNode(gcPointers.pCameraNode);
 
-        // Move right.
-        optionalError = pInputManager->addAxisEvent(
-            InputEventIds::Axis::iMoveRight, {std::make_pair(KeyboardKey::KEY_D, KeyboardKey::KEY_A)});
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Move up.
-        optionalError = pInputManager->addAxisEvent(
-            InputEventIds::Axis::iMoveUp, {std::make_pair(KeyboardKey::KEY_E, KeyboardKey::KEY_Q)});
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Capture mouse.
-        optionalError =
-            pInputManager->addActionEvent(InputEventIds::Action::iCaptureMouseCursor, {MouseButton::RIGHT});
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Increase camera speed.
-        optionalError = pInputManager->addActionEvent(
-            InputEventIds::Action::iIncreaseCameraSpeed, {KeyboardKey::KEY_LEFT_SHIFT});
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Decrease camera speed.
-        optionalError = pInputManager->addActionEvent(
-            InputEventIds::Action::iDecreaseCameraSpeed, {KeyboardKey::KEY_LEFT_CONTROL});
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Bind callbacks.
-
-        // Axis events.
-        {
-            const auto pMtxAxisEventBindings = getAxisEventBindings();
-            std::scoped_lock guard(pMtxAxisEventBindings->first);
-
-            pMtxAxisEventBindings->second[InputEventIds::Axis::iMoveForward] =
-                [this](KeyboardModifiers modifiers, float input) {
-                    if (!bIsMouseCursorCaptured) {
-                        return;
-                    }
-                    pEditorCamera->setFreeCameraForwardMovement(input);
-                };
-
-            pMtxAxisEventBindings->second[InputEventIds::Axis::iMoveRight] =
-                [this](KeyboardModifiers modifiers, float input) {
-                    if (!bIsMouseCursorCaptured) {
-                        return;
-                    }
-                    pEditorCamera->setFreeCameraRightMovement(input);
-                };
-
-            pMtxAxisEventBindings->second[InputEventIds::Axis::iMoveUp] =
-                [this](KeyboardModifiers modifiers, float input) {
-                    if (!bIsMouseCursorCaptured) {
-                        return;
-                    }
-                    pEditorCamera->setFreeCameraWorldUpMovement(input);
-                };
-        }
-
-        // Action events.
-        {
-            const auto pMtxActionEventBindings = getActionEventBindings();
-            std::scoped_lock guard(pMtxActionEventBindings->first);
-
-            pMtxActionEventBindings->second[InputEventIds::Action::iCaptureMouseCursor] =
-                [this](KeyboardModifiers modifiers, bool bIsPressed) {
-                    bIsMouseCursorCaptured = bIsPressed;
-                    getWindow()->setCursorVisibility(!bIsMouseCursorCaptured);
-                    if (!bIsMouseCursorCaptured) {
-                        // Reset any existing input.
-                        pEditorCamera->setFreeCameraForwardMovement(0.0F);
-                        pEditorCamera->setFreeCameraRightMovement(0.0F);
-                        pEditorCamera->setFreeCameraWorldUpMovement(0.0F);
-                    }
-                };
-
-            pMtxActionEventBindings->second[InputEventIds::Action::iIncreaseCameraSpeed] =
-                [this](KeyboardModifiers modifiers, bool bIsPressed) {
-                    bShouldIncreaseCameraSpeed = bIsPressed;
-                    updateCameraSpeed();
-                };
-
-            pMtxActionEventBindings->second[InputEventIds::Action::iDecreaseCameraSpeed] =
-                [this](KeyboardModifiers modifiers, bool bIsPressed) {
-                    bShouldDecreaseCameraSpeed = bIsPressed;
-                    updateCameraSpeed();
-                };
-        }
-    }
-
-    void EditorGameInstance::updateCameraSpeed() {
-        auto currentSpeed = cameraMovementSpeed;
-
-        if (bShouldIncreaseCameraSpeed) {
-            currentSpeed *= cameraSpeedIncreaseMultiplier;
-        } else if (bShouldDecreaseCameraSpeed) {
-            currentSpeed *= cameraSpeedDecreaseMultiplier;
-        }
-
-        pEditorCamera->setCameraMovementSpeed(currentSpeed);
+        // Make it active.
+        getCameraManager()->setActiveCamera(gcPointers.pCameraNode);
     }
 } // namespace ne

@@ -101,6 +101,13 @@ namespace ne {
     }
 
     void EditorCameraNode::onMouseMove(double xOffset, double yOffset) {
+        // Although we disable node's "receiving input" when we are told to,
+        // that event just queues a deferred task and until that task is not processed
+        // we still receive input but the mouse cursor is shows which may cause unwanted rotations.
+        if (bIgnoreInput) {
+            return;
+        }
+
         // Modify rotation.
         auto currentRotation = getRelativeRotation();
         currentRotation.z += static_cast<float>(xOffset * rotationSensitivity);

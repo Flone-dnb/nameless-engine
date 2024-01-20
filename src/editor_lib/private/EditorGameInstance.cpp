@@ -98,6 +98,10 @@ namespace ne {
             pMtxActionEventBindings
                 ->second[static_cast<unsigned int>(EditorInputEventIds::Action::CAPTURE_MOUSE_CURSOR)] =
                 [this](KeyboardModifiers modifiers, bool bIsPressed) {
+                    if (gcPointers.pCameraNode == nullptr) {
+                        return;
+                    }
+
                     // Set cursor visibility.
                     getWindow()->setCursorVisibility(!bIsPressed);
 

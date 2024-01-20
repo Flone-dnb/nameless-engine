@@ -1018,6 +1018,7 @@ namespace ne {
                     rangeData.allocatedDescriptors.size()));
             }
             iCurrentHeapIndex += iSkipDescriptorCount;
+            heapHandle.Offset(iSkipDescriptorCount, iDescriptorSize);
         }
 
         // Iterate over all descriptors from this heap.

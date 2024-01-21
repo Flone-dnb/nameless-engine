@@ -1031,7 +1031,7 @@ namespace ne {
                 getLightingShaderResourceManager()->getDirectionalLightDataArray()->getInternalResources();
             std::scoped_lock directionalLightsGuard(pMtxDirectionalLights->first);
 
-            // Iterate over all directional lights.
+            // Iterate over all directional lights (no culling).
             for (const auto& pLightNode :
                  pMtxDirectionalLights->second.lightsInFrustum.vShaderLightNodeArray) {
                 // Convert node type.
@@ -1069,10 +1069,12 @@ namespace ne {
                 getLightingShaderResourceManager()->getSpotlightDataArray()->getInternalResources();
             std::scoped_lock spotlightsGuard(pMtxSpotlights->first);
 
-            // Iterate over all spotlights.
-            for (const auto& pLightNode : pMtxSpotlights->second.lightsInFrustum.vShaderLightNodeArray) {
+            // Iterate only over spotlights in camera's frustum.
+            for (const auto& iSpotlightIndex :
+                 pMtxSpotlights->second.lightsInFrustum.vLightIndicesInFrustum) {
                 // Convert node type.
-                const auto pSpotlightNode = reinterpret_cast<SpotlightNode*>(pLightNode);
+                const auto pSpotlightNode = reinterpret_cast<SpotlightNode*>(
+                    pMtxSpotlights->second.lightsInFrustum.vShaderLightNodeArray[iSpotlightIndex]);
 
                 // Get light info.
                 ShadowMapHandle* pShadowMapHandle = nullptr;
@@ -1106,10 +1108,12 @@ namespace ne {
                 getLightingShaderResourceManager()->getPointLightDataArray()->getInternalResources();
             std::scoped_lock pointLightsGuard(pMtxPointLights->first);
 
-            // Iterate over all point lights.
-            for (const auto& pLightNode : pMtxPointLights->second.lightsInFrustum.vShaderLightNodeArray) {
+            // Iterate only over point lights in frustum.
+            for (const auto& iPointLightIndex :
+                 pMtxPointLights->second.lightsInFrustum.vLightIndicesInFrustum) {
                 // Convert node type.
-                const auto pPointLightNode = reinterpret_cast<PointLightNode*>(pLightNode);
+                const auto pPointLightNode = reinterpret_cast<PointLightNode*>(
+                    pMtxPointLights->second.lightsInFrustum.vShaderLightNodeArray[iPointLightIndex]);
 
                 // Get shadow handle.
                 const auto pShadowMapHandle = Renderer::getPointLightNodeShadowMapHandle(pPointLightNode);

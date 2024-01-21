@@ -61,7 +61,6 @@ TEST_CASE("spawn light sources and then a mesh") {
 
     private:
         size_t iFrameCount = 0;
-        gc<MeshNode> pMeshNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -124,7 +123,6 @@ TEST_CASE("spawn mesh and then light sources") {
 
     private:
         size_t iFrameCount = 0;
-        gc<MeshNode> pMeshNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -229,7 +227,182 @@ TEST_CASE("change render settings with lights spawned") {
 
     private:
         size_t iFrameCount = 0;
-        gc<MeshNode> pMeshNode;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) [[unlikely]] {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("point light culled when outside of camera frustum") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create and setup camera.
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-20.0F, 0.0F, 0.0F));
+
+                // Spawn a floor mesh.
+                const auto pFloorMesh = gc_new<MeshNode>();
+                pFloorMesh->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                pFloorMesh->setRelativeLocation(glm::vec3(0.0F, 0.0F, -5.0F));
+                pFloorMesh->setRelativeScale(glm::vec3(100.0F, 100.0F, 1.0F));
+                getWorldRootNode()->addChildNode(pFloorMesh);
+
+                // Now spawn light.
+                const auto pPointLight = gc_new<PointLightNode>();
+                pPointLight->setLightDistance(10.0F);
+                pPointLight->setRelativeLocation(glm::vec3(0.0F, 0.0F, 0.0F));
+                getWorldRootNode()->addChildNode(pPointLight);
+
+                iFrameCount = 0;
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float delta) override {
+            iFrameCount += 1;
+
+            // Get render stats.
+            const auto pRenderStats = getWindow()->getRenderer()->getRenderStatistics();
+
+            if (iFrameCount == 2) {
+                // No lights should be culled.
+                REQUIRE(pRenderStats->getLastFrameCulledLightCount() == 0);
+
+                // Check draw calls:
+                // 6 in shadow pass (no culling there yet) + 1 in depth prepass + 1 in main pass
+                REQUIRE(pRenderStats->getLastFrameDrawCallCount() == 8);
+
+                // Rotate the camera 180 degrees.
+                getCameraManager()->getActiveCamera()->second->setRelativeRotation(
+                    glm::vec3(0.0F, 0.0F, 180.0F));
+
+                return;
+            }
+
+            if (iFrameCount == 3) {
+                // Point light should have been culled.
+                REQUIRE(pRenderStats->getLastFrameCulledLightCount() == 1);
+
+                // Check draw calls:
+                // 1 in depth prepass + 1 in main pass
+                REQUIRE(pRenderStats->getLastFrameDrawCallCount() == 2);
+
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iFrameCount = 0;
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) [[unlikely]] {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("spotlight culled when outside of camera frustum") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                // Create and setup camera.
+                auto pCamera =
+                    TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
+                pCamera->setRelativeLocation(glm::vec3(-20.0F, 0.0F, 0.0F));
+
+                // Spawn a floor mesh.
+                const auto pFloorMesh = gc_new<MeshNode>();
+                pFloorMesh->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
+                pFloorMesh->setRelativeLocation(glm::vec3(0.0F, 0.0F, -5.0F));
+                pFloorMesh->setRelativeScale(glm::vec3(100.0F, 100.0F, 1.0F));
+                getWorldRootNode()->addChildNode(pFloorMesh);
+
+                // Now spawn light.
+                const auto pSpotlight = gc_new<SpotlightNode>();
+                pSpotlight->setLightDistance(10.0F);
+                pSpotlight->setRelativeLocation(glm::vec3(0.0F, 0.0F, 0.0F));
+                getWorldRootNode()->addChildNode(pSpotlight);
+
+                iFrameCount = 0;
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+        virtual void onBeforeNewFrame(float delta) override {
+            iFrameCount += 1;
+
+            // Get render stats.
+            const auto pRenderStats = getWindow()->getRenderer()->getRenderStatistics();
+
+            if (iFrameCount == 2) {
+                // No lights should be culled.
+                REQUIRE(pRenderStats->getLastFrameCulledLightCount() == 0);
+
+                // Check draw calls:
+                // 1 in shadow pass + 1 in depth prepass + 1 in main pass
+                REQUIRE(pRenderStats->getLastFrameDrawCallCount() == 3);
+
+                // Rotate the camera 180 degrees.
+                getCameraManager()->getActiveCamera()->second->setRelativeRotation(
+                    glm::vec3(0.0F, 0.0F, 180.0F));
+
+                return;
+            }
+
+            if (iFrameCount == 3) {
+                // Spotlight should have been culled.
+                REQUIRE(pRenderStats->getLastFrameCulledLightCount() == 1);
+
+                // Check draw calls:
+                // 1 in depth prepass + 1 in main pass
+                REQUIRE(pRenderStats->getLastFrameDrawCallCount() == 2);
+
+                getWindow()->close();
+            }
+        }
+
+    private:
+        size_t iFrameCount = 0;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();

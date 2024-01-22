@@ -94,7 +94,7 @@ namespace ne {
                 float nearClipPlaneDistance = 0.3F; // NOLINT: magic number
 
                 /** Distance to camera's far clip plane. */
-                float farClipPlaneDistance = 1000.0F; // NOLINT: magic number
+                float farClipPlaneDistance = 500.0F; // NOLINT: good default value
 
                 /** Vertical field of view. */
                 unsigned int iVerticalFov = 90; // NOLINT: magic number

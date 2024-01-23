@@ -76,13 +76,13 @@ namespace ne {
 
         } else if (sFieldCanonicalTypeName == "std::vector<unsigned long long>") {
             const auto vOriginalArray = pField->getUnsafe<std::vector<unsigned long long>>(pFieldOwner);
-            std::vector<std::string> vArray;
-            for (const auto& iItem : vOriginalArray) {
+            std::vector<std::string> vArray(vOriginalArray.size());
+            for (size_t i = 0; i < vOriginalArray.size(); i++) {
                 // Since toml11 (library that we use) uses `long long` for integers,
                 // store this type as a string.
-                vArray.push_back(std::to_string(iItem));
+                vArray[i] = std::to_string(vOriginalArray[i]);
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(vArray);
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
 
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             const std::vector<float> vArray = pField->getUnsafe<std::vector<float>>(pFieldOwner);
@@ -91,7 +91,7 @@ namespace ne {
             for (size_t i = 0; i < vArray.size(); i++) {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(vStrArray);
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
 
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
             const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
@@ -100,7 +100,7 @@ namespace ne {
             for (size_t i = 0; i < vArray.size(); i++) {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(vStrArray);
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
 
         } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =

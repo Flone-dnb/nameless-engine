@@ -62,7 +62,6 @@ namespace ne {
         gc_vector<MeshNode> vMeshNodes = gc_new_vector<MeshNode>();
 
         // Prepare variables.
-        const auto gltfNodePercentRange = 100.0F / static_cast<float>(model.nodes.size());
         const std::string sTexturesDirectoryName = "textures";
         const std::string sImageExtension = ".png";
         const std::string sDiffuseTextureName = "diffuse";

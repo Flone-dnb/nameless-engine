@@ -39,7 +39,7 @@ namespace ne {
         const auto pSubEntity = static_cast<Serializable*>(pField->getPtrUnsafe(pFieldOwner));
 
         // Serialize.
-        const auto optionalError = serializeFieldObject(
+        auto optionalError = serializeFieldObject(
             pSubEntity, pTomlData, pFieldName, sSectionName, sEntityId, iSubEntityId, pOriginalObject);
         if (optionalError.has_value()) [[unlikely]] {
             Error error = std::move(optionalError.value());

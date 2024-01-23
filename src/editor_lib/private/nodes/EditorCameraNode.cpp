@@ -80,7 +80,7 @@ namespace ne {
 
         // Check for early exit.
         if (bIgnoreInput ||
-            glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), 0.0001F))) {
+            glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), 0.0001F))) { // NOLINT
             return;
         }
 

@@ -111,7 +111,7 @@ namespace ne {
         }
     }
 
-    gc<EditorCameraNode> EditorGameInstance::getEditorCamera() { return gcPointers.pCameraNode; }
+    gc<EditorCameraNode> EditorGameInstance::getEditorCamera() const { return gcPointers.pCameraNode; }
 
     void EditorGameInstance::onGameStarted() {
         // Create world.

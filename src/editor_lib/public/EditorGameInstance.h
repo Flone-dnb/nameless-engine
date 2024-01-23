@@ -41,7 +41,7 @@ namespace ne {
          *
          * @return Camera node.
          */
-        gc<EditorCameraNode> getEditorCamera();
+        gc<EditorCameraNode> getEditorCamera() const;
 
         virtual ~EditorGameInstance() override = default;
 

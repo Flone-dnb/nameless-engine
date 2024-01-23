@@ -374,7 +374,7 @@ namespace ne RNAMESPACE() {
             requires std::same_as<SmartPointer<Serializable>, std::shared_ptr<Serializable>> ||
                      std::same_as<SmartPointer<Serializable>, gc<Serializable>>
         static std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
-        deserializeMultiple(const std::filesystem::path& pathToFile, const std::set<std::string>& ids);
+        deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
@@ -434,6 +434,17 @@ namespace ne RNAMESPACE() {
         virtual void onAfterDeserialized() {}
 
     private:
+        /**
+         * Adds ".toml" extension to the path (if needed) and copies a backup file to the specified path
+         * if the specified path does not exist but there is a backup file.
+         *
+         * @param pathToFile Path to toml file (may point to non-existing path or don't have ".toml"
+         * extension).
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] static std::optional<Error> resolvePathToToml(std::filesystem::path& pathToFile);
+
         /**
          * Returns archetype for the specified GUID.
          *
@@ -510,6 +521,86 @@ namespace ne RNAMESPACE() {
         return deserialize<SmartPointer, T>(pathToFile, foundCustomAttributes, sEntityId);
     }
 
+    template <template <typename> class SmartPointer>
+        requires std::same_as<SmartPointer<Serializable>, std::shared_ptr<Serializable>> ||
+                 std::same_as<SmartPointer<Serializable>, gc<Serializable>>
+    std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
+    Serializable::deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids) {
+        // Check that specified IDs don't have dots in them.
+        for (const auto& sId : ids) {
+            if (sId.contains('.')) [[unlikely]] {
+                return Error(
+                    std::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
+            }
+        }
+
+        // Resolve path.
+        auto optionalError = resolvePathToToml(pathToFile);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Parse file.
+        toml::value tomlData;
+        try {
+            tomlData = toml::parse(pathToFile);
+        } catch (std::exception& exception) {
+            return Error(std::format(
+                "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
+        }
+
+        // Deserialize.
+        std::vector<DeserializedObjectInformation<SmartPointer>> deserializedObjects;
+        for (const auto& sEntityId : ids) {
+            // Deserialize object with the specified entity ID.
+            std::unordered_map<std::string, std::string> customAttributes;
+            auto result =
+                deserialize<SmartPointer, Serializable>(tomlData, customAttributes, sEntityId, pathToFile);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save object info.
+            DeserializedObjectInformation objectInfo(
+                std::get<SmartPointer<Serializable>>(std::move(result)), sEntityId, customAttributes);
+            deserializedObjects.push_back(std::move(objectInfo));
+        }
+
+        return deserializedObjects;
+    }
+
+    template <template <typename> class SmartPointer, typename T>
+        requires std::derived_from<T, Serializable> &&
+                 (std::same_as<SmartPointer<T>, std::shared_ptr<T>> || std::same_as<SmartPointer<T>, gc<T>>)
+    std::variant<SmartPointer<T>, Error> Serializable::deserialize(
+        std::filesystem::path pathToFile,
+        std::unordered_map<std::string, std::string>& customAttributes,
+        const std::string& sEntityId) {
+        // Resolve path.
+        auto optionalError = resolvePathToToml(pathToFile);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Parse file.
+        toml::value tomlData;
+        try {
+            tomlData = toml::parse(pathToFile);
+        } catch (std::exception& exception) {
+            return Error(std::format(
+                "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
+        }
+
+        // Deserialize.
+        return deserialize<SmartPointer, T>(tomlData, customAttributes, sEntityId, pathToFile);
+    }
+
     template <template <typename> class SmartPointer, typename T>
         requires std::derived_from<T, Serializable> &&
                  (std::same_as<SmartPointer<T>, std::shared_ptr<T>> || std::same_as<SmartPointer<T>, gc<T>>)
@@ -523,29 +614,26 @@ namespace ne RNAMESPACE() {
             sEntityId = "0";
         }
 
-        // Read all sections.
-        std::vector<std::string> vSections;
+        // Read TOML as table.
         const auto fileTable = tomlData.as_table();
-        for (const auto& [key, value] : fileTable) {
-            if (value.is_table()) {
-                vSections.push_back(key);
-            }
-        }
 
         // Check that we have at least one section.
-        if (vSections.empty()) {
+        if (fileTable.empty()) [[unlikely]] {
             return Error("provided toml value has 0 sections while expected at least 1 section");
         }
 
         // Find a section that starts with the specified entity ID.
-        // Look for a value between dots.
-        // We can't just use sSectionName.starts_with(sEntityId) because we might make a mistake in the
-        // following situation: [100.10.1014674670888563010] with entity ID equal to "10".
-        std::string sTargetSection;
-        std::string sTypeGuid;
         // Each entity section has the following format: [entityId.GUID]
         // For sub entities (field with reflected type) format: [parentEntityId.childEntityId.childGUID]
-        for (const auto& sSectionName : vSections) {
+        std::string sTargetSection;
+        std::string sTypeGuid;
+        for (const auto& [sSectionName, value] : fileTable) {
+            // We can't just use `sSectionName.starts_with(sEntityId)` because we might make a mistake in the
+            // following situation: [100...] with entity ID equal to "10" and even if we add a dot
+            // to `sEntityId` we still might make a mistake in the following situation:
+            // [10.30.GUID] while we look for just [10.GUID].
+
+            // Get ID end position (GUID start position).
             const auto iIdEndDotPos = sSectionName.rfind('.');
             if (iIdEndDotPos == std::string::npos) [[unlikely]] {
                 return Error("provided toml value does not contain entity ID");
@@ -558,89 +646,91 @@ namespace ne RNAMESPACE() {
             }
 
             // Get ID chain (either entity ID or something like "parentEntityId.childEntityId").
-            const auto sIdChain = sSectionName.substr(0, iIdEndDotPos);
-            if (sIdChain == sEntityId) {
-                sTargetSection = sSectionName;
-
-                // Get this entity's GUID.
-                sTypeGuid = sSectionName.substr(iIdEndDotPos + 1);
-                break;
+            if (std::string_view(sSectionName.data(), iIdEndDotPos) != sEntityId) { // compare without copy
+                continue;
             }
+
+            // Save target section name.
+            sTargetSection = sSectionName;
+
+            // Save this entity's GUID.
+            sTypeGuid = sSectionName.substr(iIdEndDotPos + 1);
+
+            break;
         }
 
-        // Check if anything was found.
-        if (sTargetSection.empty()) {
+        // Make sure something was found.
+        if (sTargetSection.empty()) [[unlikely]] {
             return Error(std::format("could not find entity with ID \"{}\"", sEntityId));
         }
 
         // Get all keys (field names) from this section.
-        toml::value section;
-        try {
-            section = toml::find(tomlData, sTargetSection);
-        } catch (std::exception& ex) {
-            return Error(std::format("no section \"{}\" was found ({})", sTargetSection, ex.what()));
-        }
-
-        if (!section.is_table()) {
+        const auto& targetSection = fileTable.at(sTargetSection);
+        if (!targetSection.is_table()) [[unlikely]] {
             return Error(std::format("found \"{}\" section is not a section", sTargetSection));
         }
 
-        // Collect keys.
-        const auto& sectionTable = section.as_table();
-        std::set<std::string> keys;
+        // Collect keys from target section.
+        const auto& sectionTable = targetSection.as_table();
+        std::unordered_map<std::string_view, const toml::value*> fieldsToDeserialize;
         SmartPointer<T> pOriginalEntity = nullptr;
-        for (const auto& [key, value] : sectionTable) {
-            if (key == sNothingToSerializeKey) {
+        for (const auto& [sKey, value] : sectionTable) {
+            if (sKey == sNothingToSerializeKey) {
                 continue;
-            } else if (key == sPathRelativeToResKey) {
+            } else if (sKey == sPathRelativeToResKey) {
                 // Make sure the value is string.
-                if (!value.is_string()) {
-                    Error error(std::format("found \"{}\" key's value is not string", sPathRelativeToResKey));
-                    return error;
+                if (!value.is_string()) [[unlikely]] {
+                    return Error(
+                        std::format("found \"{}\" key's value is not string", sPathRelativeToResKey));
                 }
 
                 // Deserialize original entity.
-                const auto deserializeResult = Serializable::deserialize<SmartPointer, T>(
+                auto deserializeResult = Serializable::deserialize<SmartPointer, T>(
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / value.as_string().str);
-                if (std::holds_alternative<Error>(deserializeResult)) {
-                    auto err = std::get<Error>(deserializeResult);
-                    err.addCurrentLocationToErrorStack();
-                    return err;
+                if (std::holds_alternative<Error>(deserializeResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(deserializeResult));
+                    error.addCurrentLocationToErrorStack();
+                    return error;
                 }
                 pOriginalEntity = std::get<SmartPointer<T>>(deserializeResult);
-            } else if (key.starts_with("..")) {
+            } else if (sKey.starts_with("..")) {
                 // Custom attribute.
-                if (!value.is_string()) {
-                    return Error(std::format("found custom attribute \"{}\" is not a string", key));
+                // Make sure it's a string.
+                if (!value.is_string()) [[unlikely]] {
+                    return Error(std::format("found custom attribute \"{}\" is not a string", sKey));
                 }
-                customAttributes[key.substr(2)] = value.as_string().str;
-            } else if (key.contains('[')) {
-                // Describes array of `Serializable` objects,
-                // for example: std::vector<std::shared_ptr<Serializable>>.
-                // Insert only field name.
-                // Get field name end.
-                const auto iFieldNameEndPosition = key.find('[');
-                auto iFieldNameStartPosition = key.rfind('"', iFieldNameEndPosition);
+
+                // Add attribute.
+                customAttributes[sKey.substr(2)] = value.as_string().str;
+            } else if (const auto iFieldNameEndPosition = sKey.find('[');
+                       iFieldNameEndPosition != std::string::npos) {
+                // Describes array of `Serializable` items (for ex. vector<shared_ptr<Serializable>>
+                // might be:
+                // ["EntityIdChain.GUID".FIELD_NAME] <- section
+                // ["EntityIdChain.GUID".FIELD_NAME."FIELD_NAME[0]"] <- key
+                auto iFieldNameStartPosition = sKey.rfind('"', iFieldNameEndPosition);
                 if (iFieldNameStartPosition == std::string::npos) [[unlikely]] {
-                    return Error(std::format("section name \"{}\" is corrupted", key));
+                    return Error(std::format("section name \"{}\" is corrupted", sKey));
                 }
                 iFieldNameStartPosition += 1;
 
+                // Make sure found indices are correct.
                 if (iFieldNameStartPosition >= iFieldNameEndPosition) [[unlikely]] {
-                    return Error(std::format("section name \"{}\" is corrupted", key));
+                    return Error(std::format("section name \"{}\" is corrupted", sKey));
                 }
 
-                auto sFieldName =
-                    key.substr(iFieldNameStartPosition, iFieldNameEndPosition - iFieldNameEndPosition);
-                keys.insert(std::move(sFieldName));
+                // Save field name.
+                fieldsToDeserialize[std::string_view(
+                    sKey.data() + iFieldNameStartPosition, iFieldNameEndPosition - iFieldNameStartPosition)] =
+                    &value;
             } else {
-                keys.insert(key);
+                fieldsToDeserialize[sKey] = &value;
             }
         }
 
         // Get archetype for found GUID.
-        auto pType = getClassForGuid(sTypeGuid);
-        if (!pType) {
+        const auto pType = getClassForGuid(sTypeGuid);
+        if (pType == nullptr) [[unlikely]] {
             if (pOriginalEntity) {
                 return Error(std::format(
                     "GUID \"{}\" was not found in the database, but "
@@ -652,7 +742,9 @@ namespace ne RNAMESPACE() {
                 return Error(std::format("no type found for GUID \"{}\"", sTypeGuid));
             }
         }
-        if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(pType)) {
+
+        // Make sure the type indeed derives from serializable.
+        if (!SerializableObjectFieldSerializer::isDerivedFromSerializable(pType)) [[unlikely]] {
             if (pOriginalEntity) {
                 return Error(std::format(
                     "deserialized type for \"{}\" does not derive from {}, but "
@@ -677,8 +769,9 @@ namespace ne RNAMESPACE() {
         }
         if (pSmartPointerInstance == nullptr) {
             if constexpr (std::is_same_v<SmartPointer<T>, std::shared_ptr<T>>) {
+                // Create a shared instance.
                 pSmartPointerInstance = pType->makeSharedInstance<T>();
-                if (pSmartPointerInstance == nullptr) {
+                if (pSmartPointerInstance == nullptr) [[unlikely]] {
                     return Error(std::format(
                         "unable to make an object of type \"{}\" using type's default constructor "
                         "(does type \"{}\" has a default constructor?)",
@@ -686,10 +779,10 @@ namespace ne RNAMESPACE() {
                         pType->getName()));
                 }
             } else if (std::is_same_v<SmartPointer<T>, gc<T>>) {
-                // this section is a temporary solution until we will add a `gc_new` method
-                // to `rfk::Struct`
+                // Create GC instance.
+                // (this part is a temporary solution until we will add a `gc_new` method to `rfk::Struct`)
                 std::unique_ptr<T> pInstance = pType->makeUniqueInstance<T>();
-                if (!pInstance) {
+                if (pInstance == nullptr) [[unlikely]] {
                     return Error(std::format(
                         "unable to make an object of type \"{}\" using type's default constructor "
                         "(does type \"{}\" has a default constructor?)",
@@ -698,13 +791,13 @@ namespace ne RNAMESPACE() {
                 }
                 gc<rfk::Object> pParentGcInstance = pInstance->gc_new();
                 pSmartPointerInstance = gc_dynamic_pointer_cast<T>(pParentGcInstance);
-                if (!pSmartPointerInstance) {
+                if (pSmartPointerInstance == nullptr) [[unlikely]] {
                     return Error(std::format(
                         "dynamic cast failed to cast the type \"{}\" to the specified template argument "
                         "(are you trying to deserialize into a wrong type?)",
                         pParentGcInstance->getArchetype().getName()));
                 }
-            } else {
+            } else [[unlikely]] {
                 return Error("unexpected smart pointer type received");
             }
         }
@@ -714,28 +807,17 @@ namespace ne RNAMESPACE() {
         const auto vBinaryFieldSerializers = FieldSerializerManager::getBinaryFieldSerializers();
 
         // Deserialize fields.
-        for (auto& sFieldName : keys) {
+        for (auto& [sFieldName, pFieldTomlValue] : fieldsToDeserialize) {
             if (sFieldName == sSubEntityFieldNameKey) {
                 // This field is used as section metadata and tells us what field of parent entity
                 // this section describes.
                 continue;
             }
 
-            // Read value from TOML.
-            toml::value value;
-            try {
-                value = toml::find(section, sFieldName);
-            } catch (std::exception& exception) {
-                return Error(std::format(
-                    "field \"{}\" was not found in the specified toml value: {}",
-                    sFieldName,
-                    exception.what()));
-            }
-
             // Get field by name.
             rfk::Field const* pField =
-                pType->getFieldByName(sFieldName.c_str(), rfk::EFieldFlags::Default, true);
-            if (!pField) {
+                pType->getFieldByName(sFieldName.data(), rfk::EFieldFlags::Default, true);
+            if (pField == nullptr) [[unlikely]] { // rarely happens
                 Logger::get().warn(std::format(
                     "field name \"{}\" exists in the specified toml value but does not exist in the "
                     "actual object (if you removed/renamed this reflected field from your "
@@ -745,6 +827,7 @@ namespace ne RNAMESPACE() {
             }
             const auto sFieldCanonicalTypeName = std::string(pField->getCanonicalTypeName());
 
+            // Check if it's serializable.
             if (!SerializableObjectFieldSerializer::isFieldSerializable(*pField)) {
                 continue;
             }
@@ -770,23 +853,14 @@ namespace ne RNAMESPACE() {
                                  "because path to the main file was not specified");
                 }
 
-                // Get entity ID chain.
-                auto iLastDotPos = sTargetSection.rfind('.');
-                if (iLastDotPos == std::string::npos) [[unlikely]] {
-                    return Error(std::format("section name \"{}\" is corrupted", sTargetSection));
-                }
-                // Will be something like: "entityId.subEntityId",
-                // "entityId.subEntityId.subSubEntityId" or etc.
-                const auto sEntityIdChain = sTargetSection.substr(0, iLastDotPos);
-
                 // Prepare path to the external file.
-                if (!value.is_string()) [[unlikely]] {
+                if (!pFieldTomlValue->is_string()) [[unlikely]] {
                     return Error(std::format(
                         "expected field \"{}\" to store external filename in file \"{}\"",
                         pField->getName(),
                         optionalPathToFile.value().string()));
                 }
-                const auto sExternalFileName = value.as_string().str;
+                const auto sExternalFileName = pFieldTomlValue->as_string().str;
                 const auto pathToExternalFile = optionalPathToFile.value().parent_path() / sExternalFileName;
 
                 // Get field object.
@@ -796,7 +870,7 @@ namespace ne RNAMESPACE() {
                 if (pSerializeProperty->getSerializationType() == FST_AS_EXTERNAL_FILE) {
                     // Deserialize external file.
                     auto result = deserialize<std::shared_ptr, Serializable>(pathToExternalFile);
-                    if (std::holds_alternative<Error>(result)) {
+                    if (std::holds_alternative<Error>(result)) [[unlikely]] {
                         auto error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
                         return error;
@@ -859,13 +933,13 @@ namespace ne RNAMESPACE() {
                     bFoundSerializer = true;
                     auto optionalError = pSerializer->deserializeField(
                         &tomlData,
-                        &value,
+                        pFieldTomlValue,
                         &*pSmartPointerInstance,
                         pField,
                         sTargetSection,
                         sEntityId,
                         customAttributes);
-                    if (optionalError.has_value()) {
+                    if (optionalError.has_value()) [[unlikely]] {
                         auto error = optionalError.value();
                         error.addCurrentLocationToErrorStack();
                         if (pOriginalEntity) {
@@ -880,63 +954,19 @@ namespace ne RNAMESPACE() {
                 }
             }
 
-            if (!bFoundSerializer) {
+            if (!bFoundSerializer) [[unlikely]] {
                 Logger::get().warn(
                     std::format("unable to find a deserializer that supports field \"{}\"", sFieldName));
             }
         }
 
-        // Notify.
-        Serializable* pTarget = dynamic_cast<Serializable*>(&*pSmartPointerInstance);
-        pTarget->onAfterDeserialized();
-
-        return pSmartPointerInstance;
-    }
-
-    template <template <typename> class SmartPointer, typename T>
-        requires std::derived_from<T, Serializable> &&
-                 (std::same_as<SmartPointer<T>, std::shared_ptr<T>> || std::same_as<SmartPointer<T>, gc<T>>)
-    std::variant<SmartPointer<T>, Error> Serializable::deserialize(
-        std::filesystem::path pathToFile,
-        std::unordered_map<std::string, std::string>& customAttributes,
-        const std::string& sEntityId) {
-        // Add TOML extension to file.
-        if (!pathToFile.string().ends_with(".toml")) {
-            pathToFile += ".toml";
-        }
-
-        std::filesystem::path backupFile = pathToFile;
-        backupFile += ConfigManager::getBackupFileExtension();
-
-        if (!std::filesystem::exists(pathToFile)) {
-            // Check if a backup file exists.
-            if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, pathToFile);
-            } else {
-                return Error("requested file or a backup file do not exist");
-            }
-        }
-
-        // Load file.
-        toml::value tomlData;
-        try {
-            tomlData = toml::parse(pathToFile);
-        } catch (std::exception& exception) {
-            return Error(std::format(
-                "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
-        }
-
-        // Deserialize.
-        auto result = deserialize<SmartPointer, T>(tomlData, customAttributes, sEntityId, pathToFile);
-        if (std::holds_alternative<Error>(result)) {
-            auto err = std::get<Error>(std::move(result));
-            err.addCurrentLocationToErrorStack();
-            return err;
-        } else if (pathToFile.string().starts_with(
-                       ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT).string())) {
+        if (optionalPathToFile.has_value() &&
+            optionalPathToFile->string().starts_with(
+                ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT).string())) {
             // File is located in the `res` directory, save a relative path to the `res` directory.
             auto sRelativePath = std::filesystem::relative(
-                                     pathToFile, ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT))
+                                     optionalPathToFile->string(),
+                                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT))
                                      .string();
 
             // Replace all '\' characters with '/' just to be consistent.
@@ -950,53 +980,25 @@ namespace ne RNAMESPACE() {
             // Double check that everything is correct.
             const auto pathToOriginalFile =
                 ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / sRelativePath;
-            if (!std::filesystem::exists(pathToOriginalFile)) {
+            if (!std::filesystem::exists(pathToOriginalFile)) [[unlikely]] {
                 return Error(std::format(
                     "failed to save the relative path to the `res` directory for the file at \"{}\", "
                     "reason: constructed path \"{}\" does not exist",
-                    pathToFile.string(),
+                    optionalPathToFile->string(),
                     pathToOriginalFile.string()));
             }
 
-            SmartPointer<Serializable> pDeserialized = std::get<SmartPointer<T>>(result);
-            pDeserialized->pathDeserializedFromRelativeToRes = {sRelativePath, sEntityId};
+            // Save deserialization path.
+            pSmartPointerInstance->pathDeserializedFromRelativeToRes = {sRelativePath, sEntityId};
         }
 
-        return result;
+        // Notify about deserialization finished.
+        Serializable* pTarget = dynamic_cast<Serializable*>(&*pSmartPointerInstance);
+        pTarget->onAfterDeserialized();
+
+        return pSmartPointerInstance;
     }
 
-    template <template <typename> class SmartPointer>
-        requires std::same_as<SmartPointer<Serializable>, std::shared_ptr<Serializable>> ||
-                 std::same_as<SmartPointer<Serializable>, gc<Serializable>>
-    std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
-    Serializable::deserializeMultiple(
-        const std::filesystem::path& pathToFile, const std::set<std::string>& ids) {
-        // Check that specified IDs don't have dots in them.
-        for (const auto& sId : ids) {
-            if (sId.contains('.')) [[unlikely]] {
-                return Error(
-                    std::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
-            }
-        }
-
-        // Deserialize.
-        std::vector<DeserializedObjectInformation<SmartPointer>> deserializedObjects;
-        for (const auto& sId : ids) {
-            std::unordered_map<std::string, std::string> customAttributes;
-            auto result = deserialize<SmartPointer, Serializable>(pathToFile, customAttributes, sId);
-            if (std::holds_alternative<Error>(result)) {
-                auto err = std::get<Error>(std::move(result));
-                err.addCurrentLocationToErrorStack();
-                return err;
-            }
-
-            const auto pObject = std::get<SmartPointer<Serializable>>(std::move(result));
-            DeserializedObjectInformation objectInfo(pObject, sId, customAttributes);
-            deserializedObjects.push_back(std::move(objectInfo));
-        }
-
-        return deserializedObjects;
-    }
 }; // namespace ne RNAMESPACE()
 
 File_Serializable_GENERATED

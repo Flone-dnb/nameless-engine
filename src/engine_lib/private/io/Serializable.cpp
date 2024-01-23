@@ -660,4 +660,31 @@ namespace ne {
         return sSectionName;
     }
 
+    std::optional<Error> Serializable::resolvePathToToml(std::filesystem::path& pathToFile) {
+        // Add TOML extension to file.
+        if (!pathToFile.string().ends_with(".toml")) {
+            pathToFile += ".toml";
+        }
+
+        // Prepare path to backup file.
+        const std::filesystem::path backupFile =
+            pathToFile.string() + ConfigManager::getBackupFileExtension();
+
+        // Check file original file exists.
+        if (std::filesystem::exists(pathToFile)) {
+            // Path is ready.
+            return {};
+        }
+
+        // Make sure a backup file exists.
+        if (!std::filesystem::exists(backupFile)) [[unlikely]] {
+            return Error("requested file or a backup file do not exist");
+        }
+
+        // Duplicate and rename backup file to be original file.
+        std::filesystem::copy_file(backupFile, pathToFile);
+
+        return {};
+    }
+
 } // namespace ne

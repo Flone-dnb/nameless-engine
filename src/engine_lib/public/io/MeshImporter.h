@@ -27,8 +27,8 @@ namespace ne {
          * @param sOutputDirectoryName        Name of the new directory that does not exists yet but
          * will be created in the specified directory (relative to the `res`) to store the results
          * (allowed characters A-z and numbers 0-9, maximum length is 10 characters), for example: `mesh`.
-         * @param onProgress                  Callback that will be called to report progress (percent) and
-         * some text description of the current import stage.
+         * @param onProgress                  Callback that will be called to report some text description of
+         * the current import stage.
          *
          * @return Error if something went wrong.
          */
@@ -36,6 +36,6 @@ namespace ne {
             const std::filesystem::path& pathToFile,
             const std::string& sPathToOutputDirRelativeRes,
             const std::string& sOutputDirectoryName,
-            const std::function<void(float, const std::string&)>& onProgress);
+            const std::function<void(std::string_view)>& onProgress);
     };
 }

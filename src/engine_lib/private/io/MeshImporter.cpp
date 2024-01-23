@@ -55,8 +55,9 @@ namespace ne {
         const tinygltf::Mesh& mesh,
         const std::filesystem::path& pathToOutputFile,
         const std::string& sPathToOutputDirRelativeRes,
-        const std::function<void(float, const std::string&)>& onProgress,
-        size_t& iGltfNodeProcessedCount) {
+        const std::function<void(std::string_view)>& onProgress,
+        size_t& iGltfNodeProcessedCount,
+        const size_t iTotalGltfNodesToProcess) {
         // Prepare an array to fill.
         gc_vector<MeshNode> vMeshNodes = gc_new_vector<MeshNode>();
 
@@ -179,21 +180,15 @@ namespace ne {
             }
 
             // Process attributes.
-            size_t iProcessedAttributeCount = 0;
             for (auto& [sAttributeName, iAccessorIndex] : primitive.attributes) {
                 // Mark progress.
-                const auto processedAttributes = static_cast<float>(iProcessedAttributeCount) /
-                                                 static_cast<float>(primitive.attributes.size());
-                onProgress(
-                    static_cast<float>(iGltfNodeProcessedCount) / static_cast<float>(model.nodes.size()) *
-                            100.0F +
-                        gltfNodePercentRange * processedAttributes,
-                    std::format(
-                        "processing GLTF nodes {}/{} (processing attribute \"{}\")",
-                        iGltfNodeProcessedCount,
-                        model.nodes.size(),
-                        sAttributeName));
-                iProcessedAttributeCount += 1;
+                onProgress(std::format(
+                    "processing GLTF node {}/{}, mesh {}/{}: processing attribute \"{}\"",
+                    iGltfNodeProcessedCount,
+                    iTotalGltfNodesToProcess,
+                    iPrimitive,
+                    mesh.primitives.size(),
+                    sAttributeName));
 
                 // Get attribute accessor.
                 const auto& attributeAccessor = model.accessors[iAccessorIndex];
@@ -352,17 +347,15 @@ namespace ne {
                             pathToTempFiles / (sDiffuseTextureName + sImageExtension);
 
                         // Mark progress.
-                        onProgress(
-                            static_cast<float>(iGltfNodeProcessedCount) /
-                                    static_cast<float>(model.nodes.size()) * 100.0F +
-                                gltfNodePercentRange,
-                            std::format(
-                                "processing GLTF nodes {}/{} (importing diffuse texture)",
-                                iGltfNodeProcessedCount,
-                                model.nodes.size()));
+                        onProgress(std::format(
+                            "processing GLTF node {}/{}, mesh {}/{}: importing diffuse texture",
+                            iGltfNodeProcessedCount,
+                            iTotalGltfNodesToProcess,
+                            iPrimitive,
+                            mesh.primitives.size()));
 
                         // Write image to disk.
-                        if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) {
+                        if (!writeGltfTextureToDisk(diffuseImage, pathToDiffuseImage)) [[unlikely]] {
                             return Error(std::format(
                                 "failed to write GLTF image to path \"{}\"", pathToDiffuseImage.string()));
                         }
@@ -409,8 +402,9 @@ namespace ne {
         const std::filesystem::path& pathToOutputFile,
         const std::string& sPathToOutputDirRelativeRes,
         Node* pParentNode,
-        const std::function<void(float, const std::string&)>& onProgress,
-        size_t& iGltfNodeProcessedCount) {
+        const std::function<void(std::string_view)>& onProgress,
+        size_t& iGltfNodeProcessedCount,
+        const size_t iTotalGltfNodesToProcess) {
         // Prepare a node that will store this GLTF node.
         Node* pThisNode = pParentNode;
 
@@ -423,7 +417,8 @@ namespace ne {
                 pathToOutputFile,
                 sPathToOutputDirRelativeRes,
                 onProgress,
-                iGltfNodeProcessedCount);
+                iGltfNodeProcessedCount,
+                iTotalGltfNodesToProcess);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -448,8 +443,7 @@ namespace ne {
         // Mark node as processed.
         iGltfNodeProcessedCount += 1;
         onProgress(
-            static_cast<float>(iGltfNodeProcessedCount) / static_cast<float>(model.nodes.size()) * 100.0F,
-            std::format("processing GLTF nodes {}/{}", iGltfNodeProcessedCount, model.nodes.size()));
+            std::format("processing GLTF node {}/{}", iGltfNodeProcessedCount, iTotalGltfNodesToProcess));
 
         // Process child nodes.
         for (const auto& iNode : node.children) {
@@ -461,7 +455,8 @@ namespace ne {
                 sPathToOutputDirRelativeRes,
                 pThisNode,
                 onProgress,
-                iGltfNodeProcessedCount);
+                iGltfNodeProcessedCount,
+                iTotalGltfNodesToProcess);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -475,7 +470,7 @@ namespace ne {
         const std::filesystem::path& pathToFile,
         const std::string& sPathToOutputDirRelativeRes,
         const std::string& sOutputDirectoryName,
-        const std::function<void(float, const std::string&)>& onProgress) {
+        const std::function<void(std::string_view)>& onProgress) {
         // Make sure the file has ".GLTF" or ".GLB" extension.
         if (pathToFile.extension() != ".GLTF" && pathToFile.extension() != ".gltf" &&
             pathToFile.extension() != ".GLB" && pathToFile.extension() != ".glb") [[unlikely]] {
@@ -559,7 +554,7 @@ namespace ne {
         loader.SetPreserveImageChannels(true);
 
         // Mark progress.
-        onProgress(0.0F, "parsing file");
+        onProgress("parsing file");
 
         // Load data from file.
         if (bIsGlb) {
@@ -580,15 +575,16 @@ namespace ne {
             return Error("there was an error during the import process but no error message was received");
         }
 
-        // Prepare variable for processed nodes.
-        size_t iTotalNodeProcessedCount = 0;
-
         // Get default scene.
         const auto& scene = model.scenes[model.defaultScene];
 
         // Create a scene root node to hold all GLTF nodes of the scene.
         auto pSceneRootNode = gc_new<Node>("Scene Root");
 
+        // Prepare variable for processed nodes.
+        size_t iTotalNodeProcessedCount = 0;
+
+        // Now process GLTF nodes.
         for (const auto& iNode : scene.nodes) {
             // Make sure this node index is valid.
             if (iNode < 0) [[unlikely]] {
@@ -609,7 +605,8 @@ namespace ne {
                 std::format("{}/{}", sPathToOutputDirRelativeRes, sOutputDirectoryName),
                 &*pSceneRootNode,
                 onProgress,
-                iTotalNodeProcessedCount);
+                iTotalNodeProcessedCount,
+                scene.nodes.size());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -617,7 +614,7 @@ namespace ne {
         }
 
         // Mark progress.
-        onProgress(100.0F, "serializing resulting node tree");
+        onProgress("serializing resulting node tree");
 
         // Serialize scene node tree.
         auto optionalError = pSceneRootNode->serializeNodeTree(pathToOutputFile, false);
@@ -627,7 +624,7 @@ namespace ne {
         }
 
         // Mark progress.
-        onProgress(100.0F, "finished");
+        onProgress("finished");
 
         return {};
     }

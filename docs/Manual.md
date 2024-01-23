@@ -2312,8 +2312,8 @@ auto optionalError = MeshImporter::importMesh(
     "C:\\models\\DamagedHelmet.glb",       // importing GLB as an example, you can import GLTF in the same way
     "game/models",                         // path to the output directory relative `res` (should exist)
     "helmet",                              // name of the new directory that will be created (should not exist yet)
-    [](float percent, const std::string& sState) {
-        Logger::get().info(std::format("importing model {}%: {}", percent, sState));
+    [](std::string_view sState) {
+        Logger::get().info(sState);
     });
 if (optionalError.has_value()) [[unlikely]] {
     // ... process error ...

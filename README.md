@@ -1,6 +1,6 @@
 # nameless-engine
 
-![](screenshot.png?raw=true)
+![](screenshot.jpg?raw=true)
 
 ### Supported platforms
 

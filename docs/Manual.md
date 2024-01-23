@@ -2422,9 +2422,9 @@ using namespace ne;
 
 // Define a function that will print texture import progress.
 #if defined(WIN32)
-inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
+inline bool textureImportCallback(float percent, unsigned long long, unsigned long long) {
 #else
-inline bool textureImportProcess(float percent, int*, int*) {
+inline bool textureImportCallback(float percent, int*, int*) {
 #endif
     Logger::get().info(std::format("importing texture, progress: {}", percent));
 
@@ -2436,7 +2436,12 @@ inline bool textureImportProcess(float percent, int*, int*) {
 // - path to the directory where the image will be imported: "res/game/player/textures"
 // - path where resulting (imported) textures will be located: "res/game/player/textures/diffuse"
 // (the directory `diffuse` will be created during the import process)
-auto optionalError = TextureManager::importTexture("C:\\somedirectory\\textures\\mytexture.png", TextureType::DIFFUSE, "game/player/textures", "diffuse", process);
+auto optionalError = TextureManager::importTexture(
+    "C:\\somedirectory\\textures\\mytexture.png",
+    TextureType::DIFFUSE,
+    "game/player/textures",
+    "diffuse",
+    textureImportCallback);
 if (optionalError.has_value()){
     // ... process error ...
 }
@@ -2555,7 +2560,6 @@ UPROPERTY(Serialize)
 std::string sMyText; // `std::string` can't get garbage value since it's initialized in std::string's constructor
 ```
 otherwise you might serialize a garbage value and then deserialize it as a garbage value which might cause unexpected reaction
-- if you serialize data with large arrays (for example if your player progress file can have arrays of 200+ `int`s) then deserialization speed might be slower (because of parsing large arrays), if you think that loading of your game or user progress takes absurdly long time you might want to check if the deserialization speed is the issue (because of parsing large arrays) and maybe consider storing your data in binary format using `Serialize(FST_AS_EXTERNAL_BINARY_FILE)`
 
 ## Node
 

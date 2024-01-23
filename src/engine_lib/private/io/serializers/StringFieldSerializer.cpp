@@ -24,7 +24,7 @@ namespace ne {
         if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 pField->getUnsafe<std::string>(pFieldOwner);
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,
@@ -48,15 +48,17 @@ namespace ne {
         if (sFieldCanonicalTypeName == sStringCanonicalTypeName && pTomlValue->is_string()) {
             auto fieldValue = pTomlValue->as_string().str;
             pField->setUnsafe<std::string>(pFieldOwner, std::move(fieldValue));
-        } else if (!pTomlValue->is_string()) {
+        } else [[unlikely]] {
+            if (!pTomlValue->is_string()) {
+                return Error(std::format(
+                    "type \"{}\" of the specified field \"{}\" is supported by this serializer, "
+                    "but the TOML value is not string",
+                    sFieldCanonicalTypeName,
+                    pFieldName));
+            }
+
             return Error(std::format(
-                "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
-                "but the TOML value is not string.",
-                sFieldCanonicalTypeName,
-                pFieldName));
-        } else {
-            return Error(std::format(
-                "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
+                "type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
                 pFieldName));
         }
@@ -74,7 +76,7 @@ namespace ne {
         if (sFieldCanonicalTypeName == sStringCanonicalTypeName) {
             auto value = pFromField->getUnsafe<std::string>(pFromInstance);
             pToField->setUnsafe<std::string>(pToInstance, std::move(value));
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 sFieldCanonicalTypeName,

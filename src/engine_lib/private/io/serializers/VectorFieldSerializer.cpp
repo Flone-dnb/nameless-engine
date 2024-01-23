@@ -80,10 +80,9 @@ namespace ne {
             for (const auto& iItem : vOriginalArray) {
                 // Since toml11 (library that we use) uses `long long` for integers,
                 // store this type as a string.
-                const std::string sValue = std::to_string(iItem);
-                vArray.push_back(sValue);
+                vArray.push_back(std::to_string(iItem));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(vArray);
 
         } else if (sFieldCanonicalTypeName == "std::vector<float>") {
             const std::vector<float> vArray = pField->getUnsafe<std::vector<float>>(pFieldOwner);
@@ -92,7 +91,7 @@ namespace ne {
             for (size_t i = 0; i < vArray.size(); i++) {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(vStrArray);
 
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
             const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
@@ -101,7 +100,7 @@ namespace ne {
             for (size_t i = 0; i < vArray.size(); i++) {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(vStrArray);
 
         } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
@@ -120,7 +119,7 @@ namespace ne {
     for (size_t i = 0; i < pArray->size(); i++) {                                                            \
         const auto& pSerializable = pArray->at(i);                                                           \
         const auto pGuid = pSerializable->getArchetype().getProperty<Guid>(false);                           \
-        if (pGuid == nullptr) {                                                                              \
+        if (pGuid == nullptr) [[unlikely]] {                                                                 \
             return Error(std::format(                                                                        \
                 "type \"{}\" should have a GUID assigned to it", pSerializable->getArchetype().getName()));  \
         }                                                                                                    \
@@ -139,13 +138,13 @@ namespace ne {
                 const auto pArray = reinterpret_cast<std::vector<std::shared_ptr<Serializable>>*>(
                     pField->getPtrUnsafe(pFieldOwner));
                 SERIALIZE_VECTOR_INNER_POINTER_SERIALIZABLE
-            } else {
+            } else [[unlikely]] {
                 return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
                     sFieldCanonicalTypeName,
                     pFieldName));
             }
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
@@ -167,7 +166,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
 #define GET_TOML_VALUE_AS_ARRAY_WITH_CHECK                                                                   \
-    if (!pTomlValue->is_array()) {                                                                           \
+    if (!pTomlValue->is_array()) [[unlikely]] {                                                              \
         return Error(std::format(                                                                            \
             "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "                \
             "but the TOML value is not an array.",                                                           \
@@ -177,7 +176,7 @@ namespace ne {
     auto fieldValue = pTomlValue->as_array();
 
 #define GET_TOML_VALUE_AS_TABLE_WITH_CHECK                                                                   \
-    if (!pTomlValue->is_table()) {                                                                           \
+    if (!pTomlValue->is_table()) [[unlikely]] {                                                              \
         return Error(std::format(                                                                            \
             "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "                \
             "but the TOML value is not a table.",                                                            \
@@ -190,7 +189,7 @@ namespace ne {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<bool> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_boolean()) {
+                if (!item.is_boolean()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not boolean.",
@@ -204,7 +203,7 @@ namespace ne {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<int> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_integer()) {
+                if (!item.is_integer()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not integer.",
@@ -218,7 +217,7 @@ namespace ne {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<unsigned int> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_integer()) {
+                if (!item.is_integer()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not integer.",
@@ -239,7 +238,7 @@ namespace ne {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<long long> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_integer()) {
+                if (!item.is_integer()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not integer.",
@@ -254,7 +253,7 @@ namespace ne {
             std::vector<unsigned long long> vArray;
             for (const auto& item : fieldValue) {
                 // Stored as string.
-                if (!item.is_string()) {
+                if (!item.is_string()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
@@ -277,7 +276,7 @@ namespace ne {
             // We are storing float as a string for better precision.
             std::vector<float> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_string()) {
+                if (!item.is_string()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
@@ -301,7 +300,7 @@ namespace ne {
             // We are storing double as a string for better precision.
             std::vector<double> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_string()) {
+                if (!item.is_string()) [[unlikely]] {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string.",
@@ -324,7 +323,7 @@ namespace ne {
             GET_TOML_VALUE_AS_ARRAY_WITH_CHECK
             std::vector<std::string> vArray;
             for (const auto& item : fieldValue) {
-                if (!item.is_string()) {
+                if (!item.is_string()) [[unlikely]] {
                     return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
                         "but the TOML value is not string",
@@ -385,13 +384,13 @@ namespace ne {
 
                     pArray->push_back(std::get<std::shared_ptr<Serializable>>(std::move(result)));
                 }
-            } else {
+            } else [[unlikely]] {
                 return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
                     sFieldCanonicalTypeName,
                     pFieldName));
             }
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "the type \"{}\" of the specified field \"{}\" is not supported by this serializer",
                 sFieldCanonicalTypeName,
@@ -457,7 +456,7 @@ namespace ne {
             if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
                 CLONE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(
                     std::vector<std::shared_ptr<Serializable>>*, makeSharedInstance)
-            } else {
+            } else [[unlikely]] {
                 return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
                     sFieldCanonicalTypeName,

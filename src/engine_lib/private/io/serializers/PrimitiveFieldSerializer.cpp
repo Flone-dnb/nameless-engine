@@ -8,22 +8,22 @@ namespace ne {
         const auto& fieldType = pField->getType();
 
         // The `match` function can only be used with the primitive types.
-        if (fieldType.match(rfk::getType<bool>())) {
-            return true;
-        }
-        if (fieldType.match(rfk::getType<int>())) {
-            return true;
-        }
         if (fieldType.match(rfk::getType<unsigned int>())) {
-            return true;
-        }
-        if (fieldType.match(rfk::getType<long long>())) {
             return true;
         }
         if (fieldType.match(rfk::getType<unsigned long long>())) {
             return true;
         }
+        if (fieldType.match(rfk::getType<int>())) {
+            return true;
+        }
         if (fieldType.match(rfk::getType<float>())) {
+            return true;
+        }
+        if (fieldType.match(rfk::getType<bool>())) {
+            return true;
+        }
+        if (fieldType.match(rfk::getType<long long>())) {
             return true;
         }
         if (fieldType.match(rfk::getType<double>())) {
@@ -69,7 +69,7 @@ namespace ne {
             // Store double as string for better precision.
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
                 toml::format(toml::value(pField->getUnsafe<double>(pFieldOwner)));
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pField->getCanonicalTypeName(),
@@ -139,7 +139,7 @@ namespace ne {
                 return Error(std::format(
                     "Failed to convert string to double for field \"{}\": {}", pFieldName, ex.what()));
             }
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pField->getCanonicalTypeName(),
@@ -176,7 +176,7 @@ namespace ne {
         } else if (pFromField->getType().match(rfk::getType<double>())) {
             auto value = pFromField->getUnsafe<double>(pFromInstance);
             pToField->setUnsafe<double>(pToInstance, std::move(value)); // NOLINT
-        } else {
+        } else [[unlikely]] {
             return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
                 pFromField->getCanonicalTypeName(),

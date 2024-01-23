@@ -653,8 +653,8 @@ namespace ne {
         }
 
         // Write custom attributes, they will be written with two dots in the beginning.
-        for (const auto& [key, value] : customAttributes) {
-            tomlData[sSectionName][std::format("..{}", key)] = value;
+        for (const auto& [sKey, sValue] : customAttributes) {
+            tomlData[sSectionName][std::string(sCustomAttributePrefix) + sKey] = sValue;
         }
 
         return sSectionName;

@@ -492,6 +492,9 @@ namespace ne RNAMESPACE() {
         /** Name of the key which we use when there is nothing to serialize. */
         static inline const auto sNothingToSerializeKey = ".none";
 
+        /** Text that we add to custom (user-specified) attributes in TOML files. */
+        static constexpr std::string_view sCustomAttributePrefix = "..";
+
         ne_Serializable_GENERATED
     };
 
@@ -693,7 +696,7 @@ namespace ne RNAMESPACE() {
                     return error;
                 }
                 pOriginalEntity = std::get<SmartPointer<T>>(deserializeResult);
-            } else if (sKey.starts_with("..")) {
+            } else if (sKey.starts_with(sCustomAttributePrefix)) {
                 // Custom attribute.
                 // Make sure it's a string.
                 if (!value.is_string()) [[unlikely]] {
@@ -701,28 +704,7 @@ namespace ne RNAMESPACE() {
                 }
 
                 // Add attribute.
-                customAttributes[sKey.substr(2)] = value.as_string().str;
-            } else if (const auto iFieldNameEndPosition = sKey.find('[');
-                       iFieldNameEndPosition != std::string::npos) {
-                // Describes array of `Serializable` items (for ex. vector<shared_ptr<Serializable>>
-                // might be:
-                // ["EntityIdChain.GUID".FIELD_NAME] <- section
-                // ["EntityIdChain.GUID".FIELD_NAME."FIELD_NAME[0]"] <- key
-                auto iFieldNameStartPosition = sKey.rfind('"', iFieldNameEndPosition);
-                if (iFieldNameStartPosition == std::string::npos) [[unlikely]] {
-                    return Error(std::format("section name \"{}\" is corrupted", sKey));
-                }
-                iFieldNameStartPosition += 1;
-
-                // Make sure found indices are correct.
-                if (iFieldNameStartPosition >= iFieldNameEndPosition) [[unlikely]] {
-                    return Error(std::format("section name \"{}\" is corrupted", sKey));
-                }
-
-                // Save field name.
-                fieldsToDeserialize[std::string_view(
-                    sKey.data() + iFieldNameStartPosition, iFieldNameEndPosition - iFieldNameStartPosition)] =
-                    &value;
+                customAttributes[sKey.substr(sCustomAttributePrefix.size())] = value.as_string().str;
             } else {
                 fieldsToDeserialize[sKey] = &value;
             }

@@ -91,7 +91,7 @@ namespace ne {
             for (size_t i = 0; i < vArray.size(); i++) {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
 
         } else if (sFieldCanonicalTypeName == "std::vector<double>") {
             const std::vector<double> vArray = pField->getUnsafe<std::vector<double>>(pFieldOwner);
@@ -100,7 +100,7 @@ namespace ne {
             for (size_t i = 0; i < vArray.size(); i++) {
                 vStrArray[i] = toml::format(toml::value(vArray[i]));
             }
-            pTomlData->operator[](sSectionName).operator[](pFieldName) = vArray;
+            pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
 
         } else if (sFieldCanonicalTypeName == std::format("std::vector<{}>", sStringCanonicalTypeName)) {
             pTomlData->operator[](sSectionName).operator[](pFieldName) =

@@ -81,7 +81,7 @@ Once all base features will be implemented I will create a separate repository f
 
 # Documentation
 
-Documentation for this engine consists of 2 parts: API reference (generated from C++ comments) and the manual (at `docs/Manual.md`), generated documentation includes both API reference and a manual (copied from `docs/Manual.md`).
+Documentation for this engine consists of 2 parts: API reference (generated from C++ comments) and the manual (at `docs/Manual.md`), generated documentation includes both API reference and the manual (copied from `docs/Manual.md`).
 
 In order to generate the documentation you need to have [Doxygen](https://www.doxygen.nl/index.html) installed.
 

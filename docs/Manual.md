@@ -382,7 +382,7 @@ The engine has a garbage collector: https://github.com/Flone-dnb/tgc2. The main 
 The garbage collector library provides a smart pointer `tgc2::gc<T>` that acts as a `std::shared_ptr<T>`, the library also has `gc_collector()->collect()` function that is used to resolve cyclic references and free objects that are stuck in cyclic references. By default the engine runs garbage collection regularly so you don't have to care about it (and you don't need to call `gc_collector()->collect()` from your game code). Here is an example on how to use those `gc` pointers:
 
 ```Cpp
-const gc<MyNode> pNode = gc_new<MyNode>(); // it's like `std::make_shared<MyNode>()`
+gc<MyNode> pNode = gc_new<MyNode>(); // it's like `std::make_shared<MyNode>()`
 ```
 
 And here is a cyclic reference example that will be resolved by the garbage collector:
@@ -391,32 +391,20 @@ And here is a cyclic reference example that will be resolved by the garbage coll
 #include "misc/GC.hpp" // include for `gc` pointers
 
 using namespace ne;
-class Foo;
-class Bar;
 
-class Foo {
+class Foo{
 public:
-    ~Foo() { Logger::get().info("~Foo()", ""); }
-    gc<Bar> pBar;
-};
-
-class Bar {
-public:
-    ~Bar() { Logger::get().info("~Bar()", ""); }
     gc<Foo> pFoo;
 };
 
 {
     auto pFoo = gc_new<Foo>();
-    auto pBar = gc_new<Bar>();
-
-    pFoo->pBar = pBar;
-    pBar->pFoo = pFoo;
+    pFoo->pFoo = pFoo; // cyclic reference
 }
 
-// `Foo` and `Bar` still exist and were not freed, waiting for GC...
+// `Foo` still exists and was not freed, waiting for GC...
 gc_collector()->collect(); // this will be run regularly somewhere in the engine code so you don't have to care about it
-// `Foo` and `Bar` were freed.
+// `Foo` was freed
 ```
 
 Because the engine runs garbage collection regularly we want to minimize the amount of `gc` pointers to minimize the amount of work that the garbage collector will do. If we would have used only `gc` pointers and used them a lot, the garbage collection would probably cause stutters or freezes that players would not appreciate.
@@ -2053,8 +2041,7 @@ File_PlayerSaveData_GENERATED
     const std::string sNewProfileName = ConfigManager::getFreeProgressProfileName();
 
     // Serialize.
-    const auto pathToFile =
-        ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
+    const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sNewProfileName;
     const auto optionalError = pPlayerSaveData->serialize(pathToFile, true); // `true` to enable backup file
     if (optionalError.has_value()) [[unlikely]] {
         // ... handle error ...
@@ -2072,14 +2059,12 @@ File_PlayerSaveData_GENERATED
 
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
-    std::unordered_map<std::string, std::string> foundCustomAttributes;
-    const auto result =
-        Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
+    auto result = Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile);
     if (std::holds_alternative<Error>(result)) [[unlikely]] {
         // ... handle error ...
     }
 
-    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
+    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(std::move(result));
 
     // Everything is deserialized:
     assert(pPlayerSaveData->sCharacterName == "Player 1");

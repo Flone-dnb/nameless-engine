@@ -29,7 +29,7 @@ namespace ne {
      * @remark Owned by Window object.
      */
     class GameManager {
-        // The Game should only be created by a Window instance.
+        // Objects of this class should only be created by a window instance.
         friend class Window;
 
     public:
@@ -39,13 +39,15 @@ namespace ne {
         virtual ~GameManager();
 
         /**
-         * Returns last created Game object.
+         * Returns the last created game manager object.
          *
-         * @warning Avoid using this getter, use only when there's no other good way to get Game object.
+         * @warning Avoid using this getter, use only when there's no other good way to get game manager
+         * object.
          *
          * @warning As an addition to checking returned pointer for `nullptr` use @ref isBeingDestroyed.
          *
-         * @return `nullptr` if no Game object was created yet, otherwise pointer to game object.
+         * @return `nullptr` if no game manager object was created yet, otherwise pointer to game manager
+         * object.
          */
         static GameManager* get();
 
@@ -302,7 +304,7 @@ namespace ne {
          *
          * @remark Use @ref initialize to initialize the manager.
          *
-         * @param pWindow Window that owns this Game object.
+         * @param pWindow Window that owns this object.
          */
         GameManager(Window* pWindow);
 

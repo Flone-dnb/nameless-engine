@@ -7,6 +7,15 @@
 * Windows
 * Linux
 
+# Philosophy
+
+The engine tries to focus on things that other engines miss:
+
+- Intuitive API
+- Simplicity (not in terms of "make a game in one click" but in terms of "there are not much things to learn" (compared to the usual C++ development/gamedev knowledge), for example: there's no custom/unusual build system for the engine, just use your usual CMake files)
+- Focus on [KISS](https://en.wikipedia.org/wiki/KISS_principle) for engine internals
+- Documentation (engine source code is fully documented, every code entity is documented, even private, also there are lots of documentation-comments in the implementation code)
+
 # Roadmap
 
 Currently the engine is in a very early development state and right now it's still impossible to make games with this engine.

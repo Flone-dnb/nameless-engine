@@ -366,7 +366,6 @@ message(STATUS "${PROJECT_NAME}: adding external dependency \"GLM\"...")
 add_subdirectory(${RELATIVE_EXT_PATH}/glm ${DEPENDENCY_BUILD_DIR_NAME}/glm SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm)
 set_target_properties(glm PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-set_target_properties(uninstall PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 # Add Vulkan SDK.
 message(STATUS "${PROJECT_NAME}: adding external dependency \"Vulkan SDK\"...")

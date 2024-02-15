@@ -427,7 +427,7 @@ void cullLightsForTile(
         addPointLightToTileTransparentLightIndexList(iPointLightIndex);
 
         // Now we know that the light is inside frustum for transparent objects, frustum for opaque objects is
-        // the same expect it has smaller Z range so it's enough to just test sphere/plane.
+        // the same except it has a smaller Z range so it's enough to just test sphere/plane.
         if (isSphereBehindPlane(pointLightSphereViewSpace, minDepthPlaneViewSpace)){
             continue;
         }
@@ -474,7 +474,7 @@ void cullLightsForTile(
         addSpotLightToTileTransparentLightIndexList(iSpotlightIndex);
 
         // Now we know that the light is inside frustum for transparent objects, frustum for opaque objects is
-        // the same expect it has smaller Z range so it's enough to just test cone/plane.
+        // the same except it has a smaller Z range so it's enough to just test cone/plane.
         if (isConeBehindPlane(spotlightConeViewSpace, minDepthPlaneViewSpace)){
             continue;
         }

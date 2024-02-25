@@ -185,10 +185,9 @@ namespace ne {
         // Check anti-aliasing sample count.
         if (iAntialiasingSampleCount != static_cast<int>(MsaaState::DISABLED) &&
             iAntialiasingSampleCount != static_cast<int>(MsaaState::MEDIUM) &&
-            iAntialiasingSampleCount != static_cast<int>(MsaaState::HIGH) &&
-            iAntialiasingSampleCount != static_cast<int>(MsaaState::VERY_HIGH)) {
+            iAntialiasingSampleCount != static_cast<int>(MsaaState::HIGH)) {
             // Set new AA sample count.
-            const auto iNewSampleCount = static_cast<int>(MsaaState::VERY_HIGH);
+            const auto iNewSampleCount = static_cast<int>(MsaaState::HIGH);
 
             // Log change.
             Logger::get().warn(std::format(

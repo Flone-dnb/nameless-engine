@@ -2211,8 +2211,7 @@ namespace ne {
         msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
         msQualityLevels.NumQualityLevels = 0;
 
-        const std::array<MsaaState, 3> vQualityToCheck = {
-            MsaaState::VERY_HIGH, MsaaState::HIGH, MsaaState::MEDIUM};
+        const std::array<MsaaState, 2> vQualityToCheck = {MsaaState::HIGH, MsaaState::MEDIUM};
 
         // Find the maximum supported quality.
         for (const auto& quality : vQualityToCheck) {

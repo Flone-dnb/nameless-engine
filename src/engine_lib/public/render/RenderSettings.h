@@ -17,7 +17,7 @@ namespace ne RNAMESPACE() {
         DISABLED = 1,
         MEDIUM = 2,
         HIGH = 4,
-        VERY_HIGH = 8,
+        // no x8 MSAA because it has an absurd performance penalty with very little visual changes
         // ! add new entries to `RenderSettings::onAfterDeserialized` !
     };
 
@@ -294,7 +294,7 @@ namespace ne RNAMESPACE() {
 
         /** Sample count of AA. */
         RPROPERTY(Serialize)
-        int iAntialiasingSampleCount = static_cast<int>(MsaaState::VERY_HIGH);
+        int iAntialiasingSampleCount = static_cast<int>(MsaaState::HIGH);
 
         /** Texture filtering mode. */
         RPROPERTY(Serialize)

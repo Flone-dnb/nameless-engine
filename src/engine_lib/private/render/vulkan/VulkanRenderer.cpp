@@ -68,9 +68,6 @@ namespace ne {
         // Combine supported color and depth buffer sample count.
         VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
                                     physicalDeviceProperties.limits.framebufferDepthSampleCounts;
-        if ((counts & VK_SAMPLE_COUNT_8_BIT) != 0) {
-            return MsaaState::VERY_HIGH;
-        }
         if ((counts & VK_SAMPLE_COUNT_4_BIT) != 0) {
             return MsaaState::HIGH;
         }
@@ -3802,10 +3799,6 @@ namespace ne {
         }
         case (MsaaState::HIGH): {
             msaaSampleCount = VK_SAMPLE_COUNT_4_BIT;
-            break;
-        }
-        case (MsaaState::VERY_HIGH): {
-            msaaSampleCount = VK_SAMPLE_COUNT_8_BIT;
             break;
         }
         }

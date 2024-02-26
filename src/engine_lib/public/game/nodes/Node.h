@@ -867,11 +867,13 @@ namespace ne RNAMESPACE() {
         }
 
         // Check parent's type and optionally name.
-        if (dynamic_cast<NodeType*>(&*mtxParentNode.second) &&
+        if (dynamic_cast<NodeType*>(&*mtxParentNode.second) != nullptr &&
             (sParentNodeName.empty() || mtxParentNode.second->getNodeName() == sParentNodeName)) {
+            // Found the node.
             return gc_dynamic_pointer_cast<NodeType>(mtxParentNode.second);
         }
 
+        // Ask parent nodes of that node.
         return mtxParentNode.second->getParentNodeOfType<NodeType>(sParentNodeName);
     }
 
@@ -880,18 +882,24 @@ namespace ne RNAMESPACE() {
     gc<NodeType> Node::getChildNodeOfType(const std::string& sChildNodeName) {
         std::scoped_lock guard(mtxChildNodes.first);
 
+        // Iterate over child nodes.
         for (auto& pChildNode : *mtxChildNodes.second) {
-            if (dynamic_cast<NodeType*>(&*pChildNode) &&
+            // Check if this is the node we are looking for.
+            if (dynamic_cast<NodeType*>(&*pChildNode) != nullptr &&
                 (sChildNodeName.empty() || pChildNode->getNodeName() == sChildNodeName)) {
+                // Found the node.
                 return gc_dynamic_pointer_cast<NodeType>(pChildNode);
             }
 
+            // Ask child nodes of that node.
             const auto pNode = pChildNode->getChildNodeOfType<NodeType>(sChildNodeName);
-            if (!pNode) {
+            if (pNode == nullptr) {
+                // Check the next child node.
                 continue;
-            } else {
-                return pNode;
             }
+
+            // Found the node.
+            return pNode;
         }
 
         return nullptr;

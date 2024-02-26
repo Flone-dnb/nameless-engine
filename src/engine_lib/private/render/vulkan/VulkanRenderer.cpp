@@ -55,7 +55,7 @@ namespace ne {
             "correctly");
     }
 
-    std::variant<MsaaState, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
+    std::variant<AntialiasingQuality, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
         // Make sure physical device is valid.
         if (pPhysicalDevice == nullptr) [[unlikely]] {
             return Error("expected physical device to be valid at this point");
@@ -69,13 +69,13 @@ namespace ne {
         VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
                                     physicalDeviceProperties.limits.framebufferDepthSampleCounts;
         if ((counts & VK_SAMPLE_COUNT_4_BIT) != 0) {
-            return MsaaState::HIGH;
+            return AntialiasingQuality::HIGH;
         }
         if ((counts & VK_SAMPLE_COUNT_2_BIT) != 0) {
-            return MsaaState::MEDIUM;
+            return AntialiasingQuality::MEDIUM;
         }
 
-        return MsaaState::DISABLED;
+        return AntialiasingQuality::DISABLED;
     }
 
     VulkanRenderer::~VulkanRenderer() {
@@ -3761,23 +3761,23 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        const auto maxSampleCount = std::get<MsaaState>(result);
+        const auto maxSampleCount = std::get<AntialiasingQuality>(result);
 
         // First check if AA is supported at all.
-        if (maxSampleCount == MsaaState::DISABLED) {
+        if (maxSampleCount == AntialiasingQuality::DISABLED) {
             // AA is not supported.
             msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
             return {};
         }
-        const auto iMaxSampleCount = static_cast<int>(maxSampleCount);
+        const auto iMaxSampleCount = static_cast<unsigned int>(maxSampleCount);
 
         // Get render setting.
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock guard(pMtxRenderSettings->first);
 
         // Get current AA sample count.
-        const auto sampleCount = pMtxRenderSettings->second->getAntialiasingState();
-        const auto iSampleCount = static_cast<int>(sampleCount);
+        const auto sampleCount = pMtxRenderSettings->second->getAntialiasingQuality();
+        const auto iSampleCount = static_cast<unsigned int>(sampleCount);
 
         // Make sure this sample count is supported.
         if (iSampleCount > iMaxSampleCount) [[unlikely]] {
@@ -3788,16 +3788,16 @@ namespace ne {
         // Save sample count.
         bIsUsingMsaaRenderTarget = true;
         switch (sampleCount) {
-        case (MsaaState::DISABLED): {
+        case (AntialiasingQuality::DISABLED): {
             msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
             bIsUsingMsaaRenderTarget = false;
             break;
         }
-        case (MsaaState::MEDIUM): {
+        case (AntialiasingQuality::MEDIUM): {
             msaaSampleCount = VK_SAMPLE_COUNT_2_BIT;
             break;
         }
-        case (MsaaState::HIGH): {
+        case (AntialiasingQuality::HIGH): {
             msaaSampleCount = VK_SAMPLE_COUNT_4_BIT;
             break;
         }

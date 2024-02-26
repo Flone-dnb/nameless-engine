@@ -1871,12 +1871,12 @@ void MyGameInstance::foo(){
     if (std::holds_alternative<Error>(result)){
         // ... handle error ...
     }
-    const auto maxQuality = std::get<MsaaState>(result);
+    const auto maxQuality = std::get<AntialiasingQuality>(result);
 
-    // ... display all `MsaaState` values but don't exceed `maxQuality` on the screen ...
+    // ... display all `AntialiasingQuality` values on the screen but don't exceed `maxQuality` ...
 
     // Later, when user wants to change AA:
-    pMtxRenderSettings->second->setAntialiasingState(selectedQuality);
+    pMtxRenderSettings->second->setAntialiasingQuality(selectedQuality);
 }
 ```
 

@@ -179,7 +179,8 @@ namespace ne {
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
         const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
-        const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
+        const auto iMsaaSampleCount =
+            static_cast<unsigned int>(pMtxRenderSettings->second->getAntialiasingQuality());
 
         // Prepare resource description.
         D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
@@ -1517,23 +1518,23 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        auto maxSampleCount = std::get<MsaaState>(result);
+        auto maxSampleCount = std::get<AntialiasingQuality>(result);
 
         // First check if AA is supported at all.
-        if (maxSampleCount == MsaaState::DISABLED) {
+        if (maxSampleCount == AntialiasingQuality::DISABLED) {
             // AA is not supported.
             iMsaaQualityLevelsCount = 0;
             return {};
         }
-        const auto iMaxSampleCount = static_cast<int>(maxSampleCount);
+        const auto iMaxSampleCount = static_cast<unsigned int>(maxSampleCount);
 
         // Get render setting.
         const auto pMtxRenderSettings = getRenderSettings();
         std::scoped_lock guard(pMtxRenderSettings->first);
 
         // Get current AA sample count.
-        auto sampleCount = pMtxRenderSettings->second->getAntialiasingState();
-        const auto iSampleCount = static_cast<int>(sampleCount);
+        auto sampleCount = pMtxRenderSettings->second->getAntialiasingQuality();
+        const auto iSampleCount = static_cast<unsigned int>(sampleCount);
 
         // Make sure this sample count is supported.
         if (iSampleCount > iMaxSampleCount) [[unlikely]] {
@@ -2044,7 +2045,8 @@ namespace ne {
         std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
         const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
         const auto bIsVSyncEnabled = pMtxRenderSettings->second->isVsyncEnabled();
-        const auto iMsaaSampleCount = static_cast<int>(pMtxRenderSettings->second->getAntialiasingState());
+        const auto iMsaaSampleCount =
+            static_cast<unsigned int>(pMtxRenderSettings->second->getAntialiasingQuality());
 
         // Update supported AA quality level count.
         auto optionalError = updateMsaaQualityLevelCount();
@@ -2098,9 +2100,9 @@ namespace ne {
             dynamic_cast<DirectXResourceManager*>(getResourceManager())
                 ->makeRtvResourcesFromSwapChainBuffer(pSwapChain.Get(), getRecommendedSwapChainBufferCount());
         if (std::holds_alternative<Error>(swapChainResult)) {
-            auto err = std::get<Error>(std::move(swapChainResult));
-            err.addCurrentLocationToErrorStack();
-            return err;
+            auto error = std::get<Error>(std::move(swapChainResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
         vSwapChainBuffers =
             std::get<std::vector<std::unique_ptr<DirectXResource>>>(std::move(swapChainResult));
@@ -2200,7 +2202,7 @@ namespace ne {
         waitForFenceValue(pDirectXFrameResource->iFence);
     }
 
-    std::variant<MsaaState, Error> DirectXRenderer::getMaxSupportedAntialiasingQuality() const {
+    std::variant<AntialiasingQuality, Error> DirectXRenderer::getMaxSupportedAntialiasingQuality() const {
         if (pDevice == nullptr) [[unlikely]] {
             return Error("expected device to be valid at this point");
         }
@@ -2211,12 +2213,13 @@ namespace ne {
         msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
         msQualityLevels.NumQualityLevels = 0;
 
-        const std::array<MsaaState, 2> vQualityToCheck = {MsaaState::HIGH, MsaaState::MEDIUM};
+        const std::array<AntialiasingQuality, 2> vQualityToCheck = {
+            AntialiasingQuality::HIGH, AntialiasingQuality::MEDIUM};
 
         // Find the maximum supported quality.
         for (const auto& quality : vQualityToCheck) {
             // Check hardware support for this sample count.
-            msQualityLevels.SampleCount = static_cast<int>(quality);
+            msQualityLevels.SampleCount = static_cast<unsigned int>(quality);
             auto hResult = pDevice->CheckFeatureSupport(
                 D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &msQualityLevels, sizeof(msQualityLevels));
             if (FAILED(hResult)) [[unlikely]] {
@@ -2228,7 +2231,7 @@ namespace ne {
             }
         }
 
-        return MsaaState::DISABLED;
+        return AntialiasingQuality::DISABLED;
     }
 
     bool DirectXRenderer::isInitialized() const { return bIsDirectXInitialized; }

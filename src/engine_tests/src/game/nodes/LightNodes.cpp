@@ -187,11 +187,11 @@ TEST_CASE("change render settings with lights spawned") {
                 std::scoped_lock guard(pMtxRenderSettings->first);
 
                 // Change MSAA.
-                const auto msaaState = pMtxRenderSettings->second->getAntialiasingState();
-                if (msaaState != MsaaState::HIGH) {
-                    pMtxRenderSettings->second->setAntialiasingState(MsaaState::HIGH);
+                const auto msaaState = pMtxRenderSettings->second->getAntialiasingQuality();
+                if (msaaState != AntialiasingQuality::HIGH) {
+                    pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::HIGH);
                 } else {
-                    pMtxRenderSettings->second->setAntialiasingState(MsaaState::MEDIUM);
+                    pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
                 }
 
                 return;

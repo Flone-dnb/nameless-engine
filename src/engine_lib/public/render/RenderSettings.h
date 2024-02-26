@@ -12,7 +12,7 @@ namespace ne RNAMESPACE() {
     enum class RendererType : unsigned int { DIRECTX = 0, VULKAN = 1 };
 
     /** Describes the quality (sample count) of MSAA. */
-    enum class MsaaState : int {
+    enum class AntialiasingQuality : unsigned int {
         // ! add new entries to `RenderSettings::onAfterDeserialized` !
         DISABLED = 1,
         MEDIUM = 2,
@@ -62,14 +62,14 @@ namespace ne RNAMESPACE() {
         void setShadowQuality(ShadowQuality quality);
 
         /**
-         * Sets anti-aliasing (AA) state.
+         * Sets anti-aliasing (AA) quality.
          *
          * @warning Use @ref getMaxSupportedAntialiasingQuality to query for maximum supported AA quality,
          * if the specified quality is not supported an error will be logged.
          *
-         * @param state AA state.
+         * @param quality AA quality.
          */
-        void setAntialiasingState(MsaaState state);
+        void setAntialiasingQuality(AntialiasingQuality quality);
 
         /**
          * Sets texture filtering mode to be used.
@@ -137,7 +137,7 @@ namespace ne RNAMESPACE() {
          * @return Returns `DISABLED` if AA is not supported (see @ref getMaxSupportedAntialiasingQuality),
          * otherwise current AA quality.
          */
-        MsaaState getAntialiasingState() const;
+        AntialiasingQuality getAntialiasingQuality() const;
 
         /**
          * Returns current shadow quality.
@@ -155,7 +155,7 @@ namespace ne RNAMESPACE() {
          * @return Error if something went wrong,
          * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
          */
-        std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const;
+        std::variant<AntialiasingQuality, Error> getMaxSupportedAntialiasingQuality() const;
 
         /**
          * Returns currently used texture filtering mode.
@@ -294,7 +294,7 @@ namespace ne RNAMESPACE() {
 
         /** Sample count of AA. */
         RPROPERTY(Serialize)
-        int iAntialiasingSampleCount = static_cast<int>(MsaaState::HIGH);
+        unsigned int iAntialiasingSampleCount = static_cast<unsigned int>(AntialiasingQuality::HIGH);
 
         /** Texture filtering mode. */
         RPROPERTY(Serialize)

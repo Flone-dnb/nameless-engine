@@ -330,7 +330,7 @@ namespace ne {
          * @return Error if something went wrong,
          * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
          */
-        virtual std::variant<MsaaState, Error> getMaxSupportedAntialiasingQuality() const override;
+        virtual std::variant<AntialiasingQuality, Error> getMaxSupportedAntialiasingQuality() const override;
 
         /**
          * Tells whether the renderer is initialized or not.

@@ -37,9 +37,9 @@ namespace ne {
     }
 
     CD3DX12_STATIC_SAMPLER_DESC
-    HlslShader::getStaticSamplerDescription(TextureFilteringMode textureFilteringMode) {
-        switch (textureFilteringMode) {
-        case (TextureFilteringMode::POINT): {
+    HlslShader::getStaticSamplerDescription(TextureFilteringQuality textureFilteringQuality) {
+        switch (textureFilteringQuality) {
+        case (TextureFilteringQuality::LOW): {
             return CD3DX12_STATIC_SAMPLER_DESC(
                 static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
                 D3D12_FILTER_MIN_MAG_MIP_POINT,
@@ -56,7 +56,7 @@ namespace ne {
                 iStaticSamplerShaderRegisterSpace);
             break;
         }
-        case (TextureFilteringMode::LINEAR): {
+        case (TextureFilteringQuality::MEDIUM): {
             return CD3DX12_STATIC_SAMPLER_DESC(
                 static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
                 D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -73,7 +73,7 @@ namespace ne {
                 iStaticSamplerShaderRegisterSpace);
             break;
         }
-        case (TextureFilteringMode::ANISOTROPIC): {
+        case (TextureFilteringQuality::HIGH): {
             return CD3DX12_STATIC_SAMPLER_DESC(
                 static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
                 D3D12_FILTER_ANISOTROPIC,

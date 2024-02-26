@@ -1883,23 +1883,23 @@ namespace ne {
         std::scoped_lock guard(pMtxRenderSettings->first);
 
         // Get current texture filtering mode.
-        const auto textureFilteringMode = pMtxRenderSettings->second->getTextureFilteringMode();
+        const auto textureFilteringQuality = pMtxRenderSettings->second->getTextureFilteringQuality();
 
         // Setup Vulkan parameters depending on the texture filtering mode.
         VkFilter vkFilter = VK_FILTER_NEAREST;
         VkSamplerMipmapMode vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        switch (textureFilteringMode) {
-        case (TextureFilteringMode::POINT): {
+        switch (textureFilteringQuality) {
+        case (TextureFilteringQuality::LOW): {
             vkFilter = VK_FILTER_NEAREST;
             vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
             break;
         }
-        case (TextureFilteringMode::LINEAR): {
+        case (TextureFilteringQuality::MEDIUM): {
             vkFilter = VK_FILTER_LINEAR;
             vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
             break;
         }
-        case (TextureFilteringMode::ANISOTROPIC): {
+        case (TextureFilteringQuality::HIGH): {
             vkFilter = VK_FILTER_LINEAR;
             vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
             break;
@@ -1921,7 +1921,7 @@ namespace ne {
         samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
 
         // Specify whether to use anisotropic filtering or not.
-        if (textureFilteringMode == TextureFilteringMode::ANISOTROPIC) {
+        if (textureFilteringQuality == TextureFilteringQuality::HIGH) {
             samplerInfo.anisotropyEnable = VK_TRUE;
             samplerInfo.maxAnisotropy = 16.0F; // NOLINT: magic number - max anisotropy
         } else {

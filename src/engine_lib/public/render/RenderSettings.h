@@ -13,12 +13,10 @@ namespace ne RNAMESPACE() {
 
     /** Describes the quality (sample count) of MSAA. */
     enum class AntialiasingQuality : unsigned int {
-        // ! add new entries to `RenderSettings::onAfterDeserialized` !
         DISABLED = 1,
         MEDIUM = 2,
         HIGH = 4,
         // no x8 MSAA because it has an absurd performance penalty with very little visual changes
-        // ! add new entries to `RenderSettings::onAfterDeserialized` !
     };
 
     /** Describes shadow map resolution in pixels (the actual shadow map resolution might be different). */
@@ -29,7 +27,11 @@ namespace ne RNAMESPACE() {
     };
 
     /** Describes texture filtering mode. */
-    enum class TextureFilteringMode : int { POINT = 0, LINEAR = 1, ANISOTROPIC = 2 };
+    enum class TextureFilteringQuality : unsigned int {
+        LOW = 0,    //< Point filtering.
+        MEDIUM = 1, //< Linear filtering.
+        HIGH = 2    //< Anisotropic filtering.
+    };
 
     /** Controls renderer settings. */
     class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSettings : public Serializable {
@@ -72,11 +74,11 @@ namespace ne RNAMESPACE() {
         void setAntialiasingQuality(AntialiasingQuality quality);
 
         /**
-         * Sets texture filtering mode to be used.
+         * Sets texture filtering quality to be used.
          *
-         * @param mode Mode to use.
+         * @param quality Quality to use.
          */
-        void setTextureFilteringMode(TextureFilteringMode mode);
+        void setTextureFilteringQuality(TextureFilteringQuality quality);
 
         /**
          * Sets the width and the height of the render resolution.
@@ -158,11 +160,11 @@ namespace ne RNAMESPACE() {
         std::variant<AntialiasingQuality, Error> getMaxSupportedAntialiasingQuality() const;
 
         /**
-         * Returns currently used texture filtering mode.
+         * Returns currently used texture filtering quality.
          *
-         * @return Texture filtering mode.
+         * @return Texture filtering quality.
          */
-        TextureFilteringMode getTextureFilteringMode() const;
+        TextureFilteringQuality getTextureFilteringQuality() const;
 
         /**
          * Returns currently used render resolution (width and height).
@@ -296,9 +298,9 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         unsigned int iAntialiasingSampleCount = static_cast<unsigned int>(AntialiasingQuality::HIGH);
 
-        /** Texture filtering mode. */
+        /** Texture filtering quality. */
         RPROPERTY(Serialize)
-        int iTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
+        unsigned int iTextureFilteringQuality = static_cast<unsigned int>(TextureFilteringQuality::HIGH);
 
         /** Whether VSync is enabled or not. */
         RPROPERTY(Serialize)

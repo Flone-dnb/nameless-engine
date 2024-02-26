@@ -200,20 +200,20 @@ namespace ne {
             iAntialiasingSampleCount = iNewSampleCount;
         }
 
-        // Check texture filtering mode.
-        if (iTextureFilteringMode != static_cast<int>(TextureFilteringMode::POINT) &&
-            iTextureFilteringMode != static_cast<int>(TextureFilteringMode::LINEAR) &&
-            iTextureFilteringMode != static_cast<int>(TextureFilteringMode::ANISOTROPIC)) {
-            const auto iNewTextureFilteringMode = static_cast<int>(TextureFilteringMode::ANISOTROPIC);
+        // Check texture filtering quality.
+        if (iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::LOW) &&
+            iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::MEDIUM) &&
+            iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::HIGH)) {
+            const auto iNewTextureFilteringQuality = static_cast<unsigned int>(TextureFilteringQuality::HIGH);
 
             // Log change.
             Logger::get().warn(std::format(
-                "deserialized texture filtering mode \"{}\" is not a valid parameter, changing to \"{}\"",
-                iTextureFilteringMode,
-                iNewTextureFilteringMode));
+                "deserialized texture filtering quality \"{}\" is not a valid parameter, changing to \"{}\"",
+                iTextureFilteringQuality,
+                iNewTextureFilteringQuality));
 
             // Correct the value.
-            iTextureFilteringMode = iNewTextureFilteringMode;
+            iTextureFilteringQuality = iNewTextureFilteringQuality;
         }
 
         // Check shadow map resolution.
@@ -243,19 +243,19 @@ namespace ne {
 #endif
     }
 
-    void RenderSettings::setTextureFilteringMode(TextureFilteringMode mode) {
-        if (iTextureFilteringMode == static_cast<int>(mode)) {
+    void RenderSettings::setTextureFilteringQuality(TextureFilteringQuality quality) {
+        if (iTextureFilteringQuality == static_cast<unsigned int>(quality)) {
             return; // do nothing
         }
 
         // Log change.
         Logger::get().info(std::format(
-            "texture filtering mode is being changed from \"{}\" to \"{}\"",
-            iTextureFilteringMode,
-            static_cast<int>(mode)));
+            "texture filtering quality is being changed from \"{}\" to \"{}\"",
+            iTextureFilteringQuality,
+            static_cast<unsigned int>(quality)));
 
         // Change.
-        iTextureFilteringMode = static_cast<int>(mode);
+        iTextureFilteringQuality = static_cast<unsigned int>(quality);
 
         // Notify renderer.
         notifyRendererAboutChangedSettings();
@@ -271,8 +271,8 @@ namespace ne {
         }
     }
 
-    TextureFilteringMode RenderSettings::getTextureFilteringMode() const {
-        return static_cast<TextureFilteringMode>(iTextureFilteringMode);
+    TextureFilteringQuality RenderSettings::getTextureFilteringQuality() const {
+        return static_cast<TextureFilteringQuality>(iTextureFilteringQuality);
     }
 
     std::pair<unsigned int, unsigned int> RenderSettings::getRenderResolution() const {

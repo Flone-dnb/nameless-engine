@@ -432,7 +432,7 @@ namespace ne {
             switch (samplerType) {
             case (SamplerType::BASIC): {
                 vStaticSamplersToBind.push_back(HlslShader::getStaticSamplerDescription(
-                    pMtxRenderSettings->second->getTextureFilteringMode()));
+                    pMtxRenderSettings->second->getTextureFilteringQuality()));
                 break;
             }
             case (SamplerType::COMPARISON): {

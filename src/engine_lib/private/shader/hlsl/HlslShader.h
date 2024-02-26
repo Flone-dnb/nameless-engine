@@ -56,13 +56,13 @@ namespace ne {
         /**
          * Returns a static sampler description depending on the specified texture filtering mode.
          *
-         * @param textureFilteringMode Returned sampler description will use the specified texture
+         * @param textureFilteringQuality Returned sampler description will use the specified texture
          * filtering.
          *
          * @return Static sampler description.
          */
         static CD3DX12_STATIC_SAMPLER_DESC
-        getStaticSamplerDescription(TextureFilteringMode textureFilteringMode);
+        getStaticSamplerDescription(TextureFilteringQuality textureFilteringQuality);
 
         /**
          * Returns description of a static comparison sampler.

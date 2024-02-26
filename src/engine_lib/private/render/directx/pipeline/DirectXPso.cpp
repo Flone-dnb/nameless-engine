@@ -172,8 +172,8 @@ namespace ne {
         std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
 
         // Get AA setting.
-        const auto msaaState = pRenderSettings->second->getAntialiasingQuality();
-        const auto iMsaaSampleCount = static_cast<int>(msaaState);
+        const auto antialiasingQuality = pRenderSettings->second->getAntialiasingQuality();
+        const auto iMsaaSampleCount = static_cast<unsigned int>(antialiasingQuality);
 
         // Make sure the pipeline is not initialized yet.
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
@@ -319,10 +319,12 @@ namespace ne {
             psoDesc.SampleDesc.Count = 1;
             psoDesc.SampleDesc.Quality = 0;
         } else {
-            psoDesc.RasterizerState.MultisampleEnable = static_cast<int>(msaaState != AntialiasingQuality::DISABLED);
+            psoDesc.RasterizerState.MultisampleEnable =
+                static_cast<int>(antialiasingQuality != AntialiasingQuality::DISABLED);
             psoDesc.SampleDesc.Count = iMsaaSampleCount;
-            psoDesc.SampleDesc.Quality =
-                msaaState != AntialiasingQuality::DISABLED ? (pDirectXRenderer->getMsaaQualityLevel() - 1) : 0;
+            psoDesc.SampleDesc.Quality = antialiasingQuality != AntialiasingQuality::DISABLED
+                                             ? (pDirectXRenderer->getMsaaQualityLevel() - 1)
+                                             : 0;
         }
 
         // DSV format.

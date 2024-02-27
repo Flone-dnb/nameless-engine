@@ -6,19 +6,21 @@ Note that this manual contains many sections and instead of scrolling this page 
 
 This manual expects that you have a solid knowledge in writing programs using C++ language.
 
-# Prerequisites
+# Introduction to the engine
+
+## Prerequisites
 
 First of all, read the repository's `README.md` file, specifically the `Prerequisites` section, make sure you have all required things installed.
 
 The engine relies on CMake as its build system. CMake is a very common build system for C++ projects so generally most of the developers should be familiar with it. If you don't know what CMake is or haven't used it before it's about the time to learn the basics of CMake right now. Your project will be represented as several CMake targets: one target for standalone game, one target for tests, one target for editor and etc. So you will work on `CMakeLists.txt` files as with usual C++! There are of course some litte differences compared to the usual CMake usage, for example if you want to define external dependencing in your CMake file you need to do one additional step (compared to the usual CMake usage) that will be covered later in a separate section.
 
-# Creating a new project
+## Creating a new project
 
-## Preparing project path (only for Windows users)
+### Preparing project path (only for Windows users)
 
 Because Windows limits paths to ~255 characters it's impossible to operate on files that have long paths, thus, you need to make sure that path to your project directory will not be very long, this does not mean that you need to create your project in disk root (for ex. C:\\myproject) - there's no need for that but the shorter the path to the project the most likely you won't have weird issues with your project. If you need exact numbers a path with 30-40 characters will be good but you can try using longer paths. Just don't forget about this path limitation thing.
 
-## Project generator
+### Project generator
 
 Currently we don't have a proper project generator but it's planned. Once the project generator will be implemented this section will be updated.
 
@@ -32,7 +34,7 @@ Note for Windows 10 users:
 
 Before you go ahead and dive into the engine yourself make sure to read a few more sections, there is one really important section further in the manual that you have to read, it contains general tips about things you need to keep an eye out!
 
-## Project structure
+### Project structure
 
 Let's looks at the directories/files that a typical project will have:
 - `build` this directory generally used in CMake projects to store built binaries.
@@ -52,9 +54,9 @@ Note that generally you should add all functionality of your game into a library
 
 Your game target `CMakeLists.txt` is fully yours, it will have some configuration code inside of it but you are free to change it as you want (you can disable/change `doxygen`, `clang-tidy`, reflection generation and anything else you don't like).
 
-# Which header files to include and which not to include
+## Which header files to include and which not to include
 
-## General
+### General
 
 `src/engine_lib` is divided into 2 directories: public and private. You are free to include anything from the `public` directory, you can also include header files from the `private` directory in some special/advanced cases but generally there should be no need for that. Note that this division (public/private) is only conceptual, your project already includes both directories because some engine `public` headers use `private` headers and thus both included in cmake targets that use the engine (in some cases it may cause your IDE to suggest lots of headers when attempting to include some header from some directory so it may be helpful to just look at the specific public directory to look for the header name if you feel overwhelmed).
 
@@ -64,13 +66,13 @@ You might also notice that some header files have `.h` extension and some have `
 
 You are not required to use the `private`/`public` directory convention, moreover directories that store executable cmake targets just use `src` directory (you can look into `engine_tests` or `editor` directories to see an example) so you can group your source files as you want.
 
-## Math headers
+### Math headers
 
 The engine uses GLM (a well known math library, hosted at https://github.com/g-truc/glm). Although you can include original GLM headers it's highly recommended to include the header `math/GLMath.hpp` instead of the original GLM headers when math is needed. This header includes main GLM headers and defines engine specific macros so that GLM will behave as the engine expects.
 
 You should always prefer to include `math/GLMath.hpp` instead of the original GLM headers and only if this header does not have needed functionality you can include original GLM headers afterwards.
 
-# Automatic code formatters and static analyzers
+## Automatic code formatters and static analyzers
 
 The engine uses `clang-format` and `clang-tidy` a classic pair of tools that you will commonly find in C++ projects. If you don't know what they do it's a good time to read about them on the Internet.
 
@@ -80,7 +82,7 @@ The engine does not require you to use them but their usage is highly recommende
 
 `clang-tidy` has a lot of checks enabled and is generally not that fast as you might expect, because of this we have `clang-tidy` enabled only in release builds to speed up build times for debug builds. This means that if your game builds in debug mode it may very well fail to build in release mode due to some `clang-tidy` warnings that are treated as errors. Because of this it's highly recommended to regularly (say once or twice a week) build your project in release mode to check for `clang-tidy` warnings/errors.
 
-# Node system
+## Node system
 
 Have you used Godot game engine? If the answer is "yes" you're in luck, this engine uses a similar node system for game entities. We have a base class `Node` and derived nodes like `SpatialNode`, `MeshNode` and etc.
 
@@ -89,7 +91,7 @@ If you don't know what node system is or haven't used Godot, here is a small int
 
 Nodes are generally used to take place in the node hierarchy, to be part of some parent node for example. Nodes are special and they use special garbage collected smart pointers (we will talk about them in one of the next sections) but not everything should be a node. If you want to implement some class that does not need to take a place in the node hierarchy, does not belong to some node or does not interact with nodes, for example a class to send bug reports, there's really no point in deriving you bug reporter class from `Node`, although nobody is stopping you from using nodes for everything and it's perfectly fine to do so, right now we want to smoothly transition to other important thing in your game. Your class/object might exist apart from node system and you can use it outside of the node system. For example, you can store your class/object in a `GameInstance`.
 
-# Game instance
+## Game instance
 
 > If you used Unreal Engine the `GameInstance` class works similarly (but not exactly) to how Unreal Engine's `UGameInstance` class works.
 
@@ -99,9 +101,9 @@ When `GameInstance` is created and everything is setup for the game to start `Ga
 
 So "global" (world independent) classes/objects are generally stored in `GameInstance` but sometimes they can be represented by a node.
 
-# Reflection basics
+## Reflection basics
 
-## General
+### General
 
 Have you used other game engines? Generally game engines have an editor application that allows placing your custom objects on the map and construct levels. The general process goes like this: you create a new class in the code, compile the code, open up the editor and the editor is able to see you newly created class and allows you to place objects of the class on the level/map. The ability to see/analyze your code is what reflection is about.
 
@@ -189,7 +191,7 @@ For more information about reflection generator see our reflection generator for
 
 Documentation for the original reflection generator: https://github.com/jsoysouvanh/Refureku/wiki
 
-## Using reflection for your new type
+### Using reflection for your new type
 
 Let's sum up what you need to do in order to use reflection:
 
@@ -207,7 +209,7 @@ Note
 
 For more examples see `src/engine_tests/io/ReflectionTest.h`.
 
-## Common mistakes when using reflection
+### Common mistakes when using reflection
 
 If you changed something in your header file and your IDE now shows errors in `GENERATED` macros just compile your project, it will run reflection generator and update reflection code, then the errors should disappear.
 
@@ -237,7 +239,7 @@ In some rare cases you need to manually delete generated reflection files. For e
 
 You can delete `.generated` directory but before building your project you need to re-run CMake configuration so that CMake will create a new `.generated` directory with a fresh new config files inside of it.
 
-# Error handling
+## Error handling
 
 The engine uses the `Error` class (`misc/Error.h`) to handle and propagate errors. Some engine functions return it and you should know how to use them.
 
@@ -287,7 +289,7 @@ if (std::holds_alternative<Error>(result)) {
 const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
 ```
 
-# Logging
+## Logging
 
 The engine has a simple `Logger` class (`io/Logger.h`) that you can use to write to log files and to console (note that logging to console is disabled in release builds).
 
@@ -341,7 +343,7 @@ Total ERRORS produced: 1.
 
 You will see this in the console as the last printed text in debug builds and also in the end of your log files if there were any warnings/errors logged. So pay attention to the logs/console after closing your game.
 
-# Project paths
+## Project paths
 
 In order for your game to be able to access files in the `res` directory when you build your project the engine creates symlinks to the `res` directory next to the build binaries of you game. This means that if you need to access some file from the `res` directory, in your app you can just type `"res/game/somepath"`. For release builds the engine will not create symlinks and will require you to copy your `res` directory manually but we will talk about this in more details in one of the next sections.
 
@@ -360,9 +362,9 @@ const auto pathToLogsDir = ProjectPaths::getPathToPlayerProgressDirectory();
 
 See `misc/ProjectPaths.h` for more.
 
-# Memory leaks and garbage collection
+## Memory leaks and garbage collection
 
-## Memory leak checks
+### Memory leak checks
 
 By default in Debug builds memory leak checks are enabled, look for the output/debugger output tab of your IDE after running your project. If any leaks occurred it should print about them. You can test whether the memory leak checks are enabled or not by doing something like this:
 ```Cpp
@@ -371,11 +373,11 @@ new int(42);
 ```
 run your program that runs this code and after your program is finished you should see a message about the memory leak in the output/debugger output tab of your IDE.
 
-## About raw pointers
+### About raw pointers
 
 Some engine functions return raw pointers. Generally, when the engine returns a raw pointer to you this means that you should not free/delete it and it is guaranteed to be valid for the (most) time of its usage. For more information read the documentation for the functions you are using.
 
-## Garbage collector overview
+### Garbage collector overview
 
 The engine has a garbage collector: https://github.com/Flone-dnb/tgc2. The main reason why we need a garbage collector is to resolve cyclic references. The game has a node hierarchy that can change dynamically, nodes can reference other nodes that exist in the world and cyclic references could occur easily.
 
@@ -413,7 +415,7 @@ Because the engine runs garbage collection regularly we want to minimize the amo
 
 Of course, not everything will work magically. There is one or two cases where garbage collector can fail (leak memory), but don't worry, if this will happen the engine will let you know by logging an error message with possible reasons on why that happend so pay attention to the logs and always read the documentation for the functions you are using.
 
-## Storing GC pointers in containers
+### Storing GC pointers in containers
 
 Probably the most common mistake that could cause the garbage collection to fail is related to containers, because it's the most common mistake that developers could make, let's see how to avoid it. Imagine you want to store an array of `gc` pointers or store them in another container like `std::unordered_map`, you could write something like this:
 
@@ -443,7 +445,7 @@ Not all STL containers have `gc` alternative, here is a list of supported STL wr
 - `gc_unordered_set` for `std::unordered_set`.
 - (see garbage collector's GitHub page for up to date information)
 
-## Capturing GC pointers in std::function
+### Capturing GC pointers in std::function
 
 There is also an `std::function` wrapper called `gc_function` for some special cases where you want to capture `gc` pointers in it:
 
@@ -467,7 +469,7 @@ pMyNode->callback = [pMyNode](){} // not OK, leaks
 
 or crashes in GC code (if there was a garbage collection for captured in `std::function` `gc` pointers).
 
-## Casting GC pointers
+### Casting GC pointers
 
 If you need to cast `gc` pointers there are also functions for that:
 
@@ -484,7 +486,7 @@ const gc<ParentClass> pParent = gc_new<ParentClass>();
 gc<ChildClass> pChild = gc_dynamic_pointer_cast<ChildClass>(pParent); // compilation error because `pParent` is `const`
 ```
 
-## Comparing GC pointers with pointer types
+### Comparing GC pointers with pointer types
 
 If you need to compare a raw pointer with a `gc` pointer, do the following:
 
@@ -494,7 +496,7 @@ if (&*pGcPointer == pRawPointer){
 }
 ```
 
-## Examples of storing GC fields in various places
+### Examples of storing GC fields in various places
 
 Here are some typical `gc` pointer use-cases where you might ask "is this OK?" and the answer is "yes":
 
@@ -567,7 +569,7 @@ Moreover, storing gc pointers and gc vectors in `std::pair` should also be safe 
 
 You can find more examples in the file `src/engine_tests/misc/GC.cpp`.
 
-## Interacting with garbage collector
+### Interacting with garbage collector
 
 `GameInstance` class has function to interact with the garbage collector, such as:
 
@@ -577,7 +579,7 @@ You can find more examples in the file `src/engine_tests/misc/GC.cpp`.
 
 Just note that you don't need to directly use `gc_collector()` (if you maybe saw this somewhere in examples), the engine will use it, you on the other hand should use `GameInstance` functions for garbage collection.
 
-## Garbage collector limitations
+### Garbage collector limitations
 
 Note that currently used version of garbage collection library does not support multiple inheritance, so the following example will produce a compilation error:
 
@@ -629,7 +631,7 @@ Don't try to trick this system as it will probably lead to exceptions, leaks and
 
 So if you're planning to use `gc` pointers on some type T, make sure this type T is not using multiple inheritance. Our reflection system can also have issues with multiple inheritance (in some special cases which we will talk about later), just note that.
 
-# Deferred tasks and thread pool
+## Deferred tasks and thread pool
 
 The engine has 2 kind tasks you might be interested in:
 
@@ -686,9 +688,9 @@ addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) func
 });
 ```
 
-# World creation
+## World creation
 
-## World axes and world units
+### World axes and world units
 
 The engine uses a left handed coordinate system. +X is world "forward" direction, +Y is world "right" direction and +Z is world "up" direction. These directions are stored in `Globals::WorldDirection` (`misc/Globals.h`).
 
@@ -696,7 +698,7 @@ Rotations are applied in the following order: ZYX, so "yaw" is applied first, th
 
 1 world unit is expected to be equal to 1 meter in your game.
 
-## Creating a world using C++
+### Creating a world using C++
 
 Let's first make sure you know how to create a window, your `main.cpp` should generally look like this:
 
@@ -830,7 +832,7 @@ void MyGameInstance::onGameStarted(){
 }
 ```
 
-# Lighting
+## Lighting
 
 Light source nodes (such as point/spot/directional) are stored in `game/nodes/light`. Just spawn one of these nodes and configure their setting using `setLight...` functions and `setWorldLocation`/`setWorldRotation`. Here is an example:
 
@@ -868,7 +870,7 @@ void MyGameInstance::onGameStarted(){
 }
 ```
 
-# Environment
+## Environment
 
 Using `EnvironmentNode` you can configure environment settings such as ambient light, skybox, etc. Here is an example:
 
@@ -906,30 +908,30 @@ void MyGameInstance::onGameStarted(){
 
 Note that your world can only have 1 active environment node. If you will spawn another environment node you will get a warning in the logs that will tell you that settings of your newly spawned environment node will be ignored.
 
-# Creating a character and working with input
+## Creating a character and working with input
 
-## Creating a simple flying character node
+### Creating a simple flying character node
 
 In this section we will start with the most simplest character node: a node that has a camera and can fly around using WASD and mouse movement.
 
 Let's create new files `FlyingCharacter.h` and `FlyingCharacter.cpp` inside of our new directory named `private/nodes` to our library target (we pick our library target since generally library targets will contain all functionality (so that it can be used in multiple executable targets such as `tests`) while executable targets generally will only contain `main.cpp`). Open `CMakeLists.txt` of your library target and add new files to `PROJECT_SOURCES`:
 
 ```
-# `CMakeLists.txt`
-# ... some code here ...
+## `CMakeLists.txt`
+## ... some code here ...
 
-# Specify project sources.
+## Specify project sources.
 set(PROJECT_SOURCES
-    # ... some files here ...
+    ## ... some files here ...
     private/nodes/FlyingCharacter.h
     private/nodes/FlyingCharacter.cpp
-    # add your .h/.cpp files here
+    ## add your .h/.cpp files here
 )
 
-# Define target.
+## Define target.
 add_library(${PROJECT_NAME} STATIC ${PROJECT_SOURCES})
 
-# ... some code here ...
+## ... some code here ...
 ```
 
 Now make sure CMake configuration was run, for example, Qt Creator runs CMake configuration after your make modifications to a `CMakeLists.txt` file and save it.
@@ -1198,9 +1200,9 @@ If you run your project now you should see a cube. Now close your project, look 
 
 We can now continue and work on handling user input to allow our character to fly.
 
-## Working with user input
+### Working with user input
 
-### Input events
+#### Input events
 
 The usual way to handle user input is by binding to action/axis events and doing your processing once these events are triggered.
 
@@ -1230,7 +1232,7 @@ Note
 
 Mouse movement is handled using `GameInstance::onMouseMove` function or `Node::onMouseMove` function. There are other mouse related functions like `onMouseScrollMove` that you might find useful.
 
-### Handling input event IDs
+#### Handling input event IDs
 
 In the next sections you will learn that you can bind to input events in game instance and in nodes. As it was said earlier input events use IDs to be distinguished. This means that you need to have an application-global collection of unique IDs for input events.
 
@@ -1264,7 +1266,7 @@ This file will store all input IDs that your game needs, even if you have switch
 Note
 > We will talk about switchable controls like "walking" or "in vehice" and how to handle them in one of the next sections.
 
-### Binding to input events in game instance
+#### Binding to input events in game instance
 
 Since input events are identified using unique IDs we should create a special struct for our input IDs:
 
@@ -1352,7 +1354,7 @@ Note
 Note
 > You can bind to input events before registering input events - this is perfectly fine.
 
-### Binding to input events in nodes
+#### Binding to input events in nodes
 
 This is the most common use case for input events. The usual workflow goes like this:
 1. Register action/axis events with some default keys in your `GameInstance` constructor.
@@ -1574,39 +1576,9 @@ If you read the documentation for `Node::setIsReceivingInput` you would know tha
 
 This will be enough for now. Later we will talk about using `InputManager` in a slightly better way and also talk about saving/loading inputs.
 
-# Tips to note when working with nodes
+## Working with timers
 
-Prefer to start your custom nodes like this:
-
-```Cpp
-MyDerivedNode() : MyDerivedNode("My Derived Node") {};
-MyDerivedNode(const std::string& sNodeName) : ParentNodeClass(sNodeName) {
-  // constructor logic
-}
-virtual ~MyDerivedNode() override = default;
-```
-
-If you override some `virtual` function in node it's very likely (read the documentation for the functions you are overriding) that **you need to call the parent's version**:
-
-```Cpp
-void FlyingCharacterNode::onChildNodesSpawned() {
-    SpatialNode::onChildNodesSpawned(); // <- calling parent's version
-
-    // ... your code ...
-}
-```
-
-Don't forget about `Node::getChildNodeOfType` and `Node::getParentNodeOfType` as they might be useful.
-
-**Remember that `World` is inaccessable when the node is not spawned and thus `Node::getWorldRootNode` is `nullptr`.**
-
-If you have a character node with some child nodes and you want the player to explore the world by walking on his feet or by riding a car you can use `pCarNode->addChildNode(pCharacterNode)` to attach your already spawned player (which is attached to the world's root node) to the car node when the player gets in the car or detach it from the car by using something like `getWorldRootNode()->addChildNode(pCharacterNode)` to make it attached to the world's root node again. By using `addChildNode` you can not only add child nodes but also attach and detach existing ones even if they already have a parent.
-
-The order in which `Node::onBeforeNewFrame` are called on nodes is kind of random. If you need a specific node's `onBeforeNewFrame` to be called before `onBeforeNewFrame` of some other node consider using `Node::setTickGroup`. For example if your game have a functionality to focus the camera on some world entity you might want to put the "focusing" logic in the later tick group to make sure that all world entities processed their movement before you rotate (focus) the camera.
-
-# Working with timers
-
-## Timers and GameInstance
+### Timers and GameInstance
 
 Let's consider an example where you need to trigger some logic after some time in your `GameInstance`:
 
@@ -1638,7 +1610,7 @@ We store a `Timer* pTimer = nullptr` in the header file of our game instance to 
 
 Using timer callbacks in game instance is pretty safe and you generally shouldn't worry about anything. And as always if you have any questions you might look at the documentation of the timer class and at the timer tests at `src/engine_tests/game/GameInstance.cpp`.
 
-## Timers and Node
+### Timers and Node
 
 Same timer functions are used in nodes:
 
@@ -1678,7 +1650,7 @@ Again, we store a `Timer* pTimer = nullptr` in the header file of our node to re
 
 As with game instance using timer callbacks in nodes is pretty safe and you generally shouldn't worry about anything. And as always if you have any questions you might look at the documentation of the timer class and at the timer tests at `src/engine_tests/misc/Timer.cpp`.
 
-# Node callbacks (including asynchronous tasks)
+## Node callbacks (including asynchronous tasks)
 
 In your game you would most likelly want to use callbacks to trigger custom logic in nodes when some event happens, for example when your character's collision hits/overlaps with something you might want the collision node to notify the character node to do some custom logic.
 
@@ -1708,7 +1680,7 @@ SomeSystem->DoAsynchronousQuery(
     });
 ```
 
-# Safely using the publisher-subscriber pattern with nodes
+## Safely using the publisher-subscriber pattern with nodes
 
 Every game has custom game events, in this engine some nodes can subscribe to a specific publisher object, this way subscriber nodes can be notified when a specific event happens. For example, if your character node wants to know when its collision hits something we can use the publisher-subscriber pattern. When the publisher object decides that the event has happend it notifies all subscriber nodes and calls `NodeFunction` callbacks of all subscribed nodes.
 
@@ -1759,7 +1731,7 @@ Note that you don't need to unsubscribe when your subscribed node is being despa
 Note
 > Because `broadcast` call simply loops over all registered callbacks extra care should be taken when you subscribe to pair events such as "on started overlapping" / "on finished overlapping" because the order of these events may be incorrect in some special situations. When subscribing to such "pair" events it's recommended to add checks in the beginning of your callbacks that make sure the order is correct (as expected), otherwise show an error message so that you will instantly notice that and fix it.
 
-# Saving and loading user's input settings
+## Saving and loading user's input settings
 
 `InputManager` allows creating input events and axis events, i.e. allows binding names with multiple input keys. When working with input the workflow for creating, modifying, saving and loading inputs goes like this:
 
@@ -1819,7 +1791,7 @@ if (optionalError.has_value()){
 
 As it was shown `InputManager` can be acquired using `GameInstance::getInputManager()`, so both game instance and nodes (using `getGameInstance()->getInputManager()`) can work with the input manager.
 
-# Configuring graphics settings
+## Configuring graphics settings
 
 Graphics settings are configured using the `RenderSettings` class. In order to get render settings from a game instance you need to use the following approach:
 
@@ -1882,9 +1854,9 @@ void MyGameInstance::foo(){
 
 As always if you forget something or pass unsupported value the engine will let you know by logging an error so pay attention to the logs/console.
 
-# Saving and loading user's progress data
+## Saving and loading user's progress data
 
-## Overview
+### Overview
 
 There are 2 ways to save/load custom data:
     - using `ConfigManager` (`io/ConfigManager.h`) - this approach is generally used when you have just 1-2 simple variables that you want to save or when you don't want to / can't create a type and use reflection
@@ -1892,9 +1864,9 @@ There are 2 ways to save/load custom data:
 
 Let's start with the most commonly used approach.
 
-## Saving and loading data using reflection
+### Saving and loading data using reflection
 
-### Overview
+#### Overview
 
 One of the previous sections of the manual taught you how to use reflection for your types so at this point you should know how to add reflection to your type. Now we will talk about additional steps that you need to do in order to use serialization/deserialization. As you might guess we will use some C++ types (that store some user data) and serialize them to file.
 
@@ -2149,7 +2121,7 @@ auto vDeserializedObjects = std::get<std::vector<DeserializedObjectInformation<g
 // Everything is deserialized.
 ```
 
-### Reflection limitations
+#### Reflection limitations
 
 Currently used version of the reflection library has some issues with multiple inheritance. If you are deriving from two classes one of which is `Serializable` (or a class/struct that derives from it) and the other is not an interface class (contains fields) then you might want to derive from `Serializable` first and then from that non-interface class. Example:
 
@@ -2188,7 +2160,7 @@ class RCLASS(Guid("...")) MyClass : public Serializable, public MyParentClass{
 
 Just keep this in mind when using reflection for serialization/deserialization.
 
-## Saving and loading data using ConfigManager
+### Saving and loading data using ConfigManager
 
 `ConfigManager` (just like reflection serialization) uses `TOML` file format so if you don't know how this format looks like you can search it right now on the Internet. `TOML` format generally looks like `INI` format but with more features.
 
@@ -2240,7 +2212,7 @@ As you can see `ConfigManager` is a very simple system for very simple tasks. Ge
 
 `ConfigManager` also has support for backup files and some other interesting features (see documentation for `ConfigManager`).
 
-# Adding external dependencies
+## Adding external dependencies
 
 In CMake we modify our `CMakeLists.txt` to add external dependencies. This generally comes down to something like this:
 
@@ -2260,15 +2232,15 @@ Note
 As it was said earlier you might need to do one additional step: if your target uses reflection (has `add_refureku` command) then you also need to tell the reflection generator about included headers of your external dependency:
 
 ```
-# Write project include directories for Refureku.
+## Write project include directories for Refureku.
 set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}
-    ${ABSOLUTE_EXT_PATH}/fmt/include     # <- new dependency
+    ${ABSOLUTE_EXT_PATH}/fmt/include     ## <- new dependency
     ${CMAKE_CURRENT_SOURCE_DIR}/public
     ${CMAKE_CURRENT_SOURCE_DIR}/private
 )
 add_refureku(
-    # some code here
+    ## some code here
 ```
 
 If you compile your project after adding a new external dependency and the compilation fails with something like this:
@@ -2279,7 +2251,7 @@ If you compile your project after adding a new external dependency and the compi
 
 this is because you forgot to tell the reflection generator about some directory of your external dependency.
 
-# Importing custom meshes
+## Importing custom meshes
 
 Generally you would import meshes using the editor but we will show how to do it in C++.
 
@@ -2320,11 +2292,11 @@ auto pImportedRootNode = std::get<gc<Node>>(std::move(result));
 getWorldRootNode()->addChildNode(pImportedRootNode);
 ```
 
-## Configuring export settings for your mesh in Blender
+### Configuring export settings for your mesh in Blender
 
 Usually the only thing that you need to do is to untick the "+Y up" checkbox in "Transform" section (since we use +Z as our UP axis).
 
-# Procedurally generating meshes
+## Procedurally generating meshes
 
 The most simple example of procedurally generated geometry is the following:
 
@@ -2341,9 +2313,9 @@ getWorldRootNode()->addChildNode(pMeshNode);
 
 If you would look into how `PrimitiveMeshGenerator::createCube` is implemented you would see that it just constructs a `MeshData` by filling all positions, normals, UVs, etc. In the same way you can create a procedural mesh by constructing a `MeshData` object. After we assigned a new mesh data to our mesh node we can set materials and shaders to it.
 
-# Working with materials
+## Working with materials
 
-## Working with materials in C++
+### Working with materials in C++
 
 Each `MeshNode` uses a default engine material (if other material is not specified) which means that if we have a `MeshNode` it already has a material.
 
@@ -2509,83 +2481,7 @@ getWorldRootNode()->addChildNode(pMeshNode);
 
 Generally you won't need to directly modify mesh data or material slots as this will happen automatically when you import some mesh from a (for example) GLTF/GLB file but it's good if you know what they are and where there are created/stored.
 
-# !!! Important things to keep in mind while developing a game !!!
-
-This section contains a list of important things that you need to regularly check while developing a game to minimize the amount of bugs/crashes in your game. All information listed below is documented in the manual and in the engine code (just duplicating the most important things here, see more details in other sections of the manual or in the engine code documentation).
-
-## General
-
-- always read the documentation for the functions you are using (documentation comments in the code), this generally saves you from all issues listed here
-- always check the logs, if something goes wrong the engine will let you know in the logs, after your game is closed if there were any warnings/errors the last message in the log (before the application is closed) will be the total number of warnings/errors produced (if there were any) so you don't have to scroll through the logs or use search every time
-- from time to time check your console output's beginning when you start your game for special warnings like `[Refureku] WARNING: Double registration detected` which are not captured by our logging system, these might occur in very special cases, report these if found
-
-## Garbage collection and GC pointers
-
-- never capture `gc` pointers in `std::function`, if your game crashes in GC code it's probably because you are capturing `gc` pointers in `std::function`
-- never store `gc` pointers in STL containers, store `gc` pointers only in "gc containers", for ex. instead of `std::vector<gc<Foo>>` use `gc_vector<Foo>` (and don't forget to initialize them properly, for ex. `gc_new_vector<Foo>()`), otherwise leaks may occur
-
-## World switching
-
-- if you are holding any `gc` pointers to nodes in game instance, make sure you set `nullptr` to them before calling `createWorld` or `loadNodeTreeAsWorld`, otherwise they will still exist in despawned (not spawned) state which might not be desired
-
-## Multiple inheritance
-
-- using `gc` pointers on types that use multiple inheritance is not supported and will cause exceptions, leaks and crashes
-- if you use multiple inheritance with serialization (not using `gc` pointers), make sure to derive from the `Serializable` class (or derived, for ex. `Node`) first and only then from other non `Serializable` classes (order matters, otherwise garbage data will be serialized instead of the actual data)
-
-## Serialization/deserialization
-
-- initialize almost all `RPROPERTY(Serialize)` fields, for example:
-```Cpp
-// MyHeader.h
-UPROPERTY(Serialize)
-long long iCharacterLevel = 0; // initialize because it can get garbage value
-
-UPROPERTY(Serialize)
-std::string sMyText; // `std::string` can't get garbage value since it's initialized in std::string's constructor
-```
-otherwise you might serialize a garbage value and then deserialize it as a garbage value which might cause unexpected reaction
-
-## Node
-
-- always check `getWorldRootNode` for `nullptr` before using it, `nullptr` here typically means that the node is not spawned or the world is being destroyed
-- always remember to call parent's virtual function in the beginning of your override (note that this is not always needed but is required for some `Node` functions)
-- use `NodeFunction` instead of `std::function` when you need callbacks in nodes
-- use `NodeNotificationBroadcaster` when you need publisher-subscriber pattern
-- it's highly recommended to not do any logic if the node is not spawned to avoid running into `nullptr`s (or deleted memory when on a non-main thread, use `getSpawnDespawnMutex()` mutex for non-main thread functions)
-
-## Multithreading
-
-- when using thread pool tasks remember that all thread pool tasks will be stopped during the game destruction before GameInstance is destroyed, there are no other checks for thread pool tasks to be stopped so in other cases you need to make sure your async task will not hit deleted memory:
-  - if you're using `Node` member functions in async task make sure the task is finished in your Node::onDespawning,
-  - if you're using `GameInstance` member functions in async task you only might care about world being changed, for this use promise/future or something else to guarantee that the callback won't be called on a deleted object
-- use `NodeFunction` instead of `std::function` when you need to process asynchronous results in nodes
-- submitting a deferred task from a **non-main thread** where in deferred task you operate on a `gc` controlled object such as Node can be dangerous as you may operate on a deleted (freed) memory, in this case use additional checks in the beginning of your deferred task to check if the node you want to use is still valid:
-```Cpp
-// We are on a non-main thread inside of a node:
-addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) functions, also capturing self ID
-    // We are inside of a deferred task (on the main thread) and we don't know if the node (`this`)
-    // was garbage collected or not because we submitted our task from a non-main thread.
-    // REMEMBER: we can't capture `gc` pointers in `std::function`, this is not supported
-    // and will cause memory leaks/crashes!
-
-    const auto pGameManager = GameManager::get(); // using engine's private class `GameManager`
-
-    // `pGameManager` is guaranteed to be valid inside of a deferred task.
-    // Otherwise, if running this code outside of a deferred task you need to do 2 checks:
-    // if (pGameManager == nullptr) return;
-    // if (pGameManager->isBeingDestroyed()) return;
-
-    if (!pGameManager->isNodeSpawned(iNodeId)){
-        // Node was despawned and it may be dangerous to run the callback.
-        return;
-    }
-
-    // Can safely interact with `this` (self) - we are on the main thread.
-});
-```
-
-# Render statistics
+## Render statistics
 
 If you want to know your game's FPS or other similar statistics you can use `Renderer::getRenderStatistics`. For example, you can display the FPS on your game's UI for debugging purposes:
 
@@ -2598,7 +2494,7 @@ void MyUiNode::onLoopingTimerTimeout() {
 }
 ```
 
-# Using profiler
+## Using profiler
 
 The engine has https://github.com/Celtoys/Remotery integrated and you can use this profiler in order to detect slow parts of your game.
 
@@ -2658,7 +2554,7 @@ In the browser page near the text "Main Thread" (in "Sample Timeline" panel) you
 Note
 > It's recommended to use profiler for a short amount of time to identify slow parts of your code because the profiler has proved to cause freezes at startup and sometimes memory leaks.
 
-# Simulating input for automated tests
+## Simulating input for automated tests
 
 Your game has a `..._tests` target for automated testing (which relies on https://github.com/catchorg/Catch2) and generally it will be very useful to simulate user input. Here is an example on how to do that:
 
@@ -2674,7 +2570,7 @@ There are also other `on...` function in `Window` that you might find handy in s
 
 For more examples see `src/engine_tests/game/nodes/Node.cpp`, there are some tests that simulate user input.
 
-# Exporting your game
+## Exporting your game
 
 If you want to distribute a version of your game you need to switch to the `release` build mode in your IDE to switch CMake to `release` build configuration (make sure CMake is now using a `release` configuration). Then build your project as usual, it will take much longer since we have `clang-tidy` enabled for `release` builds. `clang-tidy` can fail the build if it finds some issues in your code. It's expected that you build your game in `release` mode regularly to fix `clang-tidy` warnings/errors (if there are any).
 
@@ -2689,6 +2585,116 @@ As you might have noticed next to the built executable of your game there is an 
 That's it! Your game is ready to be distributed. You can archive the directory with the built executable and send it to a friend or upload it on the Internet.
 
 At the time of writing this there is no compression/encryption of the game's resources. All game's resources are distributed as-is.
+
+# Regular reading
+
+This part of the manual groups sections that you might want to re-read regularly in the future.
+
+## Tips to note when working with nodes
+
+Prefer to start your custom nodes like this:
+
+```Cpp
+MyDerivedNode() : MyDerivedNode("My Derived Node") {};
+MyDerivedNode(const std::string& sNodeName) : ParentNodeClass(sNodeName) {
+  // constructor logic
+}
+virtual ~MyDerivedNode() override = default;
+```
+
+If you override some `virtual` function in node it's very likely (read the documentation for the functions you are overriding) that **you need to call the parent's version**:
+
+```Cpp
+void FlyingCharacterNode::onChildNodesSpawned() {
+    SpatialNode::onChildNodesSpawned(); // <- calling parent's version
+
+    // ... your code ...
+}
+```
+
+Don't forget about `Node::getChildNodeOfType` and `Node::getParentNodeOfType` as they might be useful.
+
+**Remember that `World` is inaccessable when the node is not spawned and thus `Node::getWorldRootNode` is `nullptr`.**
+
+If you have a character node with some child nodes and you want the player to explore the world by walking on his feet or by riding a car you can use `pCarNode->addChildNode(pCharacterNode)` to attach your already spawned player (which is attached to the world's root node) to the car node when the player gets in the car or detach it from the car by using something like `getWorldRootNode()->addChildNode(pCharacterNode)` to make it attached to the world's root node again. By using `addChildNode` you can not only add child nodes but also attach and detach existing ones even if they already have a parent.
+
+The order in which `Node::onBeforeNewFrame` are called on nodes is kind of random. If you need a specific node's `onBeforeNewFrame` to be called before `onBeforeNewFrame` of some other node consider using `Node::setTickGroup`. For example if your game have a functionality to focus the camera on some world entity you might want to put the "focusing" logic in the later tick group to make sure that all world entities processed their movement before you rotate (focus) the camera.
+
+## Important things to keep in mind
+
+This section contains a list of important things that you need to regularly check while developing a game to minimize the amount of bugs/crashes in your game. All information listed below is documented in the manual and in the engine code (just duplicating the most important things here, see more details in other sections of the manual or in the engine code documentation).
+
+### General
+
+- always read the documentation for the functions you are using (documentation comments in the code), this generally saves you from all issues listed here
+- always check the logs, if something goes wrong the engine will let you know in the logs, after your game is closed if there were any warnings/errors the last message in the log (before the application is closed) will be the total number of warnings/errors produced (if there were any) so you don't have to scroll through the logs or use search every time
+- from time to time check your console output's beginning when you start your game for special warnings like `[Refureku] WARNING: Double registration detected` which are not captured by our logging system, these might occur in very special cases, report these if found
+
+### Garbage collection and GC pointers
+
+- never capture `gc` pointers in `std::function`, if your game crashes in GC code it's probably because you are capturing `gc` pointers in `std::function`
+- never store `gc` pointers in STL containers, store `gc` pointers only in "gc containers", for ex. instead of `std::vector<gc<Foo>>` use `gc_vector<Foo>` (and don't forget to initialize them properly, for ex. `gc_new_vector<Foo>()`), otherwise leaks may occur
+
+### World switching
+
+- if you are holding any `gc` pointers to nodes in game instance, make sure you set `nullptr` to them before calling `createWorld` or `loadNodeTreeAsWorld`, otherwise they will still exist in despawned (not spawned) state which might not be desired
+
+### Multiple inheritance
+
+- using `gc` pointers on types that use multiple inheritance is not supported and will cause exceptions, leaks and crashes
+- if you use multiple inheritance with serialization (not using `gc` pointers), make sure to derive from the `Serializable` class (or derived, for ex. `Node`) first and only then from other non `Serializable` classes (order matters, otherwise garbage data will be serialized instead of the actual data)
+
+### Serialization/deserialization
+
+- initialize almost all `RPROPERTY(Serialize)` fields, for example:
+```Cpp
+// MyHeader.h
+UPROPERTY(Serialize)
+long long iCharacterLevel = 0; // initialize because it can get garbage value
+
+UPROPERTY(Serialize)
+std::string sMyText; // `std::string` can't get garbage value since it's initialized in std::string's constructor
+```
+otherwise you might serialize a garbage value and then deserialize it as a garbage value which might cause unexpected reaction
+
+### Node
+
+- always check `getWorldRootNode` for `nullptr` before using it, `nullptr` here typically means that the node is not spawned or the world is being destroyed
+- always remember to call parent's virtual function in the beginning of your override (note that this is not always needed but is required for some `Node` functions)
+- use `NodeFunction` instead of `std::function` when you need callbacks in nodes
+- use `NodeNotificationBroadcaster` when you need publisher-subscriber pattern
+- it's highly recommended to not do any logic if the node is not spawned to avoid running into `nullptr`s (or deleted memory when on a non-main thread, use `getSpawnDespawnMutex()` mutex for non-main thread functions)
+
+### Multithreading
+
+- when using thread pool tasks remember that all thread pool tasks will be stopped during the game destruction before GameInstance is destroyed, there are no other checks for thread pool tasks to be stopped so in other cases you need to make sure your async task will not hit deleted memory:
+  - if you're using `Node` member functions in async task make sure the task is finished in your Node::onDespawning,
+  - if you're using `GameInstance` member functions in async task you only might care about world being changed, for this use promise/future or something else to guarantee that the callback won't be called on a deleted object
+- use `NodeFunction` instead of `std::function` when you need to process asynchronous results in nodes
+- submitting a deferred task from a **non-main thread** where in deferred task you operate on a `gc` controlled object such as Node can be dangerous as you may operate on a deleted (freed) memory, in this case use additional checks in the beginning of your deferred task to check if the node you want to use is still valid:
+```Cpp
+// We are on a non-main thread inside of a node:
+addDeferredTask([this, iNodeId](){ // capturing `this` to use `Node` (self) functions, also capturing self ID
+    // We are inside of a deferred task (on the main thread) and we don't know if the node (`this`)
+    // was garbage collected or not because we submitted our task from a non-main thread.
+    // REMEMBER: we can't capture `gc` pointers in `std::function`, this is not supported
+    // and will cause memory leaks/crashes!
+
+    const auto pGameManager = GameManager::get(); // using engine's private class `GameManager`
+
+    // `pGameManager` is guaranteed to be valid inside of a deferred task.
+    // Otherwise, if running this code outside of a deferred task you need to do 2 checks:
+    // if (pGameManager == nullptr) return;
+    // if (pGameManager->isBeingDestroyed()) return;
+
+    if (!pGameManager->isNodeSpawned(iNodeId)){
+        // Node was despawned and it may be dangerous to run the callback.
+        return;
+    }
+
+    // Can safely interact with `this` (self) - we are on the main thread.
+});
+```
 
 # Advanced topics
 
@@ -3005,27 +3011,27 @@ Most of the game assets are stored in the human-readable `TOML` format. This for
 When you serialize a serializable object (an object that derives from `Serializable`) the general TOML structure will look like this (comments start with #):
 
 ```INI
-# <unique_id> is an integer, used to globally differentiate objects in the file
-# (in case they have the same type (same GUID)), if you are serializing only 1 object the ID is 0 by default
-["<unique_id>.<type_guid>"]       # section that describes an object with GUID
-<field_name> = <field_value>      # not all fields will have their values stored like that
+## <unique_id> is an integer, used to globally differentiate objects in the file
+## (in case they have the same type (same GUID)), if you are serializing only 1 object the ID is 0 by default
+["<unique_id>.<type_guid>"]       ## section that describes an object with GUID
+<field_name> = <field_value>      ## not all fields will have their values stored like that
 <field_name> = <field_value>
 
 
-["<unique_id>.<type_guid>"]       # some other object
-<field_name> = <field_value>      # some other field
-"..parent_node_id" = <unique_id>  # keys that start with two dots are "custom attributes" (user-specified)
-                                  # that you pass into `serialize`, they are used to store additional info
-<field_name> = "reflected type, see other sub-section"  # this field derives from `Serializable` and so we store
-                                                        # its data in a separate section
+["<unique_id>.<type_guid>"]       ## some other object
+<field_name> = <field_value>      ## some other field
+"..parent_node_id" = <unique_id>  ## keys that start with two dots are "custom attributes" (user-specified)
+                                  ## that you pass into `serialize`, they are used to store additional info
+<field_name> = "reflected type, see other sub-section"  ## this field derives from `Serializable` and so we store
+                                                        ## its data in a separate section
 
 
-["<unique_parent_object_id>.<unique_subobject_id>.<type_guid>"] # section of an object
-                                                                # <unique_subobject_id> is unique only within
-                                                                # the parent object
-".field_name" = <field_name>      # keys that start with one dot are "internal attributes" they are used for storing 
-                                  # internal info, in this case this key describes the name of the field this section 
-                                  # represents in `<unique_parent_object_id>` object
+["<unique_parent_object_id>.<unique_subobject_id>.<type_guid>"] ## section of an object
+                                                                ## <unique_subobject_id> is unique only within
+                                                                ## the parent object
+".field_name" = <field_name>      ## keys that start with one dot are "internal attributes" they are used for storing 
+                                  ## internal info, in this case this key describes the name of the field this section 
+                                  ## represents in `<unique_parent_object_id>` object
 ```
 
 Here is a more specific example:
@@ -3036,11 +3042,11 @@ sName = "Node"
 
 ["1.550ea9f9-dd8a-4089-a717-0fe4e351a687"]
 bBoolValue2 = true
-"..parent_node_id" = "0"                              # means that this section describes a node that has
-                                                      # a parent node
+"..parent_node_id" = "0"                              ## means that this section describes a node that has
+                                                      ## a parent node
 entity = "reflected type, see other sub-section"
-".path_relative_to_res" = "test/custom_node.toml"     # means that this section contains only changed fields compared
-                                                      # to the specified file (original entity)
+".path_relative_to_res" = "test/custom_node.toml"     ## means that this section contains only changed fields compared
+                                                      ## to the specified file (original entity)
 
 ["1.0.550ea9f9-dd8a-4089-a717-0fe4e351a686"]
 iIntValue2 = 42

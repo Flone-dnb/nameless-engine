@@ -377,7 +377,7 @@ namespace ne {
          * @param yOffset  Mouse Y movement delta in pixels (plus if moved up,
          * minus if moved down).
          */
-        virtual void onMouseMove(double xOffset, double yOffset){};
+        virtual void onMouseMove(double xOffset, double yOffset) {};
 
         /**
          * Called when the window receives mouse scroll movement.

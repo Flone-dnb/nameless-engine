@@ -239,7 +239,7 @@ namespace ne RNAMESPACE() {
          * @remark If you change location/rotation/scale inside of this function,
          * this function will not be called again (no recursion will occur).
          */
-        virtual void onWorldLocationRotationScaleChanged(){};
+        virtual void onWorldLocationRotationScaleChanged() {};
 
     private:
         /**

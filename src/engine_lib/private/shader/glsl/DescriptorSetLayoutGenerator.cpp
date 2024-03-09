@@ -194,6 +194,9 @@ namespace ne {
                 "the specified shader \"{}\" is not a vertex shader", pVertexShader->getShaderName()));
         }
 
+        // Prepare the name (identifier) of the descriptor layout that we will create.
+        std::string sCombinedShadersName = std::format("\"{}\"", pVertexShader->getShaderName());
+
         if (pFragmentShader != nullptr) {
             // Make sure that the fragment shader is indeed a fragment shader.
             if (pFragmentShader->getShaderType() != ShaderType::FRAGMENT_SHADER) [[unlikely]] {
@@ -201,6 +204,8 @@ namespace ne {
                     "the specified shader \"{}\" is not a fragment shader",
                     pFragmentShader->getShaderName()));
             }
+
+            sCombinedShadersName += std::format(" \"{}\"", pFragmentShader->getShaderName());
         }
 
         // Prepare a dummy mutex for fragment shader in case fragment shader is not specified in order
@@ -437,6 +442,13 @@ namespace ne {
                 std::format("failed to create descriptor set layout, error: {}", string_VkResult(result)));
         }
 
+        // Name this descriptor set layout.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pRenderer,
+            generatedData.pDescriptorSetLayout,
+            VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+            std::format("descriptor set layout {}", sCombinedShadersName));
+
         // Continue to create a descriptor pool.
 
         // Describe descriptor types that our descriptor sets will contain.
@@ -476,6 +488,13 @@ namespace ne {
             vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
             return Error(std::format("failed to create descriptor pool, error: {}", string_VkResult(result)));
         }
+
+        // Name this pool.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pRenderer,
+            generatedData.pDescriptorPool,
+            VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+            std::format("descriptor pool {}", sCombinedShadersName));
 
         // Allocate descriptor sets.
 

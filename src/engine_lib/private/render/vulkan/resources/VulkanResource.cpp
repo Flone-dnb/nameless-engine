@@ -129,8 +129,10 @@ namespace ne {
                 "failed to create buffer \"{}\", error: {}", sResourceName, string_VkResult(result)));
         }
 
-        // Set allocation name.
+        // Set created object name.
         vmaSetAllocationName(pMemoryAllocator, pCreatedMemory, sResourceName.c_str());
+        VulkanRenderer::setObjectDebugOnlyName(
+            pResourceManager->getRenderer(), pCreatedBuffer, VK_OBJECT_TYPE_BUFFER, sResourceName);
 
         return std::unique_ptr<VulkanResource>(new VulkanResource(
             pResourceManager,
@@ -161,12 +163,16 @@ namespace ne {
                 "failed to create image \"{}\", error: {}", sResourceName, string_VkResult(result)));
         }
 
-        // Set allocation name.
+        // Set created object name.
         vmaSetAllocationName(pMemoryAllocator, pCreatedMemory, sResourceName.c_str());
+        VulkanRenderer::setObjectDebugOnlyName(
+            pResourceManager->getRenderer(), pCreatedImage, VK_OBJECT_TYPE_IMAGE, sResourceName);
 
+        // Create resource object.
         auto pCreatedImageResource = std::unique_ptr<VulkanResource>(
             new VulkanResource(pResourceManager, sResourceName, pCreatedImage, pCreatedMemory, 0, 0));
 
+        // Optionally create views.
         if (viewDescription.has_value()) {
             // Convert renderer.
             const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pResourceManager->getRenderer());
@@ -208,6 +214,13 @@ namespace ne {
                     string_VkResult(result)));
             }
 
+            // Set name of this view.
+            VulkanRenderer::setObjectDebugOnlyName(
+                pResourceManager->getRenderer(),
+                pCreatedImageResource->pImageView,
+                VK_OBJECT_TYPE_IMAGE_VIEW,
+                std::format("{} (view)", sResourceName));
+
             // Check if need to create an additional view.
             if ((viewDescription.value() & VK_IMAGE_ASPECT_DEPTH_BIT) != 0 &&
                 (viewDescription.value() & VK_IMAGE_ASPECT_STENCIL_BIT) != 0) {
@@ -227,6 +240,13 @@ namespace ne {
                         sResourceName,
                         string_VkResult(result)));
                 }
+
+                // Set name of this view.
+                VulkanRenderer::setObjectDebugOnlyName(
+                    pResourceManager->getRenderer(),
+                    pCreatedImageResource->pImageView,
+                    VK_OBJECT_TYPE_IMAGE_VIEW,
+                    std::format("{} (depth only view)", sResourceName));
             }
 
             if (bIsCubeMapView) {
@@ -247,6 +267,13 @@ namespace ne {
                             sResourceName,
                             string_VkResult(result)));
                     }
+
+                    // Set name of this view.
+                    VulkanRenderer::setObjectDebugOnlyName(
+                        pResourceManager->getRenderer(),
+                        pCreatedImageResource->pImageView,
+                        VK_OBJECT_TYPE_IMAGE_VIEW,
+                        std::format("{} (cubemap face #{} view)", sResourceName, i));
                 }
             }
         }
@@ -292,6 +319,13 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create image view, error: {}", string_VkResult(result)));
         }
+
+        // Set name of this view.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pResourceManager->getRenderer(),
+            pCreatedResource->pImageView,
+            VK_OBJECT_TYPE_IMAGE_VIEW,
+            std::format("{} (view)", sResourceName));
 
         return pCreatedResource;
     }

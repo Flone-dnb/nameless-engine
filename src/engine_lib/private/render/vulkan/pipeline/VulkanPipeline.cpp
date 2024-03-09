@@ -449,6 +449,13 @@ namespace ne {
                 string_VkResult(result)));
         }
 
+        // Name this shader module.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pVulkanRenderer,
+            pVertexShaderModule,
+            VK_OBJECT_TYPE_SHADER_MODULE,
+            std::format("shader module {}", pVertexShader->getShaderName()));
+
         VkShaderModule pFragmentShaderModule = nullptr;
         if (pFragmentShader != nullptr) {
             // Describe fragment shader module.
@@ -470,6 +477,13 @@ namespace ne {
                     pFragmentShader->getShaderName(),
                     string_VkResult(result)));
             }
+
+            // Name this shader module.
+            VulkanRenderer::setObjectDebugOnlyName(
+                pVulkanRenderer,
+                pFragmentShaderModule,
+                VK_OBJECT_TYPE_SHADER_MODULE,
+                std::format("shader module {}", pFragmentShader->getShaderName()));
         }
 
         // Describe vertex shader pipeline stage.
@@ -674,6 +688,13 @@ namespace ne {
             return Error(std::format("failed to create pipeline layout, error: {}", string_VkResult(result)));
         }
 
+        // Name this pipeline layout.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pVulkanRenderer,
+            pPipelineLayout,
+            VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+            std::format("graphics pipeline layout {}", getPipelineIdentifier()));
+
         // Describe graphics pipeline.
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -748,6 +769,13 @@ namespace ne {
             return Error(
                 std::format("failed to create graphics pipeline, error: {}", string_VkResult(result)));
         }
+
+        // Name this pipeline layout.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pVulkanRenderer,
+            pPipeline,
+            VK_OBJECT_TYPE_PIPELINE,
+            std::format("graphics pipeline {}", getPipelineIdentifier()));
 
         // Destroy shader modules since we don't need them after the pipeline was created.
         vkDestroyShaderModule(pLogicalDevice, pVertexShaderModule, nullptr);
@@ -840,6 +868,13 @@ namespace ne {
                 string_VkResult(result)));
         }
 
+        // Name this shader module.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pVulkanRenderer,
+            pComputeShaderModule,
+            VK_OBJECT_TYPE_SHADER_MODULE,
+            std::format("shader module {}", pComputeShader->getShaderName()));
+
         // Describe compute shader pipeline stage.
         VkPipelineShaderStageCreateInfo computeShaderStageInfo{};
         computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -865,6 +900,13 @@ namespace ne {
             return Error(std::format("failed to create pipeline layout, error: {}", string_VkResult(result)));
         }
 
+        // Name this pipeline layout.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pVulkanRenderer,
+            pPipelineLayout,
+            VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+            std::format("compute pipeline layout {}", getPipelineIdentifier()));
+
         // Describe compute pipeline.
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -887,6 +929,13 @@ namespace ne {
             return Error(
                 std::format("failed to create compute pipeline, error: {}", string_VkResult(result)));
         }
+
+        // Name this pipeline.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pVulkanRenderer,
+            pPipeline,
+            VK_OBJECT_TYPE_PIPELINE,
+            std::format("compute pipeline {}", getPipelineIdentifier()));
 
         // Destroy shader module since we don't need it after the pipeline was created.
         vkDestroyShaderModule(pLogicalDevice, pComputeShaderModule, nullptr);

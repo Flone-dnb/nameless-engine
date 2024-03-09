@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <format>
+#include <string>
 
 // Custom.
 #include "render/general/resources/GpuResource.h"
@@ -16,6 +17,7 @@
 
 namespace ne {
     class VulkanResourceManager;
+    class Renderer;
 
     /** Vulkan buffer/memory wrapper. */
     class VulkanResource : public GpuResource {

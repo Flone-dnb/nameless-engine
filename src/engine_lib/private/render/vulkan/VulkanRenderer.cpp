@@ -1558,6 +1558,9 @@ namespace ne {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
 
+        // Name this render pass.
+        setObjectDebugOnlyName(this, pMainRenderPass, VK_OBJECT_TYPE_RENDER_PASS, "main render pass");
+
         return {};
     }
 
@@ -1687,6 +1690,10 @@ namespace ne {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
 
+        // Name this render pass.
+        setObjectDebugOnlyName(
+            this, pDepthOnlyRenderPass, VK_OBJECT_TYPE_RENDER_PASS, "depth only render pass");
+
         return {};
     }
 
@@ -1769,6 +1776,13 @@ namespace ne {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
 
+        // Name this render pass.
+        setObjectDebugOnlyName(
+            this,
+            pShadowMappingDirectionalSpotRenderPass,
+            VK_OBJECT_TYPE_RENDER_PASS,
+            "shadow mapping (directional/spot) render pass");
+
         // Describe attachment for point light render pass.
         VkAttachmentDescription pointColorAttachment{};
         pointColorAttachment.format = shadowMappingPointLightColorTargetFormat;
@@ -1800,6 +1814,13 @@ namespace ne {
         if (result != VK_SUCCESS) [[unlikely]] {
             return Error(std::format("failed to create render pass, error: {}", string_VkResult(result)));
         }
+
+        // Name this render pass.
+        setObjectDebugOnlyName(
+            this,
+            pShadowMappingPointRenderPass,
+            VK_OBJECT_TYPE_RENDER_PASS,
+            "shadow mapping (point) render pass");
 
         return {};
     }
@@ -2369,6 +2390,13 @@ namespace ne {
                     string_VkResult(result)));
             }
 
+            // Name this framebuffer.
+            setObjectDebugOnlyName(
+                this,
+                vSwapChainFramebuffersMainRenderPass[i],
+                VK_OBJECT_TYPE_FRAMEBUFFER,
+                std::format("swapchain framebuffer #{} for main render pass", i));
+
             // Change render pass and attachments.
             vAttachments.clear();
 
@@ -2392,6 +2420,13 @@ namespace ne {
                     "failed to create a framebuffer for a swapchain image view, error: {}",
                     string_VkResult(result)));
             }
+
+            // Name this framebuffer.
+            setObjectDebugOnlyName(
+                this,
+                vSwapChainFramebuffersDepthOnlyRenderPass[i],
+                VK_OBJECT_TYPE_FRAMEBUFFER,
+                std::format("swapchain framebuffer #{} for depth only render pass", i));
         }
 
         return {};
@@ -3232,6 +3267,60 @@ namespace ne {
                 }
             }
         }
+    }
+
+    void VulkanRenderer::setObjectDebugOnlyName(
+        Renderer* pRenderer, void* pObject, VkObjectType objectType, const std::string& sResourceName) {
+#if defined(DEBUG)
+        // Convert renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            Error error("expected a Vulkan renderer");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get Vulkan instance.
+        const auto pInstance = pVulkanRenderer->getInstance();
+        if (pInstance == nullptr) [[unlikely]] {
+            Error error("expected an instance to be valid");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Get Vulkan device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            Error error("expected a logical device to be valid");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Prepare debug name info.
+        VkDebugUtilsObjectNameInfoEXT debugNameInfo{};
+        debugNameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        debugNameInfo.pNext = nullptr;
+        debugNameInfo.objectType = objectType;
+        debugNameInfo.objectHandle = reinterpret_cast<uint64_t>(pObject);
+        debugNameInfo.pObjectName = sResourceName.c_str();
+
+        // Get pointer to the function.
+        const auto pSetDebugUtilsObjectName = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+            vkGetInstanceProcAddr(pInstance, "vkSetDebugUtilsObjectNameEXT"));
+        if (pSetDebugUtilsObjectName == nullptr) [[unlikely]] {
+            Error error("expected to get extension function pointer");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Set debug name.
+        const auto result = pSetDebugUtilsObjectName(pLogicalDevice, &debugNameInfo);
+        if (result != VK_SUCCESS) [[unlikely]] {
+            Error error(std::format("failed to set debug object name, error: {}", string_VkResult(result)));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+#endif
     }
 
     void VulkanRenderer::drawMeshesDepthPrepass(

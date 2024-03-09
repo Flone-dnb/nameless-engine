@@ -77,6 +77,19 @@ namespace ne {
         create(GameManager* pGameManager, const std::vector<std::string>& vBlacklistedGpuNames);
 
         /**
+         * Sets name of the object for debugging purposes using Vulkan's debugging utils extension.
+         *
+         * @remark Does nothing in release builds.
+         *
+         * @param pRenderer     Vulkan renderer.
+         * @param pObject       Object to name.
+         * @param objectType    Type of the object.
+         * @param sResourceName Name to set.
+         */
+        static void setObjectDebugOnlyName(
+            Renderer* pRenderer, void* pObject, VkObjectType objectType, const std::string& sResourceName);
+
+        /**
          * Returns sampler for textures.
          *
          * @return `nullptr` if not created yet, otherwise valid pointer.

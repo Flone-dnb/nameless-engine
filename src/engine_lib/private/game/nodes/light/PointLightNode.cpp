@@ -21,9 +21,9 @@ namespace ne {
         const auto pShadowMapManager =
             getGameInstance()->getWindow()->getRenderer()->getResourceManager()->getShadowMapManager();
         auto shadowMapResult = pShadowMapManager->createShadowMap(
-            getNodeName(), ShadowMapType::POINT, [this](unsigned int iIndexToUse) {
-                onShadowMapArrayIndexChanged(iIndexToUse);
-            });
+            std::format("{} shadow map", getNodeName()),
+            ShadowMapType::POINT,
+            [this](unsigned int iIndexToUse) { onShadowMapArrayIndexChanged(iIndexToUse); });
         if (std::holds_alternative<Error>(shadowMapResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(shadowMapResult));
             error.addCurrentLocationToErrorStack();

@@ -170,6 +170,14 @@ namespace ne {
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
+            // Name this framebuffer.
+            VulkanRenderer::setObjectDebugOnlyName(
+                pVulkanRenderer,
+                vFramebuffers[0],
+                VK_OBJECT_TYPE_FRAMEBUFFER,
+                std::format(
+                    "shadow mapping framebuffer for resource \"{}\"", pDepthTexture->getResourceName()));
+
             // Done.
             return;
         }
@@ -198,6 +206,16 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+
+            // Name this framebuffer.
+            VulkanRenderer::setObjectDebugOnlyName(
+                pVulkanRenderer,
+                vFramebuffers[i],
+                VK_OBJECT_TYPE_FRAMEBUFFER,
+                std::format(
+                    "shadow mapping framebuffer for cubemap face #{} for resource \"{}\"",
+                    i,
+                    pColorTexture->getResourceName()));
         }
     }
 

@@ -2739,17 +2739,17 @@ void MyGameInstance::onGameStarted(){
 
     std::vector vShaders = {pixelShader};
 
-    auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
+    const auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {
         // show progress here
     };
-    auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
-        if (std::holds_alternative<std::string>(error)){
+    const auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> errorInfo) {
+        if (std::holds_alternative<std::string>(errorInfo)){
             // shader compilation error
         }else{
             // internal error
         }
-    }
-    auto onCompleted = []() {
+    };
+    const auto onCompleted = []() {
         // do final logic here
     };
 

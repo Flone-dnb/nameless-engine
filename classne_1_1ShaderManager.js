@@ -1,0 +1,26 @@
+var classne_1_1ShaderManager =
+[
+    [ "ShaderData", "structne_1_1ShaderManager_1_1ShaderData.html", "structne_1_1ShaderManager_1_1ShaderData" ],
+    [ "ShaderManager", "classne_1_1ShaderManager.html#a7b7db57803fdfd091373e3efc2a23808", null ],
+    [ "compileShaders", "classne_1_1ShaderManager.html#a8d2166c0698051cb43ba0b44dd1e6536", null ],
+    [ "compileShaderTask", "classne_1_1ShaderManager.html#a435cd6d65d44e573a745f15f3172102a", null ],
+    [ "getShader", "classne_1_1ShaderManager.html#aca4fc0fed6bbdf24751319f3e774b5cb", null ],
+    [ "isShaderNameCanBeUsed", "classne_1_1ShaderManager.html#a87aa310492aa04059696943383403f7f", null ],
+    [ "markShaderToBeRemoved", "classne_1_1ShaderManager.html#a005b1de2299a6257502f772992ab52b5", null ],
+    [ "performSelfValidation", "classne_1_1ShaderManager.html#a09beef22fcf157936533b5b7a8e62ac6", null ],
+    [ "refreshShaderCache", "classne_1_1ShaderManager.html#ae5a1e41b8eccc56ef48163f4d5bbd09c", null ],
+    [ "releaseShaderBytecodeIfNotUsed", "classne_1_1ShaderManager.html#ac605a789b555ca9fa5a267e258ec4143", null ],
+    [ "removeShaderIfMarkedToBeRemoved", "classne_1_1ShaderManager.html#aac23eeac24f3692764f9bb9592441c50", null ],
+    [ "setRendererConfigurationForShaders", "classne_1_1ShaderManager.html#a6bd5b94c95221216d98e690d502c5336", null ],
+    [ "iMaximumShaderNameLength", "classne_1_1ShaderManager.html#a43b2d9ff0bf54dd02457e394a373e583", null ],
+    [ "iTotalCompileShadersQueries", "classne_1_1ShaderManager.html#a5d7f0bf39c48d5471354b19b0327289a", null ],
+    [ "mtxShaderData", "classne_1_1ShaderManager.html#ab348a57a97036ac786b40b061cc6e307", null ],
+    [ "pRenderer", "classne_1_1ShaderManager.html#a39bddc7cb1f8ee6bfbb99f22909605b0", null ],
+    [ "sGlobalShaderCacheHlslCsModelKeyName", "classne_1_1ShaderManager.html#ad7aea622b4816c68b2a668650f944d51", null ],
+    [ "sGlobalShaderCacheHlslPsModelKeyName", "classne_1_1ShaderManager.html#a393b35635580223697112f73818bb679", null ],
+    [ "sGlobalShaderCacheHlslVsModelKeyName", "classne_1_1ShaderManager.html#a304f26b89dd52e6b78a885a63c36a8fc", null ],
+    [ "sGlobalShaderCacheParametersFileName", "classne_1_1ShaderManager.html#a588b886517e9172b50f6a5b40306201f", null ],
+    [ "sGlobalShaderCacheReleaseBuildKeyName", "classne_1_1ShaderManager.html#ae1bcdc4e7ac2329bee8ff9ec8f488c90", null ],
+    [ "sGlobalShaderCacheRendererTypeKeyName", "classne_1_1ShaderManager.html#a2744ec33ff1a6d90e1f1273cb0e7a104", null ],
+    [ "vValidCharactersForShaderName", "classne_1_1ShaderManager.html#a539c5b65b2158cab00f5161e9c3b9663", null ]
+];

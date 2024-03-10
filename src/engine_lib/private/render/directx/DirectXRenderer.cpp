@@ -1418,12 +1418,19 @@ namespace ne {
                     // as it might cause a deadlock (see MeshNode::setMaterial for example).
                     std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
-                    // Set mesh's shader CPU write resources (`cbuffer`s for example).
+                    // Set mesh's shader CPU write resources.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
                         reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
                             ->setConstantBufferViewOfPipeline(
                                 pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+                    }
+
+                    // Set mesh's texture shader resources.
+                    for (const auto& [sResourceName, pShaderTextureResource] :
+                         pMtxMeshGpuResources->second.shaderResources.shaderTextureResources) {
+                        reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                            ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
                     }
 
                     // Prepare vertex buffer view.

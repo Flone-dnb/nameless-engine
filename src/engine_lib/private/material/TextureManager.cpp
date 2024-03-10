@@ -361,7 +361,8 @@ namespace ne {
                 std::format("expected the path \"{}\" to point to a directory", pathToResource.string()));
         }
 
-        // Append file name.
+        // Construct a path to the file by appending image quality and a format
+        // (TODO: "0" below will be replaced once we implement RenderSettings::setTextureQuality).
         pathToResource /= "0" + sTextureFormatExtension;
 
         // Load texture.

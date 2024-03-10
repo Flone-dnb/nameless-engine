@@ -2845,6 +2845,8 @@ You can use your usual shader debugging software (`PIX`, `RenderDoc`, `NVIDIA Ns
 
 ### Using custom shader resources
 
+#### Introduction to using custom resources
+
 Let's consider a simple example of passing a buffer from C++ into your custom shader which looks like this:
 
 ```HLSL
@@ -2929,7 +2931,7 @@ Now let's tell the engine how to pass your buffer to shaders:
 void CustomMeshNode::onSpawning(){
     SpatialNode::onSpawning();
 
-    setShaderCpuWriteResourceBindingData( // please call this function only in `onSpawning`, see function docs for more
+    setShaderCpuWriteResourceBindingData(   // call this function only in `onSpawning`, see function docs
         "customData",                       // name of the resource written in your shader file (HLSL/GLSL)
         sizeof(CustomMeshShaderConstants),  // size of your buffer
         [this]() -> void* { return onStartedUpdatingShaderConstants(); },
@@ -2967,6 +2969,59 @@ void CustomMeshNode::onSomeEvent() {
 `markShaderCpuWriteResourceToBeCopiedToGpu` will notify the engine if your node is spawned, otherwise it won't do anything so that your "update" functions will only be called while your node is spawned. After the engine was notified it will mark that resource as "needs update" and call your "update" functions before the next frame is submitted to be rendered (when the engine will be ready to update GPU resources).
 
 If you assigned your custom shaders to the material of your `CustomMeshNode` then we don't need to do anything else.
+
+#### Using custom textures
+
+Similar approach is used for custom textures. First, define a shader:
+
+```GLSL
+// ... some code here ...
+
+#hlsl Texture2D customTexture : register(t5, space5);
+#glsl layout(binding = 8) uniform sampler2D customTexture[];
+
+#additional_shader_constants{
+    uint customTexture;
+}
+
+void main(){
+... some code here ...
+
+#hlsl float4 color = customTexture.Sample(textureSampler, pin.uv);
+#glsl vec4 color   = texture(customTexture[constants.customTexture], fragmentUv);
+
+... some code here ...
+}
+```
+
+Then assign a material that uses this pixel/fragment shader to your custom mesh node (use default vertex shader). Now, import a texture, use can use the editor or pure C++ for this step:
+
+```Cpp
+#include "material/TextureManager.h"
+
+auto optionalError = TextureManager::importTexture(
+    "C:\\images\\stone.png", TextureType::DIFFUSE, "game", "stone", importTextureProgress);
+if (optionalError.has_value()) [[unlikely]] {
+    // ... handle error ...
+}
+
+// `importTextureProgress` signature and definition is skipped to simplify the example
+```
+
+Once you have a texture in your `res` directory you need to bind the file to the shader:
+
+```Cpp
+void MyMeshNode::onSpawning(){
+    MeshNode::onSpawning();
+
+    setShaderTextureResourceBindingData(    // call this function only in `onSpawning`, see function docs
+        "customTexture",                    // name of the resource
+        "game/stone"                        // path relative `res`
+    );
+}
+```
+
+Now your mesh's pixel/fragment shader will have a custom texture binded.
 
 ## Adding support for new types for serialization/deserialization
 

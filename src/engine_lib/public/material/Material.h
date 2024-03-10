@@ -545,7 +545,7 @@ namespace ne RNAMESPACE() {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Setups a shader resource that references a texture  that will be used in shaders when
+         * Setups a shader resource that references a texture that will be used in shaders when
          * this material is rendered.
          *
          * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
@@ -553,7 +553,7 @@ namespace ne RNAMESPACE() {
          *
          * @param sShaderResourceName               Name of the resource we are referencing (should be exactly
          * the same as the resource name written in the shader file we are referencing).
-         * @param sPathToTextureResourceRelativeRes Path to file/directory with texture resource to use.
+         * @param sPathToTextureResourceRelativeRes Path to the directory with texture resource to use.
          */
         void setShaderTextureResourceBindingData(
             const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes);

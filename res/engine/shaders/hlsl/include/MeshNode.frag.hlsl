@@ -5,9 +5,8 @@
 #define READ_ONLY_LIGHT_GRID
 #include "../../include/Lighting.glsl"
 
-#ifdef PS_USE_DIFFUSE_TEXTURE
-#hlsl SamplerState textureSampler : register(s0, space5);
-#endif
+// Not using ifdefs on this static texture sampler because the user may want to use custom textures.
+SamplerState textureSampler : register(s0, space5);
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
     Texture2D diffuseTexture : register(t4, space5);

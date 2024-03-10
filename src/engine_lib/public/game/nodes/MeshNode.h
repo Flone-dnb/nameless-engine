@@ -9,6 +9,7 @@
 #include "render/general/resources/GpuResource.h"
 #include "shader/general/resources/ShaderResource.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
+#include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/shapes/AABB.h"
 
@@ -186,6 +187,9 @@ namespace ne RNAMESPACE() {
                  * @remark Empty if the node is not spawned.
                  */
                 std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
+
+                /** Shader resources that reference textures. */
+                std::unordered_map<std::string, ShaderTextureResourceUniquePtr> shaderTextureResources;
             };
 
             /** Mesh GPU resources. */
@@ -400,6 +404,20 @@ namespace ne RNAMESPACE() {
             size_t iResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
+
+        /**
+         * Setups a shader resource that references a texture that will be used in shaders when
+         * this mesh is rendered.
+         *
+         * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
+         * bindings will be automatically removed in @ref deallocateShaderResources.
+         *
+         * @param sShaderResourceName               Name of the resource we are referencing (should be exactly
+         * the same as the resource name written in the shader file we are referencing).
+         * @param sPathToTextureResourceRelativeRes Path to the directory with texture resource to use.
+         */
+        void setShaderTextureResourceBindingData(
+            const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes);
 
         /**
          * Looks for binding created using @ref setShaderCpuWriteResourceBindingData and

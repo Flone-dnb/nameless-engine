@@ -30,10 +30,15 @@ namespace ne {
                 decltype(mtxGpuResources.second.shaderResources.shaderCpuWriteResources),
                 std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr>>,
             "update reinterpret_casts in both renderers (in draw function)");
+        static_assert(
+            std::is_same_v<
+                decltype(mtxGpuResources.second.shaderResources.shaderTextureResources),
+                std::unordered_map<std::string, ShaderTextureResourceUniquePtr>>,
+            "update reinterpret_casts in both renderers (in draw function)");
 
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
-            sizeof(GpuResources::ShaderResources) == 80, // NOLINT
+            sizeof(GpuResources::ShaderResources) == 160, // NOLINT
             "add new static asserts for resources here");
 #elif defined(DEBUG)
         static_assert(
@@ -572,7 +577,18 @@ namespace ne {
         }
         // keep spawn locked
 
-        // Collect pipelines of all materials.
+        // Make sure there is no resource with this name.
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
+            Error error(std::format(
+                "mesh node \"{}\" already has a shader CPU write resource with the name \"{}\"",
+                getNodeName(),
+                sShaderResourceName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Collect pipelines of all used materials.
         std::unordered_set<Pipeline*> pipelinesToUse;
         for (const auto& pMaterial : vMaterials) {
             // Get used pipeline.
@@ -589,17 +605,6 @@ namespace ne {
 
             // Add pipeline.
             pipelinesToUse.insert(pUsedPipeline);
-        }
-
-        // Make sure there is no resource with this name.
-        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
-        if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
-            Error error(std::format(
-                "mesh node \"{}\" already has a shader CPU write resource with the name \"{}\"",
-                getNodeName(),
-                sShaderResourceName));
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Create object data constant buffer for shaders.
@@ -622,6 +627,96 @@ namespace ne {
         // Add to be considered.
         mtxGpuResources.second.shaderResources.shaderCpuWriteResources[sShaderResourceName] =
             std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
+    }
+
+    void MeshNode::setShaderTextureResourceBindingData(
+        const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes) {
+        std::scoped_lock spawnGuard(*getSpawnDespawnMutex(), mtxGpuResources.first);
+
+        // Make sure the node is spawned.
+        if (!isSpawned()) [[unlikely]] {
+            Error error("binding data to shader resources should be called in `onSpawning` function when the "
+                        "node is spawned");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        // keep spawn locked
+
+        // Make sure there is no resource with this name.
+        auto it = mtxGpuResources.second.shaderResources.shaderTextureResources.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderTextureResources.end()) [[unlikely]] {
+            Error error(std::format(
+                "mesh node \"{}\" already has an active binding for shader texture resource with the name "
+                "\"{}\"",
+                getNodeName(),
+                sShaderResourceName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Collect pipelines of all used materials.
+        std::unordered_set<Pipeline*> pipelinesToUse;
+        for (const auto& pMaterial : vMaterials) {
+            // Get used pipeline.
+            const auto pUsedPipeline = pMaterial->getColorPipeline();
+            if (pUsedPipeline == nullptr) [[unlikely]] {
+                Error error(std::format(
+                    "unable to create shader resources for mesh node \"{}\" because material \"{}\" was not "
+                    "initialized",
+                    getNodeName(),
+                    pMaterial->getMaterialName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Make sure pipeline is initialized.
+            if (pUsedPipeline == nullptr) [[unlikely]] {
+                Error error(std::format(
+                    "mesh node \"{}\" requested to set shader resources binding data but pipeline of "
+                    "used material \"{}\" is not initialized",
+                    getNodeName(),
+                    pMaterial->getMaterialName()));
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Add pipeline.
+            pipelinesToUse.insert(pUsedPipeline);
+        }
+
+        // Get texture manager.
+        const auto pRenderer = getGameInstance()->getWindow()->getRenderer();
+        const auto pTextureManager = pRenderer->getResourceManager()->getTextureManager();
+
+        // Get texture handle.
+        auto textureResult = pTextureManager->getTexture(sPathToTextureResourceRelativeRes);
+        if (std::holds_alternative<Error>(textureResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(textureResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+        auto pTextureHandle = std::get<std::unique_ptr<TextureHandle>>(std::move(textureResult));
+
+        // Get shader texture resource manager.
+        const auto pShaderResourceManager = pRenderer->getShaderTextureResourceManager();
+
+        // Create a new shader resource.
+        auto shaderResourceResult = pShaderResourceManager->createShaderTextureResource(
+            sShaderResourceName,
+            std::format("mesh node \"{}\"", getNodeName()),
+            pipelinesToUse,
+            std::move(pTextureHandle));
+        if (std::holds_alternative<Error>(shaderResourceResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(shaderResourceResult));
+            error.addCurrentLocationToErrorStack();
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Add to be considered.
+        mtxGpuResources.second.shaderResources.shaderTextureResources[sShaderResourceName] =
+            std::get<ShaderTextureResourceUniquePtr>(std::move(shaderResourceResult));
     }
 
     void MeshNode::markShaderCpuWriteResourceToBeCopiedToGpu(const std::string& sShaderResourceName) {
@@ -683,8 +778,8 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        // Collect pipelines of all materials.
-        std::unordered_set<Pipeline*> pipelinesToUse;
+        // Collect pipelines of all used materials.
+        std::unordered_set<Pipeline*> colorPipelines;
         std::unordered_set<Pipeline*> depthOnlyPipelines;
         std::unordered_set<Pipeline*> shadowMappingPipelines;
         for (const auto& pMaterial : vMaterials) {
@@ -697,8 +792,8 @@ namespace ne {
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
-            // Add for shader resources.
-            pipelinesToUse.insert(pPipeline);
+            // Add pipeline.
+            colorPipelines.insert(pPipeline);
 
             // Check if this material also has depth only pipeline.
             const auto pDepthOnlyPipeline = pMaterial->getDepthOnlyPipeline();
@@ -724,10 +819,22 @@ namespace ne {
         }
 
         // Update shader CPU write resources.
-        for (const auto& [sResourceName, shaderCpuWriteResource] :
+        for (const auto& [sResourceName, pShaderCpuWriteResource] :
              mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
             // Update binding info.
-            auto optionalError = shaderCpuWriteResource.getResource()->changeUsedPipelines(pipelinesToUse);
+            auto optionalError = pShaderCpuWriteResource.getResource()->changeUsedPipelines(colorPipelines);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                optionalError->showError();
+                throw std::runtime_error(optionalError->getFullErrorMessage());
+            }
+        }
+
+        // Update shader texture resources.
+        for (const auto& [sResourceName, pShaderTextureResource] :
+             mtxGpuResources.second.shaderResources.shaderTextureResources) {
+            // Update binding info.
+            auto optionalError = pShaderTextureResource.getResource()->changeUsedPipelines(colorPipelines);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 optionalError->showError();
@@ -736,11 +843,12 @@ namespace ne {
         }
 
         if (!depthOnlyPipelines.empty() || !shadowMappingPipelines.empty()) {
-            // Additionally, bind mesh data shader resource to depth only / shadow mapping pipelines for depth
-            // prepass / shadow mapping since in those passes (only vertex shader) only mesh data is used.
+            // Additionally, bind "mesh data" shader resource to depth only / shadow mapping pipelines for
+            // depth prepass / shadow mapping since in those passes (only vertex shader) only mesh data is
+            // used.
 
             // Combine usual, depth only and shadow mapping pipelines.
-            std::unordered_set<Pipeline*> combinedPipelines = pipelinesToUse;
+            std::unordered_set<Pipeline*> combinedPipelines = colorPipelines;
             for (const auto& pPipeline : depthOnlyPipelines) {
                 combinedPipelines.insert(pPipeline);
             }
@@ -759,7 +867,7 @@ namespace ne {
                 throw std::runtime_error(error.getFullErrorMessage());
             }
 
-            // Bind it to all pipelines (including depth only).
+            // Bind it to these pipelines.
             auto optionalError = meshDataIt->second.getResource()->changeUsedPipelines(combinedPipelines);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
@@ -770,10 +878,12 @@ namespace ne {
 
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
-            sizeof(GpuResources::ShaderResources) == 80, "change pipelines of new resources here"); // NOLINT
+            sizeof(GpuResources::ShaderResources) == 160,
+            "change pipelines of newly added shader resources here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
-            sizeof(GpuResources::ShaderResources) == 56, "change pipelines of new resources here"); // NOLINT
+            sizeof(GpuResources::ShaderResources) == 56,
+            "change pipelines of newly added shader resources here"); // NOLINT
 #endif
     }
 
@@ -859,5 +969,4 @@ namespace ne {
 
         return {pIndexBuffer, iIndexCount};
     }
-
 }

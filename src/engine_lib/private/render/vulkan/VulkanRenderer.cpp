@@ -3768,6 +3768,13 @@ namespace ne {
                                 pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
                     }
 
+                    // Set mesh's texture resources.
+                    for (const auto& [sResourceName, pShaderTextureResource] :
+                         pMtxMeshGpuResources->second.shaderResources.shaderTextureResources) {
+                        reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                            ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
+                    }
+
                     // Bind vertex buffer.
                     vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
                                              pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())

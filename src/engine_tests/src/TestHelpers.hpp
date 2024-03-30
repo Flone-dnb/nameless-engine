@@ -4,6 +4,9 @@
 #include "game/nodes/CameraNode.h"
 #include "game/camera/CameraManager.h"
 
+// External.
+#include "GcPtr.h"
+
 namespace ne {
     /** Provides static helper functions for tests. */
     class TestHelpers {
@@ -15,10 +18,10 @@ namespace ne {
          *
          * @param pWorldRootNode
          */
-        static inline gc<CameraNode>
-        createAndSpawnActiveCamera(const gc<Node>& pWorldRootNode, CameraManager* pCameraManager) {
+        static inline sgc::GcPtr<CameraNode>
+        createAndSpawnActiveCamera(const sgc::GcPtr<Node>& pWorldRootNode, CameraManager* pCameraManager) {
             // Create camera.
-            auto pCamera = gc_new<CameraNode>();
+            auto pCamera = sgc::makeGc<CameraNode>();
 
             // Configure.
             pCamera->setSerialize(false);

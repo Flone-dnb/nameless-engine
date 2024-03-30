@@ -50,7 +50,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     std::filesystem::remove(pathToFileInRes);
 
     // Try to load using the backup file.
-    auto result = Serializable::deserialize<gc, InventorySaveData>(pathToFileInRes);
+    auto result = Serializable::deserialize<sgc::GcPtr<InventorySaveData>>(pathToFileInRes);
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(result);
         error.addCurrentLocationToErrorStack();
@@ -62,7 +62,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     REQUIRE(std::filesystem::exists(pathToFileInRes));
 
     // Make sure that deserialized data is correct.
-    auto pDeserialized = std::get<gc<InventorySaveData>>(result);
+    auto pDeserialized = std::get<sgc::GcPtr<InventorySaveData>>(result);
     REQUIRE(pDeserialized->getItemAmount(42) == 1);
 
     // Check that relative path exists and correct.
@@ -71,7 +71,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     REQUIRE(optionalRelativePath.value().first == sRelativePathToFile);
 
     // Load the data from the temp directory.
-    result = Serializable::deserialize<gc, InventorySaveData>(pathToFileInTemp);
+    result = Serializable::deserialize<sgc::GcPtr<InventorySaveData>>(pathToFileInTemp);
     if (std::holds_alternative<Error>(result)) {
         auto error = std::get<Error>(result);
         error.addCurrentLocationToErrorStack();
@@ -80,7 +80,7 @@ TEST_CASE("make sure relative path to the file the object was deserialized from 
     }
 
     // Make sure that deserialized data is correct.
-    pDeserialized = std::get<gc<InventorySaveData>>(result);
+    pDeserialized = std::get<sgc::GcPtr<InventorySaveData>>(result);
     REQUIRE(pDeserialized->getItemAmount(42) == 1);
 
     // Check that relative path is empty.
@@ -118,7 +118,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
 
     // Try to load using the backup.
     {
-        auto result = Serializable::deserialize<gc, InventorySaveData>(fullPathToFile);
+        auto result = Serializable::deserialize<sgc::GcPtr<InventorySaveData>>(fullPathToFile);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addCurrentLocationToErrorStack();
@@ -126,7 +126,7 @@ TEST_CASE("serialize and deserialize with a backup file") {
             REQUIRE(false);
         }
 
-        auto pDeserialized = std::get<gc<InventorySaveData>>(result);
+        auto pDeserialized = std::get<sgc::GcPtr<InventorySaveData>>(result);
         REQUIRE(pDeserialized->getItemAmount(42) == 1);
 
         // Check that original file was restored.
@@ -173,7 +173,7 @@ TEST_CASE("deserialize a node tree that references external node") {
     {
         // Now let's say we are building a new node tree and want to use this custom node.
         // Deserialize this custom node.
-        auto result = Serializable::deserialize<gc, ReflectionTestNode1>(pathToCustomNodeFileInRes);
+        auto result = Serializable::deserialize<sgc::GcPtr<ReflectionTestNode1>>(pathToCustomNodeFileInRes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addCurrentLocationToErrorStack();
@@ -181,7 +181,7 @@ TEST_CASE("deserialize a node tree that references external node") {
             REQUIRE(false);
         }
 
-        auto pDeserializedNode = std::get<gc<ReflectionTestNode1>>(result);
+        auto pDeserializedNode = std::get<sgc::GcPtr<ReflectionTestNode1>>(result);
 
         // Check that deserialized object now has a path relative to the `res` directory.
         REQUIRE(pDeserializedNode->getPathDeserializedFromRelativeToRes().has_value());
@@ -190,7 +190,7 @@ TEST_CASE("deserialize a node tree that references external node") {
             sCustomNodeRelativePathToFile);
 
         // Build a node tree.
-        gc<Node> pParentNode = gc_new<Node>();
+        sgc::GcPtr<Node> pParentNode = sgc::makeGc<Node>();
         pParentNode->addChildNode(
             pDeserializedNode,
             Node::AttachmentRule::KEEP_RELATIVE,
@@ -222,7 +222,7 @@ TEST_CASE("deserialize a node tree that references external node") {
             REQUIRE(false);
         }
 
-        const auto pRootNode = std::get<gc<Node>>(result);
+        const auto pRootNode = std::get<sgc::GcPtr<Node>>(result);
 
         // Check that deserialized object now has a path relative to the `res` directory.
         REQUIRE(pRootNode->getPathDeserializedFromRelativeToRes().has_value());
@@ -230,9 +230,9 @@ TEST_CASE("deserialize a node tree that references external node") {
             pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
 
         // Get our child node.
-        REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
-        auto pChildNode =
-            gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()->second->operator[](0));
+        REQUIRE(pRootNode->getChildNodes()->second.size() == 1);
+        sgc::GcPtr<ReflectionTestNode1> pChildNode =
+            dynamic_cast<ReflectionTestNode1*>(pRootNode->getChildNodes()->second[0].get());
         REQUIRE(pChildNode);
 
         // Check that everything is deserialized correctly.
@@ -357,9 +357,9 @@ TEST_CASE("deserialize a node tree that references external node") {
     // Cleanup.
     ConfigManager::removeFile(pathToCustomNodeFileInRes);
     ConfigManager::removeFile(pathToNodeTreeFileInRes);
-    gc_collector()->collect();
+    sgc::GarbageCollector::get().collectGarbage();
     REQUIRE(Node::getAliveNodeCount() == 0);
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize type with external file") {
@@ -407,7 +407,7 @@ TEST_CASE("serialize and deserialize type with external file") {
                 {
                     // Deserialize.
                     auto result =
-                        Serializable::deserialize<std::shared_ptr, EntityWithExternalFile>(pathToFileInTemp);
+                        Serializable::deserialize<std::shared_ptr<EntityWithExternalFile>>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
@@ -449,7 +449,7 @@ TEST_CASE("serialize and deserialize type with external file") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("deserialize a node tree that references external node tree") {
@@ -468,8 +468,8 @@ TEST_CASE("deserialize a node tree that references external node tree") {
 
     {
         // Say we have a custom node tree.
-        gc<ReflectionTestNode1> pRootNode = gc_new<ReflectionTestNode1>();
-        auto pChildNode = gc_new<ReflectionTestNode1>();
+        auto pRootNode = sgc::makeGc<ReflectionTestNode1>();
+        auto pChildNode = sgc::makeGc<ReflectionTestNode1>();
 
         // Build node tree.
         pRootNode->addChildNode(
@@ -508,7 +508,8 @@ TEST_CASE("deserialize a node tree that references external node tree") {
             REQUIRE(false);
         }
 
-        auto pDeserializedRootNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(std::get<gc<Node>>(result));
+        sgc::GcPtr<ReflectionTestNode1> pDeserializedRootNode =
+            dynamic_cast<ReflectionTestNode1*>(std::get<sgc::GcPtr<Node>>(result).get());
         REQUIRE(pDeserializedRootNode);
 
         // Check that deserialized object now has a path relative to the `res` directory.
@@ -518,9 +519,9 @@ TEST_CASE("deserialize a node tree that references external node tree") {
             sCustomNodeTreeRelativePathToFile);
 
         // Check children.
-        REQUIRE(pDeserializedRootNode->getChildNodes()->second->size() == 1);
-        const auto pChildNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(
-            pDeserializedRootNode->getChildNodes()->second->operator[](0));
+        REQUIRE(pDeserializedRootNode->getChildNodes()->second.size() == 1);
+        const sgc::GcPtr<ReflectionTestNode1> pChildNode =
+            dynamic_cast<ReflectionTestNode1*>(pDeserializedRootNode->getChildNodes()->second[0].get());
         REQUIRE(pChildNode);
         REQUIRE(pChildNode->bBoolValue1);
         REQUIRE(!pChildNode->bBoolValue2);
@@ -530,7 +531,7 @@ TEST_CASE("deserialize a node tree that references external node tree") {
             sCustomNodeTreeRelativePathToFile);
 
         // Build a new node tree and reference our custom node tree.
-        gc<Node> pParentNode = gc_new<Node>();
+        auto pParentNode = sgc::makeGc<Node>();
         pParentNode->addChildNode(
             pDeserializedRootNode,
             Node::AttachmentRule::KEEP_RELATIVE,
@@ -567,16 +568,16 @@ TEST_CASE("deserialize a node tree that references external node tree") {
             REQUIRE(false);
         }
 
-        const auto pRootNode = std::get<gc<Node>>(result);
+        const auto pRootNode = std::get<sgc::GcPtr<Node>>(result);
 
         // Get our child node.
-        REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
+        REQUIRE(pRootNode->getChildNodes()->second.size() == 1);
         REQUIRE(pRootNode->getPathDeserializedFromRelativeToRes().has_value());
         REQUIRE(
             pRootNode->getPathDeserializedFromRelativeToRes().value().first == sNodeTreeRelativePathToFile);
 
-        auto pChildNode =
-            gc_dynamic_pointer_cast<ReflectionTestNode1>(pRootNode->getChildNodes()->second->operator[](0));
+        sgc::GcPtr<ReflectionTestNode1> pChildNode =
+            dynamic_cast<ReflectionTestNode1*>(pRootNode->getChildNodes()->second[0].get());
         REQUIRE(pChildNode);
         REQUIRE(pChildNode->getPathDeserializedFromRelativeToRes().has_value());
         REQUIRE(
@@ -586,9 +587,9 @@ TEST_CASE("deserialize a node tree that references external node tree") {
         REQUIRE(pChildNode->entity.iIntValue1 == 42);
 
         // Get child child nodes.
-        REQUIRE(pChildNode->getChildNodes()->second->size() == 1);
-        auto pChildChildNode =
-            gc_dynamic_pointer_cast<ReflectionTestNode1>(pChildNode->getChildNodes()->second->operator[](0));
+        REQUIRE(pChildNode->getChildNodes()->second.size() == 1);
+        sgc::GcPtr<ReflectionTestNode1> pChildChildNode =
+            dynamic_cast<ReflectionTestNode1*>(pChildNode->getChildNodes()->second[0].get());
         REQUIRE(pChildChildNode);
 
         // Check that everything is deserialized correctly.
@@ -603,9 +604,9 @@ TEST_CASE("deserialize a node tree that references external node tree") {
     // Cleanup.
     ConfigManager::removeFile(pathToCustomNodeTreeFileInRes);
     ConfigManager::removeFile(pathToNodeTreeFileInRes);
-    gc_collector()->collect();
+    sgc::GarbageCollector::get().collectGarbage();
     REQUIRE(Node::getAliveNodeCount() == 0);
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("attempting to add a serializer that was previously added does nothing") {
@@ -648,7 +649,7 @@ TEST_CASE("attempting to add a serializer that was previously added does nothing
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize fields of different types") {
@@ -758,7 +759,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
         REQUIRE(ids.find("0") != ids.end());
 
         // Deserialize.
-        auto result = Serializable::deserialize<gc, ReflectionOuterTestClass>(pathToFile);
+        auto result = Serializable::deserialize<sgc::GcPtr<ReflectionOuterTestClass>>(pathToFile);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();
@@ -766,7 +767,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
             REQUIRE(false);
         }
 
-        const auto pDeserialized = std::get<gc<ReflectionOuterTestClass>>(result);
+        const auto pDeserialized = std::get<sgc::GcPtr<ReflectionOuterTestClass>>(result);
 
         // Compare results.
 
@@ -916,7 +917,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
 
     // Cleanup.
     std::filesystem::remove(fullPathToFile);
-    gc_collector()->fullCollect();
+    sgc::GarbageCollector::get().collectGarbage();
 }
 
 TEST_CASE("serialize and deserialize sample player save data") {
@@ -967,7 +968,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
         const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
         std::unordered_map<std::string, std::string> foundCustomAttributes;
         const auto result =
-            Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile, foundCustomAttributes);
+            Serializable::deserialize<std::shared_ptr<PlayerSaveData>>(pathToFile, foundCustomAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addCurrentLocationToErrorStack();
@@ -1024,14 +1025,14 @@ TEST_CASE("serialize and deserialize node") {
 
     // Deserialize.
     std::unordered_map<std::string, std::string> deserializeCustomAttributes;
-    const auto result = Serializable::deserialize<gc, Node>(pathToFile, deserializeCustomAttributes);
+    const auto result = Serializable::deserialize<sgc::GcPtr<Node>>(pathToFile, deserializeCustomAttributes);
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addCurrentLocationToErrorStack();
         INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
-    const auto pDeserializedNode = std::get<gc<Node>>(std::move(result));
+    const auto pDeserializedNode = std::get<sgc::GcPtr<Node>>(std::move(result));
 
     // Check that name is the same.
     REQUIRE(pDeserializedNode->getNodeName() == node.getNodeName());
@@ -1096,20 +1097,21 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     REQUIRE(ids.find("1") != ids.end());
 
     // Deserialize.
-    const auto result = Serializable::deserializeMultiple<gc>(pathToFile, {"0", "1"});
+    const auto result = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile, {"0", "1"});
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addCurrentLocationToErrorStack();
         INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
-    auto vDeserializedObjects = std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(result));
+    auto vDeserializedObjects =
+        std::get<std::vector<DeserializedObjectInformation<sgc::GcPtr<Serializable>>>>(std::move(result));
 
     // Check results.
     REQUIRE(vDeserializedObjects.size() == 2);
 
-    const auto pNode1 = gc<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[0].pObject));
-    const auto pNode2 = gc<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[1].pObject));
+    const auto pNode1 = sgc::GcPtr<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[0].pObject));
+    const auto pNode2 = sgc::GcPtr<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[1].pObject));
 
     REQUIRE(pNode1 != nullptr);
     REQUIRE(pNode2 != nullptr);

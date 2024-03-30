@@ -374,9 +374,9 @@ namespace ne {
             std::optional<Error> error;
             std::string sEntityId;
             Serializable* pOriginalEntity = nullptr;
-            std::optional<std::filesystem::path> optionalPathToFile = {};
+            std::optional<std::filesystem::path> optionalPathToFile;
             bool bEnableBackup = false;
-            gc<Serializable> pGcOriginalEntity = nullptr;
+            sgc::GcPtr<Serializable> pGcOriginalEntity = nullptr;
             size_t iSubEntityId = 0;
             size_t iTotalFieldsSerialized = 0;
         };
@@ -436,7 +436,7 @@ namespace ne {
                         if (SerializableObjectFieldSerializer::isDerivedFromSerializable(
                                 pOriginalField->getType().getArchetype())) {
                             pOriginalFieldObject = static_cast<Serializable*>(
-                                pOriginalField->getPtrUnsafe(&*pData->pOriginalEntity));
+                                pOriginalField->getPtrUnsafe(pData->pOriginalEntity));
                         }
 
                         // Check if value was not changed.

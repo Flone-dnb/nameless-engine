@@ -61,16 +61,6 @@ set(PROJECT_WIN32_SOURCES
     # add Windows specific sources here...
 )
 
-# TODO: Temporary solution for `tgc2` in `Refureku` (because we use it below).
-set(TGC_CPP_FILE_PATH ${ABSOLUTE_EXT_PATH}/Refureku/build/Include/tgc2/include/tgc2.cpp)
-set(TGC_H_FILE_PATH ${ABSOLUTE_EXT_PATH}/Refureku/build/Include/tgc2/include/tgc2.h)
-if (NOT EXISTS ${TGC_CPP_FILE_PATH})
-    file(WRITE ${TGC_CPP_FILE_PATH} "")
-endif()
-if (NOT EXISTS ${TGC_H_FILE_PATH})
-    file(WRITE ${TGC_H_FILE_PATH} "")
-endif()
-
 # Engine general (cross-platform) sources.
 set(PROJECT_SOURCES
     private/misc/Error.cpp
@@ -258,7 +248,6 @@ set(PROJECT_SOURCES
     public/io/properties/GuidProperty.h
     private/game/World.h
     private/game/World.cpp
-    public/misc/GC.hpp
     public/io/serializers/IFieldSerializer.hpp
     public/io/serializers/IBinaryFieldSerializer.hpp
     public/io/serializers/PrimitiveFieldSerializer.h
@@ -492,19 +481,13 @@ target_link_libraries(${PROJECT_NAME} PUBLIC tinygltf)
 set_target_properties(tinygltf PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 add_dependencies(${PROJECT_NAME} tinygltf)
 
-# [TODO: temporary solution]: External: tgc
-message(STATUS "${PROJECT_NAME}: adding external dependency \"TGC\"...")
-set(TGC_TARGET_NAME tgc)
-add_library(${TGC_TARGET_NAME} STATIC
-    ${TGC_CPP_FILE_PATH}
-    ${TGC_H_FILE_PATH})
-set_target_properties(${TGC_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-add_dependencies(${PROJECT_NAME} ${TGC_TARGET_NAME})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${TGC_TARGET_NAME})
-if(NOT MSVC)
-    set_source_files_properties(${TGC_CPP_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
-    set_source_files_properties(${TGC_H_FILE_PATH} PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-error=extra")
-endif()
+# External: sgc
+message(STATUS "${PROJECT_NAME}: adding external dependency \"sgc\"...")
+set(SGC_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(${RELATIVE_EXT_PATH}/sgc ${DEPENDENCY_BUILD_DIR_NAME}/sgc SYSTEM)
+target_link_libraries(${PROJECT_NAME} PUBLIC sgc_lib)
+set_target_properties(${SGC_TARGET_NAME} PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+add_dependencies(${PROJECT_NAME} sgc_lib)
 
 # External: Refureku
 set(REFUREKU_EXCLUDED_FILES "")
@@ -521,6 +504,8 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/spdlog/include
     ${ABSOLUTE_EXT_PATH}/source_location/include
     ${ABSOLUTE_EXT_PATH}/glm
+    ${ABSOLUTE_EXT_PATH}/sgc/src/sgc_lib/private
+    ${ABSOLUTE_EXT_PATH}/sgc/src/sgc_lib/public
     ${ABSOLUTE_EXT_PATH}/Refureku/build/Include
     ${ABSOLUTE_EXT_PATH}/combined-shader-language-parser/src/csl_lib/src
     ${ABSOLUTE_EXT_PATH}/shaderc/libshaderc/include

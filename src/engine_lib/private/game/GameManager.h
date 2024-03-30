@@ -16,6 +16,9 @@
 #include "game/World.h"
 #include "render/RenderSettings.h"
 
+// External.
+#include "GcPtr.h"
+
 namespace ne {
     class GameInstance;
     class Renderer;
@@ -216,7 +219,7 @@ namespace ne {
          *
          * @return nullptr if world is not created (see @ref createWorld), otherwise world's root node.
          */
-        gc<Node> getWorldRootNode();
+        sgc::GcPtr<Node> getWorldRootNode();
 
         /**
          * Returns time since world creation (in seconds).
@@ -510,12 +513,13 @@ namespace ne {
 
         /** Description of reasons why a leak may occur. */
         inline static const char* sGcLeakReasons =
-            "1. you are not using STL container wrappers for gc "
-            "pointers (for example, you need to use `gc_vector<T>` instead of `std::vector<gc<T>>`, "
-            "and other `gc_*` containers when storing gc pointers),\n"
-            "2. you are capturing `gc` pointer(s) in `std::function` (this might leak in some special "
-            "cases, such as when you have a class `MyClass` with a `std::function` member in it "
-            "and you capture a `gc<MyClass>` in this `std::function` member which creates a non-resolvable "
-            "cycle, for such cases use `gc_function` instead of `std::function` as a member of your class).";
+            "- you are switching a world but your game instance holds some non-nullptr gc pointers,\n"
+            "- you are not using STL container wrappers for gc "
+            "pointers (for example, you need to use `sgc::GcVector<sgc::GcPtr<T>>` instead of "
+            "`std::vector<sgc::GcPtr<T>>`, and other `gc_*` containers when storing gc pointers),\n"
+            "- you are capturing `sgc::GcPtr` pointer(s) in `std::function` (this might leak in some "
+            "special),\n"
+            "- for a more detailed list of possible issues see the \"README\" file at "
+            "https://github.com/Flone-dnb/sgc";
     };
 } // namespace ne

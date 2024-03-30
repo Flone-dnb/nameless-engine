@@ -4,8 +4,8 @@
 #include <memory>
 #include <mutex>
 
-// Custom.
-#include "misc/GC.hpp"
+// External.
+#include "GcPtr.h"
 
 namespace ne {
     class CameraNode;
@@ -36,7 +36,7 @@ namespace ne {
          *
          * @param pCameraNode Spawned camera node to make active.
          */
-        void setActiveCamera(const gc<CameraNode>& pCameraNode);
+        void setActiveCamera(const sgc::GcPtr<CameraNode>& pCameraNode);
 
         /** Removes the currently active camera so that there will be no active camera. */
         void clearActiveCamera();
@@ -51,7 +51,7 @@ namespace ne {
          *
          * @return `nullptr` if there is no active camera, otherwise valid camera.
          */
-        std::pair<std::recursive_mutex, gc<CameraNode>>* getActiveCamera();
+        std::pair<std::recursive_mutex, sgc::GcPtr<CameraNode>>* getActiveCamera();
 
     private:
         /**
@@ -65,6 +65,6 @@ namespace ne {
         Renderer* pRenderer = nullptr;
 
         /** Stores active camera. */
-        std::pair<std::recursive_mutex, gc<CameraNode>> mtxActiveCamera;
+        std::pair<std::recursive_mutex, sgc::GcPtr<CameraNode>> mtxActiveCamera;
     };
 } // namespace ne

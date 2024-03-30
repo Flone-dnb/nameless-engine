@@ -151,7 +151,7 @@ TEST_CASE("timer callback is called") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("timer callback validator prevents callback to be called after onWindowClose was started") {
@@ -207,7 +207,7 @@ TEST_CASE("timer callback validator prevents callback to be called after onWindo
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("timer callback validator prevents old (stopped) callback from being called") {
@@ -291,5 +291,5 @@ TEST_CASE("timer callback validator prevents old (stopped) callback from being c
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

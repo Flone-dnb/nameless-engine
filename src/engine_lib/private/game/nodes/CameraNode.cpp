@@ -208,7 +208,7 @@ namespace ne {
     }
 
     void CameraNode::makeActive() {
-        getGameInstance()->getCameraManager()->setActiveCamera(gc<CameraNode>(this));
+        getGameInstance()->getCameraManager()->setActiveCamera(sgc::GcPtr<CameraNode>(this));
     }
 
 } // namespace ne

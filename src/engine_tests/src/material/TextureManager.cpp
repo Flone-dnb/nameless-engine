@@ -101,5 +101,5 @@ TEST_CASE("import texture") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

@@ -33,7 +33,6 @@ set(PROJECT_SOURCES
     src/io/ReflectionTest.cpp
     src/input/InputManager.cpp
     src/misc/Timer.cpp
-    src/misc/GC.cpp
     src/shader/general/ShaderPack.cpp
     src/material/Material.cpp
     src/shader/general/ShaderManager.cpp

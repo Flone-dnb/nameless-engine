@@ -2,7 +2,6 @@
 Checks:          '-*,clang-analyzer-*,clang-diagnostic-*,concurrency-*,performance-*,readability-*,-readability-qualified-auto'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^(src)'
-AnalyzeTemporaryDtors: false
 FormatStyle: none
 UseColor: true
 CheckOptions:

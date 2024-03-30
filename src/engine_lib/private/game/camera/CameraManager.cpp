@@ -13,7 +13,7 @@ namespace ne {
 
     CameraManager::CameraManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
-    void CameraManager::setActiveCamera(const gc<CameraNode>& pCameraNode) {
+    void CameraManager::setActiveCamera(const sgc::GcPtr<CameraNode>& pCameraNode) {
         if (pCameraNode == nullptr) [[unlikely]] {
             Error error("`nullptr` is not a valid camera");
             error.showError();
@@ -68,7 +68,7 @@ namespace ne {
         pRenderer->onActiveCameraChanged();
     }
 
-    std::pair<std::recursive_mutex, gc<CameraNode>>* CameraManager::getActiveCamera() {
+    std::pair<std::recursive_mutex, sgc::GcPtr<CameraNode>>* CameraManager::getActiveCamera() {
         return &mtxActiveCamera;
     }
 
@@ -85,7 +85,7 @@ namespace ne {
         }
 
         // See if this camera is indeed used as the active one.
-        if (&*mtxActiveCamera.second != pCameraNode) [[unlikely]] {
+        if (mtxActiveCamera.second != pCameraNode) [[unlikely]] {
             Logger::get().error(std::format(
                 "the camera node \"{}\" notified the camera manager about it being despawned because "
                 "it thinks that it's the active camera but it's not the active camera node",

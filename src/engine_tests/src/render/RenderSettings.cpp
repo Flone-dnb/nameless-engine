@@ -44,7 +44,7 @@ TEST_CASE(
                 pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Create node and initialize.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Spawn mesh node.
@@ -95,7 +95,8 @@ TEST_CASE(
                 std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
 
                 // Apply.
-                bIsAaEnabled = pMtxRenderSettings->second->getAntialiasingQuality() != AntialiasingQuality::DISABLED;
+                bIsAaEnabled =
+                    pMtxRenderSettings->second->getAntialiasingQuality() != AntialiasingQuality::DISABLED;
                 if (bIsAaEnabled) {
                     if (pMtxRenderSettings->second->getAntialiasingQuality() == AntialiasingQuality::HIGH) {
                         pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
@@ -143,7 +144,7 @@ TEST_CASE(
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 
     class TestGameInstance2 : public GameInstance {
     public:
@@ -155,9 +156,11 @@ TEST_CASE(
 
             REQUIRE(pMtxRenderSettings->second->getRenderResolution() == targetResolution);
             if (bIsAaEnabled) {
-                REQUIRE(pMtxRenderSettings->second->getAntialiasingQuality() != AntialiasingQuality::DISABLED);
+                REQUIRE(
+                    pMtxRenderSettings->second->getAntialiasingQuality() != AntialiasingQuality::DISABLED);
             } else {
-                REQUIRE(pMtxRenderSettings->second->getAntialiasingQuality() == AntialiasingQuality::DISABLED);
+                REQUIRE(
+                    pMtxRenderSettings->second->getAntialiasingQuality() == AntialiasingQuality::DISABLED);
             }
             REQUIRE(pMtxRenderSettings->second->isVsyncEnabled() == bIsVsyncEnabled);
 
@@ -167,5 +170,5 @@ TEST_CASE(
 
     pMainWindow->processEvents<TestGameInstance2>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

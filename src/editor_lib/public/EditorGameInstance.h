@@ -3,6 +3,9 @@
 // Custom.
 #include "game/GameInstance.h"
 
+// External.
+#include "GcPtr.h"
+
 namespace ne {
     class Window;
     class GameManager;
@@ -41,7 +44,7 @@ namespace ne {
          *
          * @return Camera node.
          */
-        gc<EditorCameraNode> getEditorCamera() const;
+        sgc::GcPtr<EditorCameraNode> getEditorCamera() const;
 
         virtual ~EditorGameInstance() override = default;
 
@@ -68,7 +71,7 @@ namespace ne {
         /** Groups all GC pointers that the editor holds. */
         struct EditorGcPointers {
             /** Camera used in the editor. */
-            gc<EditorCameraNode> pCameraNode;
+            sgc::GcPtr<EditorCameraNode> pCameraNode;
         };
 
         /** Called after a new world was created to create editor-specific nodes such as camera and etc. */

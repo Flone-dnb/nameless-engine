@@ -140,17 +140,19 @@ namespace ne {
     }
 
     void Logger::removeOldestLogFiles(const std::filesystem::path& sLogDirectory) {
-        const auto directoryIterator = std::filesystem::directory_iterator(sLogDirectory);
-
         size_t iFileCount = 0;
 
         auto oldestTime = std::chrono::file_clock::now();
         std::filesystem::path oldestFilePath = "";
 
-        for (auto const& entry : directoryIterator) {
-            if (entry.is_regular_file()) {
-                iFileCount += 1;
+        // (some weird error in `last_write_time` code or clang-tidy's false-positive)
+        // NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
+        for (const auto& entry : std::filesystem::directory_iterator(sLogDirectory)) {
+            if (!entry.is_regular_file()) {
+                continue;
             }
+
+            iFileCount += 1;
 
             auto fileLastWriteTime = entry.last_write_time();
             if (fileLastWriteTime < oldestTime) {
@@ -158,6 +160,7 @@ namespace ne {
                 oldestFilePath = entry.path();
             }
         }
+        // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
 
         if (iFileCount < iMaxLogFiles) {
             return;

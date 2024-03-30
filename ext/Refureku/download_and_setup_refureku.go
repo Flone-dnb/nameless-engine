@@ -111,7 +111,7 @@ func main() {
 	}
 
 	// Change this to update used Refureku version.
-	var refureku_version_tag = "v2.3.0f"
+	var refureku_version_tag = "v2.3.0g"
 	var archive_url = ""
 	var base_archive_url = "https://github.com/Flone-dnb/Refureku/releases/download/"
 	if runtime.GOOS == "windows" {

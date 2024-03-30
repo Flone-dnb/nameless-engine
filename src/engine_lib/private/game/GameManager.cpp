@@ -9,7 +9,6 @@
 #include "io/Logger.h"
 #include "io/Serializable.h"
 #include "misc/ProjectPaths.h"
-#include "misc/GC.hpp"
 #include "render/Renderer.h"
 #include "material/Material.h"
 #include "shader/general/Shader.h"
@@ -19,12 +18,22 @@
 #include "shader/ShaderManager.h"
 #include "game/nodes/Node.h"
 #include "misc/Profiler.hpp"
+#include "GcInfoCallbacks.hpp"
 
 namespace ne {
     // Static pointer for accessing last created game manager.
     static GameManager* pLastCreatedGameManager = nullptr;
 
     GameManager::GameManager(Window* pWindow) {
+        // Bind GC info callbacks.
+        sgc::GcInfoCallbacks::setCallbacks(
+            [](const char* pWarningMessage) { Logger::get().warn(pWarningMessage); },
+            [](const char* pCriticalErrorMessage) {
+                Error error(pCriticalErrorMessage);
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            });
+
         // Save window.
         this->pWindow = pWindow;
 
@@ -65,8 +74,7 @@ namespace ne {
         // Register engine serializers.
         FieldSerializerManager::registerEngineFieldSerializers();
 
-        // Run GC for the first time to setup things (I guess, first scan is usually not that fast).
-        gc_collector()->collect();
+        // Setup initial GC time.
         lastGcRunTime = std::chrono::steady_clock::now();
         Logger::get().info(std::format("garbage collector will run every {} seconds", iGcRunIntervalInSec));
 
@@ -151,15 +159,15 @@ namespace ne {
         Logger::get().info("GameManager is being destroyed, running garbage collector...");
         Logger::get().flushToDisk(); // flush to disk in order to see if a crash was caused by a GC
 
-        gc_collector()->fullCollect(); // `fullCollect` is longer that a usual `collect` but we don't care
-                                       // about the time here
+        const auto iFreedObjectCount = sgc::GarbageCollector::get().collectGarbage();
+        const auto iGcAllocationsAlive = sgc::GarbageCollector::get().getAliveAllocationCount();
 
         // Log results.
         Logger::get().info(std::format(
-            "garbage collector has finished, "
-            "freed {} object(s) ({} left alive)",
-            gc_collector()->getLastFreedObjectsCount(),
-            gc_collector()->getAliveObjectsCount()));
+            "garbage collector has finished: "
+            "deleted {} allocation(s) ({} alive)",
+            iFreedObjectCount,
+            iGcAllocationsAlive));
 
         // Make sure there are no nodes alive.
         const auto iNodesAlive = Node::getAliveNodeCount();
@@ -171,13 +179,12 @@ namespace ne {
                 sGcLeakReasons));
         }
 
-        // Make sure there are no GC objects alive.
-        const auto iGcObjectsLeft = gc_collector()->getAliveObjectsCount();
-        if (iGcObjectsLeft != 0) [[unlikely]] {
+        // Make sure there are no GC allocations alive.
+        if (iGcAllocationsAlive != 0) [[unlikely]] {
             Logger::get().error(std::format(
                 "the game was destroyed and a full garbage collection was run but there are still "
-                "{} gc object(s) alive, here are a few reasons why this may happen:\n{}",
-                iGcObjectsLeft,
+                "{} allocation(s) alive, here are a few reasons why this may happen:\n{}",
+                iGcAllocationsAlive,
                 sGcLeakReasons));
         }
 
@@ -273,7 +280,8 @@ namespace ne {
         const auto startTime = std::chrono::steady_clock::now();
 
         // Run garbage collector.
-        gc_collector()->collect();
+        const auto iFreedObjectCount = sgc::GarbageCollector::get().collectGarbage();
+        const auto iGcAllocationsAlive = sgc::GarbageCollector::get().getAliveAllocationCount();
 
         // Measure the time it took to run garbage collector.
         const auto endTime = std::chrono::steady_clock::now();
@@ -283,10 +291,10 @@ namespace ne {
         // Log results.
         Logger::get().info(std::format(
             "garbage collector has finished, took {:.1F} millisecond(s): "
-            "freed {} object(s) ({} left alive)",
+            "deleted {} allocation(s) ({} alive)",
             timeTookInMs,
-            gc_collector()->getLastFreedObjectsCount(),
-            gc_collector()->getAliveObjectsCount()));
+            iFreedObjectCount,
+            iGcAllocationsAlive));
 
         // Save current time.
         lastGcRunTime = std::chrono::steady_clock::now();
@@ -443,7 +451,7 @@ namespace ne {
         });
     }
 
-    gc<Node> GameManager::getWorldRootNode() {
+    sgc::GcPtr<Node> GameManager::getWorldRootNode() {
         std::scoped_lock guard(mtxWorld.first);
 
         if (mtxWorld.second == nullptr) {
@@ -761,7 +769,10 @@ namespace ne {
             }
 
             // Save action's state as key state.
-            int iAxisInputState = bIsPressedDown ? (bTriggersPlusInput ? 1 : -1) : 0;
+            int iAxisInputState = 0;
+            if (bIsPressedDown) {
+                iAxisInputState = bTriggersPlusInput ? 1 : -1;
+            }
 
             if (!bIsPressedDown) {
                 // The key is not pressed but this does not mean that we need to broadcast

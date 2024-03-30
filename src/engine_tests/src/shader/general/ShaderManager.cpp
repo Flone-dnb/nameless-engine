@@ -56,6 +56,6 @@ TEST_CASE("unable to compile shader with a name that contains forbidden characte
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

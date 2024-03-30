@@ -50,7 +50,7 @@ namespace ne {
             &sBasePath, &sFilename, &image, false, &uriCallbacks, &sOutputUri, &fsCallbacks);
     }
 
-    inline std::variant<Error, gc_vector<MeshNode>> processGltfMesh( // NOLINT: too complex
+    inline std::variant<Error, sgc::GcVector<sgc::GcPtr<MeshNode>>> processGltfMesh( // NOLINT: too complex
         const tinygltf::Model& model,
         const tinygltf::Mesh& mesh,
         const std::filesystem::path& pathToOutputFile,
@@ -58,8 +58,8 @@ namespace ne {
         const std::function<void(std::string_view)>& onProgress,
         size_t& iGltfNodeProcessedCount,
         const size_t iTotalGltfNodesToProcess) {
-        // Prepare an array to fill.
-        gc_vector<MeshNode> vMeshNodes = gc_new_vector<MeshNode>();
+        // Prepare array to fill.
+        sgc::GcVector<sgc::GcPtr<MeshNode>> vMeshNodes;
 
         // Prepare variables.
         const std::string sTexturesDirectoryName = "textures";
@@ -312,7 +312,7 @@ namespace ne {
             }
 
             // Create a new mesh node with the specified data.
-            auto pMeshNode = gc_new<MeshNode>(mesh.name);
+            auto pMeshNode = sgc::makeGc<MeshNode>(mesh.name);
             pMeshNode->setMeshData(std::move(meshData));
 
             if (primitive.material >= 0) {
@@ -386,7 +386,7 @@ namespace ne {
             }
 
             // Add this new mesh node to results.
-            vMeshNodes->push_back(std::move(pMeshNode));
+            vMeshNodes.push_back(std::move(pMeshNode));
         }
 
         // Delete temp directory.
@@ -423,10 +423,10 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            auto vMeshNodes = std::get<gc_vector<MeshNode>>(std::move(result));
+            auto vMeshNodes = std::get<sgc::GcVector<sgc::GcPtr<MeshNode>>>(std::move(result));
 
             // Attach new nodes to parent.
-            for (const auto& pMeshNode : *vMeshNodes) {
+            for (const auto& pMeshNode : vMeshNodes) {
                 // Attach to parent node.
                 pParentNode->addChildNode(
                     pMeshNode,
@@ -435,7 +435,7 @@ namespace ne {
                     Node::AttachmentRule::KEEP_RELATIVE); // don't change relative scale
 
                 // Mark this node as parent for child GLTF nodes.
-                pThisNode = &*pMeshNode;
+                pThisNode = pMeshNode.get();
             }
         }
 
@@ -578,7 +578,7 @@ namespace ne {
         const auto& scene = model.scenes[model.defaultScene];
 
         // Create a scene root node to hold all GLTF nodes of the scene.
-        auto pSceneRootNode = gc_new<Node>("Scene Root");
+        auto pSceneRootNode = sgc::makeGc<Node>("Scene Root");
 
         // Prepare variable for processed nodes.
         size_t iTotalNodeProcessedCount = 0;
@@ -602,7 +602,7 @@ namespace ne {
                 model,
                 pathToOutputFile,
                 std::format("{}/{}", sPathToOutputDirRelativeRes, sOutputDirectoryName),
-                &*pSceneRootNode,
+                pSceneRootNode.get(),
                 onProgress,
                 iTotalNodeProcessedCount,
                 scene.nodes.size());

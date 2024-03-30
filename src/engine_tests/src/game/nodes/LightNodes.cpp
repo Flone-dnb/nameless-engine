@@ -35,12 +35,12 @@ TEST_CASE("spawn light sources and then a mesh") {
                 pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                 // Spawn some light sources.
-                getWorldRootNode()->addChildNode(gc_new<DirectionalLightNode>());
-                getWorldRootNode()->addChildNode(gc_new<PointLightNode>());
-                getWorldRootNode()->addChildNode(gc_new<SpotlightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<DirectionalLightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<PointLightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<SpotlightNode>());
 
                 // Now spawn a mesh.
-                getWorldRootNode()->addChildNode(gc_new<MeshNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MeshNode>());
 
                 iFrameCount = 0;
             });
@@ -97,12 +97,12 @@ TEST_CASE("spawn mesh and then light sources") {
                 pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                 // Spawn a mesh.
-                getWorldRootNode()->addChildNode(gc_new<MeshNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MeshNode>());
 
                 // Now spawn some light sources.
-                getWorldRootNode()->addChildNode(gc_new<DirectionalLightNode>());
-                getWorldRootNode()->addChildNode(gc_new<PointLightNode>());
-                getWorldRootNode()->addChildNode(gc_new<SpotlightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<DirectionalLightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<PointLightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<SpotlightNode>());
 
                 iFrameCount = 0;
             });
@@ -159,16 +159,16 @@ TEST_CASE("change render settings with lights spawned") {
                 pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                 // Spawn a mesh.
-                const auto pFloorMesh = gc_new<MeshNode>();
+                const auto pFloorMesh = sgc::makeGc<MeshNode>();
                 pFloorMesh->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 pFloorMesh->setRelativeLocation(glm::vec3(0.0F, 0.0F, -5.0F));
                 pFloorMesh->setRelativeScale(glm::vec3(100.0F, 100.0F, 1.0F));
                 getWorldRootNode()->addChildNode(pFloorMesh);
 
                 // Now spawn some light sources.
-                getWorldRootNode()->addChildNode(gc_new<DirectionalLightNode>());
-                getWorldRootNode()->addChildNode(gc_new<PointLightNode>());
-                getWorldRootNode()->addChildNode(gc_new<SpotlightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<DirectionalLightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<PointLightNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<SpotlightNode>());
 
                 iFrameCount = 0;
             });
@@ -263,14 +263,14 @@ TEST_CASE("point light culled when outside of camera frustum") {
                 pCamera->setRelativeLocation(glm::vec3(-20.0F, 0.0F, 0.0F));
 
                 // Spawn a floor mesh.
-                const auto pFloorMesh = gc_new<MeshNode>();
+                const auto pFloorMesh = sgc::makeGc<MeshNode>();
                 pFloorMesh->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 pFloorMesh->setRelativeLocation(glm::vec3(0.0F, 0.0F, -5.0F));
                 pFloorMesh->setRelativeScale(glm::vec3(100.0F, 100.0F, 1.0F));
                 getWorldRootNode()->addChildNode(pFloorMesh);
 
                 // Now spawn light.
-                const auto pPointLight = gc_new<PointLightNode>();
+                const auto pPointLight = sgc::makeGc<PointLightNode>();
                 pPointLight->setLightDistance(10.0F);
                 pPointLight->setRelativeLocation(glm::vec3(0.0F, 0.0F, 0.0F));
                 getWorldRootNode()->addChildNode(pPointLight);
@@ -351,14 +351,14 @@ TEST_CASE("spotlight culled when outside of camera frustum") {
                 pCamera->setRelativeLocation(glm::vec3(-20.0F, 0.0F, 0.0F));
 
                 // Spawn a floor mesh.
-                const auto pFloorMesh = gc_new<MeshNode>();
+                const auto pFloorMesh = sgc::makeGc<MeshNode>();
                 pFloorMesh->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 pFloorMesh->setRelativeLocation(glm::vec3(0.0F, 0.0F, -5.0F));
                 pFloorMesh->setRelativeScale(glm::vec3(100.0F, 100.0F, 1.0F));
                 getWorldRootNode()->addChildNode(pFloorMesh);
 
                 // Now spawn light.
-                const auto pSpotlight = gc_new<SpotlightNode>();
+                const auto pSpotlight = sgc::makeGc<SpotlightNode>();
                 pSpotlight->setLightDistance(10.0F);
                 pSpotlight->setRelativeLocation(glm::vec3(0.0F, 0.0F, 0.0F));
                 getWorldRootNode()->addChildNode(pSpotlight);

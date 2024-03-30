@@ -143,7 +143,7 @@ namespace ne {
         return &mtxBindedAxisEvents;
     }
 
-    gc<Node> GameInstance::getWorldRootNode() const { return pGameManager->getWorldRootNode(); }
+    sgc::GcPtr<Node> GameInstance::getWorldRootNode() const { return pGameManager->getWorldRootNode(); }
 
     float GameInstance::getWorldTimeInSeconds() const { return pGameManager->getWorldTimeInSeconds(); }
 

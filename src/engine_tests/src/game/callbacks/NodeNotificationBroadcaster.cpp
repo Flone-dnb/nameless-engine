@@ -54,13 +54,13 @@ TEST_CASE("broadcast does not trigger despawned nodes") {
                 }
 
                 // Create nodes.
-                auto pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = sgc::makeGc<MyNode>();
                 pBroadcasterNode->createBroadcaster();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 0);
 
-                auto pSubscriberNode1 = gc_new<MyNode>();
-                auto pSubscriberNode2 = gc_new<MyNode>();
-                auto pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = sgc::makeGc<MyNode>();
+                auto pSubscriberNode2 = sgc::makeGc<MyNode>();
+                auto pSubscriberNode3 = sgc::makeGc<MyNode>();
 
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 0);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 0);
@@ -165,13 +165,13 @@ TEST_CASE("unsubscribe outside of a broadcast call") {
                 }
 
                 // Create nodes.
-                auto pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = sgc::makeGc<MyNode>();
                 pBroadcasterNode->createBroadcaster();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 0);
 
-                auto pSubscriberNode1 = gc_new<MyNode>();
-                auto pSubscriberNode2 = gc_new<MyNode>();
-                auto pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = sgc::makeGc<MyNode>();
+                auto pSubscriberNode2 = sgc::makeGc<MyNode>();
+                auto pSubscriberNode3 = sgc::makeGc<MyNode>();
 
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 0);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 0);
@@ -291,13 +291,13 @@ TEST_CASE("unsubscribe inside of a broadcast call") {
                 }
 
                 // Create nodes.
-                auto pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = sgc::makeGc<MyNode>();
                 pBroadcasterNode->createBroadcaster();
                 REQUIRE(pBroadcasterNode->getSubscriberCount() == 0);
 
-                auto pSubscriberNode1 = gc_new<MyNode>();
-                auto pSubscriberNode2 = gc_new<MyNode>();
-                auto pSubscriberNode3 = gc_new<MyNode>();
+                auto pSubscriberNode1 = sgc::makeGc<MyNode>();
+                auto pSubscriberNode2 = sgc::makeGc<MyNode>();
+                auto pSubscriberNode3 = sgc::makeGc<MyNode>();
 
                 REQUIRE(pSubscriberNode1->iCallbackCallCount == 0);
                 REQUIRE(pSubscriberNode2->iCallbackCallCount == 0);
@@ -367,18 +367,18 @@ TEST_CASE("pass GC pointer as a broadcast argument") {
         virtual ~MyNode() override = default;
 
         void createBroadcaster() {
-            pBroadcaster = createNotificationBroadcaster<void(const gc<MyNode>&)>();
+            pBroadcaster = createNotificationBroadcaster<void(const sgc::GcPtr<MyNode>&)>();
             REQUIRE(pBroadcaster != nullptr);
         }
 
-        NodeFunction<void(const gc<MyNode>&)> getCallback() {
-            return NodeFunction<void(const gc<MyNode>&)>(
-                getNodeId().value(), [this](const gc<MyNode>& pSomeNode) { myCallback(pSomeNode); });
+        NodeFunction<void(const sgc::GcPtr<MyNode>&)> getCallback() {
+            return NodeFunction<void(const sgc::GcPtr<MyNode>&)>(
+                getNodeId().value(), [this](const sgc::GcPtr<MyNode>& pSomeNode) { myCallback(pSomeNode); });
         }
 
         size_t iCallbackCallCount = 0;
 
-        NodeNotificationBroadcaster<void(const gc<MyNode>&)>* pBroadcaster = nullptr;
+        NodeNotificationBroadcaster<void(const sgc::GcPtr<MyNode>&)>* pBroadcaster = nullptr;
 
         void useNode() {
             REQUIRE(pSomeNode != nullptr);
@@ -386,14 +386,14 @@ TEST_CASE("pass GC pointer as a broadcast argument") {
         }
 
     private:
-        void myCallback(const gc<MyNode>& pSomeNode) {
+        void myCallback(const sgc::GcPtr<MyNode>& pSomeNode) {
             REQUIRE(isSpawned());
             iCallbackCallCount += 1;
 
             this->pSomeNode = pSomeNode;
         }
 
-        gc<MyNode> pSomeNode = nullptr;
+        sgc::GcPtr<MyNode> pSomeNode = nullptr;
 
         std::string sSomePrivateString = "Hello";
     };
@@ -412,10 +412,10 @@ TEST_CASE("pass GC pointer as a broadcast argument") {
                 }
 
                 // Create nodes.
-                auto pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = sgc::makeGc<MyNode>();
                 pBroadcasterNode->createBroadcaster();
 
-                auto pSubscriberNode1 = gc_new<MyNode>();
+                auto pSubscriberNode1 = sgc::makeGc<MyNode>();
 
                 // Now spawn nodes.
                 getWorldRootNode()->addChildNode(pBroadcasterNode);
@@ -455,21 +455,21 @@ TEST_CASE("call broadcast inside of another broadcast call") {
         virtual ~MyNode() override = default;
 
         void createBroadcaster() {
-            pBroadcaster = createNotificationBroadcaster<void(const gc<MyNode>&)>();
+            pBroadcaster = createNotificationBroadcaster<void(const sgc::GcPtr<MyNode>&)>();
             REQUIRE(pBroadcaster != nullptr);
         }
 
-        NodeFunction<void(const gc<MyNode>&)> getCallback() {
-            return NodeFunction<void(const gc<MyNode>&)>(
-                getNodeId().value(), [this](const gc<MyNode>& pSomeNode) { myCallback(pSomeNode); });
+        NodeFunction<void(const sgc::GcPtr<MyNode>&)> getCallback() {
+            return NodeFunction<void(const sgc::GcPtr<MyNode>&)>(
+                getNodeId().value(), [this](const sgc::GcPtr<MyNode>& pSomeNode) { myCallback(pSomeNode); });
         }
 
         size_t iCallbackCallCount = 0;
 
-        NodeNotificationBroadcaster<void(const gc<MyNode>&)>* pBroadcaster = nullptr;
+        NodeNotificationBroadcaster<void(const sgc::GcPtr<MyNode>&)>* pBroadcaster = nullptr;
 
     private:
-        void myCallback(const gc<MyNode>& pSomeNode) {
+        void myCallback(const sgc::GcPtr<MyNode>& pSomeNode) {
             REQUIRE(isSpawned());
             iCallbackCallCount += 1;
 
@@ -493,10 +493,10 @@ TEST_CASE("call broadcast inside of another broadcast call") {
                 }
 
                 // Create nodes.
-                auto pBroadcasterNode = gc_new<MyNode>();
+                auto pBroadcasterNode = sgc::makeGc<MyNode>();
                 pBroadcasterNode->createBroadcaster();
 
-                auto pSubscriberNode1 = gc_new<MyNode>();
+                auto pSubscriberNode1 = sgc::makeGc<MyNode>();
 
                 // Now spawn nodes.
                 getWorldRootNode()->addChildNode(pBroadcasterNode);

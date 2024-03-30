@@ -11,7 +11,9 @@
 #include "input/MouseButton.hpp"
 #include "misc/Timer.h"
 #include "misc/Globals.h"
-#include "misc/GC.hpp"
+
+// External.
+#include "GcPtr.h"
 
 namespace ne {
     class Window;
@@ -235,7 +237,7 @@ namespace ne {
          * @return nullptr if world is not created or was destroyed (see @ref createWorld), otherwise world's
          * root node.
          */
-        gc<Node> getWorldRootNode() const;
+        sgc::GcPtr<Node> getWorldRootNode() const;
 
         /**
          * Returns time since world creation (in seconds).

@@ -58,3 +58,6 @@
 [submodule "ext/combined-shader-language-parser"]
 	path = ext/combined-shader-language-parser
 	url = https://github.com/Flone-dnb/combined-shader-language-parser.git
+[submodule "ext/sgc"]
+	path = ext/sgc
+	url = https://github.com/Flone-dnb/sgc.git

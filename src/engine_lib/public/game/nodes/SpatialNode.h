@@ -191,7 +191,7 @@ namespace ne RNAMESPACE() {
          * @return `nullptr` as a gc pointer (second value in the pair) if there is no SpatialNode in the
          * parent node chain, otherwise closest SpatialNode in the parent node chain.
          */
-        std::pair<std::recursive_mutex, gc<SpatialNode>>* getClosestSpatialParent();
+        std::pair<std::recursive_mutex, sgc::GcPtr<SpatialNode>>* getClosestSpatialParent();
 
     protected:
         /**
@@ -368,7 +368,7 @@ namespace ne RNAMESPACE() {
         glm::vec3 relativeScale = glm::vec3(1.0F, 1.0F, 1.0F);
 
         /** First (most closer to this node) spatial node in the parent chain. */
-        std::pair<std::recursive_mutex, gc<SpatialNode>> mtxSpatialParent{};
+        std::pair<std::recursive_mutex, sgc::GcPtr<SpatialNode>> mtxSpatialParent{};
 
         /** Matrix that describes basis vectors that define node's local space. */
         std::pair<std::recursive_mutex, LocalSpaceInformation> mtxLocalSpace{};

@@ -8,7 +8,6 @@
 #include "io/properties/GuidProperty.h"
 #include "io/Logger.h"
 #include "misc/Globals.h"
-#include "misc/GC.hpp"
 #include "io/FieldSerializerManager.h"
 
 namespace ne {
@@ -249,7 +248,7 @@ namespace ne {
 
         // Deserialize section into an object.
         std::unordered_map<std::string, std::string> subAttributes;
-        auto result = Serializable::deserialize<std::shared_ptr, Serializable>(
+        auto result = Serializable::deserialize<std::shared_ptr<Serializable>>(
             *pTomlDocument, subAttributes, sSubEntityId);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
@@ -270,7 +269,7 @@ namespace ne {
             Serializable* pOtherEntity = nullptr;
             std::vector<IFieldSerializer*> vFieldSerializers;
             bool bIsEqual = true;
-            std::optional<Error> error = {};
+            std::optional<Error> error;
         };
 
         Data loopData{pObjectA, pObjectB, FieldSerializerManager::getFieldSerializers()};
@@ -502,7 +501,7 @@ namespace ne {
         auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
 
         // Safely clone to target.
-        auto optionalError = cloneSerializableObject(&*pDeserializedObject, pTarget, true);
+        auto optionalError = cloneSerializableObject(pDeserializedObject.get(), pTarget, true);
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();

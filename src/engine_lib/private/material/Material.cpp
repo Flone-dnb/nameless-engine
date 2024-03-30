@@ -421,7 +421,7 @@ namespace ne {
             sMaterialShaderConstantBufferName,
             sizeof(MaterialShaderConstants),
             [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
-            [this]() { return onFinishedUpdatingShaderMeshConstants(); });
+            [this]() { onFinishedUpdatingShaderMeshConstants(); });
 
         // Set diffuse texture (if path is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {

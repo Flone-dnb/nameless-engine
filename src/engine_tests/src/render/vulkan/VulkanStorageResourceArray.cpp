@@ -20,9 +20,7 @@ TEST_CASE("make array expand / shrink") {
     class TestGameInstance : public GameInstance {
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pGame, pInputManager) {
-            vMeshNodes = gc_new_vector<MeshNode>();
-        }
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
 
         virtual void onGameStarted() override {
             // Make sure we are using Vulkan renderer.
@@ -51,7 +49,7 @@ TEST_CASE("make array expand / shrink") {
                 REQUIRE(pArrayManager != nullptr);
 
                 // Spawn sample mesh.
-                pMeshNode = gc_new<MeshNode>();
+                pMeshNode = sgc::makeGc<MeshNode>();
                 const auto mtxMeshData = pMeshNode->getMeshData();
                 {
                     std::scoped_lock guard(*mtxMeshData.first);
@@ -70,18 +68,18 @@ TEST_CASE("make array expand / shrink") {
                 REQUIRE(iInitialCapacity == pMeshDataArray->getCapacityStepSize());
 
                 // Spawn some temp more nodes.
-                gc_vector<MeshNode> vTempNodes = gc_new_vector<MeshNode>();
+                sgc::GcVector<sgc::GcPtr<MeshNode>> vTempNodes;
                 const auto iTempNodeCount = 2;
                 for (size_t i = 0; i < iTempNodeCount; i++) {
                     // Spawn sample mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     {
                         std::scoped_lock guard(*mtxMeshData.first);
                         (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
                     }
                     getWorldRootNode()->addChildNode(pMeshNode);
-                    vTempNodes->push_back(pMeshNode);
+                    vTempNodes.push_back(pMeshNode);
                 }
 
                 // Make sure there are no unused slots.
@@ -96,8 +94,8 @@ TEST_CASE("make array expand / shrink") {
 
                 // Despawn temp nodes.
                 for (size_t i = 0; i < iTempNodeCount; i++) {
-                    vTempNodes->back()->detachFromParentAndDespawn();
-                    vTempNodes->pop_back();
+                    vTempNodes.back()->detachFromParentAndDespawn();
+                    vTempNodes.pop_back();
                 }
 
                 // Make sure there are unused slots.
@@ -118,14 +116,14 @@ TEST_CASE("make array expand / shrink") {
                                                FrameResourcesManager::getFrameResourcesCount();
                 for (size_t i = 0; i < iMeshToSpawnCount; i++) {
                     // Spawn sample mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     const auto mtxMeshData = pMeshNode->getMeshData();
                     {
                         std::scoped_lock guard(*mtxMeshData.first);
                         (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
                     }
                     getWorldRootNode()->addChildNode(pMeshNode);
-                    vMeshNodes->push_back(pMeshNode);
+                    vMeshNodes.push_back(pMeshNode);
                 }
 
                 // Now array has expanded.
@@ -147,18 +145,18 @@ TEST_CASE("make array expand / shrink") {
                 // Now make the array shrink.
                 const auto iMeshCountToDespawn =
                     pMeshDataArray->getCapacityStepSize() / FrameResourcesManager::getFrameResourcesCount();
-                REQUIRE(vMeshNodes->size() > iMeshCountToDespawn);
-                auto iMeshNodeCount = vMeshNodes->size() + 1;
+                REQUIRE(vMeshNodes.size() > iMeshCountToDespawn);
+                auto iMeshNodeCount = vMeshNodes.size() + 1;
                 for (size_t i = 0; i < iMeshCountToDespawn; i++) {
-                    vMeshNodes->back()->detachFromParentAndDespawn();
-                    vMeshNodes->pop_back();
+                    vMeshNodes.back()->detachFromParentAndDespawn();
+                    vMeshNodes.pop_back();
                 }
-                iMeshNodeCount = vMeshNodes->size() + 1;
+                iMeshNodeCount = vMeshNodes.size() + 1;
 
                 // Now array has shrinked.
                 REQUIRE(
                     pMeshDataArray->getSize() ==
-                    (vMeshNodes->size() + 1) * FrameResourcesManager::getFrameResourcesCount());
+                    (vMeshNodes.size() + 1) * FrameResourcesManager::getFrameResourcesCount());
                 REQUIRE(pMeshDataArray->getCapacity() > iInitialCapacity);
                 REQUIRE(
                     pMeshDataArray->getCapacity() ==
@@ -197,16 +195,16 @@ TEST_CASE("make array expand / shrink") {
                     pArrayManager->getArrayForShaderResource(pTargetShaderResourceName);
 
                 // Despawn all left mesh nodes.
-                const auto iNodesLeft = vMeshNodes->size() + 1;
+                const auto iNodesLeft = vMeshNodes.size() + 1;
                 REQUIRE(
                     iNodesLeft * FrameResourcesManager::getFrameResourcesCount() ==
                     pMeshDataArray->getSize());
 
                 // Despawn nodes.
-                const auto iNodesToDespawnCount = vMeshNodes->size();
+                const auto iNodesToDespawnCount = vMeshNodes.size();
                 for (size_t i = 0; i < iNodesToDespawnCount; i++) {
-                    vMeshNodes->back()->detachFromParentAndDespawn();
-                    vMeshNodes->pop_back();
+                    vMeshNodes.back()->detachFromParentAndDespawn();
+                    vMeshNodes.pop_back();
                 }
                 pMeshNode->detachFromParentAndDespawn();
 
@@ -222,8 +220,8 @@ TEST_CASE("make array expand / shrink") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc_vector<MeshNode> vMeshNodes;
-        gc<MeshNode> pMeshNode;
+        sgc::GcVector<sgc::GcPtr<MeshNode>> vMeshNodes;
+        sgc::GcPtr<MeshNode> pMeshNode;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
     };

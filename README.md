@@ -66,12 +66,8 @@ Here is the list of base features that needs to be implemented in order for you 
     - [ ] Shadow caster culling
     - [ ] GUI
 - [ ] Skeletal animations
-- [ ] Rewrite garbage collector [tgc2](https://github.com/Flone-dnb/tgc2) (to fix some major issues)
 - [ ] Minimal scripting using [AngelScript](https://www.angelcode.com/angelscript/)
-- [ ] Editor (integrate [ImGui](https://github.com/ocornut/imgui))
-    - [ ] Content management
-    - [ ] Script debugging
-    - [ ] Script syntax highlighting, scripting helpers
+- [ ] Basic editor
 - [ ] Audio engine (integrate [SoLoud](https://github.com/jarikomppa/soloud))
     - [ ] 2D audio
     - [ ] 3D audio

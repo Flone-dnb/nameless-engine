@@ -10,7 +10,8 @@
 
 namespace ne {
 
-    World::World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize) : iWorldSize(iWorldSize) {
+    World::World(GameManager* pGameManager, sgc::GcPtr<Node> pRootNode, size_t iWorldSize)
+        : iWorldSize(iWorldSize) {
         // Check that world size is power of 2.
         if (!std::has_single_bit(iWorldSize)) {
             Error err(std::format(
@@ -70,7 +71,7 @@ namespace ne {
     }
 
     std::unique_ptr<World> World::createWorld(GameManager* pGameManager, size_t iWorldSize) {
-        return std::unique_ptr<World>(new World(pGameManager, gc_new<Node>("Root"), iWorldSize));
+        return std::unique_ptr<World>(new World(pGameManager, sgc::makeGc<Node>("Root"), iWorldSize));
     }
 
     std::variant<std::unique_ptr<World>, Error> World::loadNodeTreeAsWorld(
@@ -83,14 +84,14 @@ namespace ne {
             return error;
         }
 
-        auto pRootNode = std::get<gc<Node>>(result);
+        auto pRootNode = std::get<sgc::GcPtr<Node>>(result);
 
         return std::unique_ptr<World>(new World(pGameManager, pRootNode, iWorldSize));
     }
 
     size_t World::getTotalSpawnedNodeCount() { return iTotalSpawnedNodeCount.load(); }
 
-    gc<Node> World::getRootNode() {
+    sgc::GcPtr<Node> World::getRootNode() {
         std::scoped_lock guard(mtxRootNode.first);
         return mtxRootNode.second;
     }

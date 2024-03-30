@@ -5,7 +5,6 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "misc/Globals.h"
 #include "game/GameInstance.h"
 #include "game/World.h"
 #include "game/GameManager.h"
@@ -37,7 +36,6 @@ namespace ne {
     Node::Node(const std::string& sName) {
         this->sNodeName = sName;
         mtxParentNode.second = nullptr;
-        mtxChildNodes.second = gc_new_vector<Node>();
         mtxIsCalledEveryFrame.second = false;
         mtxIsReceivingInput.second = false;
         mtxIsSpawned.second = false;
@@ -77,12 +75,12 @@ namespace ne {
     std::string Node::getNodeName() const { return sNodeName; }
 
     void Node::addChildNode(
-        const gc<Node>& pNode,
+        const sgc::GcPtr<Node>& pNode,
         AttachmentRule locationRule,
         AttachmentRule rotationRule,
         AttachmentRule scaleRule) {
         // Convert to spatial node for later use.
-        SpatialNode* pSpatialNode = dynamic_cast<SpatialNode*>(&*pNode);
+        SpatialNode* pSpatialNode = dynamic_cast<SpatialNode*>(pNode.get());
 
         // Save world rotation/location/scale for later use.
         glm::vec3 worldLocation = glm::vec3(0.0F, 0.0F, 0.0F);
@@ -106,7 +104,7 @@ namespace ne {
         }
 
         // Make sure the specified node is not `this`.
-        if (&*pNode == this) [[unlikely]] {
+        if (pNode == this) [[unlikely]] {
             Logger::get().warn(std::format(
                 "an attempt was made to attach the \"{}\" node to itself, aborting this "
                 "operation",
@@ -117,7 +115,7 @@ namespace ne {
         std::scoped_lock guard(mtxChildNodes.first);
 
         // Make sure the specified node is not our direct child.
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        for (const auto& pChildNode : mtxChildNodes.second) {
             if (pChildNode == pNode) [[unlikely]] {
                 Logger::get().warn(std::format(
                     "an attempt was made to attach the \"{}\" node to the \"{}\" node but it's already "
@@ -144,7 +142,7 @@ namespace ne {
         std::scoped_lock parentGuard(pNode->mtxParentNode.first);
         if (pNode->mtxParentNode.second != nullptr) {
             // Check if we are already this node's parent.
-            if (&*pNode->mtxParentNode.second == this) {
+            if (pNode->mtxParentNode.second == this) {
                 Logger::get().warn(std::format(
                     "an attempt was made to attach the \"{}\" node to its parent again, "
                     "aborting this operation",
@@ -158,18 +156,18 @@ namespace ne {
             // Remove node from parent's children array.
             std::scoped_lock parentsChildrenGuard(pNode->mtxParentNode.second->mtxChildNodes.first);
 
-            const auto pParentsChildren = &pNode->mtxParentNode.second->mtxChildNodes.second;
-            for (auto it = (*pParentsChildren)->begin(); it != (*pParentsChildren)->end(); ++it) {
+            auto& parentsChildren = pNode->mtxParentNode.second->mtxChildNodes.second;
+            for (auto it = parentsChildren.begin(); it != parentsChildren.end(); ++it) {
                 if (*it == pNode) {
-                    (*pParentsChildren)->erase(it);
+                    parentsChildren.erase(it);
                     break;
                 }
             }
         }
 
         // Add node to our children array.
-        pNode->mtxParentNode.second = gc<Node>(this);
-        mtxChildNodes.second->push_back(pNode);
+        pNode->mtxParentNode.second = sgc::GcPtr<Node>(this);
+        mtxChildNodes.second.push_back(pNode);
 
         // The specified node is not attached.
 
@@ -198,7 +196,7 @@ namespace ne {
     }
 
     void Node::detachFromParentAndDespawn() {
-        if (&*getWorldRootNode() == this) [[unlikely]] {
+        if (getWorldRootNode() == this) [[unlikely]] {
             Error error("Instead of despawning world's root node, create/replace world using GameInstance "
                         "functions, this would destroy the previous world with all nodes.");
             error.showError();
@@ -207,7 +205,7 @@ namespace ne {
 
         // Detach from parent.
         std::scoped_lock guard(mtxIsSpawned.first, mtxParentNode.first);
-        gc<Node> pSelf;
+        sgc::GcPtr<Node> pSelf;
 
         if (mtxParentNode.second != nullptr) {
             // Notify.
@@ -215,12 +213,12 @@ namespace ne {
 
             // Remove this node from parent's children array.
             std::scoped_lock parentChildGuard(mtxParentNode.second->mtxChildNodes.first);
-            auto pParentChildren = &mtxParentNode.second->mtxChildNodes.second;
+            auto& parentChildren = mtxParentNode.second->mtxChildNodes.second;
             bool bFound = false;
-            for (auto it = (*pParentChildren)->begin(); it != (*pParentChildren)->end(); ++it) {
-                if (&**it == this) {
+            for (auto it = parentChildren.begin(); it != parentChildren.end(); ++it) {
+                if (*it == this) {
                     pSelf = *it; // make sure we won't be deleted while being in this function
-                    (*pParentChildren)->erase(it);
+                    parentChildren.erase(it);
                     bFound = true;
                     break;
                 }
@@ -330,7 +328,7 @@ namespace ne {
         {
             std::scoped_lock childGuard(mtxChildNodes.first);
 
-            for (const auto& pChildNode : *mtxChildNodes.second) {
+            for (const auto& pChildNode : mtxChildNodes.second) {
                 pChildNode->spawn();
             }
         }
@@ -356,7 +354,7 @@ namespace ne {
         {
             std::scoped_lock childGuard(mtxChildNodes.first);
 
-            for (const auto& pChildNode : *mtxChildNodes.second) {
+            for (const auto& pChildNode : mtxChildNodes.second) {
                 pChildNode->despawn();
             }
         }
@@ -392,7 +390,7 @@ namespace ne {
         pWorld = nullptr;
     }
 
-    std::pair<std::recursive_mutex, gc<Node>>* Node::getParentNode() { return &mtxParentNode; }
+    std::pair<std::recursive_mutex, sgc::GcPtr<Node>>* Node::getParentNode() { return &mtxParentNode; }
 
     std::optional<Error>
     Node::serializeNodeTree(const std::filesystem::path& pathToFile, bool bEnableBackup) {
@@ -484,19 +482,19 @@ namespace ne {
             }
 
             // Deserialize the original entity.
-            auto result = deserialize<gc, Node>(pathToOriginalFile, sObjectIdInDeserializedFile);
+            auto result = deserialize<sgc::GcPtr<Node>>(pathToOriginalFile, sObjectIdInDeserializedFile);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(result);
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
             // Save original object to only save changed fields later.
-            selfInfo.pDeserializedOriginalObject = std::get<gc<Node>>(result);
-            selfInfo.pOriginalObject = &*selfInfo.pDeserializedOriginalObject;
+            selfInfo.pDeserializedOriginalObject = std::get<sgc::GcPtr<Node>>(result);
+            selfInfo.pOriginalObject = selfInfo.pDeserializedOriginalObject.get();
 
             // Check if child nodes are located in the same file
             // (i.e. check if this node is a root of some external node tree).
-            if (!mtxChildNodes.second->empty() &&
+            if (!mtxChildNodes.second.empty() &&
                 isTreeDeserializedFromOneFile(sPathDeserializedFromRelativeRes)) {
                 // Don't serialize information about child nodes,
                 // when referencing an external node tree, we should only
@@ -514,7 +512,7 @@ namespace ne {
         if (bIncludeInformationAboutChildNodes) {
             // Get information about child nodes.
             std::scoped_lock guard(mtxChildNodes.first);
-            for (const auto& pChildNode : *mtxChildNodes.second) {
+            for (const auto& pChildNode : mtxChildNodes.second) {
                 // Skip node (and its child nodes) if it should not be serialized.
                 if (!pChildNode->isSerialized()) {
                     continue;
@@ -541,23 +539,22 @@ namespace ne {
 
     void Node::lockChildren() {
         mtxChildNodes.first.lock();
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        for (const auto& pChildNode : mtxChildNodes.second) {
             pChildNode->lockChildren();
         }
     }
 
     void Node::unlockChildren() {
         mtxChildNodes.first.unlock();
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        for (const auto& pChildNode : mtxChildNodes.second) {
             pChildNode->unlockChildren();
         }
     }
 
-    std::variant<gc<Node>, Error>
-    Node::deserializeNodeTree(const std::filesystem::path& pathToFile) { // NOLINT: too complex
+    std::variant<sgc::GcPtr<Node>, Error> Node::deserializeNodeTree(const std::filesystem::path& pathToFile) {
         // Get all IDs from this file.
         const auto idResult = Serializable::getIdsFromFile(pathToFile);
-        if (std::holds_alternative<Error>(idResult)) {
+        if (std::holds_alternative<Error>(idResult)) [[unlikely]] {
             auto err = std::get<Error>(idResult);
             err.addCurrentLocationToErrorStack();
             return err;
@@ -565,22 +562,24 @@ namespace ne {
         const auto ids = std::get<std::set<std::string>>(idResult);
 
         // Deserialize all nodes.
-        auto deserializeResult = Serializable::deserializeMultiple<gc>(pathToFile, ids);
-        if (std::holds_alternative<Error>(deserializeResult)) {
+        auto deserializeResult = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile, ids);
+        if (std::holds_alternative<Error>(deserializeResult)) [[unlikely]] {
             auto err = std::get<Error>(deserializeResult);
             err.addCurrentLocationToErrorStack();
             return err;
         }
-        auto vNodesInfo =
-            std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(deserializeResult));
+        auto vNodesInfo = std::get<std::vector<DeserializedObjectInformation<sgc::GcPtr<Serializable>>>>(
+            std::move(deserializeResult));
 
         // See if some node is external node tree.
         for (auto& nodeInfo : vNodesInfo) {
             // Try to cast this object to Node.
-            if (dynamic_cast<Node*>(&*nodeInfo.pObject) == nullptr) [[unlikely]] {
+            const auto pCurrentNode = dynamic_cast<Node*>(nodeInfo.pObject.get());
+            if (pCurrentNode == nullptr) [[unlikely]] {
                 return Error("deserialized object is not a node");
             }
 
+            // Find attribute that stores path to the external node tree file.
             auto it = nodeInfo.customAttributes.find(sExternalNodeTreePathAttributeName);
             if (it == nodeInfo.customAttributes.end()) {
                 continue;
@@ -589,7 +588,7 @@ namespace ne {
             // Construct path to this external node tree.
             const auto pathToExternalNodeTree =
                 ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / it->second;
-            if (!std::filesystem::exists(pathToExternalNodeTree)) {
+            if (!std::filesystem::exists(pathToExternalNodeTree)) [[unlikely]] {
                 Error error(std::format(
                     "file storing external node tree \"{}\" does not exist",
                     pathToExternalNodeTree.string()));
@@ -598,21 +597,27 @@ namespace ne {
 
             // Deserialize external node tree.
             auto result = deserializeNodeTree(pathToExternalNodeTree);
-            if (std::holds_alternative<Error>(result)) {
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(result);
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            gc<Node> pExternalRootNode = std::get<gc<Node>>(result);
+            sgc::GcPtr<Node> pExternalRootNode = std::get<sgc::GcPtr<Node>>(result);
 
-            gc<Node> pNode = gc_dynamic_pointer_cast<Node>(nodeInfo.pObject);
-
-            // Attach child nodes of this external root node to our node that has changed fields.
+            // Get child nodes of external node tree.
             const auto pMtxChildNodes = pExternalRootNode->getChildNodes();
             std::scoped_lock externalChildNodesGuard(pMtxChildNodes->first);
-            for (const auto& pExternalChildNode : *pMtxChildNodes->second) {
-                pNode->addChildNode(
-                    pExternalChildNode,
+
+            // Attach child nodes of this external root node to our node
+            // (their data cannot be changed since when you reference an external node tree
+            // you can only modify root node of the external node tree).
+            while (!pMtxChildNodes->second.empty()) {
+                // Use a "while" loop instead of a "for" loop because this "child nodes array" will be
+                // modified each iteration (this array will be smaller and smaller with each iteration since
+                // we are "removing" child nodes of some parent node), thus we avoid modifying the
+                // array while iterating over it (avoiding incrementing invalidated iterator).
+                pCurrentNode->addChildNode(
+                    *pMtxChildNodes->second.begin(),
                     AttachmentRule::KEEP_RELATIVE,
                     AttachmentRule::KEEP_RELATIVE,
                     AttachmentRule::KEEP_RELATIVE);
@@ -620,12 +625,12 @@ namespace ne {
         }
 
         // Sort all nodes by their ID.
-        gc<Node> pRootNode;
+        sgc::GcPtr<Node> pRootNode;
         // Prepare array of pairs: Node - Parent index.
         std::vector<std::pair<Node*, std::optional<size_t>>> vNodes(vNodesInfo.size());
         for (const auto& nodeInfo : vNodesInfo) {
             // Try to cast this object to Node.
-            const auto pNode = dynamic_cast<Node*>(&*nodeInfo.pObject);
+            const auto pNode = dynamic_cast<Node*>(nodeInfo.pObject.get());
             if (pNode == nullptr) [[unlikely]] {
                 return Error("deserialized object is not a node");
             }
@@ -634,9 +639,9 @@ namespace ne {
             std::optional<size_t> iParentNodeId = {};
             const auto parentNodeAttributeIt = nodeInfo.customAttributes.find(sParentNodeIdAttributeName);
             if (parentNodeAttributeIt == nodeInfo.customAttributes.end()) {
-                if (!pRootNode) {
-                    pRootNode = gc<Node>(pNode);
-                } else {
+                if (pRootNode == nullptr) {
+                    pRootNode = sgc::GcPtr<Node>(pNode);
+                } else [[unlikely]] {
                     return Error(std::format(
                         "found non root node \"{}\" that does not have a parent", pNode->getNodeName()));
                 }
@@ -694,7 +699,7 @@ namespace ne {
         for (const auto& node : vNodes) {
             if (node.second.has_value()) {
                 vNodes[node.second.value()].first->addChildNode(
-                    gc<Node>(node.first),
+                    sgc::GcPtr<Node>(node.first),
                     AttachmentRule::KEEP_RELATIVE,
                     AttachmentRule::KEEP_RELATIVE,
                     AttachmentRule::KEEP_RELATIVE);
@@ -704,7 +709,9 @@ namespace ne {
         return pRootNode;
     }
 
-    std::pair<std::recursive_mutex, gc_vector<Node>>* Node::getChildNodes() { return &mtxChildNodes; }
+    std::pair<std::recursive_mutex, sgc::GcVector<sgc::GcPtr<Node>>>* Node::getChildNodes() {
+        return &mtxChildNodes;
+    }
 
     GameInstance* Node::getGameInstance() {
         const auto pGameManager = GameManager::get();
@@ -722,7 +729,7 @@ namespace ne {
         return pGameManager->getGameInstance();
     }
 
-    gc<Node> Node::getWorldRootNode() {
+    sgc::GcPtr<Node> Node::getWorldRootNode() {
         std::scoped_lock guard(mtxIsSpawned.first);
 
         if (pWorld == nullptr) {
@@ -736,8 +743,8 @@ namespace ne {
         std::scoped_lock guard(mtxChildNodes.first);
 
         // See if the specified node is in our child tree.
-        for (const auto& pChildNode : *mtxChildNodes.second) { // NOLINT
-            if (&*pChildNode == pNode) {
+        for (const auto& pChildNode : mtxChildNodes.second) { // NOLINT
+            if (pChildNode == pNode) {
                 return true;
             }
 
@@ -760,7 +767,7 @@ namespace ne {
             return false;
         }
 
-        if (&*mtxParentNode.second == pNode) {
+        if (mtxParentNode.second == pNode) {
             return true;
         }
 
@@ -772,7 +779,7 @@ namespace ne {
 
         onAfterAttachedToNewParent(bThisNodeBeingAttached);
 
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        for (const auto& pChildNode : mtxChildNodes.second) {
             pChildNode->notifyAboutAttachedToNewParent(false);
         }
     }
@@ -782,7 +789,7 @@ namespace ne {
 
         onBeforeDetachedFromParent(bThisNodeBeingDetached);
 
-        for (const auto& pChildNode : *mtxChildNodes.second) {
+        for (const auto& pChildNode : mtxChildNodes.second) {
             pChildNode->notifyAboutDetachingFromParent(false);
         }
     }
@@ -799,7 +806,7 @@ namespace ne {
         bool bPathEqual = true;
         lockChildren();
         {
-            for (const auto& pChildNode : *mtxChildNodes.second) {
+            for (const auto& pChildNode : mtxChildNodes.second) {
                 if (!pChildNode->isTreeDeserializedFromOneFile(sPathRelativeToRes)) {
                     bPathEqual = false;
                     break;

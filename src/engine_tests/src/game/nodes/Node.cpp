@@ -12,8 +12,8 @@ TEST_CASE("node names should not be unique") {
 
     const auto sNodeName = "Test Node Name";
 
-    const auto pNode1 = gc_new<Node>(sNodeName);
-    const auto pNode2 = gc_new<Node>(sNodeName);
+    const auto pNode1 = sgc::makeGc<Node>(sNodeName);
+    const auto pNode2 = sgc::makeGc<Node>(sNodeName);
 
     REQUIRE(pNode1->getNodeName() == sNodeName);
     REQUIRE(pNode2->getNodeName() == sNodeName);
@@ -24,11 +24,11 @@ TEST_CASE("build and check node hierarchy") {
 
     {
         // Create nodes.
-        const auto pParentNode = gc_new<Node>();
-        const auto pChildNode = gc_new<Node>();
+        const auto pParentNode = sgc::makeGc<Node>();
+        const auto pChildNode = sgc::makeGc<Node>();
 
-        const auto pChildChildNode1 = gc_new<Node>();
-        const auto pChildChildNode2 = gc_new<Node>();
+        const auto pChildChildNode1 = sgc::makeGc<Node>();
+        const auto pChildChildNode2 = sgc::makeGc<Node>();
 
         // Build hierarchy.
         pChildNode->addChildNode(
@@ -45,12 +45,12 @@ TEST_CASE("build and check node hierarchy") {
         std::scoped_lock childChildNodesGuard(pMtxChildChildNodes->first);
 
         // Check that everything is correct.
-        REQUIRE(pMtxParentChildNodes->second->size() == 1);
-        REQUIRE(&*pMtxParentChildNodes->second->operator[](0) == &*pChildNode);
+        REQUIRE(pMtxParentChildNodes->second.size() == 1);
+        REQUIRE(&*pMtxParentChildNodes->second.operator[](0) == &*pChildNode);
 
-        REQUIRE(pMtxChildChildNodes->second->size() == 2);
-        REQUIRE(&*pMtxChildChildNodes->second->operator[](0) == &*pChildChildNode1);
-        REQUIRE(&*pMtxChildChildNodes->second->operator[](1) == &*pChildChildNode2);
+        REQUIRE(pMtxChildChildNodes->second.size() == 2);
+        REQUIRE(&*pMtxChildChildNodes->second.operator[](0) == &*pChildChildNode1);
+        REQUIRE(&*pMtxChildChildNodes->second.operator[](1) == &*pChildChildNode2);
 
         REQUIRE(pChildNode->getParentNode()->second == pParentNode);
         REQUIRE(pChildChildNode1->getParentNode()->second == pChildNode);
@@ -71,9 +71,9 @@ TEST_CASE("build and check node hierarchy") {
     }
 
     // Cleanup.
-    gc_collector()->collect();
+    sgc::GarbageCollector::get().collectGarbage();
     REQUIRE(Node::getAliveNodeCount() == 0);
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("move nodes in the hierarchy") {
@@ -81,13 +81,13 @@ TEST_CASE("move nodes in the hierarchy") {
 
     {
         // Create nodes.
-        const auto pParentNode = gc_new<Node>();
-        const auto pCharacterNode = gc_new<Node>();
-        const auto pCarNode = gc_new<Node>();
-        const auto pSomeNode = gc_new<Node>();
+        const auto pParentNode = sgc::makeGc<Node>();
+        const auto pCharacterNode = sgc::makeGc<Node>();
+        const auto pCarNode = sgc::makeGc<Node>();
+        const auto pSomeNode = sgc::makeGc<Node>();
 
-        const auto pCharacterChildNode1 = gc_new<Node>();
-        const auto pCharacterChildNode2 = gc_new<Node>();
+        const auto pCharacterChildNode1 = sgc::makeGc<Node>();
+        const auto pCharacterChildNode2 = sgc::makeGc<Node>();
 
         // Build hierarchy.
         pCharacterNode->addChildNode(
@@ -108,8 +108,8 @@ TEST_CASE("move nodes in the hierarchy") {
         // Check that everything is correct.
         REQUIRE(&*pCharacterNode->getParentNode()->second == &*pCarNode);
         REQUIRE(&*pSomeNode->getParentNode()->second == &*pCarNode);
-        REQUIRE(pCharacterNode->getChildNodes()->second->size() == 2);
-        REQUIRE(pCarNode->getChildNodes()->second->size() == 2);
+        REQUIRE(pCharacterNode->getChildNodes()->second.size() == 2);
+        REQUIRE(pCarNode->getChildNodes()->second.size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
 
@@ -117,7 +117,7 @@ TEST_CASE("move nodes in the hierarchy") {
         pSomeNode->detachFromParentAndDespawn();
         REQUIRE(pSomeNode->getParentNode()->second == nullptr);
 
-        REQUIRE(pCarNode->getChildNodes()->second->size() == 1);
+        REQUIRE(pCarNode->getChildNodes()->second.size() == 1);
 
         // Detach the character from the car.
         pParentNode->addChildNode(
@@ -125,15 +125,15 @@ TEST_CASE("move nodes in the hierarchy") {
 
         // Check that everything is correct.
         REQUIRE(&*pCharacterNode->getParentNode()->second == &*pParentNode);
-        REQUIRE(pCharacterNode->getChildNodes()->second->size() == 2);
+        REQUIRE(pCharacterNode->getChildNodes()->second.size() == 2);
         REQUIRE(pCharacterChildNode1->isChildOf(&*pCharacterNode));
         REQUIRE(pCharacterChildNode2->isChildOf(&*pCharacterNode));
     }
 
     // Cleanup.
-    gc_collector()->collect();
+    sgc::GarbageCollector::get().collectGarbage();
     REQUIRE(Node::getAliveNodeCount() == 0);
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize node tree") {
@@ -149,10 +149,10 @@ TEST_CASE("serialize and deserialize node tree") {
 
     {
         // Create nodes.
-        const auto pRootNode = gc_new<Node>("Root Node");
-        const auto pChildNode1 = gc_new<Node>("Child Node 1");
-        const auto pChildNode2 = gc_new<Node>("Child Node 2");
-        const auto pChildChildNode1 = gc_new<Node>("Child Child Node 1");
+        const auto pRootNode = sgc::makeGc<Node>("Root Node");
+        const auto pChildNode1 = sgc::makeGc<Node>("Child Node 1");
+        const auto pChildNode2 = sgc::makeGc<Node>("Child Node 2");
+        const auto pChildChildNode1 = sgc::makeGc<Node>("Child Child Node 1");
 
         // Build hierarchy.
         pRootNode->addChildNode(
@@ -174,7 +174,7 @@ TEST_CASE("serialize and deserialize node tree") {
         REQUIRE(std::filesystem::exists(fullPathToFile));
     }
 
-    gc_collector()->fullCollect();
+    sgc::GarbageCollector::get().collectGarbage();
     REQUIRE(Node::getAliveNodeCount() == 0); // cyclic references should be freed
 
     {
@@ -186,37 +186,37 @@ TEST_CASE("serialize and deserialize node tree") {
             INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
-        const auto pRootNode = std::get<gc<Node>>(deserializeResult);
+        const auto pRootNode = std::get<sgc::GcPtr<Node>>(deserializeResult);
 
         // Check results.
         REQUIRE(pRootNode->getNodeName() == "Root Node");
         const auto pMtxChildNodes = pRootNode->getChildNodes();
         std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-        REQUIRE(pMtxChildNodes->second->size() == 2);
+        REQUIRE(pMtxChildNodes->second.size() == 2);
 
         // Check child nodes.
-        gc<Node> pChildNode1;
-        gc<Node> pChildNode2;
-        if ((*pMtxChildNodes->second)[0]->getNodeName() == "Child Node 1") {
-            REQUIRE((*pMtxChildNodes->second)[1]->getNodeName() == "Child Node 2");
-            pChildNode1 = (*pMtxChildNodes->second)[0];
-            pChildNode2 = (*pMtxChildNodes->second)[1];
-        } else if ((*pMtxChildNodes->second)[0]->getNodeName() == "Child Node 2") {
-            REQUIRE((*pMtxChildNodes->second)[1]->getNodeName() == "Child Node 1");
-            pChildNode1 = (*pMtxChildNodes->second)[1];
-            pChildNode2 = (*pMtxChildNodes->second)[2];
+        sgc::GcPtr<Node> pChildNode1;
+        sgc::GcPtr<Node> pChildNode2;
+        if (pMtxChildNodes->second[0]->getNodeName() == "Child Node 1") {
+            REQUIRE(pMtxChildNodes->second[1]->getNodeName() == "Child Node 2");
+            pChildNode1 = pMtxChildNodes->second[0];
+            pChildNode2 = pMtxChildNodes->second[1];
+        } else if (pMtxChildNodes->second[0]->getNodeName() == "Child Node 2") {
+            REQUIRE(pMtxChildNodes->second[1]->getNodeName() == "Child Node 1");
+            pChildNode1 = pMtxChildNodes->second[1];
+            pChildNode2 = pMtxChildNodes->second[2];
         }
 
         // Check for child child nodes.
-        REQUIRE(pChildNode2->getChildNodes()->second->empty());
+        REQUIRE(pChildNode2->getChildNodes()->second.empty());
         const auto pMtxChildChildNodes = pChildNode1->getChildNodes();
         std::scoped_lock childChildNodesGuard(pMtxChildChildNodes->first);
-        REQUIRE(pMtxChildChildNodes->second->size() == 1);
-        REQUIRE((*pMtxChildChildNodes->second)[0]->getChildNodes()->second->empty());
-        REQUIRE((*pMtxChildChildNodes->second)[0]->getNodeName() == "Child Child Node 1");
+        REQUIRE(pMtxChildChildNodes->second.size() == 1);
+        REQUIRE(pMtxChildChildNodes->second[0]->getChildNodes()->second.empty());
+        REQUIRE(pMtxChildChildNodes->second[0]->getNodeName() == "Child Child Node 1");
     }
 
-    gc_collector()->fullCollect();
+    sgc::GarbageCollector::get().collectGarbage();
     REQUIRE(Node::getAliveNodeCount() == 0); // cyclic references should be freed
 }
 
@@ -267,12 +267,12 @@ TEST_CASE("get parent node of type") {
                 }
 
                 // Create nodes.
-                auto pDerivedNodeParent = gc_new<MyDerivedNode>("MyDerivedNode");
+                auto pDerivedNodeParent = sgc::makeGc<MyDerivedNode>("MyDerivedNode");
                 pDerivedNodeParent->iAnswer = 42;
 
-                const auto pDerivedNodeChild = gc_new<MyDerivedNode>();
+                const auto pDerivedNodeChild = sgc::makeGc<MyDerivedNode>();
 
-                auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
+                auto pDerivedDerivedNode = sgc::makeGc<MyDerivedDerivedNode>();
 
                 // Build node hierarchy.
                 pDerivedNodeChild->addChildNode(
@@ -307,7 +307,7 @@ TEST_CASE("get parent node of type") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("get child node of type") {
@@ -333,7 +333,7 @@ TEST_CASE("get child node of type") {
 
             // Get child without name.
             auto pNode = getChildNodeOfType<MyDerivedNode>();
-            REQUIRE(&*pNode == &*getChildNodes()->second->operator[](0));
+            REQUIRE(&*pNode == &*getChildNodes()->second.operator[](0));
             REQUIRE(pNode->iAnswer == 0);
 
             // Get child with name.
@@ -356,11 +356,11 @@ TEST_CASE("get child node of type") {
                     REQUIRE(false);
                 }
                 // Create nodes.
-                auto pDerivedDerivedNode = gc_new<MyDerivedDerivedNode>();
+                auto pDerivedDerivedNode = sgc::makeGc<MyDerivedDerivedNode>();
 
-                auto pDerivedNodeParent = gc_new<MyDerivedNode>();
+                auto pDerivedNodeParent = sgc::makeGc<MyDerivedNode>();
 
-                const auto pDerivedNodeChild = gc_new<MyDerivedNode>("MyDerivedNode");
+                const auto pDerivedNodeChild = sgc::makeGc<MyDerivedNode>("MyDerivedNode");
                 pDerivedNodeChild->iAnswer = 42;
 
                 // Build node hierarchy.
@@ -396,7 +396,7 @@ TEST_CASE("get child node of type") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("saving pointer to the root node does not prevent correct world destruction") {
@@ -407,7 +407,7 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
         MyDerivedNode() = default;
         virtual ~MyDerivedNode() override = default;
 
-        gc<Node> pRootNode = nullptr;
+        sgc::GcPtr<Node> pRootNode = nullptr;
     };
 
     class TestGameInstance : public GameInstance {
@@ -424,7 +424,7 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
                 }
 
                 // Create our custom node.
-                auto pNode = gc_new<MyDerivedNode>();
+                auto pNode = sgc::makeGc<MyDerivedNode>();
                 pNode->pRootNode = getWorldRootNode();
                 REQUIRE(pNode->pRootNode);
 
@@ -461,13 +461,10 @@ TEST_CASE("saving pointer to the root node does not prevent correct world destru
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("test GC performance and stability with nodes") {
-    // This test is needed because the original version of our garbage collector
-    // had a bug (that I fixed) that was crashing the program when we had
-    // around 6000-8000 nodes.
     using namespace ne;
 
     class TestGameInstance : public GameInstance {
@@ -483,7 +480,7 @@ TEST_CASE("test GC performance and stability with nodes") {
                 return;
             }
 
-            const auto pNewNode = gc_new<Node>();
+            const auto pNewNode = sgc::makeGc<Node>();
             addChildNodes(100, pNewNode);
             getWorldRootNode()->addChildNode(
                 pNewNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
@@ -491,13 +488,13 @@ TEST_CASE("test GC performance and stability with nodes") {
         virtual ~TestGameInstance() override {}
 
     private:
-        void addChildNodes(size_t iChildrenCount, gc<Node> pNode) {
+        void addChildNodes(size_t iChildrenCount, sgc::GcPtr<Node> pNode) {
             using namespace ne;
 
             if (iChildrenCount == 0)
                 return;
 
-            const auto pNewNode = gc_new<Node>();
+            const auto pNewNode = sgc::makeGc<Node>();
             addChildNodes(iChildrenCount - 1, pNewNode);
             pNode->addChildNode(
                 pNewNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
@@ -515,7 +512,7 @@ TEST_CASE("test GC performance and stability with nodes") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
@@ -552,13 +549,13 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
 
                 REQUIRE(getCalledEveryFrameNodeCount() == 0);
 
-                pNotCalledtNode = gc_new<MyNode>(false);
+                pNotCalledtNode = sgc::makeGc<MyNode>(false);
                 getWorldRootNode()->addChildNode(
                     pNotCalledtNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
                     Node::AttachmentRule::KEEP_RELATIVE); // queues deferred task to add to world
 
-                pCalledNode = gc_new<MyNode>(true);
+                pCalledNode = sgc::makeGc<MyNode>(true);
                 getWorldRootNode()->addChildNode(
                     pCalledNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -583,8 +580,8 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
 
     private:
         size_t iTicks = 0;
-        gc<MyNode> pCalledNode;
-        gc<MyNode> pNotCalledtNode;
+        sgc::GcPtr<MyNode> pCalledNode;
+        sgc::GcPtr<MyNode> pNotCalledtNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -602,57 +599,8 @@ TEST_CASE("onBeforeNewFrame is called only on marked nodes") {
 TEST_CASE("tick groups order is correct") {
     using namespace ne;
 
-    class MyFirstNode;
-    class MySecondNode;
-
-    class TestGameInstance : public GameInstance {
-    public:
-        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pGame, pInputManager) {}
-        virtual void onGameStarted() override {
-            createWorld([&](const std::optional<Error>& optionalWorldError) {
-                if (optionalWorldError.has_value()) {
-                    auto error = optionalWorldError.value();
-                    error.addCurrentLocationToErrorStack();
-                    INFO(error.getFullErrorMessage());
-                    REQUIRE(false);
-                }
-
-                REQUIRE(getWorldRootNode());
-
-                getWorldRootNode()->addChildNode(
-                    gc_new<MyFirstNode>(),
-                    Node::AttachmentRule::KEEP_RELATIVE,
-                    Node::AttachmentRule::KEEP_RELATIVE);
-                getWorldRootNode()->addChildNode(
-                    gc_new<MySecondNode>(),
-                    Node::AttachmentRule::KEEP_RELATIVE,
-                    Node::AttachmentRule::KEEP_RELATIVE);
-            });
-        }
-        virtual ~TestGameInstance() override {}
-
-        void onFirstNodeTick() {
-            bFirstNodeCalled = true;
-            REQUIRE(!bSecondNodeCalled);
-        }
-
-        void onSecondNodeTick() {
-            bSecondNodeCalled = true;
-            REQUIRE(bFirstNodeCalled);
-
-            getWindow()->close();
-        }
-
-        virtual void onWindowClose() override {
-            REQUIRE(bFirstNodeCalled);
-            REQUIRE(bSecondNodeCalled);
-        }
-
-    private:
-        bool bFirstNodeCalled = false;
-        bool bSecondNodeCalled = false;
-    };
+    static bool bFirstNodeTicked = false;
+    static bool bSecondNodeTicked = false;
 
     class MyFirstNode : public Node {
     public:
@@ -662,7 +610,9 @@ TEST_CASE("tick groups order is correct") {
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
             Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
 
-            dynamic_cast<TestGameInstance*>(getGameInstance())->onFirstNodeTick();
+            REQUIRE(!bFirstNodeTicked);
+            REQUIRE(!bSecondNodeTicked);
+            bFirstNodeTicked = true;
         }
     };
 
@@ -677,8 +627,47 @@ TEST_CASE("tick groups order is correct") {
         virtual void onBeforeNewFrame(float fTimeSincePrevCallInSec) override {
             Node::onBeforeNewFrame(fTimeSincePrevCallInSec);
 
-            dynamic_cast<TestGameInstance*>(getGameInstance())->onSecondNodeTick();
+            REQUIRE(bFirstNodeTicked);
+            REQUIRE(!bSecondNodeTicked);
+            bSecondNodeTicked = true;
+
+            getGameInstance()->getWindow()->close();
         }
+    };
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                REQUIRE(getWorldRootNode() != nullptr);
+
+                pFirstNode = sgc::makeGc<MyFirstNode>();
+                pSecondNode = sgc::makeGc<MySecondNode>();
+
+                getWorldRootNode()->addChildNode(pFirstNode);
+                getWorldRootNode()->addChildNode(pSecondNode);
+            });
+        }
+        virtual ~TestGameInstance() override {}
+
+    protected:
+        virtual void onWindowClose() override {
+            REQUIRE(bFirstNodeTicked);
+            REQUIRE(bSecondNodeTicked);
+        }
+
+    private:
+        sgc::GcPtr<MyFirstNode> pFirstNode;
+        sgc::GcPtr<MySecondNode> pSecondNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -691,6 +680,9 @@ TEST_CASE("tick groups order is correct") {
 
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
+
+    bFirstNodeTicked = false;
+    bSecondNodeTicked = false;
 }
 
 TEST_CASE("input event callbacks in Node are triggered") {
@@ -743,7 +735,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(
                     pMyNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -780,7 +772,7 @@ TEST_CASE("input event callbacks in Node are triggered") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -830,15 +822,15 @@ TEST_CASE("use deferred task with node's member function while the world is bein
                 //          this is essential test, some engine parts rely on this
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-                const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
+                const auto iInitialObjectCount = sgc::GarbageCollector::get().getAliveAllocationCount();
 
-                auto pMyNode = gc_new<MyDerivedNode>();
+                auto pMyNode = sgc::makeGc<MyDerivedNode>();
                 getWorldRootNode()->addChildNode(
                     pMyNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
 
                 // add deferred task to change world
                 createWorld([this, iInitialObjectCount](const std::optional<Error>& optionalWorldError2) {
-                    REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount);
+                    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == iInitialObjectCount);
                     bFinished = true;
                 });
 
@@ -865,7 +857,7 @@ TEST_CASE("use deferred task with node's member function while the world is bein
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use deferred task with node's member function while the garbage collector is running") {
@@ -903,23 +895,23 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
                 //          this is essential test, some engine parts rely on this
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-                const auto iInitialObjectCount = gc_collector()->getAliveObjectsCount();
+                const auto iInitialObjectCount = sgc::GarbageCollector::get().getAliveAllocationCount();
 
                 // add deferred task to run GC
                 queueGarbageCollection(true, [this, iInitialObjectCount]() {
-                    REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount);
+                    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == iInitialObjectCount);
                     bFinished = true;
                 });
 
                 {
-                    auto pMyNode = gc_new<MyDerivedNode>();
+                    auto pMyNode = sgc::makeGc<MyDerivedNode>();
 
                     // add deferred task to call our function
                     pMyNode->start();
                 } // this node is no longer used and can be garbage collected
 
                 // node should be still alive
-                REQUIRE(gc_collector()->getAliveObjectsCount() == iInitialObjectCount + 2);
+                REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == iInitialObjectCount + 1);
 
                 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 //       engine should finish all deferred tasks before running the GC
@@ -942,7 +934,7 @@ TEST_CASE("use deferred task with node's member function while the garbage colle
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("detach and despawn spawned node") {
@@ -956,7 +948,7 @@ TEST_CASE("detach and despawn spawned node") {
             createWorld([this](const std::optional<Error>&) {
                 REQUIRE(getTotalSpawnedNodeCount() == 0); // world root node is still in deferred task
 
-                pMyNode = gc_new<Node>();
+                pMyNode = sgc::makeGc<Node>();
                 getWorldRootNode()->addChildNode(
                     pMyNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -983,7 +975,7 @@ TEST_CASE("detach and despawn spawned node") {
 
     private:
         size_t iTickCount = 0;
-        gc<Node> pMyNode;
+        sgc::GcPtr<Node> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -997,7 +989,7 @@ TEST_CASE("detach and despawn spawned node") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("input event callbacks and tick in Node is not triggered after despawning") {
@@ -1058,7 +1050,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(
                     pMyNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -1125,7 +1117,7 @@ TEST_CASE("input event callbacks and tick in Node is not triggered after despawn
 
     private:
         size_t iTickCount = 0;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1171,7 +1163,7 @@ TEST_CASE("disable \"is called every frame\" in onBeforeNewFrame") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
             });
         }
@@ -1198,7 +1190,7 @@ TEST_CASE("disable \"is called every frame\" in onBeforeNewFrame") {
         bool bWait = false;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1251,7 +1243,7 @@ TEST_CASE("disable \"is called every frame\" in onBeforeNewFrame and despawn") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
             });
         }
@@ -1278,7 +1270,7 @@ TEST_CASE("disable \"is called every frame\" in onBeforeNewFrame and despawn") {
         bool bWait = false;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1327,7 +1319,7 @@ TEST_CASE("quickly enable and disable \"is called every frame\" while spawned") 
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
             });
         }
@@ -1351,7 +1343,7 @@ TEST_CASE("quickly enable and disable \"is called every frame\" while spawned") 
         bool bWait = false;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1398,7 +1390,7 @@ TEST_CASE("quickly enable, disable and enable \"is called every frame\" while sp
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
             });
         }
@@ -1423,7 +1415,7 @@ TEST_CASE("quickly enable, disable and enable \"is called every frame\" while sp
         bool bWait = false;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1472,7 +1464,7 @@ TEST_CASE("enable \"is called every frame\" while spawned and despawn") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
             });
         }
@@ -1497,7 +1489,7 @@ TEST_CASE("enable \"is called every frame\" while spawned and despawn") {
         bool bWait = false;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1546,7 +1538,7 @@ TEST_CASE("enable \"is called every frame\" after despawn") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
             });
         }
@@ -1571,7 +1563,7 @@ TEST_CASE("enable \"is called every frame\" after despawn") {
         bool bWait = false;
         size_t iFramesPassed = 0;
         const size_t iFramesToWait = 10;
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -1629,7 +1621,7 @@ TEST_CASE("disable receiving input while processing input") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
@@ -1663,7 +1655,7 @@ TEST_CASE("disable receiving input while processing input") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
         bool bInitialTriggerFinished = false;
     };
 
@@ -1723,7 +1715,7 @@ TEST_CASE("disable receiving input and despawn") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
@@ -1760,7 +1752,7 @@ TEST_CASE("disable receiving input and despawn") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
         bool bInitialTriggerFinished = false;
     };
 
@@ -1819,7 +1811,7 @@ TEST_CASE("enable receiving input and despawn") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
@@ -1854,7 +1846,7 @@ TEST_CASE("enable receiving input and despawn") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
         bool bInitialTriggerFinished = false;
     };
 
@@ -1913,7 +1905,7 @@ TEST_CASE("enable receiving input while spawned") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
@@ -1948,7 +1940,7 @@ TEST_CASE("enable receiving input while spawned") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
         bool bInitialTriggerFinished = false;
     };
 
@@ -2008,7 +2000,7 @@ TEST_CASE("quickly enable receiving input and disable while spawned") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
@@ -2043,7 +2035,7 @@ TEST_CASE("quickly enable receiving input and disable while spawned") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
         bool bInitialTriggerFinished = false;
     };
 
@@ -2104,7 +2096,7 @@ TEST_CASE("quickly disable receiving input and enable while spawned") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register event.
@@ -2139,7 +2131,7 @@ TEST_CASE("quickly disable receiving input and enable while spawned") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
         bool bInitialTriggerFinished = false;
     };
 
@@ -2204,7 +2196,7 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
                 }
 
                 // Spawn node.
-                pMyNode = gc_new<MyNode>();
+                pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode); // queues a deferred task to be added to world
 
                 // Register events.
@@ -2255,7 +2247,7 @@ TEST_CASE("input event callbacks are only triggered when input changed") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MyNode> pMyNode;
+        sgc::GcPtr<MyNode> pMyNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -2293,8 +2285,8 @@ TEST_CASE("serialize node tree while some nodes marked as not serialize") {
 
                 {
                     // Prepare serialized nodes.
-                    const auto pParentNode = gc_new<Node>("serialized parent node");
-                    const auto pChildNode = gc_new<Node>("serialized child node");
+                    const auto pParentNode = sgc::makeGc<Node>("serialized parent node");
+                    const auto pChildNode = sgc::makeGc<Node>("serialized child node");
                     pParentNode->addChildNode(pChildNode);
 
                     // Spawn serialized nodes.
@@ -2303,10 +2295,10 @@ TEST_CASE("serialize node tree while some nodes marked as not serialize") {
 
                 {
                     // Prepare nodes that won't be serialized.
-                    const auto pParentNode = gc_new<Node>("not serialized parent node");
+                    const auto pParentNode = sgc::makeGc<Node>("not serialized parent node");
                     pParentNode->setSerialize(false);
 
-                    const auto pChildNode = gc_new<Node>("not serialized child node");
+                    const auto pChildNode = sgc::makeGc<Node>("not serialized child node");
                     pChildNode->setSerialize(true); // explicitly mark to be serialized to make sure it won't
                                                     // be serialized because parent is not serialized
 
@@ -2335,15 +2327,15 @@ TEST_CASE("serialize node tree while some nodes marked as not serialize") {
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pRootNode = std::get<gc<Node>>(std::move(result));
+                    const auto pRootNode = std::get<sgc::GcPtr<Node>>(std::move(result));
 
                     // Get root's child nodes.
                     const auto pMtxRootChildNodes = pRootNode->getChildNodes();
                     std::scoped_lock rootChildNodesGuard(pMtxRootChildNodes->first);
 
                     // Make sure we have only 1 child node under root.
-                    REQUIRE(pMtxRootChildNodes->second->size() == 1);
-                    const auto pParentNode = pMtxRootChildNodes->second->at(0);
+                    REQUIRE(pMtxRootChildNodes->second.size() == 1);
+                    const auto pParentNode = pMtxRootChildNodes->second.at(0);
 
                     // Make sure the name is correct.
                     REQUIRE(pParentNode->getNodeName() == "serialized parent node");
@@ -2353,8 +2345,8 @@ TEST_CASE("serialize node tree while some nodes marked as not serialize") {
                     std::scoped_lock parentChildNodesGuard(pMtxParentChildNodes->first);
 
                     // Make sure we have only 1 child node under root.
-                    REQUIRE(pMtxParentChildNodes->second->size() == 1);
-                    const auto pChildNode = pMtxParentChildNodes->second->at(0);
+                    REQUIRE(pMtxParentChildNodes->second.size() == 1);
+                    const auto pChildNode = pMtxParentChildNodes->second.at(0);
 
                     // Make sure the name is correct.
                     REQUIRE(pChildNode->getNodeName() == "serialized child node");

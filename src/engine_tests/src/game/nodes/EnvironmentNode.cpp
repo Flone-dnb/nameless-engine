@@ -31,7 +31,7 @@ TEST_CASE("serialize and deserialize EnvironmentNode as part of a node tree") {
 
                 {
                     // Create node and initialize.
-                    const auto pEnvironmentNode = gc_new<EnvironmentNode>();
+                    const auto pEnvironmentNode = sgc::makeGc<EnvironmentNode>();
                     pEnvironmentNode->setAmbientLight(ambientLight);
                     getWorldRootNode()->addChildNode(pEnvironmentNode);
 
@@ -45,7 +45,7 @@ TEST_CASE("serialize and deserialize EnvironmentNode as part of a node tree") {
                     }
                 }
 
-                gc_collector()->collect();
+                sgc::GarbageCollector::get().collectGarbage();
 
                 {
                     // Deserialize.
@@ -56,11 +56,11 @@ TEST_CASE("serialize and deserialize EnvironmentNode as part of a node tree") {
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pRootNode = std::get<gc<Node>>(std::move(result));
+                    const auto pRootNode = std::get<sgc::GcPtr<Node>>(std::move(result));
 
-                    REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
-                    const auto pEnvironmentNode = gc_dynamic_pointer_cast<EnvironmentNode>(
-                        pRootNode->getChildNodes()->second->operator[](0));
+                    REQUIRE(pRootNode->getChildNodes()->second.size() == 1);
+                    const sgc::GcPtr<EnvironmentNode> pEnvironmentNode =
+                        dynamic_cast<EnvironmentNode*>(pRootNode->getChildNodes()->second[0].get());
 
                     // Check.
                     REQUIRE(glm::all(
@@ -89,5 +89,5 @@ TEST_CASE("serialize and deserialize EnvironmentNode as part of a node tree") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

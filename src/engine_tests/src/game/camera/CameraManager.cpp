@@ -24,7 +24,7 @@ TEST_CASE("make camera node to be the active camera") {
                 }
 
                 // Spawn camera node.
-                const auto pCameraNode = gc_new<CameraNode>();
+                const auto pCameraNode = sgc::makeGc<CameraNode>();
                 getWorldRootNode()->addChildNode(pCameraNode);
 
                 // Make camera node to be the active one.
@@ -55,5 +55,5 @@ TEST_CASE("make camera node to be the active camera") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

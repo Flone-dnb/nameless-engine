@@ -93,13 +93,13 @@ TEST_CASE("manager correctly manages compute pipelines") {
                         pCamera->setRelativeLocation(glm::vec3(-2.0F, 0.0F, 0.0F));
 
                         // Spawn point light.
-                        const auto pPointLightNode = gc_new<PointLightNode>();
+                        const auto pPointLightNode = sgc::makeGc<PointLightNode>();
                         getWorldRootNode()->addChildNode(pPointLightNode);
                         pPointLightNode->setWorldLocation(
                             glm::vec3(-1.0F, 5.0F, 5.0F)); // NOLINT: magic numbers
 
                         // Spawn sample mesh.
-                        const auto pMeshNode = gc_new<MeshNode>();
+                        const auto pMeshNode = sgc::makeGc<MeshNode>();
                         pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                         getWorldRootNode()->addChildNode(pMeshNode);
                         pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
@@ -192,6 +192,6 @@ TEST_CASE("manager correctly manages compute pipelines") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

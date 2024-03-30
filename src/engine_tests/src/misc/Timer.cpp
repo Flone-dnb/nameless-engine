@@ -78,7 +78,7 @@ TEST_CASE("measure elapsed time") {
                     REQUIRE(false);
                 }
 
-                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MyDerivedNode>());
             });
         }
     };
@@ -94,7 +94,7 @@ TEST_CASE("measure elapsed time") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("measure elapsed time of a looping timer") {
@@ -152,7 +152,7 @@ TEST_CASE("measure elapsed time of a looping timer") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("run callback on timeout") {
@@ -202,7 +202,7 @@ TEST_CASE("run callback on timeout") {
                     REQUIRE(false);
                 }
 
-                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MyDerivedNode>());
             });
         }
     };
@@ -218,7 +218,7 @@ TEST_CASE("run callback on timeout") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("check that timer is running (without callback)") {
@@ -271,7 +271,7 @@ TEST_CASE("check that timer is running (without callback)") {
                     REQUIRE(false);
                 }
 
-                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MyDerivedNode>());
             });
         }
     };
@@ -287,7 +287,7 @@ TEST_CASE("check that timer is running (without callback)") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("check that timer is running (with callback, force stop)") {
@@ -357,7 +357,7 @@ TEST_CASE("check that timer is running (with callback, force stop)") {
                     REQUIRE(false);
                 }
 
-                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MyDerivedNode>());
             });
         }
     };
@@ -373,7 +373,7 @@ TEST_CASE("check that timer is running (with callback, force stop)") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("check that timer is running (with callback)") {
@@ -435,7 +435,7 @@ TEST_CASE("check that timer is running (with callback)") {
                     REQUIRE(false);
                 }
 
-                getWorldRootNode()->addChildNode(gc_new<MyDerivedNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MyDerivedNode>());
             });
         }
     };
@@ -451,7 +451,7 @@ TEST_CASE("check that timer is running (with callback)") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("callback validator should prevent callback being executed after despawn") {
@@ -508,7 +508,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
                     REQUIRE(false);
                 }
 
-                const auto pNode = gc_new<MyDerivedNode>();
+                const auto pNode = sgc::makeGc<MyDerivedNode>();
                 getWorldRootNode()->addChildNode(pNode); // do Node::onSpawning logic
 
                 // Timeout submitted a deferred task, despawn now.
@@ -546,7 +546,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("callback validator should prevent callback being executed after despawning and spawning again "
@@ -604,7 +604,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
                     REQUIRE(false);
                 }
 
-                const auto pNode = gc_new<MyDerivedNode>();
+                const auto pNode = sgc::makeGc<MyDerivedNode>();
                 getWorldRootNode()->addChildNode(pNode); // do Node::onSpawning logic
 
                 // Timeout submitted a deferred task, despawn now.
@@ -648,7 +648,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("callback validator should prevent callback being executed after despawning and spawning again") {
@@ -702,7 +702,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
                     REQUIRE(false);
                 }
 
-                const auto pNode = gc_new<MyDerivedNode>();
+                const auto pNode = sgc::makeGc<MyDerivedNode>();
                 getWorldRootNode()->addChildNode(pNode);
                 pNode->runTimer();
 
@@ -746,7 +746,7 @@ TEST_CASE("callback validator should prevent callback being executed after despa
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("callback validator should prevent previous callback being executed after starting a new one") {
@@ -804,7 +804,7 @@ TEST_CASE("callback validator should prevent previous callback being executed af
                     REQUIRE(false);
                 }
 
-                const auto pNode = gc_new<MyDerivedNode>();
+                const auto pNode = sgc::makeGc<MyDerivedNode>();
                 getWorldRootNode()->addChildNode(pNode);
 
                 pNode->runTimer(false);
@@ -840,7 +840,7 @@ TEST_CASE("callback validator should prevent previous callback being executed af
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("stopping looping timer from callback") {
@@ -913,5 +913,5 @@ TEST_CASE("stopping looping timer from callback") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

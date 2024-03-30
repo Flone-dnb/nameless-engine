@@ -11,9 +11,11 @@
 #include <atomic>
 
 // Custom.
-#include "misc/GC.hpp"
 #include "misc/Globals.h"
 #include "misc/Error.h"
+
+// External.
+#include "GcPtr.h"
 
 namespace ne {
     class GameManager;
@@ -130,7 +132,7 @@ namespace ne {
          *
          * @return `nullptr` if world is being destroyed, otherwise pointer to world's root node.
          */
-        gc<Node> getRootNode();
+        sgc::GcPtr<Node> getRootNode();
 
         /**
          * Returns the current amount of spawned nodes that are marked as "should be called every frame".
@@ -171,7 +173,7 @@ namespace ne {
          * @param iWorldSize   World size in game units. Must be power of 2
          * (128, 256, 512, 1024, 2048, etc.).
          */
-        World(GameManager* pGameManager, gc<Node> pRootNode, size_t iWorldSize);
+        World(GameManager* pGameManager, sgc::GcPtr<Node> pRootNode, size_t iWorldSize);
 
         /**
          * Called from Node to notify the World about a new node being spawned.
@@ -244,7 +246,7 @@ namespace ne {
         std::pair<std::recursive_mutex, bool> mtxIsDestroyed;
 
         /** World's root node. */
-        std::pair<std::mutex, gc<Node>> mtxRootNode;
+        std::pair<std::mutex, sgc::GcPtr<Node>> mtxRootNode;
 
         /** Array of currently spawned nodes that are marked as "should be called every frame". */
         CalledEveryFrameNodes calledEveryFrameNodes;

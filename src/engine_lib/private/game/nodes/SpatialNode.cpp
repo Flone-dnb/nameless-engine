@@ -261,8 +261,8 @@ namespace ne {
             // (don't unlock our world matrix yet)
             const auto pMtxChildNodes = getChildNodes();
             std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-            for (const auto& pNode : *pMtxChildNodes->second) {
-                recalculateWorldMatrixForNodeAndNotifyChildren(&*pNode);
+            for (const auto& pNode : pMtxChildNodes->second) {
+                recalculateWorldMatrixForNodeAndNotifyChildren(pNode.get());
             }
         }
     }
@@ -279,8 +279,8 @@ namespace ne {
         // This is not a spatial node, notify children maybe there's a spatial node somewhere.
         const auto pMtxChildNodes = pNode->getChildNodes();
         std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-        for (const auto& pNode : *pMtxChildNodes->second) {
-            recalculateWorldMatrixForNodeAndNotifyChildren(&*pNode);
+        for (const auto& pNode : pMtxChildNodes->second) {
+            recalculateWorldMatrixForNodeAndNotifyChildren(pNode.get());
         }
     }
 
@@ -358,7 +358,7 @@ namespace ne {
         return mtxLocalSpace.second.relativeRotationMatrix;
     }
 
-    std::pair<std::recursive_mutex, gc<SpatialNode>>* SpatialNode::getClosestSpatialParent() {
+    std::pair<std::recursive_mutex, sgc::GcPtr<SpatialNode>>* SpatialNode::getClosestSpatialParent() {
         return &mtxSpatialParent;
     }
 

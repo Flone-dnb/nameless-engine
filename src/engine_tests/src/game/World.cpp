@@ -14,11 +14,11 @@ TEST_CASE("create and destroy world") {
     class MyNode : public Node {
     public:
         MyNode() {
-            const auto pChildNode1 = tgc2::gc_new<Node>("Child Node 1");
+            const auto pChildNode1 = sgc::makeGc<Node>("Child Node 1");
             addChildNode(pChildNode1);
 
-            auto pChildNode2 = tgc2::gc_new<Node>("Child Node 2");
-            const auto pChildChildNode = tgc2::gc_new<Node>("Child Child Node");
+            auto pChildNode2 = sgc::makeGc<Node>("Child Node 2");
+            const auto pChildChildNode = sgc::makeGc<Node>("Child Child Node");
             pChildNode2->addChildNode(pChildChildNode);
             addChildNode(pChildNode2);
 
@@ -42,8 +42,8 @@ TEST_CASE("create and destroy world") {
         virtual void onDespawning() override { bWasDespawned = true; }
 
     private:
-        gc<Node> pRootNode;
-        gc<Node> pMyChildChildNode;
+        sgc::GcPtr<Node> pRootNode;
+        sgc::GcPtr<Node> pMyChildChildNode;
         bool bWasSpawned = false;
         bool bWasDespawned = false;
     };
@@ -63,8 +63,8 @@ TEST_CASE("create and destroy world") {
 
                 REQUIRE(getWorldRootNode());
 
-                const auto pNode1 = gc_new<MyNode>();
-                const auto pNode2 = gc_new<Node>();
+                const auto pNode1 = sgc::makeGc<MyNode>();
+                const auto pNode2 = sgc::makeGc<Node>();
                 getWorldRootNode()->addChildNode(pNode1);
                 getWorldRootNode()->addChildNode(pNode2);
 
@@ -152,7 +152,7 @@ TEST_CASE("create world and switch to another world") {
 
                 REQUIRE(getWorldRootNode());
 
-                const auto pNode = gc_new<Node>();
+                const auto pNode = sgc::makeGc<Node>();
                 getWorldRootNode()->addChildNode(pNode);
 
                 // Create another world now.
@@ -164,7 +164,7 @@ TEST_CASE("create world and switch to another world") {
                         REQUIRE(false);
                     }
 
-                    const auto pNode = gc_new<Node>();
+                    const auto pNode = sgc::makeGc<Node>();
                     getWorldRootNode()->addChildNode(pNode);
 
                     // Finished.
@@ -204,13 +204,13 @@ TEST_CASE("create, serialize and deserialize world") {
                 }
 
                 // Add child node.
-                const auto pMyNode = gc_new<ReflectionTestNode1>();
+                const auto pMyNode = sgc::makeGc<ReflectionTestNode1>();
                 REQUIRE(!pMyNode->bBoolValue2);
                 pMyNode->bBoolValue2 = true;
                 getWorldRootNode()->addChildNode(pMyNode);
 
                 // And another child node.
-                const auto pChildNode = gc_new<Node>();
+                const auto pChildNode = sgc::makeGc<Node>();
                 pMyNode->addChildNode(pChildNode);
 
                 // Serialize world.
@@ -243,13 +243,13 @@ TEST_CASE("create, serialize and deserialize world") {
                             }
                             // Check that everything is correct.
                             REQUIRE(getWorldRootNode());
-                            REQUIRE(getWorldRootNode()->getChildNodes()->second->size() == 1);
+                            REQUIRE(getWorldRootNode()->getChildNodes()->second.size() == 1);
 
-                            auto pMyNode = gc_dynamic_pointer_cast<ReflectionTestNode1>(
-                                getWorldRootNode()->getChildNodes()->second->operator[](0));
+                            sgc::GcPtr<ReflectionTestNode1> pMyNode = dynamic_cast<ReflectionTestNode1*>(
+                                getWorldRootNode()->getChildNodes()->second[0].get());
                             REQUIRE(pMyNode);
                             REQUIRE(pMyNode->bBoolValue2);
-                            REQUIRE(pMyNode->getChildNodes()->second->size() == 1);
+                            REQUIRE(pMyNode->getChildNodes()->second.size() == 1);
 
                             getWindow()->close();
                         },
@@ -295,7 +295,7 @@ TEST_CASE("check that node is spawned") {
 
                 REQUIRE(getWorldRootNode());
 
-                const auto pNode = gc_new<Node>();
+                const auto pNode = sgc::makeGc<Node>();
                 getWorldRootNode()->addChildNode(pNode);
 
                 // Check that spawned.

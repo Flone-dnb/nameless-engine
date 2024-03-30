@@ -476,7 +476,7 @@ namespace ne {
             // See if config file exists.
             if (std::filesystem::exists(pathToConfigFile)) {
                 // Try to deserialize.
-                auto result = Serializable::deserialize<std::shared_ptr, RenderSettings>(pathToConfigFile);
+                auto result = Serializable::deserialize<std::shared_ptr<RenderSettings>>(pathToConfigFile);
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
@@ -786,7 +786,7 @@ namespace ne {
         // See if config file exists.
         if (std::filesystem::exists(pathToConfigFile)) {
             // Try to deserialize.
-            auto result = Serializable::deserialize<std::shared_ptr, RenderSettings>(pathToConfigFile);
+            auto result = Serializable::deserialize<std::shared_ptr<RenderSettings>>(pathToConfigFile);
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

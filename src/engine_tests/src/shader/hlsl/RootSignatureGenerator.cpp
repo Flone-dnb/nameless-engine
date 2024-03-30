@@ -39,7 +39,7 @@ TEST_CASE("root signature merge is correct") {
                 meshData.getIndices()->push_back({0});
 
                 // Create node and initialize.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(std::move(meshData));
 
                 // Spawn mesh node.
@@ -85,6 +85,6 @@ TEST_CASE("root signature merge is correct") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

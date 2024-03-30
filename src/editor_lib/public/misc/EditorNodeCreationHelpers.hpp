@@ -19,9 +19,9 @@ namespace ne {
          */
         template <typename NodeType>
             requires std::derived_from<NodeType, Node>
-        static inline gc<NodeType> createEditorNode(const std::string& sNodeName) {
+        static inline sgc::GcPtr<NodeType> createEditorNode(const std::string& sNodeName) {
             // Create node.
-            auto pCreatedNode = gc_new<NodeType>(sNodeName);
+            auto pCreatedNode = sgc::makeGc<NodeType>(sNodeName);
 
             // Disable serialization so that it won't be serialized as part of the game world.
             pCreatedNode->setSerialize(false);

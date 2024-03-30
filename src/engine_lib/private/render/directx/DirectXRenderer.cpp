@@ -565,6 +565,8 @@ namespace ne {
         pCommandList->ResourceBarrier(1, &transition);
 
         // Clear depth/stencil.
+        // (some weird error in external code or clang-tidy's false-positive)
+        // NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
         pCommandList->ClearDepthStencilView(
             depthStencilDescriptorHandle,
             D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
@@ -572,6 +574,7 @@ namespace ne {
             0,
             0,
             nullptr);
+        // NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
 
         // Bind only DSV for depth prepass.
         pCommandList->OMSetRenderTargets(0, nullptr, FALSE, &depthStencilDescriptorHandle);

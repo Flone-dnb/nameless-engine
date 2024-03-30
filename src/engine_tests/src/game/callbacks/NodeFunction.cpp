@@ -46,7 +46,7 @@ TEST_CASE("node callback function is not called after the node is despawned") {
                 }
 
                 // Spawn node.
-                auto pMyNode = gc_new<MyNode>();
+                auto pMyNode = sgc::makeGc<MyNode>();
                 getWorldRootNode()->addChildNode(pMyNode);
 
                 // Save callback.

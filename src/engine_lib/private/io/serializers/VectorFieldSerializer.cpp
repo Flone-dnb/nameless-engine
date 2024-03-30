@@ -375,7 +375,7 @@ namespace ne {
 
                 for (const auto& [key, value] : fieldValue) {
                     auto result =
-                        Serializable::deserialize<std::shared_ptr, Serializable>(value, customAttributes);
+                        Serializable::deserialize<std::shared_ptr<Serializable>>(value, customAttributes);
                     if (std::holds_alternative<Error>(result)) {
                         auto error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();

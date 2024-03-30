@@ -9,9 +9,12 @@
 
 // Custom.
 #include "io/Serializable.h"
-#include "misc/GC.hpp"
 #include "input/KeyboardKey.hpp"
+#include "gccontainers/GcVector.hpp"
 #include "game/callbacks/NodeNotificationBroadcaster.hpp"
+
+// External.
+#include "GcPtr.h"
 
 #include "Node.generated.h"
 
@@ -90,7 +93,8 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise pointer to the root node.
          */
-        static std::variant<gc<Node>, Error> deserializeNodeTree(const std::filesystem::path& pathToFile);
+        static std::variant<sgc::GcPtr<Node>, Error>
+        deserializeNodeTree(const std::filesystem::path& pathToFile);
 
         /**
          * Sets node's name.
@@ -134,7 +138,7 @@ namespace ne RNAMESPACE() {
          * (after `onAfterAttachedToNewParent` was called)
          */
         void addChildNode(
-            const gc<Node>& pNode,
+            const sgc::GcPtr<Node>& pNode,
             AttachmentRule locationRule = AttachmentRule::KEEP_WORLD,
             AttachmentRule rotationRule = AttachmentRule::KEEP_WORLD,
             AttachmentRule scaleRule = AttachmentRule::KEEP_WORLD);
@@ -181,7 +185,7 @@ namespace ne RNAMESPACE() {
          * @return `nullptr` if this node is not spawned or was despawned or world is being destroyed (always
          * check returned pointer before doing something), otherwise valid pointer.
          */
-        gc<Node> getWorldRootNode();
+        sgc::GcPtr<Node> getWorldRootNode();
 
         /**
          * Returns parent node if this node.
@@ -197,7 +201,7 @@ namespace ne RNAMESPACE() {
          * @return `nullptr` as a gc pointer (second value in the pair) if this node has no parent
          * (could only happen when the node is not spawned), otherwise valid gc pointer.
          */
-        std::pair<std::recursive_mutex, gc<Node>>* getParentNode();
+        std::pair<std::recursive_mutex, sgc::GcPtr<Node>>* getParentNode();
 
         /**
          * Returns pointer to child nodes array.
@@ -207,12 +211,12 @@ namespace ne RNAMESPACE() {
          * @warning Avoid saving returned raw pointer as it points to the node's field and does not guarantee
          * that the node will always live while you hold this pointer. Returning raw pointer in order
          * to avoid creating GC pointers (if you for example only want to iterate over child nodes
-         * there's no point in returning gc_vector), but you can always save returned gc_vector
+         * there's no point in returning GC vector), but you can always save returned GC vector
          * or GC pointers to child nodes if you need.
          *
          * @return Array of child nodes.
          */
-        std::pair<std::recursive_mutex, gc_vector<Node>>* getChildNodes();
+        std::pair<std::recursive_mutex, sgc::GcVector<sgc::GcPtr<Node>>>* getChildNodes();
 
         /**
          * Goes up the parent node chain (up to the world's root node if needed) to find
@@ -230,7 +234,7 @@ namespace ne RNAMESPACE() {
          */
         template <typename NodeType>
             requires std::derived_from<NodeType, Node>
-        gc<NodeType> getParentNodeOfType(const std::string& sParentNodeName = "");
+        sgc::GcPtr<NodeType> getParentNodeOfType(const std::string& sParentNodeName = "");
 
         /**
          * Goes down the child node chain to find a first node that matches the specified node type and
@@ -248,7 +252,7 @@ namespace ne RNAMESPACE() {
          */
         template <typename NodeType>
             requires std::derived_from<NodeType, Node>
-        gc<NodeType> getChildNodeOfType(const std::string& sChildNodeName = "");
+        sgc::GcPtr<NodeType> getChildNodeOfType(const std::string& sChildNodeName = "");
 
         /**
          * Returns last created game instance.
@@ -649,13 +653,13 @@ namespace ne RNAMESPACE() {
                 const std::string& sObjectUniqueId,
                 const std::unordered_map<std::string, std::string>& customAttributes = {},
                 Serializable* pOriginalObject = nullptr,
-                gc<Node> pDeserializedOriginalObject = nullptr)
+                sgc::GcPtr<Node> pDeserializedOriginalObject = nullptr)
                 : SerializableObjectInformation(pObject, sObjectUniqueId, customAttributes, pOriginalObject) {
                 this->pDeserializedOriginalObject = pDeserializedOriginalObject;
             }
 
             /** GC pointer to the deserialized original object. */
-            gc<Node> pDeserializedOriginalObject = nullptr;
+            sgc::GcPtr<Node> pDeserializedOriginalObject = nullptr;
         };
 
         /**
@@ -775,10 +779,10 @@ namespace ne RNAMESPACE() {
         std::string sNodeName;
 
         /** Attached child nodes. Should be used under the mutex when changing children. */
-        std::pair<std::recursive_mutex, gc_vector<Node>> mtxChildNodes;
+        std::pair<std::recursive_mutex, sgc::GcVector<sgc::GcPtr<Node>>> mtxChildNodes;
 
         /** Attached parent node. */
-        std::pair<std::recursive_mutex, gc<Node>> mtxParentNode;
+        std::pair<std::recursive_mutex, sgc::GcPtr<Node>> mtxParentNode;
 
         /** Map of action events that this node is binded to. Must be used with mutex. */
         std::pair<
@@ -858,7 +862,7 @@ namespace ne RNAMESPACE() {
 
     template <typename NodeType>
         requires std::derived_from<NodeType, Node>
-    gc<NodeType> Node::getParentNodeOfType(const std::string& sParentNodeName) {
+    sgc::GcPtr<NodeType> Node::getParentNodeOfType(const std::string& sParentNodeName) {
         std::scoped_lock guard(mtxParentNode.first);
 
         // Check if have a parent.
@@ -867,10 +871,11 @@ namespace ne RNAMESPACE() {
         }
 
         // Check parent's type and optionally name.
-        if (dynamic_cast<NodeType*>(&*mtxParentNode.second) != nullptr &&
+        sgc::GcPtr<NodeType> pCastedParentNode = dynamic_cast<NodeType*>(mtxParentNode.second.get());
+        if (pCastedParentNode != nullptr &&
             (sParentNodeName.empty() || mtxParentNode.second->getNodeName() == sParentNodeName)) {
             // Found the node.
-            return gc_dynamic_pointer_cast<NodeType>(mtxParentNode.second);
+            return pCastedParentNode;
         }
 
         // Ask parent nodes of that node.
@@ -879,16 +884,17 @@ namespace ne RNAMESPACE() {
 
     template <typename NodeType>
         requires std::derived_from<NodeType, Node>
-    gc<NodeType> Node::getChildNodeOfType(const std::string& sChildNodeName) {
+    sgc::GcPtr<NodeType> Node::getChildNodeOfType(const std::string& sChildNodeName) {
         std::scoped_lock guard(mtxChildNodes.first);
 
         // Iterate over child nodes.
-        for (auto& pChildNode : *mtxChildNodes.second) {
+        for (auto& pChildNode : mtxChildNodes.second) {
             // Check if this is the node we are looking for.
-            if (dynamic_cast<NodeType*>(&*pChildNode) != nullptr &&
+            sgc::GcPtr<NodeType> pCastedChildNode = dynamic_cast<NodeType*>(pChildNode.get());
+            if (pCastedChildNode != nullptr &&
                 (sChildNodeName.empty() || pChildNode->getNodeName() == sChildNodeName)) {
                 // Found the node.
-                return gc_dynamic_pointer_cast<NodeType>(pChildNode);
+                return pCastedChildNode;
             }
 
             // Ask child nodes of that node.

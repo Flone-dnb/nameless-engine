@@ -62,7 +62,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     meshData.getIndices()->push_back({0, 1});
 
                     // Create node and initialize.
-                    const auto pMeshNode = gc_new<MeshNode>("My cool node");
+                    const auto pMeshNode = sgc::makeGc<MeshNode>("My cool node");
                     pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
                     pMeshNode->setMeshData(std::move(meshData));
                     getWorldRootNode()->addChildNode(
@@ -78,7 +78,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     }
                 }
 
-                gc_collector()->collect();
+                sgc::GarbageCollector::get().collectGarbage();
 
                 {
                     // Deserialize.
@@ -89,11 +89,11 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pRootNode = std::get<gc<Node>>(std::move(result));
+                    const auto pRootNode = std::get<sgc::GcPtr<Node>>(std::move(result));
 
-                    REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
-                    const auto pMeshNode =
-                        gc_dynamic_pointer_cast<MeshNode>(pRootNode->getChildNodes()->second->operator[](0));
+                    REQUIRE(pRootNode->getChildNodes()->second.size() == 1);
+                    const sgc::GcPtr<MeshNode> pMeshNode =
+                        dynamic_cast<MeshNode*>(pRootNode->getChildNodes()->second[0].get());
 
                     // Check.
                     REQUIRE(pMeshNode->getNodeName() == "My cool node");
@@ -110,7 +110,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
                     REQUIRE(mtxMeshData.second->getIndices()->at(0)[1] == 1);
                 }
 
-                gc_collector()->collect();
+                sgc::GarbageCollector::get().collectGarbage();
 
                 // Cleanup.
                 if (std::filesystem::exists(pathToFileInTemp)) {
@@ -134,7 +134,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -191,7 +191,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     meshData.getIndices()->push_back({0, 1});
 
                     // Create node and initialize.
-                    const auto pMeshNode = gc_new<MeshNode>("My cool node");
+                    const auto pMeshNode = sgc::makeGc<MeshNode>("My cool node");
                     pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
                     pMeshNode->setMeshData(std::move(meshData));
 
@@ -207,14 +207,14 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 {
                     // Deserialize mesh node.
-                    auto result = Serializable::deserialize<gc, MeshNode>(pathToNodeFile);
+                    auto result = Serializable::deserialize<sgc::GcPtr<MeshNode>>(pathToNodeFile);
                     if (std::holds_alternative<Error>(result)) {
                         auto error = std::get<Error>(result);
                         error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
+                    auto pMeshNode = std::get<sgc::GcPtr<MeshNode>>(std::move(result));
 
                     getWorldRootNode()->addChildNode(
                         pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
@@ -235,8 +235,8 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                 {
                     // Modify mesh data.
-                    auto pMeshNode = gc_dynamic_pointer_cast<MeshNode>(
-                        getWorldRootNode()->getChildNodes()->second->operator[](0));
+                    sgc::GcPtr<MeshNode> pMeshNode =
+                        dynamic_cast<MeshNode*>(getWorldRootNode()->getChildNodes()->second[0].get());
 
                     MeshData meshData;
                     meshData.getVertices()->push_back(vertex1);
@@ -265,11 +265,11 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pRootNode = std::get<gc<Node>>(std::move(result));
+                    const auto pRootNode = std::get<sgc::GcPtr<Node>>(std::move(result));
 
-                    REQUIRE(pRootNode->getChildNodes()->second->size() == 1);
-                    const auto pMeshNode =
-                        gc_dynamic_pointer_cast<MeshNode>(pRootNode->getChildNodes()->second->operator[](0));
+                    REQUIRE(pRootNode->getChildNodes()->second.size() == 1);
+                    const sgc::GcPtr<MeshNode> pMeshNode =
+                        dynamic_cast<MeshNode*>(pRootNode->getChildNodes()->second[0].get());
 
                     // Check.
                     REQUIRE(pMeshNode->getNodeName() == "My cool node");
@@ -288,7 +288,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
                     REQUIRE(mtxMeshData.second->getIndices()->at(0)[2] == 2);
                 }
 
-                gc_collector()->collect();
+                sgc::GarbageCollector::get().collectGarbage();
 
                 // Cleanup.
                 if (std::filesystem::exists(pathToFileInTemp)) {
@@ -315,7 +315,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -355,14 +355,14 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
 #endif
 
                 // Deserialize.
-                auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
+                auto result = Serializable::deserialize<sgc::GcPtr<MeshNode>>(pathToFileInTemp);
                 if (std::holds_alternative<Error>(result)) {
                     Error error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
+                const auto pMeshNode = std::get<sgc::GcPtr<MeshNode>>(std::move(result));
 
                 // Check.
                 const auto mtxMeshData = pMeshNode->getMeshData();
@@ -401,7 +401,7 @@ TEST_CASE("MeshNode's meshdata deserialization backwards compatibility") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -452,7 +452,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
                 }
 
                 // Create node and initialize.
-                const auto pMeshNode = gc_new<MeshNode>("My cool node");
+                const auto pMeshNode = sgc::makeGc<MeshNode>("My cool node");
                 pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
                 pMeshNode->setMeshData(std::move(meshData));
 
@@ -526,7 +526,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -551,7 +551,7 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
                 pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Spawn sample mesh.
-                pMeshNode = gc_new<MeshNode>();
+                pMeshNode = sgc::makeGc<MeshNode>();
 
                 auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
                 meshData.getIndices()->at(0) = {
@@ -631,7 +631,7 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
 
     private:
         size_t iFrameCount = 0;
-        gc<MeshNode> pMeshNode;
+        sgc::GcPtr<MeshNode> pMeshNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -645,7 +645,7 @@ TEST_CASE("change spawned mesh from 2 to 1 to 3 to 3 (again) material slots") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -669,7 +669,7 @@ TEST_CASE("check the number of pipelines on spawned mesh material slots") {
 
                 {
                     // Spawn sample mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
                     meshData.getIndices()->at(0) = {
                         0,  1,  2,  3,  2,  1,  // +X face.
@@ -696,7 +696,7 @@ TEST_CASE("check the number of pipelines on spawned mesh material slots") {
 
                 {
                     // Spawn another mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                     REQUIRE(pMeshNode->getAvailableMaterialSlotCount() == 1);
 
@@ -724,7 +724,7 @@ TEST_CASE("check the number of pipelines on spawned mesh material slots") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -750,7 +750,7 @@ TEST_CASE("serialize and deserialize mesh with 2 material slots") {
 
                 {
                     // Spawn sample mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
                     meshData.getIndices()->at(0) = {
                         0,  1,  2,  3,  2,  1,  // +X face.
@@ -778,14 +778,14 @@ TEST_CASE("serialize and deserialize mesh with 2 material slots") {
                 }
 
                 // Deserialize.
-                auto result = Serializable::deserialize<gc, MeshNode>(pathToFileInTemp);
+                auto result = Serializable::deserialize<sgc::GcPtr<MeshNode>>(pathToFileInTemp);
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                auto pMeshNode = std::get<gc<MeshNode>>(std::move(result));
+                auto pMeshNode = std::get<sgc::GcPtr<MeshNode>>(std::move(result));
 
                 // Make sure there are 2 slots.
                 REQUIRE(pMeshNode->getMeshData().second->getIndices()->size() == 2);
@@ -812,7 +812,7 @@ TEST_CASE("serialize and deserialize mesh with 2 material slots") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -842,7 +842,7 @@ TEST_CASE("check draw call count with invisibility") {
                 getCameraManager()->setActiveCamera(pCamera);
 
                 // Spawn sample mesh.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pMeshNode);
                 pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
@@ -859,7 +859,7 @@ TEST_CASE("check draw call count with invisibility") {
                 REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() >= 1);
 
                 // Spawn another sample mesh.
-                pSomeMeshNode = gc_new<MeshNode>();
+                pSomeMeshNode = sgc::makeGc<MeshNode>();
                 pSomeMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pSomeMeshNode);
                 pSomeMeshNode->setWorldLocation(glm::vec3(1.0F, 3.0F, 0.0F));
@@ -880,7 +880,7 @@ TEST_CASE("check draw call count with invisibility") {
 
     private:
         size_t iFrameCount = 0;
-        gc<MeshNode> pSomeMeshNode;
+        sgc::GcPtr<MeshNode> pSomeMeshNode;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -894,7 +894,7 @@ TEST_CASE("check draw call count with invisibility") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -920,7 +920,7 @@ TEST_CASE("check draw call count with frustum culling") {
                 pCamera->setRelativeLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
                 // Spawn sample mesh.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pMeshNode);
                 pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
@@ -953,7 +953,7 @@ TEST_CASE("check draw call count with frustum culling") {
 
     private:
         size_t iFrameCount = 0;
-        gc<CameraNode> pCamera;
+        sgc::GcPtr<CameraNode> pCamera;
     };
 
     auto result = Window::getBuilder().withVisibility(false).build();
@@ -967,6 +967,6 @@ TEST_CASE("check draw call count with frustum culling") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

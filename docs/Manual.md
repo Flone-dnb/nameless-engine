@@ -379,33 +379,32 @@ Some engine functions return raw pointers. Generally, when the engine returns a 
 
 ### Garbage collector overview
 
-The engine has a garbage collector: https://github.com/Flone-dnb/tgc2. The main reason why we need a garbage collector is to resolve cyclic references. The game has a node hierarchy that can change dynamically, nodes can reference other nodes that exist in the world and cyclic references could occur easily.
+The engine uses the following garbage collector: https://github.com/Flone-dnb/sgc. The main reason why we need a garbage collector is to resolve cyclic references. The game has a node hierarchy that can change dynamically, nodes can reference other nodes that exist in the world and cyclic references could occur easily.
 
-The garbage collector library provides a smart pointer `tgc2::gc<T>` that acts as a `std::shared_ptr<T>`, the library also has `gc_collector()->collect()` function that is used to resolve cyclic references and free objects that are stuck in cyclic references. By default the engine runs garbage collection regularly so you don't have to care about it (and you don't need to call `gc_collector()->collect()` from your game code). Here is an example on how to use those `gc` pointers:
+The garbage collector library provides a smart pointer `sgc::GcPtr<T>` that acts as a `std::shared_ptr<T>`, the library also has `sgc::GarbageCollector::get().collectGarbage()` function that is used to resolve cyclic references and free objects that are stuck in cyclic references. By default the engine runs garbage collection regularly so you don't have to care about it (and you don't need to call `sgc::GarbageCollector::get().collectGarbage()` from your game code). Here is an example on how to use these `sgc::GcPtr` objects:
 
 ```Cpp
-gc<MyNode> pNode = gc_new<MyNode>(); // it's like `std::make_shared<MyNode>()`
+sgc::GcPtr<MyNode> pNode = sgc::makeGc<MyNode>(); // it's like `std::make_shared<MyNode>()`
 ```
 
 And here is a cyclic reference example that will be resolved by the garbage collector:
 
 ```Cpp
-#include "misc/GC.hpp" // include for `gc` pointers
-
-using namespace ne;
+#include "GcPtr.h" // include for `GC` pointers
 
 class Foo{
 public:
-    gc<Foo> pFoo;
+    sgc::GcPtr<Foo> pFoo;
 };
 
 {
-    auto pFoo = gc_new<Foo>();
+    auto pFoo = sgc::makeGc<Foo>();
     pFoo->pFoo = pFoo; // cyclic reference
 }
 
 // `Foo` still exists and was not freed, waiting for GC...
-gc_collector()->collect(); // this will be run regularly somewhere in the engine code so you don't have to care about it
+sgc::GarbageCollector::get().collectGarbage(); // this will be run regularly somewhere in the engine code
+                                               // so you don't have to care about it
 // `Foo` was freed
 ```
 
@@ -420,154 +419,30 @@ Of course, not everything will work magically. There is one or two cases where g
 Probably the most common mistake that could cause the garbage collection to fail is related to containers, because it's the most common mistake that developers could make, let's see how to avoid it. Imagine you want to store an array of `gc` pointers or store them in another container like `std::unordered_map`, you could write something like this:
 
 ```Cpp
-std::vector<gc<MyNode>> vMyNodes; // DON'T DO THIS, this may leak
+std::vector<sgc::GcPtr<MyNode>> vMyNodes; // DON'T DO THIS, this may leak
 ```
 
 but due to garbage collector limitations this might cause memory leaks. Don't worry, when these leaks will happen the engine will log an error message with possible reasons on why that happend and possible solutions, so you will instantly know what to do. The right way to store `gc` pointers in a container will be the following:
 
 ```Cpp
-gc_vector<MyNode> vMyNodes = gc_new_vector<MyNode>(); // you have to initialize it like this
-                                                      // otherwise you will crash when using it
+#include "gccontainers/GcVector.hpp"
+
+sgc::GcVector<sgc::GcPtr<MyNode>> vMyNodes; // works just like `std::vector<T>`
 ```
 
-under the hood `gc_vector` is a `gc` pointer to the `std::vector` object, so you need to use it as a pointer (i.e. instead of `vMyNodes.push_back` use `vMyNodes->push_back`). Because it's a pointer you can copy this `gc_vector` easily.
+Not all STL containers have `gc` alternative, see the garbage collector's repository for more information.
 
-Remember that you have to initialize `gc_vector`s correctly (like shown above), otherwise expect crashes in vector operations.
+### GC limitations and thread safety with examples
 
-Not all STL containers have `gc` alternative, here is a list of supported STL wrappers for storing `gc` pointers:
+It's really important that you know how to properly use the GC objects.
 
-- `gc_vector` for `std::vector`,
-- `gc_map` for `std::map`,
-- `gc_unordered_map` for `std::unordered_map`,
-- `gc_deque` for `std::deque`,
-- `gc_list` for `std::list`,
-- `gc_set` for `std::set`,
-- `gc_unordered_set` for `std::unordered_set`.
-- (see garbage collector's GitHub page for up to date information)
+Use the link to the garbage collector's repository (see above) and make sure to read the `README` file (especially the limitations and thread safety sections).
 
-### Capturing GC pointers in std::function
+Here's what you don't need to care about in your game's code:
 
-There is also an `std::function` wrapper called `gc_function` for some special cases where you want to capture `gc` pointers in it:
-
-```Cpp
-auto pObj = tgc2::gc_new<int>(0);
-gc_function<void()> gc_callback = [pObj](){};
-```
-
-Otherwise there will be a leak:
-
-```Cpp
-class MyNode{
-  std::function<void()> callback;
-}
-
-// somewhere else
-
-gc<MyNode> pMyNode = ...;
-pMyNode->callback = [pMyNode](){} // not OK, leaks
-```
-
-or crashes in GC code (if there was a garbage collection for captured in `std::function` `gc` pointers).
-
-### Casting GC pointers
-
-If you need to cast `gc` pointers there are also functions for that:
-
-- use `gc_static_pointer_cast<To>(pFrom)` for `static_cast`,
-- use `gc_dynamic_pointer_cast<To>(pFrom)` for `dynamic_cast`, example:
-
-```Cpp
-// note that `gc_dynamic_pointer_cast` takes `gc<T>&` and not `const gc<T>&`
-gc<ParentClass> pParent = gc_new<ParentClass>();
-gc<ChildClass> pChild = gc_dynamic_pointer_cast<ChildClass>(pParent); // OK because `pParent` is not `const`
-// you have 2 GC pointers now
-// ==========================================================
-const gc<ParentClass> pParent = gc_new<ParentClass>();
-gc<ChildClass> pChild = gc_dynamic_pointer_cast<ChildClass>(pParent); // compilation error because `pParent` is `const`
-```
-
-### Comparing GC pointers with pointer types
-
-If you need to compare a raw pointer with a `gc` pointer, do the following:
-
-```Cpp
-if (&*pGcPointer == pRawPointer){
-  // Both pointers are pointing to the same address.
-}
-```
-
-### Examples of storing GC fields in various places
-
-Here are some typical `gc` pointer use-cases where you might ask "is this OK?" and the answer is "yes":
-
-```Cpp
-class Collected {};
-
-class Inner {
-public:
-    gc<Collected> pCollected;
-};
-
-class Outer {
-public:
-    Inner inner; // not wrapping into a `gc`
-};
-
-{
-    Outer outer;
-    outer.inner.pCollected = gc_new<Collected>();
-
-    // `pCollected` is alive
-} // goes out of scope but still alive, waiting for GC
-
-// ... say the engine runs GC now (happens regularly, don't care about it) ...
-
-// `pCollected` is freed now, everything run as expected
-```
-
-Another example:
-
-```Cpp
-void MyNode::bar(){
-    foo(gc<MyNode>(this)); // <- constructing a gc pointer from `this` is fine
-}
-
-void foo(const gc<Node>& pNodeToProcess);
-```
-
-Another example:
-
-```Cpp
-class Collected {};
-
-struct MyData {
-    void allocate() { pCollected = gc_new<Collected>(); }
-
-private:
-    gc<Collected> pCollected;
-};
-
-{
-    std::vector<MyData> vMyData; // intentionally not using `gc_vector` (because not storing `gc<MyData>`)
-
-    constexpr size_t iDataSize = 10;
-    for (size_t i = 0; i < iDataSize; i++) {
-        MyData data;
-        data.allocate();
-        vMyData.push_back(std::move(data));
-    }
-
-    // Array objects are alive
-} // go out of scope but still alive, waiting for GC
-
-// ... say the engine runs GC now (happens regularly, don't care about it) ...
-
-// all `gc` fields were freed now, everything run as expected
-```
-
-Moreover, storing gc pointers and gc vectors in `std::pair` should also be safe (since our nodes are doing that without any leaks).
-
-You can find more examples in the file `src/engine_tests/misc/GC.cpp`.
+- No need to set GC info callbacks because the engine does that for you.
+- No need to directly interact with `sgc::GarbageCollector` because the engine runs garbage collector regularly and in some special situations.
+- No need to add GC to your game's cmake file because it's already included in the engine's cmake target.
 
 ### Interacting with garbage collector
 
@@ -577,59 +452,7 @@ You can find more examples in the file `src/engine_tests/misc/GC.cpp`.
 - `setGarbageCollectorRunInterval` to set the time interval after which the GC runs again.
 - and probably more, see the `GameInstance` class for more details...
 
-Just note that you don't need to directly use `gc_collector()` (if you maybe saw this somewhere in examples), the engine will use it, you on the other hand should use `GameInstance` functions for garbage collection.
-
-### Garbage collector limitations
-
-Note that currently used version of garbage collection library does not support multiple inheritance, so the following example will produce a compilation error:
-
-```Cpp
-class Foo {};
-
-class Bar {};
-
-class Wow : public Foo, public Bar {};
-
-gc<Wow> pWow = gc_new<Wow>();
-gc<Foo> pFoo = gc_dynamic_pointer_cast<Foo>(pWow); // triggers a `static_assert` "multiple inheritance is not supported"
-```
-
-But that's not all, the following example also not going to work:
-
-```Cpp
-class SomeInterface {
-public:
-    virtual void foo() = 0;
-};
-
-class MyDerivedNode : public Node, public SomeInterface {
-public:
-    MyDerivedNode() = default;
-    virtual ~MyDerivedNode() override = default;
-
-    virtual void foo() override { sSomePrivateString = "It seems to work."; }
-
-protected:
-    std::string sSomePrivateString = "Hello!";
-};
-
-gc<SomeInterface> pMyInterface;
-{
-  auto pMyNode = gc_new<MyDerivedNode>();
-
-  pMyInterface = pMyNode;
-  // or
-  pMyInterface = gc<SomeInterface>(dynamic_cast<SomeInterface>(&*pMyNode)); // most likely will throw exception
-}
-
-// `pMyInterface` is alive and holds some object, but...
-
-// say the engine runs garbage collection now - it will crash during garbage collection process
-```
-
-Don't try to trick this system as it will probably lead to exceptions, leaks and crashes.
-
-So if you're planning to use `gc` pointers on some type T, make sure this type T is not using multiple inheritance. Our reflection system can also have issues with multiple inheritance (in some special cases which we will talk about later), just note that.
+Just note that you don't need to directly use `sgc::GarbageCollector` (if you maybe saw this somewhere in examples), the engine will use it, you on the other hand should use `GameInstance` functions for garbage collection.
 
 ## Deferred tasks and thread pool
 
@@ -784,7 +607,7 @@ void MyGameInstance::onGameStarted(){
         }
 
         // Spawn sample mesh.
-        const auto pMeshNode = gc_new<MeshNode>();
+        const auto pMeshNode = sgc::makeGc<MeshNode>();
         pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
         getWorldRootNode()->addChildNode(pMeshNode);
 
@@ -851,7 +674,7 @@ void MyGameInstance::onGameStarted(){
         }
 
         // Spawn sample mesh.
-        const auto pMeshNode = gc_new<MeshNode>();
+        const auto pMeshNode = sgc::makeGc<MeshNode>();
         pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
         getWorldRootNode()->addChildNode(pMeshNode);
 
@@ -859,7 +682,7 @@ void MyGameInstance::onGameStarted(){
         pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
         // Spawn point light.
-        const auto pPointLightNode = gc_new<PointLightNode>();
+        const auto pPointLightNode = sgc::makeGc<PointLightNode>();
         getWorldRootNode()->addChildNode(pPointLightNode);
 
         // Configure point light.
@@ -889,7 +712,7 @@ void MyGameInstance::onGameStarted(){
         }
 
         // Spawn sample mesh.
-        const auto pMeshNode = gc_new<MeshNode>();
+        const auto pMeshNode = sgc::makeGc<MeshNode>();
         pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
         getWorldRootNode()->addChildNode(pMeshNode);
 
@@ -897,7 +720,7 @@ void MyGameInstance::onGameStarted(){
         pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
         // Spawn environment node.
-        const auto pEnvironmentNode = gc_new<EnvironmentNode>();
+        const auto pEnvironmentNode = sgc::makeGc<EnvironmentNode>();
         getWorldRootNode()->addChildNode(pEnvironmentNode);
 
         // Configure environment settings.
@@ -1058,7 +881,7 @@ public:
     virtual ~FlyingCharacterNode() override = default;
 
 private:
-    gc<CameraNode> pCameraNode;
+    sgc::GcPtr<CameraNode> pCameraNode;
 
     FlyingCharacterNode_GENERATED
 };
@@ -1085,15 +908,12 @@ FlyingCharacterNode::FlyingCharacterNode() : FlyingCharacterNode("Flying Charact
 
 FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
     // Create our camera node.
-    pCameraNode = ::gc_new<CameraNode>("Player Camera");
+    pCameraNode = sgc::makeGc<CameraNode>("Player Camera");
 
     // Attach the camera to the character.
     addChildNode(pCameraNode, AttachmentRule::KEEP_RELATIVE, AttachmentRule::KEEP_RELATIVE);
 }
 ```
-
-Note
-> I'm using `::%gc_new` instead of `gc_new` because of some name collision from Windows headers (this might not be the case for your project, I have some Windows headers included this might be the issue), if I would try to compile with `gc_new` I would get a weird error saying something about Microsoft extension.
 
 Now let's compile our program and make sure we have a world, in our `GameInstance::onGameStarted` create an empty world:
 
@@ -1117,7 +937,7 @@ void MyGameInstance::onGameStarted() {
         }
 
         // Prepare a sample mesh.
-        const auto pMeshNode = gc_new<MeshNode>();
+        const auto pMeshNode = sgc::makeGc<MeshNode>();
         pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
         // Spawn mesh node.
@@ -1125,7 +945,7 @@ void MyGameInstance::onGameStarted() {
         pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
         // Spawn character node.
-        const auto pCharacter = gc_new<FlyingCharacterNode>();
+        const auto pCharacter = sgc::makeGc<FlyingCharacterNode>();
         getWorldRootNode()->addChildNode(pCharacter);
         pCharacter->setWorldLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
     });
@@ -1181,12 +1001,12 @@ void MyGameInstance::onGameStarted() {
         // ... some code here ...
 
         // Spawn character node.
-        const auto pCharacter = gc_new<FlyingCharacterNode>();
+        const auto pCharacter = sgc::makeGc<FlyingCharacterNode>();
         getWorldRootNode()->addChildNode(pCharacter);
         pCharacter->setWorldLocation(glm::vec3(-1.0F, 0.0F, 0.0F));
 
         // Spawn directional light.
-        const auto pDirectionalLightNode = gc_new<DirectionalLightNode>();
+        const auto pDirectionalLightNode = sgc::makeGc<DirectionalLightNode>();
         pDirectionalLightNode->setWorldRotation(
             MathHelpers::convertDirectionToRollPitchYaw(glm::normalize(glm::vec3(1.0F, -1.0F, -1.0F))));
         getWorldRootNode()->addChildNode(pDirectionalLightNode);
@@ -1445,7 +1265,7 @@ FlyingCharacterNode::FlyingCharacterNode() : FlyingCharacterNode("Flying Charact
 
 FlyingCharacterNode::FlyingCharacterNode(const std::string& sNodeName) : SpatialNode(sNodeName) {
     // Create our camera node.
-    pCameraNode = ::gc_new<CameraNode>("Player Camera");
+    pCameraNode = sgc::makeGc<CameraNode>("Player Camera");
 
     // Attach the camera to the character.
     addChildNode(pCameraNode, AttachmentRule::KEEP_RELATIVE, AttachmentRule::KEEP_RELATIVE);
@@ -2031,7 +1851,7 @@ File_PlayerSaveData_GENERATED
 
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
-    auto result = Serializable::deserialize<std::shared_ptr, PlayerSaveData>(pathToFile);
+    auto result = Serializable::deserialize<std::shared_ptr<PlayerSaveData>>(pathToFile);
     if (std::holds_alternative<Error>(result)) [[unlikely]] {
         // ... handle error ...
     }
@@ -2111,12 +1931,13 @@ if (std::holds_alternative<Error>(idResult)) {
 const auto ids = std::get<std::set<std::string>>(idResult);
 // `ids` contains 2 values: "0" and "1", this information might be helpful.
 
-// Deserialize.
-const auto result = Serializable::deserializeMultiple<gc>(pathToFile, {"0", "1"}); // deserialize with IDs 0 and 1
+// Deserialize with IDs 0 and 1.
+const auto result = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile, {"0", "1"});
 if (std::holds_alternative<Error>(result)) {
     // ... handle error ...
 }
-auto vDeserializedObjects = std::get<std::vector<DeserializedObjectInformation<gc>>>(std::move(result));
+auto vDeserializedObjects
+    = std::get<std::vector<DeserializedObjectInformation<sgc::GcPtr<Serializable>>>>(std::move(result));
 
 // Everything is deserialized.
 ```
@@ -2286,7 +2107,7 @@ auto result = Node::deserializeNodeTree(
 if (std::holds_alternative<Error>(result)) {
     // ... process errorr ...
 }
-auto pImportedRootNode = std::get<gc<Node>>(std::move(result));
+auto pImportedRootNode = std::get<sgc::GcPtr<Node>>(std::move(result));
 
 // Spawn node tree.
 getWorldRootNode()->addChildNode(pImportedRootNode);
@@ -2306,7 +2127,7 @@ The most simple example of procedurally generated geometry is the following:
 using namespace ne;
 
 // Spawn procedural cube mesh.
-const auto pMeshNode = gc_new<MeshNode>();
+const auto pMeshNode = sgc::makeGc<MeshNode>();
 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 getWorldRootNode()->addChildNode(pMeshNode);
 ```
@@ -2423,7 +2244,7 @@ In order to query available material slots use `MeshNode::getAvailableMaterialSl
 
 ```Cpp
 // Create mesh node.
-const auto pMeshNode = gc_new<MeshNode>();
+const auto pMeshNode = sgc::makeGc<MeshNode>();
 
 // Generate cube mesh data.
 auto meshData = PrimitiveMeshGenerator::createCube(1.0F);
@@ -2632,12 +2453,8 @@ This section contains a list of important things that you need to regularly chec
 
 ### Garbage collection and GC pointers
 
-- never capture `gc` pointers in `std::function`, if your game crashes in GC code it's probably because you are capturing `gc` pointers in `std::function`
-- never store `gc` pointers in STL containers, store `gc` pointers only in "gc containers", for ex. instead of `std::vector<gc<Foo>>` use `gc_vector<Foo>` (and don't forget to initialize them properly, for ex. `gc_new_vector<Foo>()`), otherwise leaks may occur
-
-### World switching
-
-- if you are holding any `gc` pointers to nodes in game instance, make sure you set `nullptr` to them before calling `createWorld` or `loadNodeTreeAsWorld`, otherwise they will still exist in despawned (not spawned) state which might not be desired
+- never capture `gc` pointers in `std::function`
+- never store `gc` pointers in STL containers, store `gc` pointers only in "gc containers"
 
 ### Multiple inheritance
 

@@ -573,8 +573,8 @@ namespace ne {
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width = static_cast<uint32_t>(iImageWidth);
-        imageInfo.extent.height = static_cast<uint32_t>(iImageHeight);
+        imageInfo.extent.width = iImageWidth;
+        imageInfo.extent.height = iImageHeight;
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = iTextureMipLevelCount;
         imageInfo.arrayLayers = bIsCubeMap ? 6 : 1; // NOLINT: cubemap face count

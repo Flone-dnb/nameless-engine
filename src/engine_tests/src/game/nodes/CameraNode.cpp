@@ -25,10 +25,10 @@ TEST_CASE("orbital camera node behaves correctly when used in a node tree") {
 
                 constexpr float floatEpsilon = 0.001f;
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0F, 0.0F, 90.0F));
 
-                const auto pChildCameraNode = gc_new<CameraNode>();
+                const auto pChildCameraNode = sgc::makeGc<CameraNode>();
 
                 // Spawn in world.
                 pParentSpatialNode->addChildNode(
@@ -125,5 +125,5 @@ TEST_CASE("orbital camera node behaves correctly when used in a node tree") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

@@ -132,12 +132,12 @@ TEST_CASE("create engine default materials") {
                 meshData.getIndices()->push_back({0});
 
                 // Create nodes.
-                auto pMeshNodeTransparent = gc_new<MeshNode>("Transparent material node");
+                auto pMeshNodeTransparent = sgc::makeGc<MeshNode>("Transparent material node");
                 pMeshNodeTransparent->setMaterial(
                     std::get<std::shared_ptr<Material>>(std::move(resultTransparent)));
                 pMeshNodeTransparent->setMeshData(meshData);
 
-                auto pMeshNodeOpaque = gc_new<MeshNode>("Opaque material node");
+                auto pMeshNodeOpaque = sgc::makeGc<MeshNode>("Opaque material node");
                 pMeshNodeOpaque->setMaterial(std::get<std::shared_ptr<Material>>(std::move(resultOpaque)));
                 pMeshNodeOpaque->setMeshData(meshData);
 
@@ -194,7 +194,7 @@ TEST_CASE("create engine default materials") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -258,7 +258,7 @@ TEST_CASE("serialize and deserialize Material") {
 
                 {
                     // Deserialize.
-                    auto result = Serializable::deserialize<std::shared_ptr, Material>(pathToFileInTemp);
+                    auto result = Serializable::deserialize<std::shared_ptr<Material>>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
@@ -302,7 +302,7 @@ TEST_CASE("serialize and deserialize Material") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -378,17 +378,17 @@ TEST_CASE("unused materials unload shaders from memory") {
                         meshData.getIndices()->push_back({0});
 
                         // Create nodes with custom material.
-                        auto pCustomMeshNode1 = gc_new<MeshNode>();
+                        auto pCustomMeshNode1 = sgc::makeGc<MeshNode>();
                         pCustomMeshNode1->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
                         pCustomMeshNode1->setMeshData(meshData);
 
                         // Create nodes with custom material.
-                        auto pCustomMeshNode2 = gc_new<MeshNode>();
+                        auto pCustomMeshNode2 = sgc::makeGc<MeshNode>();
                         pCustomMeshNode2->setMaterial(pCustomMeshNode1->getMaterial());
                         pCustomMeshNode2->setMeshData(meshData);
 
                         // Create node with default material.
-                        auto pMeshNode = gc_new<MeshNode>();
+                        auto pMeshNode = sgc::makeGc<MeshNode>();
                         pMeshNode->setMeshData(meshData);
 
                         // Get current shader count.
@@ -445,7 +445,7 @@ TEST_CASE("unused materials unload shaders from memory") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -477,7 +477,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 0);
 
                 // Spawn sample mesh 1.
-                const auto pMeshNode1 = gc_new<MeshNode>();
+                const auto pMeshNode1 = sgc::makeGc<MeshNode>();
                 pMeshNode1->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 getWorldRootNode()->addChildNode(
@@ -488,7 +488,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 pMeshNode1->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
 
                 // Spawn sample mesh 2.
-                const auto pMeshNode2 = gc_new<MeshNode>();
+                const auto pMeshNode2 = sgc::makeGc<MeshNode>();
                 pMeshNode2->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
@@ -549,7 +549,7 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -576,7 +576,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 REQUIRE(pPipelineManager->getCurrentGraphicsPipelineCount() == 0);
 
                 // Spawn sample mesh 1.
-                const auto pMeshNode1 = gc_new<MeshNode>();
+                const auto pMeshNode1 = sgc::makeGc<MeshNode>();
                 auto mtxMeshData = pMeshNode1->getMeshData();
                 {
                     std::scoped_lock guard(*mtxMeshData.first);
@@ -587,7 +587,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 pMeshNode1->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
                 // Spawn sample mesh 2.
-                const auto pMeshNode2 = gc_new<MeshNode>();
+                const auto pMeshNode2 = sgc::makeGc<MeshNode>();
                 mtxMeshData = pMeshNode2->getMeshData();
                 {
                     std::scoped_lock guard(*mtxMeshData.first);
@@ -651,7 +651,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -685,7 +685,7 @@ TEST_CASE("change texture while spawned") {
                 }
 
                 // Spawn sample mesh.
-                pMeshNode = gc_new<MeshNode>();
+                pMeshNode = sgc::makeGc<MeshNode>();
                 auto mtxMeshData = pMeshNode->getMeshData();
                 {
                     std::scoped_lock guard(*mtxMeshData.first);
@@ -732,7 +732,7 @@ TEST_CASE("change texture while spawned") {
         virtual ~TestGameInstance() override {}
 
     private:
-        gc<MeshNode> pMeshNode;
+        sgc::GcPtr<MeshNode> pMeshNode;
         bool bChangedTexture = false;
         size_t iFramesSpentWaiting = 0;
         const size_t iFramesToWait = 10;
@@ -749,7 +749,7 @@ TEST_CASE("change texture while spawned") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -775,7 +775,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                 }
 
                 // Prepare parent mesh.
-                const auto pMeshNodeParent = gc_new<MeshNode>();
+                const auto pMeshNodeParent = sgc::makeGc<MeshNode>();
                 auto mtxMeshData = pMeshNodeParent->getMeshData();
                 {
                     std::scoped_lock guard(*mtxMeshData.first);
@@ -790,7 +790,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                 pMeshNodeParent->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
                 // Prepare child mesh.
-                const auto pMeshNodeChild = gc_new<MeshNode>();
+                const auto pMeshNodeChild = sgc::makeGc<MeshNode>();
                 mtxMeshData = pMeshNodeChild->getMeshData();
                 {
                     std::scoped_lock guard(*mtxMeshData.first);
@@ -842,14 +842,14 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    auto pDeserialized = std::get<gc<Node>>(std::move(result));
-                    const auto pMeshNodeParent = gc_dynamic_pointer_cast<MeshNode>(pDeserialized);
+                    auto pDeserialized = std::get<sgc::GcPtr<Node>>(std::move(result));
+                    const sgc::GcPtr<MeshNode> pMeshNodeParent = dynamic_cast<MeshNode*>(pDeserialized.get());
                     REQUIRE(pMeshNodeParent != nullptr);
 
                     // Get child node.
-                    REQUIRE(pMeshNodeParent->getChildNodes()->second->size() == 1);
-                    const auto pMeshNodeChild =
-                        gc_dynamic_pointer_cast<MeshNode>(pMeshNodeParent->getChildNodes()->second->at(0));
+                    REQUIRE(pMeshNodeParent->getChildNodes()->second.size() == 1);
+                    const sgc::GcPtr<MeshNode> pMeshNodeChild =
+                        dynamic_cast<MeshNode*>(pMeshNodeParent->getChildNodes()->second[0].get());
                     REQUIRE(pMeshNodeChild != nullptr);
 
                     // Make sure there are no textures in memory.
@@ -898,7 +898,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -933,7 +933,7 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                 }
 
                 // Spawn sample mesh.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
@@ -992,7 +992,7 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -1019,7 +1019,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
 
                 {
                     // Spawn sample mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     auto mtxMeshData = pMeshNode->getMeshData();
                     {
                         std::scoped_lock guard(*mtxMeshData.first);
@@ -1035,7 +1035,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
 
                 {
                     // Spawn sample mesh.
-                    const auto pMeshNode = gc_new<MeshNode>();
+                    const auto pMeshNode = sgc::makeGc<MeshNode>();
                     auto mtxMeshData = pMeshNode->getMeshData();
                     {
                         std::scoped_lock guard(*mtxMeshData.first);
@@ -1075,7 +1075,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -1096,7 +1096,7 @@ TEST_CASE("only opaque materials have depth only pipelines") {
                 }
 
                 // Prepare mesh.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Spawn nodes.
@@ -1138,6 +1138,6 @@ TEST_CASE("only opaque materials have depth only pipelines") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

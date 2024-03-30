@@ -30,7 +30,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (no paren
                 const auto targetWorldRotation = glm::vec3(10.0f, 20.0f, 30.0f);
                 const auto targetWorldScale = glm::vec3(5.0f, 6.0f, 7.0f);
 
-                const auto pSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
 
                 pSpatialNode->setRelativeLocation(targetWorldLocation);
                 pSpatialNode->setRelativeRotation(targetWorldRotation);
@@ -62,7 +62,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (no paren
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("world location is calculated correctly when rotating parent by X") {
@@ -83,11 +83,11 @@ TEST_CASE("world location is calculated correctly when rotating parent by X") {
 
                 constexpr float floatEpsilon = 0.00001f;
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
                 pParentSpatialNode->setRelativeRotation(glm::vec3(-90.0f, 0.0f, 0.0f));
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->addChildNode(
                     pChildSpatialNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -122,7 +122,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by X") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("world location is calculated correctly when rotating parent by Y") {
@@ -143,11 +143,11 @@ TEST_CASE("world location is calculated correctly when rotating parent by Y") {
 
                 constexpr float floatEpsilon = 0.00001f;
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeLocation(glm::vec3(0.0f, 5.0f, 0.0f));
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, -90.0f, 0.0f));
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->addChildNode(
                     pChildSpatialNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -182,7 +182,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by Y") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("world location is calculated correctly when rotating parent by Z") {
@@ -203,11 +203,11 @@ TEST_CASE("world location is calculated correctly when rotating parent by Z") {
 
                 constexpr float floatEpsilon = 0.00001f;
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeLocation(glm::vec3(0.0f, 0.0f, 5.0f));
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 0.0f, -90.0f));
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->addChildNode(
                     pChildSpatialNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -242,7 +242,7 @@ TEST_CASE("world location is calculated correctly when rotating parent by Z") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("world location, rotation and scale are calculated correctly (with parent)") {
@@ -263,11 +263,11 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
 
                 constexpr float floatEpsilon = 0.00001f;
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>("My Cool Parent Spatial Node");
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>("My Cool Child Spatial Node");
                 pParentSpatialNode->addChildNode(
                     pChildSpatialNode,
                     Node::AttachmentRule::KEEP_RELATIVE,
@@ -308,7 +308,7 @@ TEST_CASE("world location, rotation and scale are calculated correctly (with par
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("move parent node with rotation") {
@@ -329,10 +329,10 @@ TEST_CASE("move parent node with rotation") {
 
                 constexpr float floatEpsilon = 0.001f;
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0F, 0.0F, 90.0F));
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>();
 
                 // Spawn in world.
                 pParentSpatialNode->addChildNode(
@@ -388,7 +388,7 @@ TEST_CASE("move parent node with rotation") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE(
@@ -411,23 +411,23 @@ TEST_CASE(
                 constexpr float floatEpsilon = 0.00001f;
 
                 // Create nodes.
-                const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Parent Spatial Node");
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>("My Cool Parent Spatial Node");
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 1.0f, 1.0f));
 
-                const auto pUsualNode1 = gc_new<Node>("Usual Node 1");
+                const auto pUsualNode1 = sgc::makeGc<Node>("Usual Node 1");
 
-                const auto pSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node");
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>("My Cool Child Spatial Node");
 
-                const auto pUsualNode2 = gc_new<Node>("Usual Node 2");
+                const auto pUsualNode2 = sgc::makeGc<Node>("Usual Node 2");
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 1");
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>("My Cool Child Spatial Node 1");
                 pChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
                 pChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
-                const auto pUsualNode3 = gc_new<Node>("Usual Node 3");
+                const auto pUsualNode3 = sgc::makeGc<Node>("Usual Node 3");
 
-                const auto pChildChildSpatialNode = gc_new<SpatialNode>("My Cool Child Spatial Node 2");
+                const auto pChildChildSpatialNode = sgc::makeGc<SpatialNode>("My Cool Child Spatial Node 2");
                 pChildChildSpatialNode->setRelativeLocation(glm::vec3(5.0f, 0.0f, 0.0f));
                 pChildChildSpatialNode->setRelativeScale(glm::vec3(1.0f, 1.0f, 5.0f));
 
@@ -492,7 +492,7 @@ TEST_CASE(
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("world location with parent rotation is correct") {
@@ -514,28 +514,28 @@ TEST_CASE("world location with parent rotation is correct") {
                 float floatEpsilon = 0.00001f;
 
                 // Create nodes.
-                const auto pParentSpatialNodeA = gc_new<SpatialNode>();
+                const auto pParentSpatialNodeA = sgc::makeGc<SpatialNode>();
                 pParentSpatialNodeA->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
 
-                const auto pParentSpatialNodeB = gc_new<SpatialNode>();
+                const auto pParentSpatialNodeB = sgc::makeGc<SpatialNode>();
                 pParentSpatialNodeB->setRelativeRotation(glm::vec3(90.0f, 0.0f, 0.0f));
 
-                const auto pSpatialNodeA = gc_new<SpatialNode>();
+                const auto pSpatialNodeA = sgc::makeGc<SpatialNode>();
                 pSpatialNodeA->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
                 pSpatialNodeA->setRelativeLocation(glm::vec3(10.0f, 0.0f, 0.0f));
 
-                const auto pSpatialNodeB = gc_new<SpatialNode>();
+                const auto pSpatialNodeB = sgc::makeGc<SpatialNode>();
                 pSpatialNodeB->setRelativeRotation(glm::vec3(0.0f, 0.0f, 45.0f));
 
-                const auto pSpatialNodeC = gc_new<SpatialNode>();
+                const auto pSpatialNodeC = sgc::makeGc<SpatialNode>();
                 pSpatialNodeC->setRelativeRotation(glm::vec3(0.0f, 0.0f, 90.0f));
                 pSpatialNodeC->setRelativeLocation(glm::vec3(0.0F, 5.0F, 0.0F));
 
-                const auto pChildSpatialNodeA = gc_new<SpatialNode>();
-                const auto pChildSpatialNodeB = gc_new<SpatialNode>();
+                const auto pChildSpatialNodeA = sgc::makeGc<SpatialNode>();
+                const auto pChildSpatialNodeB = sgc::makeGc<SpatialNode>();
                 pChildSpatialNodeB->setRelativeLocation(glm::vec3(10.0f, 0.0f, 0.0f));
 
-                const auto pChildSpatialNodeC = gc_new<SpatialNode>();
+                const auto pChildSpatialNodeC = sgc::makeGc<SpatialNode>();
                 pChildSpatialNodeC->setRelativeLocation(glm::vec3(0.0f, 10.0f, 0.0f));
 
                 // Build hierarchy.
@@ -615,7 +615,7 @@ TEST_CASE("world location with parent rotation is correct") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("set world location with parent is correct") {
@@ -637,13 +637,13 @@ TEST_CASE("set world location with parent is correct") {
                 constexpr float floatEpsilon = 0.00001f;
 
                 // Create nodes.
-                const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0f, 5.0f, 5.0f));
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0F, 0.0F, 90.0F));
 
-                const auto pUsualNode = gc_new<Node>("Usual Node");
+                const auto pUsualNode = sgc::makeGc<Node>("Usual Node");
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
 
                 // Build hierarchy.
                 getWorldRootNode()->addChildNode(
@@ -694,7 +694,7 @@ TEST_CASE("set world location with parent is correct") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("set world rotation with parent is correct") {
@@ -716,12 +716,12 @@ TEST_CASE("set world rotation with parent is correct") {
                 float floatEpsilon = 0.001f;
 
                 // Create nodes.
-                const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
                 pParentSpatialNode->setRelativeRotation(glm::vec3(0.0f, 0.0f, 90.0f));
 
-                const auto pUsualNode = gc_new<Node>("Usual Node");
+                const auto pUsualNode = sgc::makeGc<Node>("Usual Node");
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
 
                 // Build hierarchy.
                 getWorldRootNode()->addChildNode(
@@ -769,7 +769,7 @@ TEST_CASE("set world rotation with parent is correct") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("set world scale with parent is correct") {
@@ -791,12 +791,12 @@ TEST_CASE("set world scale with parent is correct") {
                 constexpr float floatEpsilon = 0.00001f;
 
                 // Create nodes.
-                const auto pParentSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0f, 5.0f, 5.0f));
 
-                const auto pUsualNode = gc_new<Node>("Usual Node");
+                const auto pUsualNode = sgc::makeGc<Node>("Usual Node");
 
-                const auto pChildSpatialNode = gc_new<SpatialNode>("My Cool Spatial Node");
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>("My Cool Spatial Node");
 
                 // Build hierarchy.
                 getWorldRootNode()->addChildNode(
@@ -847,7 +847,7 @@ TEST_CASE("set world scale with parent is correct") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize SpatialNode") {
@@ -876,7 +876,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
 
                 {
                     // Setup.
-                    const auto pSpatialNode = gc_new<SpatialNode>();
+                    const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                     pSpatialNode->setRelativeLocation(location);
                     pSpatialNode->setRelativeRotation(rotation);
                     pSpatialNode->setRelativeScale(scale);
@@ -893,14 +893,14 @@ TEST_CASE("serialize and deserialize SpatialNode") {
 
                 {
                     // Deserialize.
-                    auto result = Serializable::deserialize<gc, SpatialNode>(pathToFileInTemp);
+                    auto result = Serializable::deserialize<sgc::GcPtr<SpatialNode>>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pSpatialNode = std::get<gc<SpatialNode>>(std::move(result));
+                    const auto pSpatialNode = std::get<sgc::GcPtr<SpatialNode>>(std::move(result));
 
                     constexpr float floatEpsilon = 0.00001f;
 
@@ -941,7 +941,7 @@ TEST_CASE("serialize and deserialize SpatialNode") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("make spatial node look at world location with parent rotation") {
@@ -963,8 +963,8 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 float floatEpsilon = 0.001f;
 
                 // Create nodes.
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
-                const auto pChildSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
+                const auto pChildSpatialNode = sgc::makeGc<SpatialNode>();
 
                 // Build hierarchy.
                 getWorldRootNode()->addChildNode(
@@ -1121,7 +1121,7 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("relative location/rotation/scale is considered as world when not spawned (no parent)") {
@@ -1142,7 +1142,7 @@ TEST_CASE("relative location/rotation/scale is considered as world when not spaw
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
                 pSpatialNode->setRelativeRotation(glm::vec3(0.0F, 5.0F, 0.0F));
                 pSpatialNode->setRelativeScale(glm::vec3(0.0F, 0.0F, 5.0F));
@@ -1172,7 +1172,7 @@ TEST_CASE("relative location/rotation/scale is considered as world when not spaw
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `reset` attachment rule for location") {
@@ -1193,10 +1193,10 @@ TEST_CASE("use `reset` attachment rule for location") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1228,7 +1228,7 @@ TEST_CASE("use `reset` attachment rule for location") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `keepRelative` attachment rule for location") {
@@ -1249,10 +1249,10 @@ TEST_CASE("use `keepRelative` attachment rule for location") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1284,7 +1284,7 @@ TEST_CASE("use `keepRelative` attachment rule for location") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `keepWorld` attachment rule for location") {
@@ -1305,10 +1305,10 @@ TEST_CASE("use `keepWorld` attachment rule for location") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeLocation(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1340,7 +1340,7 @@ TEST_CASE("use `keepWorld` attachment rule for location") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `reset` attachment rule for rotation") {
@@ -1361,10 +1361,10 @@ TEST_CASE("use `reset` attachment rule for rotation") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1396,7 +1396,7 @@ TEST_CASE("use `reset` attachment rule for rotation") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `keepRelative` attachment rule for rotation") {
@@ -1417,10 +1417,10 @@ TEST_CASE("use `keepRelative` attachment rule for rotation") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1452,7 +1452,7 @@ TEST_CASE("use `keepRelative` attachment rule for rotation") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `keepWorld` attachment rule for rotation") {
@@ -1473,10 +1473,10 @@ TEST_CASE("use `keepWorld` attachment rule for rotation") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeRotation(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1508,7 +1508,7 @@ TEST_CASE("use `keepWorld` attachment rule for rotation") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `reset` attachment rule for scale") {
@@ -1529,10 +1529,10 @@ TEST_CASE("use `reset` attachment rule for scale") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1566,7 +1566,7 @@ TEST_CASE("use `reset` attachment rule for scale") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `keepRelative` attachment rule for scale") {
@@ -1587,10 +1587,10 @@ TEST_CASE("use `keepRelative` attachment rule for scale") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1624,7 +1624,7 @@ TEST_CASE("use `keepRelative` attachment rule for scale") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("use `keepWorld` attachment rule for scale") {
@@ -1645,10 +1645,10 @@ TEST_CASE("use `keepWorld` attachment rule for scale") {
 
                 float floatEpsilon = 0.001f;
 
-                const auto pSpatialNode = gc_new<SpatialNode>();
+                const auto pSpatialNode = sgc::makeGc<SpatialNode>();
                 pSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
 
-                const auto pParentSpatialNode = gc_new<SpatialNode>();
+                const auto pParentSpatialNode = sgc::makeGc<SpatialNode>();
                 pParentSpatialNode->setRelativeScale(glm::vec3(5.0F, 0.0F, 0.0F));
 
                 getWorldRootNode()->addChildNode(pParentSpatialNode);
@@ -1682,7 +1682,7 @@ TEST_CASE("use `keepWorld` attachment rule for scale") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("serialize and deserialize spatial node tree") {
@@ -1713,8 +1713,8 @@ TEST_CASE("serialize and deserialize spatial node tree") {
 
                 {
                     // Create nodes.
-                    const auto pSpatialNode = gc_new<SpatialNode>();
-                    const auto pChildSpatialNode = gc_new<SpatialNode>();
+                    const auto pSpatialNode = sgc::makeGc<SpatialNode>();
+                    const auto pChildSpatialNode = sgc::makeGc<SpatialNode>();
 
                     // Build hierarchy.
                     getWorldRootNode()->addChildNode(pSpatialNode);
@@ -1757,29 +1757,29 @@ TEST_CASE("serialize and deserialize spatial node tree") {
                         INFO(err.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pRootNode = std::get<gc<Node>>(deserializeResult);
+                    const auto pRootNode = std::get<sgc::GcPtr<Node>>(deserializeResult);
 
                     // Check results.
                     auto pMtxChildNodes = pRootNode->getChildNodes();
                     {
                         std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-                        REQUIRE(pMtxChildNodes->second->size() == 1);
+                        REQUIRE(pMtxChildNodes->second.size() == 1);
                     }
 
                     // Check child nodes.
-                    const auto pSpatialNode =
-                        gc_dynamic_pointer_cast<SpatialNode>(pMtxChildNodes->second->at(0));
+                    const sgc::GcPtr<SpatialNode> pSpatialNode =
+                        dynamic_cast<SpatialNode*>(pMtxChildNodes->second[0].get());
                     pMtxChildNodes = pSpatialNode->getChildNodes();
                     {
                         std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-                        REQUIRE(pMtxChildNodes->second->size() == 1);
+                        REQUIRE(pMtxChildNodes->second.size() == 1);
                     }
                     const auto pChildSpatialNode =
-                        gc_dynamic_pointer_cast<SpatialNode>(pMtxChildNodes->second->at(0));
+                        dynamic_cast<SpatialNode*>(pMtxChildNodes->second[0].get());
                     pMtxChildNodes = pChildSpatialNode->getChildNodes();
                     {
                         std::scoped_lock childNodesGuard(pMtxChildNodes->first);
-                        REQUIRE(pMtxChildNodes->second->size() == 0);
+                        REQUIRE(pMtxChildNodes->second.size() == 0);
                     }
 
                     // Make sure locations are correct.
@@ -1813,7 +1813,7 @@ TEST_CASE("serialize and deserialize spatial node tree") {
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }
 
 TEST_CASE("using `reset`/`keepRelative`/`keepWorld` attachment rule for location triggers "
@@ -1856,9 +1856,9 @@ TEST_CASE("using `reset`/`keepRelative`/`keepWorld` attachment rule for location
                     REQUIRE(false);
                 }
 
-                const auto pSpatialNode1 = gc_new<MyNode>();
-                const auto pSpatialNode2 = gc_new<MyNode>();
-                const auto pSpatialNode3 = gc_new<MyNode>();
+                const auto pSpatialNode1 = sgc::makeGc<MyNode>();
+                const auto pSpatialNode2 = sgc::makeGc<MyNode>();
+                const auto pSpatialNode3 = sgc::makeGc<MyNode>();
 
                 REQUIRE(!pSpatialNode1->bOnWorldLocationRotationScaleChanged);
                 REQUIRE(!pSpatialNode2->bOnWorldLocationRotationScaleChanged);
@@ -1890,5 +1890,5 @@ TEST_CASE("using `reset`/`keepRelative`/`keepWorld` attachment rule for location
     pMainWindow->processEvents<TestGameInstance>();
 
     // Make sure everything is collected correctly.
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

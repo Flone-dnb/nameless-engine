@@ -30,7 +30,7 @@ TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is corre
                 meshData.getIndices()->push_back({0});
 
                 // Create node and initialize.
-                const auto pMeshNode = gc_new<MeshNode>();
+                const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(std::move(meshData));
 
                 // Spawn mesh node.
@@ -72,7 +72,7 @@ TEST_CASE("make sure used vertex/pixel shader configuration of MeshNode is corre
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }
 
@@ -93,9 +93,9 @@ TEST_CASE("there are only 2 shadow mapping pipelines per vertex shader") {
                 }
 
                 // Create several nodes and spawn so that they would initialize (request) pipelines.
-                getWorldRootNode()->addChildNode(gc_new<MeshNode>());
-                getWorldRootNode()->addChildNode(gc_new<MeshNode>());
-                getWorldRootNode()->addChildNode(gc_new<MeshNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MeshNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MeshNode>());
+                getWorldRootNode()->addChildNode(sgc::makeGc<MeshNode>());
 
                 // Get graphics pipelines.
                 const auto pMtxPipelines =
@@ -131,6 +131,6 @@ TEST_CASE("there are only 2 shadow mapping pipelines per vertex shader") {
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
 
-    REQUIRE(gc_collector()->getAliveObjectsCount() == 0);
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
     REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

@@ -50,11 +50,7 @@ TEST_CASE("make array expand / shrink") {
 
                 // Spawn sample mesh.
                 pMeshNode = sgc::makeGc<MeshNode>();
-                const auto mtxMeshData = pMeshNode->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pMeshNode);
 
                 // Make sure storage array now has 1 item.
@@ -73,11 +69,7 @@ TEST_CASE("make array expand / shrink") {
                 for (size_t i = 0; i < iTempNodeCount; i++) {
                     // Spawn sample mesh.
                     const auto pMeshNode = sgc::makeGc<MeshNode>();
-                    const auto mtxMeshData = pMeshNode->getMeshData();
-                    {
-                        std::scoped_lock guard(*mtxMeshData.first);
-                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                    }
+                    pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                     getWorldRootNode()->addChildNode(pMeshNode);
                     vTempNodes.push_back(pMeshNode);
                 }
@@ -117,11 +109,7 @@ TEST_CASE("make array expand / shrink") {
                 for (size_t i = 0; i < iMeshToSpawnCount; i++) {
                     // Spawn sample mesh.
                     const auto pMeshNode = sgc::makeGc<MeshNode>();
-                    const auto mtxMeshData = pMeshNode->getMeshData();
-                    {
-                        std::scoped_lock guard(*mtxMeshData.first);
-                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                    }
+                    pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                     getWorldRootNode()->addChildNode(pMeshNode);
                     vMeshNodes.push_back(pMeshNode);
                 }

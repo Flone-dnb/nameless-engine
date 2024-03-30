@@ -64,7 +64,7 @@ bool prepareDiffuseTextures() {
         "test/temp",
         pImportedTexture1DirectoryName,
         textureImportProcess);
-    if (optionalError.has_value()) {
+    if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         INFO(optionalError->getFullErrorMessage());
         REQUIRE(false);
@@ -77,7 +77,7 @@ bool prepareDiffuseTextures() {
         "test/temp",
         pImportedTexture2DirectoryName,
         textureImportProcess);
-    if (optionalError.has_value()) {
+    if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         INFO(optionalError->getFullErrorMessage());
         REQUIRE(false);
@@ -577,22 +577,13 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
 
                 // Spawn sample mesh 1.
                 const auto pMeshNode1 = sgc::makeGc<MeshNode>();
-                auto mtxMeshData = pMeshNode1->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
-
+                pMeshNode1->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
                 getWorldRootNode()->addChildNode(pMeshNode1);
                 pMeshNode1->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
                 // Spawn sample mesh 2.
                 const auto pMeshNode2 = sgc::makeGc<MeshNode>();
-                mtxMeshData = pMeshNode2->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNode2->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Create transparent material.
                 auto result = Material::create(
@@ -684,13 +675,9 @@ TEST_CASE("change texture while spawned") {
                     REQUIRE(false);
                 }
 
-                // Spawn sample mesh.
+                // Create a sample mesh.
                 pMeshNode = sgc::makeGc<MeshNode>();
-                auto mtxMeshData = pMeshNode->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
                 pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
@@ -776,11 +763,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
 
                 // Prepare parent mesh.
                 const auto pMeshNodeParent = sgc::makeGc<MeshNode>();
-                auto mtxMeshData = pMeshNodeParent->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNodeParent->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
                 pMeshNodeParent->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
@@ -791,11 +774,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
 
                 // Prepare child mesh.
                 const auto pMeshNodeChild = sgc::makeGc<MeshNode>();
-                mtxMeshData = pMeshNodeChild->getMeshData();
-                {
-                    std::scoped_lock guard(*mtxMeshData.first);
-                    (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                }
+                pMeshNodeChild->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
                 pMeshNodeChild->getMaterial()->setDiffuseTexture(sImportedTexture2PathRelativeRes);
@@ -1020,11 +999,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
                 {
                     // Spawn sample mesh.
                     const auto pMeshNode = sgc::makeGc<MeshNode>();
-                    auto mtxMeshData = pMeshNode->getMeshData();
-                    {
-                        std::scoped_lock guard(*mtxMeshData.first);
-                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                    }
+                    pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                     // Set texture before spawning.
                     pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
@@ -1036,11 +1011,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
                 {
                     // Spawn sample mesh.
                     const auto pMeshNode = sgc::makeGc<MeshNode>();
-                    auto mtxMeshData = pMeshNode->getMeshData();
-                    {
-                        std::scoped_lock guard(*mtxMeshData.first);
-                        (*mtxMeshData.second) = PrimitiveMeshGenerator::createCube(1.0F);
-                    }
+                    pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                     // Set texture before spawning.
                     // Use the same texture.

@@ -271,8 +271,7 @@ namespace ne {
             bool bIsEqual = true;
             std::optional<Error> error;
         };
-
-        Data loopData{pObjectA, pObjectB, FieldSerializerManager::getFieldSerializers()};
+        Data loopData{pObjectA, pObjectB, FieldSerializerManager::getFieldSerializers(), true, {}};
 
         entityAArchetype.foreachField(
             [](rfk::Field const& field, void* pUserData) -> bool {

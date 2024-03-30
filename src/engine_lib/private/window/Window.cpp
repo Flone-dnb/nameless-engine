@@ -371,7 +371,7 @@ namespace ne {
         // Set icon.
         if (std::filesystem::exists(params.pathToWindowIcon)) {
             auto error = pWindow->setIcon(params.pathToWindowIcon);
-            if (error.has_value()) {
+            if (error.has_value()) [[unlikely]] {
                 error->addCurrentLocationToErrorStack();
                 error->showError();
                 // don't throw here, not a critical error.
@@ -413,8 +413,8 @@ namespace ne {
     std::optional<Error> Window::setIcon(const std::filesystem::path& pathToIcon) const {
         showErrorIfNotOnMainThread();
 
-        if (!std::filesystem::exists(pathToIcon)) {
-            return Error(std::format("the specified file \"{}\" does not exist.", pathToIcon.string()));
+        if (!std::filesystem::exists(pathToIcon)) [[unlikely]] {
+            return Error(std::format("the specified file \"{}\" does not exist", pathToIcon.string()));
         }
 
         // Load image.

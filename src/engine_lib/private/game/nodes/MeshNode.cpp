@@ -42,7 +42,7 @@ namespace ne {
             "add new static asserts for resources here");
 #elif defined(DEBUG)
         static_assert(
-            sizeof(GpuResources::ShaderResources) == 56, // NOLINT
+            sizeof(GpuResources::ShaderResources) == 112, // NOLINT
             "add new static asserts for resources here");
 #endif
     }
@@ -882,7 +882,7 @@ namespace ne {
             "change pipelines of newly added shader resources here"); // NOLINT
 #elif defined(DEBUG)
         static_assert(
-            sizeof(GpuResources::ShaderResources) == 56,
+            sizeof(GpuResources::ShaderResources) == 112,
             "change pipelines of newly added shader resources here"); // NOLINT
 #endif
     }

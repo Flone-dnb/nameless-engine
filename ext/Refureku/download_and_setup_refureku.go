@@ -101,15 +101,6 @@ func main() {
 		}
 	}
 
-	// Make sure all included directories exist.
-	for i := 0; i < len(include_directories); i++ {
-		var _, err = os.Stat(include_directories[i])
-		if os.IsNotExist(err) {
-			fmt.Println(log_prefix, "the specified included directory", include_directories[i], "does not exist")
-			os.Exit(1)
-		}
-	}
-
 	// Change this to update used Refureku version.
 	var refureku_version_tag = "v2.3.0g"
 	var archive_url = ""
@@ -135,6 +126,15 @@ func main() {
 		exclude_files,
 		depends_generated_dir,
 		compiler_id)
+
+	// After downloading the library (and some includes), make sure all included directories exist.
+	for i := 0; i < len(include_directories); i++ {
+		var _, err = os.Stat(include_directories[i])
+		if os.IsNotExist(err) {
+			fmt.Println(log_prefix, "the specified included directory", include_directories[i], "does not exist")
+			os.Exit(1)
+		}
+	}
 }
 
 func get_archive_name(archive_url string) string {

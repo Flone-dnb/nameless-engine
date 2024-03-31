@@ -1,7 +1,7 @@
 #include "../../include/Base.glsl"
-#include "../../include/ShadowPassLightInfoData.glsl"
-#include "../../include/shader_constants/MeshNodeShaderConstants.glsl" // include to make root constants layout as in vertex
-#include "../../include/shader_constants/ShadowPassConstants.glsl"
+#include "../../include/data/ShadowPassLightInfoData.glsl"
+#include "../../include/constants/MeshNodeConstants.glsl" // include to make root constants layout as in vertex
+#include "../../include/constants/ShadowPassConstants.glsl"
 
 [earlydepthstencil]
 float main(VertexOut pin) : SV_Target{

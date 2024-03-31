@@ -1,5 +1,3 @@
-// Include this file to get frame constants.
-
 /** Stores frame-global constants. */
 #glsl layout(binding = 0) uniform FrameData {
 #hlsl struct FrameData{

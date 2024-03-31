@@ -1,8 +1,8 @@
 #include "../../include/Base.glsl"
-#include "../../include/MeshData.glsl"
+#include "../../include/data/MeshData.glsl"
 #ifdef VS_SHADOW_MAPPING_PASS
-#include "../../include/ShadowPassLightInfoData.glsl"
-#include "../../include/shader_constants/ShadowPassConstants.glsl"
+#include "../../include/data/ShadowPassLightInfoData.glsl"
+#include "../../include/constants/ShadowPassConstants.glsl"
 #endif
 
 /** Vertex shader. */

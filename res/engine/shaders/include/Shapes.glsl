@@ -1,5 +1,3 @@
-// Include this file if you need to do calculations on shapes (planes, frustums, etc.).
-
 /** Plane represented by a normal and a distance. */
 struct Plane{
     /** Plane's normal. */

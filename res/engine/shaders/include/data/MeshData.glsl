@@ -1,5 +1,3 @@
-// Include this file if you need to have information about mesh constants.
-
 /** Describes MeshNode's constants. */
 struct MeshData {
     /** Matrix that transforms positions from model space to world space. */

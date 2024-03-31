@@ -1,5 +1,3 @@
-// This file is used by compute shaders that need to calculate frustum per light grid tile for Forward+ light culling.
-
 #include "../Shapes.glsl"
 #include "../CoordinateSystemConversion.glsl"
 

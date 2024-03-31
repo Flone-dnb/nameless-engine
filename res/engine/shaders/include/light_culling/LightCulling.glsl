@@ -1,8 +1,6 @@
-// This file is used by compute shaders that do Forward+ light culling based.
-
 #include "../Shapes.glsl"
 #include "../CoordinateSystemConversion.glsl"
-#include "../FrameData.glsl"
+#include "../data/FrameData.glsl"
 #include "../Lighting.glsl"
 #include "CountersData.glsl"
 #include "OpaqueLightGrid.glsl"

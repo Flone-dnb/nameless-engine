@@ -1,7 +1,7 @@
 #include "../../include/Base.glsl"
-#include "../../include/ShadowPassLightInfoData.glsl"
-#include "../../include/shader_constants/MeshNodeShaderConstants.glsl" // include to make push constants layout as in vertex
-#include "../../include/shader_constants/ShadowPassConstants.glsl"
+#include "../../include/data/ShadowPassLightInfoData.glsl"
+#include "../../include/constants/MeshNodeConstants.glsl" // include to make push constants layout as in vertex
+#include "../../include/constants/ShadowPassConstants.glsl"
 
 /** Input parameters. */
 layout(location = 0) in vec4 fragmentWorldPosition;

@@ -1,12 +1,10 @@
-// This file is expected to be included by most shaders.
-
 #glsl{
 #version 460
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_EXT_nonuniform_qualifier : enable
 }
 
-#include "FrameData.glsl"
+#include "data/FrameData.glsl"
 
 #hlsl{
 /** Describes vertex shader input data. */

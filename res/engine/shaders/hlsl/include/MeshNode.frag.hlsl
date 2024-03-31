@@ -1,5 +1,5 @@
 #include "../../include/Base.glsl"
-#include "../../include/MaterialData.glsl"
+#include "../../include/data/MaterialData.glsl"
 
 #define INCLUDE_LIGHTING_FUNCTIONS
 #define READ_ONLY_LIGHT_GRID

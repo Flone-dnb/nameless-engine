@@ -1,5 +1,3 @@
-// Include this file if you need to have information about material constants.
-
 /** Describes Material's constants. */
 struct MaterialData{
     /** Fill color. 4th component stores opacity (when material transparency is used). */

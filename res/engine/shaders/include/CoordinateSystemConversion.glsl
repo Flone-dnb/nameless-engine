@@ -1,5 +1,3 @@
-// Include this file if you need functions to convert points or/and vectors from one coordinate system (space) to another.
-
 /**
  * Converts the specified coordinates from NDC space to view space.
  *

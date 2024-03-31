@@ -1,5 +1,3 @@
-/// Include this file if you need to have information about spawned light sources and/or general lighting.
-
 #ifdef INCLUDE_LIGHTING_FUNCTIONS // define this macro before including to have pixel/fragment light calculation functions
 #ifdef PS_USE_MATERIAL_TRANSPARENCY
 #include "light_culling/TransparentLightGrid.glsl"

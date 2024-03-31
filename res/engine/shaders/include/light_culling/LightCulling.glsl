@@ -339,6 +339,7 @@ void cullLightsForTile(
     // Sources:
     // - Presentation "DirectX 11 Rendering in Battlefield 3" (2011) by Johan Andersson, DICE.
     // - "Forward+: A Step Toward Film-Style Shading in Real Time", Takahiro Harada (2012).
+    // - https://www.3dgep.com/forward-plus/
 
     // Prepare variable to store depth.
     float pixelDepth = 1.0F;

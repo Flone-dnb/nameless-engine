@@ -57,14 +57,13 @@ namespace ne {
         const std::function<void(unsigned int)>& onArrayIndexChanged) {
         // Get render settings.
         const auto pRenderer = pResourceManager->getRenderer();
-        const auto pMtxRenderSettings = pRenderer->getRenderSettings();
+        const auto mtxRenderSettings = pRenderer->getRenderSettings();
 
         // Lock render settings and internal resources.
-        std::scoped_lock guardSettings(pMtxRenderSettings->first, mtxInternalResources.first);
+        std::scoped_lock guardSettings(*mtxRenderSettings.first, mtxInternalResources.first);
 
         // Get shadow map resolution from render settings.
-        unsigned int iShadowMapSize =
-            static_cast<unsigned int>(pMtxRenderSettings->second->getShadowQuality());
+        unsigned int iShadowMapSize = static_cast<unsigned int>(mtxRenderSettings.second->getShadowQuality());
 
         // Correct for the specified shadow map type.
         iShadowMapSize = correctShadowMapResolutionForType(iShadowMapSize, type);
@@ -179,16 +178,16 @@ namespace ne {
     std::optional<Error> ShadowMapManager::recreateShadowMaps() {
         // Get render settings.
         const auto pRenderer = pResourceManager->getRenderer();
-        const auto pMtxRenderSettings = pRenderer->getRenderSettings();
+        const auto mtxRenderSettings = pRenderer->getRenderSettings();
 
         // Lock render settings, internal resources and rendering.
         std::scoped_lock guardSettings(
-            pMtxRenderSettings->first, mtxInternalResources.first, *pRenderer->getRenderResourcesMutex());
+            *mtxRenderSettings.first, mtxInternalResources.first, *pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Get shadow map resolution from render settings.
         unsigned int iRenderSettingsShadowMapSize =
-            static_cast<unsigned int>(pMtxRenderSettings->second->getShadowQuality());
+            static_cast<unsigned int>(mtxRenderSettings.second->getShadowQuality());
 
         for (auto& [pShadowMapHandle, shadowResources] : mtxInternalResources.second.shadowMaps) {
             // Get shadow map type.

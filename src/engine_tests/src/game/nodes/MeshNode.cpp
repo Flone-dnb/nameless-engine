@@ -63,7 +63,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree") {
 
                     // Create node and initialize.
                     const auto pMeshNode = sgc::makeGc<MeshNode>("My cool node");
-                    pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
+                    pMeshNode->setMaterial(std::get<std::unique_ptr<Material>>(std::move(result)));
                     pMeshNode->setMeshData(std::move(meshData));
                     getWorldRootNode()->addChildNode(
                         pMeshNode, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
@@ -192,7 +192,7 @@ TEST_CASE("serialize and deserialize MeshNode as part of a node tree with origin
 
                     // Create node and initialize.
                     const auto pMeshNode = sgc::makeGc<MeshNode>("My cool node");
-                    pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
+                    pMeshNode->setMaterial(std::get<std::unique_ptr<Material>>(std::move(result)));
                     pMeshNode->setMeshData(std::move(meshData));
 
                     // Serialize node.
@@ -453,7 +453,7 @@ TEST_CASE("shader read/write resources exist only when MeshNode is spawned") {
 
                 // Create node and initialize.
                 const auto pMeshNode = sgc::makeGc<MeshNode>("My cool node");
-                pMeshNode->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
+                pMeshNode->setMaterial(std::get<std::unique_ptr<Material>>(std::move(result)));
                 pMeshNode->setMeshData(std::move(meshData));
 
                 // Get shader resource manager.

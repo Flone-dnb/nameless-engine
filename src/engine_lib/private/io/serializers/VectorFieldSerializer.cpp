@@ -41,7 +41,7 @@ namespace ne {
         }
         if (sFieldCanonicalTypeName.starts_with("std::vector<") &&
             isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
-            return sFieldCanonicalTypeName.contains("std::shared_ptr<");
+            return sFieldCanonicalTypeName.contains("std::unique_ptr<");
         }
 
         return false;
@@ -134,8 +134,8 @@ namespace ne {
     }                                                                                                        \
     pTomlData->operator[](sSectionName).operator[](pFieldName) = std::move(table);
 
-            if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
-                const auto pArray = reinterpret_cast<std::vector<std::shared_ptr<Serializable>>*>(
+            if (sFieldCanonicalTypeName.contains("std::unique_ptr<")) {
+                const auto pArray = reinterpret_cast<std::vector<std::unique_ptr<Serializable>>*>(
                     pField->getPtrUnsafe(pFieldOwner));
                 SERIALIZE_VECTOR_INNER_POINTER_SERIALIZABLE
             } else [[unlikely]] {
@@ -364,8 +364,8 @@ namespace ne {
             isMostInnerTypeSerializable(sFieldCanonicalTypeName)) {
             GET_TOML_VALUE_AS_TABLE_WITH_CHECK
 
-            if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
-                const auto pArray = reinterpret_cast<std::vector<std::shared_ptr<Serializable>>*>(
+            if (sFieldCanonicalTypeName.contains("std::unique_ptr<")) {
+                const auto pArray = reinterpret_cast<std::vector<std::unique_ptr<Serializable>>*>(
                     pField->getPtrUnsafe(pFieldOwner));
 
                 // Make sure target array is empty.
@@ -375,14 +375,14 @@ namespace ne {
 
                 for (const auto& [key, value] : fieldValue) {
                     auto result =
-                        Serializable::deserialize<std::shared_ptr<Serializable>>(value, customAttributes);
+                        Serializable::deserialize<std::unique_ptr<Serializable>>(value, customAttributes);
                     if (std::holds_alternative<Error>(result)) {
                         auto error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
                         return error;
                     }
 
-                    pArray->push_back(std::get<std::shared_ptr<Serializable>>(std::move(result)));
+                    pArray->push_back(std::get<std::unique_ptr<Serializable>>(std::move(result)));
                 }
             } else [[unlikely]] {
                 return Error(std::format(
@@ -453,9 +453,9 @@ namespace ne {
         }                                                                                                    \
     }
 
-            if (sFieldCanonicalTypeName.contains("std::shared_ptr<")) {
+            if (sFieldCanonicalTypeName.contains("std::unique_ptr<")) {
                 CLONE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(
-                    std::vector<std::shared_ptr<Serializable>>*, makeSharedInstance)
+                    std::vector<std::unique_ptr<Serializable>>*, makeUniqueInstance)
             } else [[unlikely]] {
                 return Error(std::format(
                     "the type \"{}\" of the specified array field \"{}\" has unsupported smart pointer type",
@@ -525,8 +525,8 @@ namespace ne {
     }                                                                                                        \
     return true;
 
-            if (sFieldACanonicalTypeName.contains("std::shared_ptr<")) {
-                COMPARE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(std::vector<std::shared_ptr<Serializable>>*)
+            if (sFieldACanonicalTypeName.contains("std::unique_ptr<")) {
+                COMPARE_VECTOR_SMART_POINTER_SERIALIZABLE_FIELDS(std::vector<std::unique_ptr<Serializable>>*)
             }
         }
 

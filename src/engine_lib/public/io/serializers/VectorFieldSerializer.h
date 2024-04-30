@@ -7,7 +7,7 @@ namespace ne {
     /**
      * Serializer for some `std::vector<T>` field types, the following inner vector types are supported:
      * `bool`, `int`, `unsigned int`, `long long`, `unsigned long long`, `float`, `double`, `std::string`,
-     * `MeshVertex`. Additionally, supported inner types include `std::shared_ptr<T>`
+     * `MeshVertex`. Additionally, supported inner types include `std::unique_ptr<T>`
      * where `T` is any type that derives from `Serializable`.
      */
     class VectorFieldSerializer : public IFieldSerializer {

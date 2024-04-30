@@ -47,7 +47,7 @@ namespace ne {
 #endif
     }
 
-    void MeshNode::setMaterial(std::shared_ptr<Material> pMaterial, size_t iMaterialSlot) {
+    void MeshNode::setMaterial(std::unique_ptr<Material> pMaterial, size_t iMaterialSlot) {
         // Make sure the specified material is not a `nullptr`.
         if (pMaterial == nullptr) [[unlikely]] {
             auto error = Error("cannot use `nullptr` as a material");
@@ -102,7 +102,7 @@ namespace ne {
         }
     }
 
-    std::shared_ptr<Material> MeshNode::getMaterial(size_t iMaterialSlot) {
+    Material* MeshNode::getMaterial(size_t iMaterialSlot) {
         std::scoped_lock guard(*getSpawnDespawnMutex());
 
         // Make sure the specified slot is valid.
@@ -110,7 +110,7 @@ namespace ne {
             return nullptr;
         }
 
-        return vMaterials[iMaterialSlot];
+        return vMaterials[iMaterialSlot].get();
     }
 
     void MeshNode::onWorldLocationRotationScaleChanged() {
@@ -463,13 +463,14 @@ namespace ne {
             for (size_t i = 0; i < iToAddCount; i++) {
                 // Prepare material.
                 auto pNewMaterial = getDefaultMaterial();
+                const auto pNewMaterialRaw = pNewMaterial.get();
 
-                // First add material.
-                vMaterials.push_back(pNewMaterial);
+                // First add the material.
+                vMaterials.push_back(std::move(pNewMaterial));
 
                 // Then notify material to properly get information about index buffer for material slot.
                 if (bIsSpawned) {
-                    pNewMaterial->onSpawnedMeshNodeStartedUsingMaterial(
+                    pNewMaterialRaw->onSpawnedMeshNodeStartedUsingMaterial(
                         this, getIndexBufferInfoForMaterialSlot(vMaterials.size() - 1));
                 }
             }
@@ -893,7 +894,7 @@ namespace ne {
         return vMaterials.size();
     }
 
-    std::shared_ptr<Material> MeshNode::getDefaultMaterial() {
+    std::unique_ptr<Material> MeshNode::getDefaultMaterial() {
         auto result = Material::create(
             EngineShaderNames::MeshNode::getVertexShaderName(),
             EngineShaderNames::MeshNode::getFragmentShaderName(),
@@ -905,7 +906,7 @@ namespace ne {
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        return std::get<std::shared_ptr<Material>>(std::move(result));
+        return std::get<std::unique_ptr<Material>>(std::move(result));
     }
 
     void MeshNode::onAfterDeserialized() {

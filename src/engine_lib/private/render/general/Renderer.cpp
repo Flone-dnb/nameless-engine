@@ -476,7 +476,7 @@ namespace ne {
             // See if config file exists.
             if (std::filesystem::exists(pathToConfigFile)) {
                 // Try to deserialize.
-                auto result = Serializable::deserialize<std::shared_ptr<RenderSettings>>(pathToConfigFile);
+                auto result = Serializable::deserialize<std::unique_ptr<RenderSettings>>(pathToConfigFile);
                 if (std::holds_alternative<Error>(result)) {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
@@ -487,7 +487,7 @@ namespace ne {
                         error.getFullErrorMessage()));
                 } else {
                     // Use the deserialized object.
-                    const auto pSettings = std::get<std::shared_ptr<RenderSettings>>(std::move(result));
+                    const auto pSettings = std::get<std::unique_ptr<RenderSettings>>(std::move(result));
 
                     if (pSettings->iRendererType != static_cast<unsigned int>(RendererType::DIRECTX)) {
                         // Change preference queue.
@@ -582,11 +582,11 @@ namespace ne {
 
     void Renderer::updateTargetTimeToRenderFrame() {
         // Get render setting.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(*mtxRenderSettings.first);
 
         // Update time to render a frame.
-        const auto iFpsLimit = pMtxRenderSettings->second->getFpsLimit();
+        const auto iFpsLimit = mtxRenderSettings.second->getFpsLimit();
         if (iFpsLimit == 0) {
             renderStats.fpsLimitInfo.optionalTargetTimeToRenderFrameInNs = {};
         } else {
@@ -620,19 +620,18 @@ namespace ne {
             ShaderMacroConfigurations::validComputeShaderMacroConfigurations.size()));
 
         // Update render settings (maybe they were fixed/clamped during the renderer initialization).
-        const auto pMtxRenderSettings = pCreatedRenderer->getRenderSettings();
+        const auto mtxRenderSettings = pCreatedRenderer->getRenderSettings();
         {
-            std::scoped_lock guard(pMtxRenderSettings->first);
+            std::scoped_lock guard(*mtxRenderSettings.first);
 
             // Set picked renderer type.
-            pMtxRenderSettings->second->iRendererType =
-                static_cast<unsigned int>(pCreatedRenderer->getType());
+            mtxRenderSettings.second->iRendererType = static_cast<unsigned int>(pCreatedRenderer->getType());
 
             // Enable saving configuration on disk.
-            pMtxRenderSettings->second->bAllowSavingConfigurationToDisk = true;
+            mtxRenderSettings.second->bAllowSavingConfigurationToDisk = true;
 
             // Save settings.
-            auto optionalError = pMtxRenderSettings->second->saveConfigurationToDisk();
+            auto optionalError = mtxRenderSettings.second->saveConfigurationToDisk();
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
@@ -667,8 +666,8 @@ namespace ne {
         return pCreatedRenderer;
     }
 
-    std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* Renderer::getRenderSettings() {
-        return &mtxRenderSettings;
+    std::pair<std::recursive_mutex*, RenderSettings*> Renderer::getRenderSettings() {
+        return {&mtxRenderSettings.first, mtxRenderSettings.second.get()};
     }
 
     RenderStatistics* Renderer::getRenderStatistics() { return &renderStats; }
@@ -786,10 +785,11 @@ namespace ne {
         // See if config file exists.
         if (std::filesystem::exists(pathToConfigFile)) {
             // Try to deserialize.
-            auto result = Serializable::deserialize<std::shared_ptr<RenderSettings>>(pathToConfigFile);
-            if (std::holds_alternative<Error>(result)) {
+            auto result = Serializable::deserialize<std::unique_ptr<RenderSettings>>(pathToConfigFile);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
+
                 Logger::get().error(std::format(
                     "failed to deserialize render settings from the file \"{}\", using default "
                     "settings instead, error: \"{}\"",
@@ -797,14 +797,14 @@ namespace ne {
                     error.getFullErrorMessage()));
 
                 // Just create a new object with default settings.
-                mtxRenderSettings.second = std::make_shared<RenderSettings>();
+                mtxRenderSettings.second = std::make_unique<RenderSettings>();
             } else {
                 // Use the deserialized object.
-                mtxRenderSettings.second = std::get<std::shared_ptr<RenderSettings>>(std::move(result));
+                mtxRenderSettings.second = std::get<std::unique_ptr<RenderSettings>>(std::move(result));
             }
         } else {
             // Just create a new object with default settings.
-            mtxRenderSettings.second = std::make_shared<RenderSettings>();
+            mtxRenderSettings.second = std::make_unique<RenderSettings>();
         }
 
         // Initialize the setting.

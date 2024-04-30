@@ -1622,8 +1622,8 @@ void MyGameInstance::foo(){
     const auto pRenderer = getWindow()->getRenderer();
 
     // Get render settings.
-    const auto pMtxRenderSettings = pRenderer->getRenderSettings();
-    std::scoped_lock guard(pMtxRenderSettings->first);
+    const auto mtxRenderSettings = pRenderer->getRenderSettings();
+    std::scoped_lock guard(*mtxRenderSettings.first);
 
     // Get supported render resolutions.
     auto result = pRenderer->getSupportedRenderResolutions();
@@ -1635,7 +1635,7 @@ void MyGameInstance::foo(){
     // ... display `supportedRenderResolutions` on screen ...
 
     // Later, when user wants to change render resolution:
-    pMtxRenderSettings->second->setRenderResolution(someRenderResolution);
+    mtxRenderSettings.second->setRenderResolution(someRenderResolution);
 }
 ```
 
@@ -1656,11 +1656,11 @@ void MyGameInstance::foo(){
     const auto pRenderer = getWindow()->getRenderer();
 
     // Get render settings.
-    const auto pMtxRenderSettings = pRenderer->getRenderSettings();
-    std::scoped_lock guard(pMtxRenderSettings->first);
+    const auto mtxRenderSettings = pRenderer->getRenderSettings();
+    std::scoped_lock guard(*mtxRenderSettings.first);
 
     // Get maximum supported AA quality.
-    auto result = pMtxRenderSettings->second->getMaxSupportedAntialiasingQuality();
+    auto result = mtxRenderSettings.second->getMaxSupportedAntialiasingQuality();
     if (std::holds_alternative<Error>(result)){
         // ... handle error ...
     }
@@ -1669,7 +1669,7 @@ void MyGameInstance::foo(){
     // ... display all `AntialiasingQuality` values on the screen but don't exceed `maxQuality` ...
 
     // Later, when user wants to change AA:
-    pMtxRenderSettings->second->setAntialiasingQuality(selectedQuality);
+    mtxRenderSettings.second->setAntialiasingQuality(selectedQuality);
 }
 ```
 
@@ -1804,7 +1804,7 @@ public:
     /// Can also store objects of type that derive from `Ability` without any serialization/deserialization issues
     /// (just as you would expect).
     RPROPERTY(Serialize)
-    std::vector<std::shared_ptr<Ability>> vAbilities;
+    std::vector<std::unique_ptr<Ability>> vAbilities;
 
     PlayerSaveData_GENERATED
 };
@@ -1815,17 +1815,16 @@ File_PlayerSaveData_GENERATED
 
 {
     // Somewhere in the game code.
-    // (we can use either `std::shared_ptr` or `gc` pointer for deserialized data, you will see below)
-    std::shared_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
+    std::unique_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
 
     // ... if the user creates a new player profile ...
-    pPlayerSaveData = std::make_shared<PlayerSaveData>();
+    pPlayerSaveData = std::make_unique<PlayerSaveData>();
 
     // Fill save data with some information.
     pPlayerSaveData->sCharacterName = "Player 1";
     pPlayerSaveData->iCharacterLevel = 42;
     pPlayerSaveData->iExperiencePoints = 200;
-    pPlayerSaveData->vAbilities = {std::make_shared<Ability>("Fire"), std::make_shared<Ability>("Wind")};
+    pPlayerSaveData->vAbilities = {std::make_unique<Ability>("Fire"), std::make_unique<Ability>("Wind")};
     pPlayerSaveData->inventory.addOneItem(42);
     pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
     pPlayerSaveData->inventory.addOneItem(102);
@@ -1852,12 +1851,12 @@ File_PlayerSaveData_GENERATED
 
     // Deserialize.
     const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
-    auto result = Serializable::deserialize<std::shared_ptr<PlayerSaveData>>(pathToFile);
+    auto result = Serializable::deserialize<std::unique_ptr<PlayerSaveData>>(pathToFile);
     if (std::holds_alternative<Error>(result)) [[unlikely]] {
         // ... handle error ...
     }
 
-    const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(std::move(result));
+    const auto pPlayerSaveData = std::get<std::unique_ptr<PlayerSaveData>>(std::move(result));
 
     // Everything is deserialized:
     assert(pPlayerSaveData->sCharacterName == "Player 1");
@@ -2162,16 +2161,21 @@ auto result = Material::create(
 if (std::holds_alternative<Error>(result)) {
   // ... handle error ...
 }
-const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+auto pMaterial = std::get<std::unique_ptr<Material>>(std::move(result));
 
 // Assign this material to your mesh node.
-pMeshNode->setMaterial(pMaterial);
+pMeshNode->setMaterial(std::move(pMaterial));
 
 // Set mesh's diffuse color to red.
 pMeshNode->getMaterial()->setDiffuseColor(glm::vec(1.0F, 0.0F, 0.0F));
 ```
 
 As you can see you can specify custom shaders when creating a new material (use will talk about custom shaders in another section).
+
+Please note that each "Material" here should not be considered as some "big thing" that you need to reuse on multiple meshes - no, each material here is just a collection of small parameters such as diffuse color. You can think of the material here as "material properties" or a "material instance" if you want. If you have multiple materials that use the same shaders it's perfectly fine because under the hood the engine will not duplicate any loaded shaders or similar resources so these materials will just reference 1 set of shaders.
+
+Note
+> This also means that you cannot just simply clone/duplicate/share a material between multiple meshes. Unfortunatelly, at the time of writing this, we can't just use `std::shared_ptr` for materials because it might create a false assumption when you have 2 meshes that reference a single material, serialize and deserialize them - would result in both meshes having a separate (unique) material and they will no longer reference a single material. Thus we use `std::unique_ptr` to avoid false assumptions. But generally there wouldn't be such a need for this. When you import some mesh in the engine (this information is covered in another section) it's imported as a node tree (an asset file) where you generally only have a mesh node, then when this asset (node tree) is used in some level it's added to your level as external node tree and if you have multiple assets that were taken from the same node tree it's enough to modify the material in the asset's node tree to then see changes in all assets on the level.
 
 In order to enable transparency and use `Material::setOpacity` function you need to either create a material with transparency enabled (see example from above) or enable transparency using `Material::setEnableTransparency`:
 

@@ -407,14 +407,14 @@ TEST_CASE("serialize and deserialize type with external file") {
                 {
                     // Deserialize.
                     auto result =
-                        Serializable::deserialize<std::shared_ptr<EntityWithExternalFile>>(pathToFileInTemp);
-                    if (std::holds_alternative<Error>(result)) {
+                        Serializable::deserialize<std::unique_ptr<EntityWithExternalFile>>(pathToFileInTemp);
+                    if (std::holds_alternative<Error>(result)) [[unlikely]] {
                         Error error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pEntity = std::get<std::shared_ptr<EntityWithExternalFile>>(std::move(result));
+                    const auto pEntity = std::get<std::unique_ptr<EntityWithExternalFile>>(std::move(result));
 
                     // Original file should be restored.
                     REQUIRE(std::filesystem::exists(pathToExternalFile));
@@ -677,7 +677,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
             outerTestObj.entity.floatValue = 3.14159f;
             outerTestObj.entity.doubleValue = 3.14159265358979;
 
-            outerTestObj.entity.sStringValue = "Привет \"мир\""; // using non-ASCII on purpose
+            outerTestObj.entity.sStringValue = "你好世界"; // using non-ASCII on purpose
 
             outerTestObj.entity.vBoolVector = {true, true, false};
             outerTestObj.entity.vIntVector = {42, -42, 43, -43};
@@ -686,20 +686,20 @@ TEST_CASE("serialize and deserialize fields of different types") {
             outerTestObj.entity.vUnsignedLongLongVector = {ULLONG_MAX, ULLONG_MAX - 1};
             outerTestObj.entity.vFloatVector = {3.14159f, -3.14159f};
             outerTestObj.entity.vDoubleVector = {3.14159265358979, -3.14159265358979};
-            outerTestObj.entity.vStringVector = {"Привет \"мир\"", "Hello \"world\""};
-            outerTestObj.entity.vSharedPtrSerializable = {
-                std::make_shared<ReflectionTestNode1>(),
-                std::make_shared<special::ReflectionTestNode1Child>(),
-                std::make_shared<ReflectionTestNode1>()};
+            outerTestObj.entity.vStringVector = {"Привет \"мир\"", "你好世界", "Hello \"world\""};
+            outerTestObj.entity.vUniquePtrSerializable.push_back(std::make_unique<ReflectionTestNode1>());
+            outerTestObj.entity.vUniquePtrSerializable.push_back(
+                std::make_unique<special::ReflectionTestNode1Child>());
+            outerTestObj.entity.vUniquePtrSerializable.push_back(std::make_unique<ReflectionTestNode1>());
 
-            outerTestObj.entity.vSharedPtrSerializable[0]->bBoolValue1 = false;
-            outerTestObj.entity.vSharedPtrSerializable[0]->bBoolValue2 = false;
-            outerTestObj.entity.vSharedPtrSerializable[0]->entity.iIntValue1 = 1;
-            outerTestObj.entity.vSharedPtrSerializable[0]->entity.iIntValue2 = 2;
-            outerTestObj.entity.vSharedPtrSerializable[0]->entity.vVectorValue1 = {"Hello", "World!"};
-            outerTestObj.entity.vSharedPtrSerializable[0]->entity.vVectorValue2 = {"Hallo", "Welt!"};
+            outerTestObj.entity.vUniquePtrSerializable[0]->bBoolValue1 = false;
+            outerTestObj.entity.vUniquePtrSerializable[0]->bBoolValue2 = false;
+            outerTestObj.entity.vUniquePtrSerializable[0]->entity.iIntValue1 = 1;
+            outerTestObj.entity.vUniquePtrSerializable[0]->entity.iIntValue2 = 2;
+            outerTestObj.entity.vUniquePtrSerializable[0]->entity.vVectorValue1 = {"Hello", "World!"};
+            outerTestObj.entity.vUniquePtrSerializable[0]->entity.vVectorValue2 = {"Hallo", "Welt!"};
             const auto pChild = dynamic_cast<special::ReflectionTestNode1Child*>(
-                outerTestObj.entity.vSharedPtrSerializable[1].get());
+                outerTestObj.entity.vUniquePtrSerializable[1].get());
             pChild->bBoolValue1 = true;
             pChild->bBoolValue2 = true;
             pChild->entity.iIntValue1 = 11;
@@ -707,16 +707,16 @@ TEST_CASE("serialize and deserialize fields of different types") {
             pChild->entity.vVectorValue1 = {"Hello2", "World!2"};
             pChild->entity.vVectorValue2 = {"Hallo2", "Welt!2"};
             pChild->iIntValue = 42;
-            pChild->vNodes = {
-                std::make_shared<ReflectionTestNode1>(), std::make_shared<ReflectionTestNode1>()};
+            pChild->vNodes.push_back(std::make_unique<ReflectionTestNode1>());
+            pChild->vNodes.push_back(std::make_unique<ReflectionTestNode1>());
             pChild->vNodes[0]->entity.iIntValue1 = 10;
             pChild->vNodes[1]->entity.iIntValue2 = 20;
-            outerTestObj.entity.vSharedPtrSerializable[2]->bBoolValue1 = false;
-            outerTestObj.entity.vSharedPtrSerializable[2]->bBoolValue2 = true;
-            outerTestObj.entity.vSharedPtrSerializable[2]->entity.iIntValue1 = 111;
-            outerTestObj.entity.vSharedPtrSerializable[2]->entity.iIntValue2 = 222;
-            outerTestObj.entity.vSharedPtrSerializable[2]->entity.vVectorValue1 = {"Hello3", "World!3"};
-            outerTestObj.entity.vSharedPtrSerializable[2]->entity.vVectorValue2 = {"Hallo3", "Welt!3"};
+            outerTestObj.entity.vUniquePtrSerializable[2]->bBoolValue1 = false;
+            outerTestObj.entity.vUniquePtrSerializable[2]->bBoolValue2 = true;
+            outerTestObj.entity.vUniquePtrSerializable[2]->entity.iIntValue1 = 111;
+            outerTestObj.entity.vUniquePtrSerializable[2]->entity.iIntValue2 = 222;
+            outerTestObj.entity.vUniquePtrSerializable[2]->entity.vVectorValue1 = {"Hello3", "World!3"};
+            outerTestObj.entity.vUniquePtrSerializable[2]->entity.vVectorValue2 = {"Hallo3", "Welt!3"};
 
             outerTestObj.entity.mapBoolBool = {{false, false}, {true, true}};
             outerTestObj.entity.mapBoolInt = {{false, -1}, {true, 42}};
@@ -820,14 +820,14 @@ TEST_CASE("serialize and deserialize fields of different types") {
         REQUIRE(!outerTestObj.entity.vStringVector.empty());
         REQUIRE(outerTestObj.entity.vStringVector == pDeserialized->entity.vStringVector);
 
-        REQUIRE(!outerTestObj.entity.vSharedPtrSerializable.empty());
+        REQUIRE(!outerTestObj.entity.vUniquePtrSerializable.empty());
         REQUIRE(
-            outerTestObj.entity.vSharedPtrSerializable.size() ==
-            pDeserialized->entity.vSharedPtrSerializable.size());
-        for (size_t i = 0; i < outerTestObj.entity.vSharedPtrSerializable.size(); i++) {
+            outerTestObj.entity.vUniquePtrSerializable.size() ==
+            pDeserialized->entity.vUniquePtrSerializable.size());
+        for (size_t i = 0; i < outerTestObj.entity.vUniquePtrSerializable.size(); i++) {
             REQUIRE(SerializableObjectFieldSerializer::isSerializableObjectValueEqual(
-                outerTestObj.entity.vSharedPtrSerializable[i].get(),
-                pDeserialized->entity.vSharedPtrSerializable[i].get()));
+                outerTestObj.entity.vUniquePtrSerializable[i].get(),
+                pDeserialized->entity.vUniquePtrSerializable[i].get()));
         }
 
         REQUIRE(outerTestObj.entity.vEmpty.empty());
@@ -923,16 +923,17 @@ TEST_CASE("serialize and deserialize fields of different types") {
 TEST_CASE("serialize and deserialize sample player save data") {
     {
         // Somewhere in the game code.
-        std::shared_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
+        std::unique_ptr<PlayerSaveData> pPlayerSaveData = nullptr;
 
         // ... if the user creates a new player profile ...
-        pPlayerSaveData = std::make_shared<PlayerSaveData>();
+        pPlayerSaveData = std::make_unique<PlayerSaveData>();
 
         // Fill save data with some information.
         pPlayerSaveData->sCharacterName = "Player 1";
         pPlayerSaveData->iCharacterLevel = 42;
         pPlayerSaveData->iExperiencePoints = 200;
-        pPlayerSaveData->vAbilities = {std::make_shared<Ability>("Fire"), std::make_shared<Ability>("Wind")};
+        pPlayerSaveData->vAbilities.push_back(std::make_unique<Ability>("Fire"));
+        pPlayerSaveData->vAbilities.push_back(std::make_unique<Ability>("Wind"));
         pPlayerSaveData->inventory.addOneItem(42);
         pPlayerSaveData->inventory.addOneItem(42); // now have two items with ID "42"
         pPlayerSaveData->inventory.addOneItem(102);
@@ -967,8 +968,8 @@ TEST_CASE("serialize and deserialize sample player save data") {
         // Deserialize.
         const auto pathToFile = ConfigManager::getCategoryDirectory(ConfigCategory::PROGRESS) / sProfileName;
         std::unordered_map<std::string, std::string> foundCustomAttributes;
-        const auto result =
-            Serializable::deserialize<std::shared_ptr<PlayerSaveData>>(pathToFile, foundCustomAttributes);
+        auto result =
+            Serializable::deserialize<std::unique_ptr<PlayerSaveData>>(pathToFile, foundCustomAttributes);
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(result);
             error.addCurrentLocationToErrorStack();
@@ -976,7 +977,7 @@ TEST_CASE("serialize and deserialize sample player save data") {
             REQUIRE(false);
         }
 
-        const auto pPlayerSaveData = std::get<std::shared_ptr<PlayerSaveData>>(result);
+        const auto pPlayerSaveData = std::get<std::unique_ptr<PlayerSaveData>>(std::move(result));
 
         REQUIRE(pPlayerSaveData->sCharacterName == "Player 1");
         REQUIRE(pPlayerSaveData->iCharacterLevel == 42);

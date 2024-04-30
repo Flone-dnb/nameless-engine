@@ -176,11 +176,12 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::createDepthStencilBuffer() {
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
-        const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
+
+        const auto renderResolution = mtxRenderSettings.second->getRenderResolution();
         const auto iMsaaSampleCount =
-            static_cast<unsigned int>(pMtxRenderSettings->second->getAntialiasingQuality());
+            static_cast<unsigned int>(mtxRenderSettings.second->getAntialiasingQuality());
 
         // Prepare resource description.
         D3D12_RESOURCE_DESC depthStencilDesc = CD3DX12_RESOURCE_DESC(
@@ -379,11 +380,11 @@ namespace ne {
         Logger::get().info(sRating);
 
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
         // Check if the GPU to use is set.
-        auto sGpuNameToUse = pMtxRenderSettings->second->getGpuToUse();
+        auto sGpuNameToUse = mtxRenderSettings.second->getGpuToUse();
         if (!sGpuNameToUse.empty()) {
             // Find the GPU in the list of available GPUs.
             std::optional<size_t> iFoundIndex{};
@@ -434,7 +435,7 @@ namespace ne {
             pVideoAdapter = currentGpuInfo.pGpu;
 
             // Save GPU name in the settings.
-            pMtxRenderSettings->second->setGpuToUse(currentGpuInfo.sGpuName);
+            mtxRenderSettings.second->setGpuToUse(currentGpuInfo.sGpuName);
 
             // Save GPU name.
             sUsedVideoAdapter = currentGpuInfo.sGpuName;
@@ -1539,11 +1540,11 @@ namespace ne {
         const auto iMaxSampleCount = static_cast<unsigned int>(maxSampleCount);
 
         // Get render setting.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(*mtxRenderSettings.first);
 
         // Get current AA sample count.
-        auto sampleCount = pMtxRenderSettings->second->getAntialiasingQuality();
+        auto sampleCount = mtxRenderSettings.second->getAntialiasingQuality();
         const auto iSampleCount = static_cast<unsigned int>(sampleCount);
 
         // Make sure this sample count is supported.
@@ -1753,11 +1754,12 @@ namespace ne {
 
     std::optional<Error> DirectXRenderer::createSwapChain() {
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
-        const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
-        const auto refreshRate = pMtxRenderSettings->second->getRefreshRate();
-        const auto bIsVSyncEnabled = pMtxRenderSettings->second->isVsyncEnabled();
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
+
+        const auto renderResolution = mtxRenderSettings.second->getRenderResolution();
+        const auto refreshRate = mtxRenderSettings.second->getRefreshRate();
+        const auto bIsVSyncEnabled = mtxRenderSettings.second->isVsyncEnabled();
 
         DXGI_SWAP_CHAIN_DESC1 desc;
         desc.Width = renderResolution.first;
@@ -1832,8 +1834,8 @@ namespace ne {
 
         // Get render settings.
         // Make sure render settings will not be changed from other frame during initialization.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
         // Pick a GPU.
         auto optionalError = pickVideoAdapter(vBlacklistedGpuNames);
@@ -1858,7 +1860,7 @@ namespace ne {
 #if defined(DEBUG)
         // Create debug message queue for message callback.
         // Apparently the ID3D12InfoQueue1 interface to register message callback is only
-        // available on Windows 11 so we should just log the error here using the `info` category.
+        // available on Windows 11 so we should just log the event here using the `info` category.
         hResult = pDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue));
         if (FAILED(hResult)) {
             Logger::get().info("ID3D12InfoQueue1 does not seem to be available on this system, failed to "
@@ -1940,8 +1942,8 @@ namespace ne {
         }
 
         // Get preferred screen settings.
-        const auto preferredRenderResolution = pMtxRenderSettings->second->getRenderResolution();
-        const auto preferredRefreshRate = pMtxRenderSettings->second->getRefreshRate();
+        const auto preferredRenderResolution = mtxRenderSettings.second->getRenderResolution();
+        const auto preferredRefreshRate = mtxRenderSettings.second->getRefreshRate();
 
         // Setup video mode.
         DXGI_MODE_DESC pickedDisplayMode;
@@ -2004,9 +2006,9 @@ namespace ne {
         }
 
         // Save display settings.
-        pMtxRenderSettings->second->setRenderResolution(
+        mtxRenderSettings.second->setRenderResolution(
             std::make_pair(pickedDisplayMode.Width, pickedDisplayMode.Height));
-        pMtxRenderSettings->second->setRefreshRate(std::make_pair(
+        mtxRenderSettings.second->setRefreshRate(std::make_pair(
             pickedDisplayMode.RefreshRate.Numerator, pickedDisplayMode.RefreshRate.Denominator));
 
         // Create swap chain.
@@ -2051,12 +2053,13 @@ namespace ne {
         waitForGpuToFinishWorkUpToThisPoint();
 
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
-        const auto renderResolution = pMtxRenderSettings->second->getRenderResolution();
-        const auto bIsVSyncEnabled = pMtxRenderSettings->second->isVsyncEnabled();
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
+
+        const auto renderResolution = mtxRenderSettings.second->getRenderResolution();
+        const auto bIsVSyncEnabled = mtxRenderSettings.second->isVsyncEnabled();
         const auto iMsaaSampleCount =
-            static_cast<unsigned int>(pMtxRenderSettings->second->getAntialiasingQuality());
+            static_cast<unsigned int>(mtxRenderSettings.second->getAntialiasingQuality());
 
         // Update supported AA quality level count.
         auto optionalError = updateMsaaQualityLevelCount();

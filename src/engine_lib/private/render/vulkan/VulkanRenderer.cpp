@@ -951,11 +951,11 @@ namespace ne {
         Logger::get().info(sRating);
 
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
         // Check if the GPU to use is set.
-        auto sGpuNameToUse = pMtxRenderSettings->second->getGpuToUse();
+        auto sGpuNameToUse = mtxRenderSettings.second->getGpuToUse();
         if (!sGpuNameToUse.empty()) {
             // Find the GPU in the list of available GPUs.
             std::optional<size_t> iFoundIndex{};
@@ -1063,7 +1063,7 @@ namespace ne {
             pPhysicalDevice = currentGpuInfo.pGpu;
 
             // Save GPU name in the settings.
-            pMtxRenderSettings->second->setGpuToUse(currentGpuInfo.sGpuName);
+            mtxRenderSettings.second->setGpuToUse(currentGpuInfo.sGpuName);
 
             // Save GPU name.
             sUsedGpuName = currentGpuInfo.sGpuName;
@@ -1230,9 +1230,9 @@ namespace ne {
         // Determine present mode.
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
         {
-            const auto pMtxRenderSettings = getRenderSettings();
-            std::scoped_lock guard(pMtxRenderSettings->first);
-            if (pMtxRenderSettings->second->isVsyncEnabled()) {
+            const auto mtxRenderSettings = getRenderSettings();
+            std::scoped_lock guard(*mtxRenderSettings.first);
+            if (mtxRenderSettings.second->isVsyncEnabled()) {
                 presentMode = VK_PRESENT_MODE_FIFO_KHR;
             }
         }
@@ -1900,11 +1900,11 @@ namespace ne {
         }
 
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(*mtxRenderSettings.first);
 
         // Get current texture filtering mode.
-        const auto textureFilteringQuality = pMtxRenderSettings->second->getTextureFilteringQuality();
+        const auto textureFilteringQuality = mtxRenderSettings.second->getTextureFilteringQuality();
 
         // Setup Vulkan parameters depending on the texture filtering mode.
         VkFilter vkFilter = VK_FILTER_NEAREST;
@@ -3870,11 +3870,11 @@ namespace ne {
         const auto iMaxSampleCount = static_cast<unsigned int>(maxSampleCount);
 
         // Get render setting.
-        const auto pMtxRenderSettings = getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderSettings();
+        std::scoped_lock guard(*mtxRenderSettings.first);
 
         // Get current AA sample count.
-        const auto sampleCount = pMtxRenderSettings->second->getAntialiasingQuality();
+        const auto sampleCount = mtxRenderSettings.second->getAntialiasingQuality();
         const auto iSampleCount = static_cast<unsigned int>(sampleCount);
 
         // Make sure this sample count is supported.

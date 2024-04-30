@@ -89,7 +89,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise deserialized object.
          */
-        static std::variant<std::shared_ptr<Serializable>, Error> deserializeSerializableObject(
+        static std::variant<std::unique_ptr<Serializable>, Error> deserializeSerializableObject(
             const toml::value* pTomlDocument,
             const toml::value* pTomlValue,
             const std::string& sFieldName,

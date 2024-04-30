@@ -85,7 +85,7 @@ namespace special RNAMESPACE() {
         int iIntValue = 0;
 
         RPROPERTY(Serialize)
-        std::vector<std::shared_ptr<ReflectionTestNode1>> vNodes;
+        std::vector<std::unique_ptr<ReflectionTestNode1>> vNodes;
 
         special_ReflectionTestNode1Child_GENERATED
     };
@@ -147,7 +147,7 @@ public:
     std::vector<std::string> vStringVector;
 
     RPROPERTY(Serialize)
-    std::vector<std::shared_ptr<ReflectionTestNode1>> vSharedPtrSerializable;
+    std::vector<std::unique_ptr<ReflectionTestNode1>> vUniquePtrSerializable;
 
     RPROPERTY(Serialize)
     std::vector<int> vEmpty;
@@ -303,9 +303,8 @@ public:
     RPROPERTY(Serialize)
     InventorySaveData inventory;
 
-    // Can also store types that derive from `Ability` without any serialization/deserialization issues.
     RPROPERTY(Serialize)
-    std::vector<std::shared_ptr<Ability>> vAbilities;
+    std::vector<std::unique_ptr<Ability>> vAbilities;
 
     PlayerSaveData_GENERATED
 };

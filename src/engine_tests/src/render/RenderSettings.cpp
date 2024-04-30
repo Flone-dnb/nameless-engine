@@ -76,14 +76,14 @@ TEST_CASE(
                 // Get some supported resolution.
                 targetResolution = *supportedResolutions.begin();
 
-                const auto pMtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-                std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
                 // Make sure it's not the same.
-                REQUIRE(pMtxRenderSettings->second->getRenderResolution() != targetResolution);
+                REQUIRE(mtxRenderSettings.second->getRenderResolution() != targetResolution);
 
                 // Apply.
-                pMtxRenderSettings->second->setRenderResolution(targetResolution);
+                mtxRenderSettings.second->setRenderResolution(targetResolution);
 
                 // Done.
                 bChangedResolution = true;
@@ -91,20 +91,20 @@ TEST_CASE(
                 // Change MSAA.
 
                 // Get settings.
-                const auto pMtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-                std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
                 // Apply.
                 bIsAaEnabled =
-                    pMtxRenderSettings->second->getAntialiasingQuality() != AntialiasingQuality::DISABLED;
+                    mtxRenderSettings.second->getAntialiasingQuality() != AntialiasingQuality::DISABLED;
                 if (bIsAaEnabled) {
-                    if (pMtxRenderSettings->second->getAntialiasingQuality() == AntialiasingQuality::HIGH) {
-                        pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
+                    if (mtxRenderSettings.second->getAntialiasingQuality() == AntialiasingQuality::HIGH) {
+                        mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
                     } else {
-                        pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::HIGH);
+                        mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::HIGH);
                     }
                 } else {
-                    pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
+                    mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
                 }
 
                 // Done.
@@ -113,12 +113,12 @@ TEST_CASE(
                 // Change VSync.
 
                 // Get settings.
-                const auto pMtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-                std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first);
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
                 // Apply.
-                bIsVsyncEnabled = !pMtxRenderSettings->second->isVsyncEnabled();
-                pMtxRenderSettings->second->setVsyncEnabled(bIsVsyncEnabled);
+                bIsVsyncEnabled = !mtxRenderSettings.second->isVsyncEnabled();
+                mtxRenderSettings.second->setVsyncEnabled(bIsVsyncEnabled);
 
                 bChangedVsync = true;
             } else if (iTickCount == 5) {
@@ -151,18 +151,16 @@ TEST_CASE(
         TestGameInstance2(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
             : GameInstance(pGameWindow, pGame, pInputManager) {}
         virtual void onGameStarted() override {
-            const auto pMtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-            std::scoped_lock guard(pMtxRenderSettings->first);
+            const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+            std::scoped_lock guard(*mtxRenderSettings.first);
 
-            REQUIRE(pMtxRenderSettings->second->getRenderResolution() == targetResolution);
+            REQUIRE(mtxRenderSettings.second->getRenderResolution() == targetResolution);
             if (bIsAaEnabled) {
-                REQUIRE(
-                    pMtxRenderSettings->second->getAntialiasingQuality() != AntialiasingQuality::DISABLED);
+                REQUIRE(mtxRenderSettings.second->getAntialiasingQuality() != AntialiasingQuality::DISABLED);
             } else {
-                REQUIRE(
-                    pMtxRenderSettings->second->getAntialiasingQuality() == AntialiasingQuality::DISABLED);
+                REQUIRE(mtxRenderSettings.second->getAntialiasingQuality() == AntialiasingQuality::DISABLED);
             }
-            REQUIRE(pMtxRenderSettings->second->isVsyncEnabled() == bIsVsyncEnabled);
+            REQUIRE(mtxRenderSettings.second->isVsyncEnabled() == bIsVsyncEnabled);
 
             getWindow()->close();
         }

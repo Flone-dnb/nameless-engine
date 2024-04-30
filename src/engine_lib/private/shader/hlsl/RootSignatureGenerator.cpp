@@ -423,8 +423,8 @@ namespace ne {
         }
 
         // Get current render settings to query texture filtering for static sampler.
-        const auto pMtxRenderSettings = pRenderer->getRenderSettings();
-        std::scoped_lock renderSettingsGuard(pMtxRenderSettings->first); // keep locked until finished
+        const auto mtxRenderSettings = pRenderer->getRenderSettings();
+        std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first); // keep locked until finished
 
         // Collect static sampler description.
         std::vector<D3D12_STATIC_SAMPLER_DESC> vStaticSamplersToBind;
@@ -432,7 +432,7 @@ namespace ne {
             switch (samplerType) {
             case (SamplerType::BASIC): {
                 vStaticSamplersToBind.push_back(HlslShader::getStaticSamplerDescription(
-                    pMtxRenderSettings->second->getTextureFilteringQuality()));
+                    mtxRenderSettings.second->getTextureFilteringQuality()));
                 break;
             }
             case (SamplerType::COMPARISON): {

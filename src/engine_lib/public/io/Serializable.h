@@ -73,7 +73,7 @@ namespace ne RNAMESPACE() {
     /** Information about an object that was deserialized. */
     template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
         requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
-                 std::same_as<SmartPointer, std::shared_ptr<Serializable>>
+                 std::same_as<SmartPointer, std::unique_ptr<Serializable>>
     struct DeserializedObjectInformation {
     public:
         DeserializedObjectInformation() = delete;
@@ -268,7 +268,7 @@ namespace ne RNAMESPACE() {
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
          *
-         * @remark You can use either `sgc::GcPtr` or `std::shared_ptr` as a smart pointer for deserialized
+         * @remark You can use either `sgc::GcPtr` or `std::unique_ptr` as a smart pointer for deserialized
          * object.
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
@@ -279,7 +279,7 @@ namespace ne RNAMESPACE() {
         template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
             requires std::derived_from<InnerType, Serializable> &&
                      (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                      std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                      std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
         static std::variant<SmartPointer, Error> deserialize(const std::filesystem::path& pathToFile);
 
         /**
@@ -298,7 +298,7 @@ namespace ne RNAMESPACE() {
         template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
             requires std::derived_from<InnerType, Serializable> &&
                      (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                      std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                      std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
         static std::variant<SmartPointer, Error> deserialize(
             const std::filesystem::path& pathToFile,
             std::unordered_map<std::string, std::string>& customAttributes);
@@ -321,7 +321,7 @@ namespace ne RNAMESPACE() {
         template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
             requires std::derived_from<InnerType, Serializable> &&
                      (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                      std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                      std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
         static std::variant<SmartPointer, Error> deserialize(
             std::filesystem::path pathToFile,
             std::unordered_map<std::string, std::string>& customAttributes,
@@ -344,7 +344,7 @@ namespace ne RNAMESPACE() {
         template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
             requires std::derived_from<InnerType, Serializable> &&
                      (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                      std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                      std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
         static std::variant<SmartPointer, Error> deserialize(
             const std::filesystem::path& pathToFile, const std::string& sEntityId);
 
@@ -360,7 +360,7 @@ namespace ne RNAMESPACE() {
          */
         template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
             requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
-                     std::same_as<SmartPointer, std::shared_ptr<Serializable>>
+                     std::same_as<SmartPointer, std::unique_ptr<Serializable>>
         static std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
         deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids);
 
@@ -387,7 +387,7 @@ namespace ne RNAMESPACE() {
         template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
             requires std::derived_from<InnerType, Serializable> &&
                      (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                      std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                      std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
         static std::variant<SmartPointer, Error> deserialize(
             const toml::value& tomlData,
             std::unordered_map<std::string, std::string>& customAttributes,
@@ -489,7 +489,7 @@ namespace ne RNAMESPACE() {
     template <typename SmartPointer, typename InnerType>
         requires std::derived_from<InnerType, Serializable> &&
                  (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                  std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                  std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
     std::variant<SmartPointer, Error> Serializable::deserialize(const std::filesystem::path& pathToFile) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
         return deserialize<SmartPointer>(pathToFile, foundCustomAttributes);
@@ -498,7 +498,7 @@ namespace ne RNAMESPACE() {
     template <typename SmartPointer, typename InnerType>
         requires std::derived_from<InnerType, Serializable> &&
                  (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                  std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                  std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
     std::variant<SmartPointer, Error> Serializable::deserialize(
         const std::filesystem::path& pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes) {
@@ -508,7 +508,7 @@ namespace ne RNAMESPACE() {
     template <typename SmartPointer, typename InnerType>
         requires std::derived_from<InnerType, Serializable> &&
                  (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                  std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                  std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
     std::variant<SmartPointer, Error> Serializable::deserialize(
         const std::filesystem::path& pathToFile, const std::string& sEntityId) {
         std::unordered_map<std::string, std::string> foundCustomAttributes;
@@ -517,7 +517,7 @@ namespace ne RNAMESPACE() {
 
     template <typename SmartPointer, typename InnerType>
         requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
-                 std::same_as<SmartPointer, std::shared_ptr<Serializable>>
+                 std::same_as<SmartPointer, std::unique_ptr<Serializable>>
     std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
     Serializable::deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids) {
         // Check that specified IDs don't have dots in them.
@@ -569,7 +569,7 @@ namespace ne RNAMESPACE() {
     template <typename SmartPointer, typename InnerType>
         requires std::derived_from<InnerType, Serializable> &&
                  (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                  std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                  std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
     std::variant<SmartPointer, Error> Serializable::deserialize(
         std::filesystem::path pathToFile,
         std::unordered_map<std::string, std::string>& customAttributes,
@@ -598,7 +598,7 @@ namespace ne RNAMESPACE() {
     template <typename SmartPointer, typename InnerType>
         requires std::derived_from<InnerType, Serializable> &&
                  (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
-                  std::same_as<SmartPointer, std::shared_ptr<InnerType>>)
+                  std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
     std::variant<SmartPointer, Error> Serializable::deserialize(
         const toml::value& tomlData,
         std::unordered_map<std::string, std::string>& customAttributes,
@@ -687,7 +687,7 @@ namespace ne RNAMESPACE() {
                     error.addCurrentLocationToErrorStack();
                     return error;
                 }
-                pOriginalEntity = std::get<SmartPointer>(deserializeResult);
+                pOriginalEntity = std::get<SmartPointer>(std::move(deserializeResult));
             } else if (sKey.starts_with(sCustomAttributePrefix)) {
                 // Custom attribute.
                 // Make sure it's a string.
@@ -742,9 +742,9 @@ namespace ne RNAMESPACE() {
             pSmartPointerInstance = std::move(pOriginalEntity);
         }
         if (pSmartPointerInstance == nullptr) {
-            if constexpr (std::is_same_v<SmartPointer, std::shared_ptr<InnerType>>) {
-                // Create a shared instance.
-                pSmartPointerInstance = pType->makeSharedInstance<InnerType>();
+            if constexpr (std::is_same_v<SmartPointer, std::unique_ptr<InnerType>>) {
+                // Create a unique instance.
+                pSmartPointerInstance = pType->makeUniqueInstance<InnerType>();
                 if (pSmartPointerInstance == nullptr) [[unlikely]] {
                     return Error(std::format(
                         "unable to make an object of type \"{}\" using type's default constructor "
@@ -752,7 +752,11 @@ namespace ne RNAMESPACE() {
                         pType->getName(),
                         pType->getName()));
                 }
-            } else if (std::is_same_v<SmartPointer, sgc::GcPtr<InnerType>>) {
+            }
+            // NOTE: don't allow deserializing into a `shared_ptr` since it may create a false assumption
+            // that this `shared_ptr` will also save/load its referenced entity or keep its reference
+            // (you can easily convert a unique_ptr to a shared_ptr so it should not be an issue).
+            else if (std::is_same_v<SmartPointer, sgc::GcPtr<InnerType>>) {
                 // Create GC instance.
                 // (this part is a temporary solution until we will add a `makeGcFromThisType` method to
                 // `rfk::Struct`)
@@ -844,14 +848,14 @@ namespace ne RNAMESPACE() {
 
                 if (pSerializeProperty->getSerializationType() == FST_AS_EXTERNAL_FILE) {
                     // Deserialize external file.
-                    auto result = deserialize<std::shared_ptr<Serializable>>(pathToExternalFile);
+                    auto result = deserialize<std::unique_ptr<Serializable>>(pathToExternalFile);
                     if (std::holds_alternative<Error>(result)) [[unlikely]] {
                         auto error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
                         return error;
                     }
                     const auto pDeserializedExternalField =
-                        std::get<std::shared_ptr<Serializable>>(std::move(result));
+                        std::get<std::unique_ptr<Serializable>>(std::move(result));
 
                     // Clone deserialized data to field.
                     auto optionalError = SerializableObjectFieldSerializer::cloneSerializableObject(

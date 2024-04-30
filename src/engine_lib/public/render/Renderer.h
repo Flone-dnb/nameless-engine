@@ -134,14 +134,11 @@ namespace ne {
         /**
          * Returns render settings that can be configured.
          *
-         * @remark Do not delete (free) returned pointer. Returning `std::shared_ptr` in a pair
-         * not because you should copy it but because render settings are Serializable
-         * and at the time of writing serialization/deserialization for `std::unique_ptr` is
-         * not supported (so consider the `std::shared_ptr` in the pair to be a `std::unique_ptr`).
+         * @remark Do not delete (free) returned pointer.
          *
          * @return Non-owning pointer to render settings.
          */
-        std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>>* getRenderSettings();
+        std::pair<std::recursive_mutex*, RenderSettings*> getRenderSettings();
 
         /**
          * Returns various statistics about rendering (such as FPS).
@@ -862,10 +859,10 @@ namespace ne {
         std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>> mtxShaderConfiguration;
 
         /**
-         * Render setting objects that configure the renderer.
+         * Render setting object that configures the renderer.
          * Must be used with mutex.
          */
-        std::pair<std::recursive_mutex, std::shared_ptr<RenderSettings>> mtxRenderSettings;
+        std::pair<std::recursive_mutex, std::unique_ptr<RenderSettings>> mtxRenderSettings;
 
         /** Meshes that were in camera's frustum last frame. */
         MeshesInFrustum meshesInFrustumLastFrame;

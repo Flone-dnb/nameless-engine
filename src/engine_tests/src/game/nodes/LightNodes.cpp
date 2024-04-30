@@ -183,15 +183,15 @@ TEST_CASE("change render settings with lights spawned") {
                 REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
 
                 // Get render settings.
-                const auto pMtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-                std::scoped_lock guard(pMtxRenderSettings->first);
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock guard(*mtxRenderSettings.first);
 
                 // Change MSAA.
-                const auto msaaState = pMtxRenderSettings->second->getAntialiasingQuality();
+                const auto msaaState = mtxRenderSettings.second->getAntialiasingQuality();
                 if (msaaState != AntialiasingQuality::HIGH) {
-                    pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::HIGH);
+                    mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::HIGH);
                 } else {
-                    pMtxRenderSettings->second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
+                    mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
                 }
 
                 return;
@@ -202,15 +202,15 @@ TEST_CASE("change render settings with lights spawned") {
                 REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
 
                 // Get render settings.
-                const auto pMtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-                std::scoped_lock guard(pMtxRenderSettings->first);
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock guard(*mtxRenderSettings.first);
 
                 // Change shadow quality.
-                const auto shadowQuality = pMtxRenderSettings->second->getShadowQuality();
+                const auto shadowQuality = mtxRenderSettings.second->getShadowQuality();
                 if (shadowQuality != ShadowQuality::HIGH) {
-                    pMtxRenderSettings->second->setShadowQuality(ShadowQuality::HIGH);
+                    mtxRenderSettings.second->setShadowQuality(ShadowQuality::HIGH);
                 } else {
-                    pMtxRenderSettings->second->setShadowQuality(ShadowQuality::MEDIUM);
+                    mtxRenderSettings.second->setShadowQuality(ShadowQuality::MEDIUM);
                 }
 
                 // Wait a few frames to check for log errors.

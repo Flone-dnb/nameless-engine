@@ -652,11 +652,11 @@ namespace ne {
         }
 
         // Get render settings.
-        const auto pMtxRenderSettings = getRenderer()->getRenderSettings();
-        std::scoped_lock guard(pMtxRenderSettings->first);
+        const auto mtxRenderSettings = getRenderer()->getRenderSettings();
+        std::scoped_lock guard(*mtxRenderSettings.first);
 
         // Get ideal mip skip count.
-        const auto iSkipMipCount = static_cast<unsigned int>(pMtxRenderSettings->second->getTextureQuality());
+        const auto iSkipMipCount = static_cast<unsigned int>(mtxRenderSettings.second->getTextureQuality());
 
         // Load texture from disk.
         ktxTexture* pKtxUploadTexture = nullptr;

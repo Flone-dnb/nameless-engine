@@ -136,7 +136,7 @@ namespace ne {
         return {};
     }
 
-    std::variant<std::shared_ptr<Serializable>, Error>
+    std::variant<std::unique_ptr<Serializable>, Error>
     SerializableObjectFieldSerializer::deserializeSerializableObject(
         const toml::value* pTomlDocument,
         const toml::value* pTomlValue,
@@ -248,7 +248,7 @@ namespace ne {
 
         // Deserialize section into an object.
         std::unordered_map<std::string, std::string> subAttributes;
-        auto result = Serializable::deserialize<std::shared_ptr<Serializable>>(
+        auto result = Serializable::deserialize<std::unique_ptr<Serializable>>(
             *pTomlDocument, subAttributes, sSubEntityId);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
@@ -256,7 +256,7 @@ namespace ne {
             return error;
         }
 
-        return std::get<std::shared_ptr<Serializable>>(std::move(result));
+        return std::get<std::unique_ptr<Serializable>>(std::move(result));
     }
 
     bool SerializableObjectFieldSerializer::isSerializableObjectValueEqual(
@@ -497,7 +497,7 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        auto pDeserializedObject = std::get<std::shared_ptr<Serializable>>(std::move(result));
+        auto pDeserializedObject = std::get<std::unique_ptr<Serializable>>(std::move(result));
 
         // Safely clone to target.
         auto optionalError = cloneSerializableObject(pDeserializedObject.get(), pTarget, true);

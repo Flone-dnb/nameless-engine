@@ -229,7 +229,7 @@ namespace ne RNAMESPACE() {
          * @param iMaterialSlot Index of the material slot to set this new material to.
          * By default all meshes have 1 material at slot 0 and mesh's geometry uses only this slot.
          */
-        void setMaterial(std::shared_ptr<Material> pMaterial, size_t iMaterialSlot = 0);
+        void setMaterial(std::unique_ptr<Material> pMaterial, size_t iMaterialSlot = 0);
 
         /**
          * Sets mesh data (geometry) to use.
@@ -262,12 +262,14 @@ namespace ne RNAMESPACE() {
         /**
          * Returns material used by this name.
          *
+         * @warning Do not delete (free) returned pointer.
+         *
          * @param iMaterialSlot Slot from which requested material is taken from.
          *
          * @return `nullptr` if the specified slot does not exist (see @ref getAvailableMaterialSlotCount),
          * otherwise used material.
          */
-        std::shared_ptr<Material> getMaterial(size_t iMaterialSlot = 0);
+        Material* getMaterial(size_t iMaterialSlot = 0);
 
         /**
          * Returns the total number of available material slots that the current mesh data (see
@@ -446,7 +448,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Default material for mesh node.
          */
-        static std::shared_ptr<Material> getDefaultMaterial();
+        static std::unique_ptr<Material> getDefaultMaterial();
 
         /**
          * Allocates shader resources (see @ref mtxGpuResources).
@@ -505,7 +507,7 @@ namespace ne RNAMESPACE() {
          * @remark Always contains valid pointers.
          */
         RPROPERTY(Serialize)
-        std::vector<std::shared_ptr<Material>> vMaterials;
+        std::vector<std::unique_ptr<Material>> vMaterials;
 
         /**
          * Mesh geometry.

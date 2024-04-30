@@ -586,8 +586,8 @@ namespace ne {
         }
 
         // Get settings.
-        const auto pRenderSettings = getRenderer()->getRenderSettings();
-        std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
+        const auto mtxRenderSettings = getRenderer()->getRenderSettings();
+        std::scoped_lock resourcesGuard(mtxInternalResources.first, *mtxRenderSettings.first);
 
         // Describe multisampling.
         VkPipelineMultisampleStateCreateInfo multisamplingStateInfo{};

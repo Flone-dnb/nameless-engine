@@ -121,11 +121,11 @@ TEST_CASE("create engine default materials") {
                 // Create nodes.
                 auto pMeshNodeTransparent = sgc::makeGc<MeshNode>("Transparent material node");
                 pMeshNodeTransparent->setMaterial(
-                    std::get<std::shared_ptr<Material>>(std::move(resultTransparent)));
+                    std::get<std::unique_ptr<Material>>(std::move(resultTransparent)));
                 pMeshNodeTransparent->setMeshData(meshData);
 
                 auto pMeshNodeOpaque = sgc::makeGc<MeshNode>("Opaque material node");
-                pMeshNodeOpaque->setMaterial(std::get<std::shared_ptr<Material>>(std::move(resultOpaque)));
+                pMeshNodeOpaque->setMaterial(std::get<std::unique_ptr<Material>>(std::move(resultOpaque)));
                 pMeshNodeOpaque->setMeshData(meshData);
 
                 // There should be no PSOs created since no material is spawned.
@@ -217,13 +217,13 @@ TEST_CASE("serialize and deserialize Material") {
                         EngineShaderNames::MeshNode::getFragmentShaderName(),
                         true,
                         "My Material");
-                    if (std::holds_alternative<Error>(result)) {
+                    if (std::holds_alternative<Error>(result)) [[unlikely]] {
                         Error error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
                         REQUIRE(false);
                     }
-                    const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+                    const auto pMaterial = std::get<std::unique_ptr<Material>>(std::move(result));
 
                     // Customize.
                     pMaterial->setDiffuseColor(diffuseColor);
@@ -233,7 +233,7 @@ TEST_CASE("serialize and deserialize Material") {
 
                     // Serialize.
                     auto optionalError = pMaterial->serialize(pathToFileInTemp, false);
-                    if (optionalError.has_value()) {
+                    if (optionalError.has_value()) [[unlikely]] {
                         auto error = optionalError.value();
                         error.addCurrentLocationToErrorStack();
                         INFO(error.getFullErrorMessage());
@@ -245,7 +245,7 @@ TEST_CASE("serialize and deserialize Material") {
 
                 {
                     // Deserialize.
-                    auto result = Serializable::deserialize<std::shared_ptr<Material>>(pathToFileInTemp);
+                    auto result = Serializable::deserialize<std::unique_ptr<Material>>(pathToFileInTemp);
                     if (std::holds_alternative<Error>(result)) {
                         Error error = std::get<Error>(std::move(result));
                         error.addCurrentLocationToErrorStack();
@@ -253,7 +253,7 @@ TEST_CASE("serialize and deserialize Material") {
                         REQUIRE(false);
                     }
 
-                    const auto pMaterial = std::get<std::shared_ptr<Material>>(std::move(result));
+                    const auto pMaterial = std::get<std::unique_ptr<Material>>(std::move(result));
 
                     // Check.
                     REQUIRE(pMaterial->getMaterialName() == "My Material");
@@ -348,11 +348,19 @@ TEST_CASE("unused materials unload shaders from memory") {
                             REQUIRE(false);
                         }
 
-                        // Create custom material.
-                        auto result =
+                        // Create custom materials.
+                        auto result1 =
                             Material::create("test.custom_mesh_node.vs", "test.custom_mesh_node.ps", false);
-                        if (std::holds_alternative<Error>(result)) {
-                            Error error = std::get<Error>(std::move(result));
+                        if (std::holds_alternative<Error>(result1)) {
+                            Error error = std::get<Error>(std::move(result1));
+                            error.addCurrentLocationToErrorStack();
+                            INFO(error.getFullErrorMessage());
+                            REQUIRE(false);
+                        }
+                        auto result2 =
+                            Material::create("test.custom_mesh_node.vs", "test.custom_mesh_node.ps", false);
+                        if (std::holds_alternative<Error>(result1)) {
+                            Error error = std::get<Error>(std::move(result1));
                             error.addCurrentLocationToErrorStack();
                             INFO(error.getFullErrorMessage());
                             REQUIRE(false);
@@ -366,12 +374,14 @@ TEST_CASE("unused materials unload shaders from memory") {
 
                         // Create nodes with custom material.
                         auto pCustomMeshNode1 = sgc::makeGc<MeshNode>();
-                        pCustomMeshNode1->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
+                        pCustomMeshNode1->setMaterial(
+                            std::get<std::unique_ptr<Material>>(std::move(result1)));
                         pCustomMeshNode1->setMeshData(meshData);
 
                         // Create nodes with custom material.
                         auto pCustomMeshNode2 = sgc::makeGc<MeshNode>();
-                        pCustomMeshNode2->setMaterial(pCustomMeshNode1->getMaterial());
+                        pCustomMeshNode2->setMaterial(
+                            std::get<std::unique_ptr<Material>>(std::move(result2)));
                         pCustomMeshNode2->setMeshData(meshData);
 
                         // Create node with default material.
@@ -577,7 +587,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                     EngineShaderNames::MeshNode::getVertexShaderName(),
                     EngineShaderNames::MeshNode::getFragmentShaderName(),
                     true);
-                if (std::holds_alternative<Error>(result)) {
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
                     INFO(error.getFullErrorMessage());
@@ -585,7 +595,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                 }
 
                 // Use transparent material.
-                pMeshNode2->setMaterial(std::get<std::shared_ptr<Material>>(std::move(result)));
+                pMeshNode2->setMaterial(std::get<std::unique_ptr<Material>>(std::move(result)));
 
                 getWorldRootNode()->addChildNode(pMeshNode2);
                 pMeshNode2->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));

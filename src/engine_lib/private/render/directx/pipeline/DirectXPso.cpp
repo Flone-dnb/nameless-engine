@@ -168,11 +168,11 @@ namespace ne {
         }
 
         // Get settings.
-        const auto pRenderSettings = getRenderer()->getRenderSettings();
-        std::scoped_lock resourcesGuard(mtxInternalResources.first, pRenderSettings->first);
+        const auto mtxRenderSettings = getRenderer()->getRenderSettings();
+        std::scoped_lock resourcesGuard(mtxInternalResources.first, *mtxRenderSettings.first);
 
         // Get AA setting.
-        const auto antialiasingQuality = pRenderSettings->second->getAntialiasingQuality();
+        const auto antialiasingQuality = mtxRenderSettings.second->getAntialiasingQuality();
         const auto iMsaaSampleCount = static_cast<unsigned int>(antialiasingQuality);
 
         // Make sure the pipeline is not initialized yet.

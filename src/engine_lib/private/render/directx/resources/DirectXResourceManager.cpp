@@ -106,12 +106,12 @@ namespace ne {
 
         if (iTextureWidth > iMinTextureSize && iTextureHeight > iMinTextureSize && iTextureMipCount > 1) {
             // Get render settings.
-            const auto pMtxRenderSettings = getRenderer()->getRenderSettings();
-            std::scoped_lock guard(pMtxRenderSettings->first);
+            const auto mtxRenderSettings = getRenderer()->getRenderSettings();
+            std::scoped_lock guard(*mtxRenderSettings.first);
 
             // Get ideal mip skip count.
             const auto iSkipMipCount =
-                static_cast<unsigned int>(pMtxRenderSettings->second->getTextureQuality());
+                static_cast<unsigned int>(mtxRenderSettings.second->getTextureQuality());
 
             // Make sure we have a square texture with correct size.
             if (iTextureWidth % iMinTextureSize != 0 || iTextureHeight % iMinTextureSize != 0 ||

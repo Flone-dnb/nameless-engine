@@ -280,7 +280,7 @@ namespace ne {
         onSpawnedMeshNodeStoppedUsingMaterial(pMeshNode, indexBufferDisplayed);
     }
 
-    std::variant<std::shared_ptr<Material>, Error> Material::create(
+    std::variant<std::unique_ptr<Material>, Error> Material::create(
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
         bool bUseTransparency,
@@ -295,7 +295,7 @@ namespace ne {
         const auto pPipelineManager = std::get<PipelineManager*>(result);
 
         // Create material.
-        return std::shared_ptr<Material>(new Material(
+        return std::unique_ptr<Material>(new Material(
             sVertexShaderName, sPixelShaderName, bUseTransparency, pPipelineManager, sMaterialName));
     }
 

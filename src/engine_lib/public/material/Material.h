@@ -129,7 +129,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Error if something went wrong, otherwise created material.
          */
-        static std::variant<std::shared_ptr<Material>, Error> create(
+        static std::variant<std::unique_ptr<Material>, Error> create(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
             bool bUseTransparency,

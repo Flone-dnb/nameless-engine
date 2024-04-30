@@ -223,6 +223,9 @@ namespace ne {
         std::string sTextureFormatExtension;
 
         /** Do not delete (free) this pointer. Resource manager that owns this object. */
-        GpuResourceManager* pResourceManager = nullptr;
+        GpuResourceManager* const pResourceManager = nullptr;
+
+        /** File name that we add before extension to the imported texture file. */
+        static constexpr auto pImportedFileName = "t";
     };
 }

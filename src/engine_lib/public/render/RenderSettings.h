@@ -33,6 +33,14 @@ namespace ne RNAMESPACE() {
         HIGH = 2    //< Anisotropic filtering.
     };
 
+    /** Describes how much mipmaps we will skip when loading textures from disk. */
+    enum class TextureQuality : unsigned int {
+        VERY_HIGH = 0,
+        HIGH = 1,
+        MEDIUM = 2,
+        LOW = 3,
+    };
+
     /** Controls renderer settings. */
     class RCLASS(Guid("eb477c6d-cdc4-4b7a-9349-296fb38e6bfc")) RenderSettings : public Serializable {
         // Renderer will initialize this object.
@@ -81,6 +89,15 @@ namespace ne RNAMESPACE() {
         void setTextureFilteringQuality(TextureFilteringQuality quality);
 
         /**
+         * Sets texture quality to be used.
+         *
+         * @remark In order for this setting to be applied the engine needs to be restarted.
+         *
+         * @param quality Quality to use.
+         */
+        void setTextureQuality(TextureQuality quality);
+
+        /**
          * Sets the width and the height of the render resolution.
          *
          * @remark Use `Renderer::getSupportedRenderResolutions` to query for available
@@ -99,6 +116,8 @@ namespace ne RNAMESPACE() {
 
         /**
          * Sets screen's refresh rate to use.
+         *
+         * @remark In order for this setting to be applied the engine needs to be restarted.
          *
          * @param refreshRate Numerator and denominator of the refresh rate to use.
          */
@@ -165,6 +184,13 @@ namespace ne RNAMESPACE() {
          * @return Texture filtering quality.
          */
         TextureFilteringQuality getTextureFilteringQuality() const;
+
+        /**
+         * Returns currently used texture quality.
+         *
+         * @return Texture quality.
+         */
+        TextureQuality getTextureQuality() const;
 
         /**
          * Returns currently used render resolution (width and height).
@@ -298,9 +324,13 @@ namespace ne RNAMESPACE() {
         RPROPERTY(Serialize)
         unsigned int iAntialiasingSampleCount = static_cast<unsigned int>(AntialiasingQuality::HIGH);
 
-        /** Texture filtering quality. */
+        /** Texture filtering mode. */
         RPROPERTY(Serialize)
         unsigned int iTextureFilteringQuality = static_cast<unsigned int>(TextureFilteringQuality::HIGH);
+
+        /** Defines how much mipmaps we will skip when loading textures from disk. */
+        RPROPERTY(Serialize)
+        unsigned int iTextureQuality = static_cast<unsigned int>(TextureQuality::VERY_HIGH);
 
         /** Whether VSync is enabled or not. */
         RPROPERTY(Serialize)

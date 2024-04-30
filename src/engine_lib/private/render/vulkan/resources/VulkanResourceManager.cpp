@@ -53,7 +53,7 @@ namespace ne {
         // Create resource.
         auto result =
             createBuffer(sResourceName, bufferInfo, allocationCreateInfo, iElementSizeInBytes, iElementCount);
-        if (std::holds_alternative<Error>(result)) {
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -275,7 +275,7 @@ namespace ne {
             allocationInfo,
             iElementSizeInBytes,
             iElementCount);
-        if (std::holds_alternative<Error>(result)) {
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -339,7 +339,7 @@ namespace ne {
             true,
             static_cast<unsigned int>(iElementSizeInBytes),
             static_cast<unsigned int>(iElementCount));
-        if (std::holds_alternative<Error>(result)) {
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -362,7 +362,7 @@ namespace ne {
 
         // Create an upload resource for uploading data.
         auto uploadResourceResult = createResourceWithCpuWriteAccess(sResourceName, iDataSizeInBytes, 1, {});
-        if (std::holds_alternative<Error>(uploadResourceResult)) {
+        if (std::holds_alternative<Error>(uploadResourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(uploadResourceResult));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -375,7 +375,7 @@ namespace ne {
         // Create the final resource to copy the data to.
         auto finalResourceResult = createResource(
             sResourceName, iElementSizeInBytes, iElementCount, usage, bIsShaderReadWriteResource);
-        if (std::holds_alternative<Error>(finalResourceResult)) {
+        if (std::holds_alternative<Error>(finalResourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(finalResourceResult));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -423,7 +423,7 @@ namespace ne {
         // Submit command buffer.
         auto optionalError =
             pRenderer->submitWaitDestroyOneTimeSubmitCommandBuffer(pOneTimeSubmitCommandBuffer);
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
@@ -460,7 +460,7 @@ namespace ne {
             false,
             static_cast<unsigned int>(iElementSizeInBytes),
             static_cast<unsigned int>(iElementCount));
-        if (std::holds_alternative<Error>(resourceResult)) {
+        if (std::holds_alternative<Error>(resourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(resourceResult));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -477,19 +477,21 @@ namespace ne {
         // Prepare some variables.
         const auto imageFormat = convertTextureResourceFormatToVkFormat(format);
         const auto imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        const uint32_t mipLevelCount = 1;
+        const uint32_t layerCount = 1;
 
         // Create image.
         auto resourceResult = createImage(
             sResourceName,
             iWidth,
             iHeight,
-            1,
+            mipLevelCount,
             VK_SAMPLE_COUNT_1_BIT,
             imageFormat,
             VK_IMAGE_TILING_OPTIMAL,
             VK_IMAGE_USAGE_STORAGE_BIT,
             imageAspect);
-        if (std::holds_alternative<Error>(resourceResult)) {
+        if (std::holds_alternative<Error>(resourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(resourceResult));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -507,6 +509,8 @@ namespace ne {
             pTextureResource->getInternalImage(),
             imageFormat,
             imageAspect,
+            mipLevelCount,
+            layerCount,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_GENERAL); // store image can be read/written only in this layout
         if (optionalError.has_value()) [[unlikely]] {
@@ -549,7 +553,7 @@ namespace ne {
             usage,
             aspect,
             bPointLightColorCubemap);
-        if (std::holds_alternative<Error>(resourceResult)) {
+        if (std::holds_alternative<Error>(resourceResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(resourceResult));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -580,7 +584,7 @@ namespace ne {
         imageInfo.arrayLayers = bIsCubeMap ? 6 : 1; // NOLINT: cubemap face count
         imageInfo.format = imageFormat;
         imageInfo.tiling = imageTilingMode;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // must be undefined or preinitialized
         imageInfo.usage = imageUsage;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = sampleCount;
@@ -594,7 +598,7 @@ namespace ne {
         // Create resource.
         auto result = VulkanResource::create(
             this, sResourceName, pMemoryAllocator, imageInfo, allocationInfo, viewDescription, bIsCubeMap);
-        if (std::holds_alternative<Error>(result)) {
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
@@ -647,6 +651,13 @@ namespace ne {
                 ktxErrorString(result)));
         }
 
+        // Get render settings.
+        const auto pMtxRenderSettings = getRenderer()->getRenderSettings();
+        std::scoped_lock guard(pMtxRenderSettings->first);
+
+        // Get ideal mip skip count.
+        const auto iSkipMipCount = static_cast<unsigned int>(pMtxRenderSettings->second->getTextureQuality());
+
         // Load texture from disk.
         ktxTexture* pKtxUploadTexture = nullptr;
         result = ktxTexture_CreateFromNamedFile(
@@ -663,13 +674,16 @@ namespace ne {
 
         // Load texture to the GPU memory.
         ktxVulkanTexture textureData;
+        const auto targetImageTiling = VK_IMAGE_TILING_OPTIMAL;
+        const auto targetImageUsage = VK_IMAGE_USAGE_SAMPLED_BIT;
+        const auto targetImageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         result = ktxTexture_VkUploadEx_WithSuballocator(
             pKtxUploadTexture,
             &ktxDeviceInfo,
             &textureData,
-            VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_SAMPLED_BIT,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            targetImageTiling,
+            iSkipMipCount == 0 ? targetImageUsage : targetImageUsage | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+            iSkipMipCount == 0 ? targetImageLayout : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
             &subAllocCallbacks);
         if (result != KTX_SUCCESS) [[unlikely]] {
             return Error(std::format(
@@ -687,13 +701,130 @@ namespace ne {
 
         // Wrap created texture data.
         auto createResult = VulkanResource::create(this, sResourceName, textureData);
-        if (std::holds_alternative<Error>(createResult)) {
+        if (std::holds_alternative<Error>(createResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(createResult));
             error.addCurrentLocationToErrorStack();
             return error;
         }
+        auto pImportedTextureResource = std::get<std::unique_ptr<VulkanResource>>(std::move(createResult));
 
-        return std::get<std::unique_ptr<VulkanResource>>(std::move(createResult));
+        if (iSkipMipCount == 0) {
+            return pImportedTextureResource;
+        }
+
+        // Since KTX-Software does not have functionality to skip some mips we will just copy
+        // the imported texture to a new one without some mips.
+        const auto iImportedTextureMipSkipCount =
+            iSkipMipCount >= textureData.levelCount ? textureData.levelCount - 1 : iSkipMipCount;
+        const auto iTargetMipCount = textureData.levelCount - iImportedTextureMipSkipCount;
+        const auto iTargetTextureWidth = std::max(1u, textureData.width >> iImportedTextureMipSkipCount);
+        const auto iTargetTextureHeight = std::max(1u, textureData.height >> iImportedTextureMipSkipCount);
+        auto targetImageResult = createImage(
+            sResourceName,
+            iTargetTextureWidth,
+            iTargetTextureHeight,
+            iTargetMipCount,
+            VK_SAMPLE_COUNT_1_BIT,
+            textureData.imageFormat,
+            targetImageTiling,
+            targetImageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            textureData.layerCount == 6);
+        if (std::holds_alternative<Error>(targetImageResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(targetImageResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        auto pTargetTextureResource = std::get<std::unique_ptr<VulkanResource>>(std::move(targetImageResult));
+
+        // Transition layout to copy destination.
+        auto optionalError = pVulkanRenderer->transitionImageLayout(
+            pTargetTextureResource->getInternalImage(),
+            textureData.imageFormat,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            iTargetMipCount,
+            textureData.layerCount,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Create a command buffer to copy the image.
+        auto commandBufferResult = pVulkanRenderer->createOneTimeSubmitCommandBuffer();
+        if (std::holds_alternative<Error>(commandBufferResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(commandBufferResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto pOneTimeSubmitCommandBuffer = std::get<VkCommandBuffer>(commandBufferResult);
+
+        // Prepare image regions to copy.
+        std::vector<VkImageCopy> vImageCopyRegions;
+        vImageCopyRegions.reserve(iTargetMipCount);
+        for (uint32_t iSrcMip = iImportedTextureMipSkipCount, iDstMip = 0u; iSrcMip < textureData.levelCount;
+             iSrcMip++, iDstMip++) {
+            auto& copyRegion = vImageCopyRegions.emplace_back();
+
+            copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.srcSubresource.mipLevel = iSrcMip;
+            copyRegion.srcSubresource.baseArrayLayer = 0;
+            copyRegion.srcSubresource.layerCount = textureData.layerCount;
+
+            copyRegion.srcOffset.x = 0;
+            copyRegion.srcOffset.y = 0;
+            copyRegion.srcOffset.z = 0;
+
+            copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            copyRegion.dstSubresource.mipLevel = iDstMip;
+            copyRegion.dstSubresource.baseArrayLayer = 0;
+            copyRegion.dstSubresource.layerCount = textureData.layerCount;
+
+            copyRegion.dstOffset.x = 0;
+            copyRegion.dstOffset.y = 0;
+            copyRegion.dstOffset.z = 0;
+
+            copyRegion.extent.width = std::max(1u, textureData.width >> iSrcMip);
+            copyRegion.extent.height = std::max(1u, textureData.height >> iSrcMip);
+            copyRegion.extent.depth = std::max(1u, textureData.depth >> iSrcMip);
+        }
+
+        // Record a copy image command.
+        vkCmdCopyImage(
+            pOneTimeSubmitCommandBuffer,
+            pImportedTextureResource->getInternalImage(),
+            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+            pTargetTextureResource->getInternalImage(),
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            static_cast<uint32_t>(vImageCopyRegions.size()),
+            vImageCopyRegions.data());
+
+        // Submit and wait of the command buffer.
+        optionalError =
+            pVulkanRenderer->submitWaitDestroyOneTimeSubmitCommandBuffer(pOneTimeSubmitCommandBuffer);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return std::move(optionalError.value());
+        }
+
+        // Transition layout to the final state.
+        optionalError = pVulkanRenderer->transitionImageLayout(
+            pTargetTextureResource->getInternalImage(),
+            textureData.imageFormat,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            iTargetMipCount,
+            textureData.layerCount,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            targetImageLayout);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        return pTargetTextureResource;
     }
 
     VulkanStorageResourceArrayManager* VulkanResourceManager::getStorageResourceArrayManager() const {

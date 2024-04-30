@@ -2226,7 +2226,7 @@ if (optionalError.has_value()){
 // texture is imported
 ```
 
-In the example above after the image is imported the directory `res/game/player/textures/diffuse` will have multiple files with `DDS` and `KTX` extensions. Both formats are special GPU image formats with compression and mipmaps (if you heard about them). The `DDS` files are used by the DirectX renderer and the `KTX` files are used by the Vulkan renderer. Files in the resulting directory will have names like `0.dds`, `0.ktx`, `1.dds`, `1.ktx` and so on. Numbers 0, 1, 2, etc. are used for `RenderSettings::setTextureQuality` so `0.dds`/`0.ktx` file stores texture with highest quality, then `1.dds`/`1.ktx` stores texture with slightly worse quality and so on.
+In the example above after the image is imported the directory `res/game/player/textures/diffuse` will have multiple files with `DDS` and `KTX` extensions. Both formats are special GPU image formats with compression and mipmaps (if you heard about them). The `DDS` files are used by the DirectX renderer and the `KTX` files are used by the Vulkan renderer.
 
 Let's now see how we can use this texture in our material:
 

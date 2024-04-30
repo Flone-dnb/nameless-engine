@@ -183,6 +183,8 @@ namespace ne {
          * @param pImage      Image to use.
          * @param imageFormat Image format.
          * @param aspect      Aspect of the image that will be affected.
+         * @param levelCount  Defines how much mipmaps will be affected.
+         * @param layerCount  Defines how much image layers will be affected.
          * @param oldLayout   Old (current) image layout.
          * @param newLayout   New image layout.
          *
@@ -192,6 +194,8 @@ namespace ne {
             VkImage pImage,
             VkFormat imageFormat,
             VkImageAspectFlags aspect,
+            uint32_t levelCount,
+            uint32_t layerCount,
             VkImageLayout oldLayout,
             VkImageLayout newLayout);
 

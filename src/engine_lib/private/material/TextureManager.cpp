@@ -172,8 +172,8 @@ namespace ne {
         std::filesystem::create_directory(pathToOutputDirectory);
 
         // Build paths to resulting files.
-        const auto pathToDds = pathToOutputDirectory / "0.dds";
-        const auto pathToKxt = pathToOutputDirectory / "0.ktx";
+        const auto pathToDds = pathToOutputDirectory / (std::string(pImportedFileName) + ".dds");
+        const auto pathToKxt = pathToOutputDirectory / (std::string(pImportedFileName) + ".ktx");
 
         // Save compressed texture.
         auto ddsSaveResult = CMP_SaveTexture(pathToDds.string().c_str(), &compressedTextureMipSet);
@@ -201,10 +201,8 @@ namespace ne {
         return {};
     }
 
-    TextureManager::TextureManager(GpuResourceManager* pResourceManager) {
-        // Save resource manager.
-        this->pResourceManager = pResourceManager;
-
+    TextureManager::TextureManager(GpuResourceManager* pResourceManager)
+        : pResourceManager(pResourceManager) {
         // Initialize texture format extension.
         determineTextureFormatExtension();
     }
@@ -361,9 +359,8 @@ namespace ne {
                 std::format("expected the path \"{}\" to point to a directory", pathToResource.string()));
         }
 
-        // Construct a path to the file by appending image quality and a format
-        // (TODO: "0" below will be replaced once we implement RenderSettings::setTextureQuality).
-        pathToResource /= "0" + sTextureFormatExtension;
+        // Construct a path to the file by appending a format.
+        pathToResource /= pImportedFileName + sTextureFormatExtension;
 
         // Load texture.
         auto result = pResourceManager->loadTextureFromDisk(

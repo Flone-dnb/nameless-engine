@@ -90,16 +90,71 @@ namespace ne {
             return Error("expected a DirectX renderer");
         }
 
+        // Get texture info.
+        uint32_t iTextureWidth = 0;
+        uint32_t iTextureHeight = 0;
+        uint32_t iTextureMipCount = 0;
+        auto hResult = DirectX::GetDDSTextureInfoFromFile(
+            pathToTextureFile.wstring().c_str(), iTextureWidth, iTextureHeight, iTextureMipCount);
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        // Determine if we can skip some mips depending on the texture quality.
+        size_t iMaxMipSize = 0;               // 0 means don't skip any mips
+        constexpr size_t iMinTextureSize = 4; // block compression operates on 4x4
+
+        if (iTextureWidth > iMinTextureSize && iTextureHeight > iMinTextureSize && iTextureMipCount > 1) {
+            // Get render settings.
+            const auto pMtxRenderSettings = getRenderer()->getRenderSettings();
+            std::scoped_lock guard(pMtxRenderSettings->first);
+
+            // Get ideal mip skip count.
+            const auto iSkipMipCount =
+                static_cast<unsigned int>(pMtxRenderSettings->second->getTextureQuality());
+
+            // Make sure we have a square texture with correct size.
+            if (iTextureWidth % iMinTextureSize != 0 || iTextureHeight % iMinTextureSize != 0 ||
+                iTextureWidth != iTextureHeight) [[unlikely]] {
+                return Error(std::format(
+                    "unexpected texture size for texture \"{}\", expected the texture to be a square texture "
+                    "with the size being multiple of {}",
+                    pathToTextureFile.string(),
+                    iMinTextureSize));
+            }
+            iMaxMipSize = iTextureWidth;
+
+            // Skip some mips.
+            size_t iTextureMipsLeft = iTextureMipCount;
+            for (size_t i = 0; i < iSkipMipCount; i++) {
+                // Exit if only 1 mip is left (we must have at least 1).
+                if (iTextureMipsLeft == 1) {
+                    break;
+                }
+
+                // Calculate next mip size.
+                const size_t iNextMipSize = iMaxMipSize / 2;
+                if (iNextMipSize <= iMinTextureSize) {
+                    break;
+                }
+                iMaxMipSize = iNextMipSize;
+
+                // Decrement left mips.
+                iTextureMipsLeft -= 1;
+            }
+        }
+
         // Load DDS file as a new resource.
         ComPtr<ID3D12Resource> pCreatedResource;
-        std::unique_ptr<uint8_t[]> pDdsData;
+        std::unique_ptr<uint8_t[]> pImportedTextureData;
         std::vector<D3D12_SUBRESOURCE_DATA> vSubresources;
-        const auto hResult = DirectX::LoadDDSTextureFromFile(
+        hResult = DirectX::LoadDDSTextureFromFile(
             pDirectXRenderer->getD3dDevice(),
             pathToTextureFile.wstring().c_str(),
             pCreatedResource.GetAddressOf(),
-            pDdsData,
-            vSubresources
+            pImportedTextureData,
+            vSubresources,
+            iMaxMipSize
             // max size argument
             // ... output arguments ...
         );

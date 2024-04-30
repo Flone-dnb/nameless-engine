@@ -35,7 +35,7 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -63,7 +63,7 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -121,7 +121,7 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -232,6 +232,23 @@ namespace ne {
             iShadowMapSize = iNewShadowMapSize;
         }
 
+        // Check texture quality.
+        if (iTextureQuality != static_cast<unsigned int>(TextureQuality::VERY_HIGH) &&
+            iTextureQuality != static_cast<unsigned int>(TextureQuality::HIGH) &&
+            iTextureQuality != static_cast<unsigned int>(TextureQuality::MEDIUM) &&
+            iTextureQuality != static_cast<unsigned int>(TextureQuality::LOW)) {
+            const auto iNewTextureQuality = static_cast<unsigned int>(TextureQuality::VERY_HIGH);
+
+            // Log change.
+            Logger::get().warn(std::format(
+                "deserialized texture quality \"{}\" is not a valid parameter, changing to \"{}\"",
+                iTextureQuality,
+                iNewTextureQuality));
+
+            // Correct the value.
+            iTextureQuality = iNewTextureQuality;
+        }
+
 #if defined(DEBUG) && defined(WIN32)
         static_assert(
             sizeof(RenderSettings) == 200, // NOLINT: current class size
@@ -262,7 +279,35 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            Logger::get().error(std::format(
+                "failed to save new render setting configuration, error: \"{}\"",
+                error.getFullErrorMessage()));
+        }
+    }
+
+    void RenderSettings::setTextureQuality(TextureQuality quality) {
+        if (iTextureQuality == static_cast<unsigned int>(quality)) {
+            return; // do nothing
+        }
+
+        // Log change.
+        Logger::get().info(std::format(
+            "texture quality is being changed from \"{}\" to \"{}\"",
+            iTextureQuality,
+            static_cast<unsigned int>(quality)));
+
+        // Change.
+        iTextureQuality = static_cast<unsigned int>(quality);
+
+        // No need to notify the renderer since the settings will be applied
+        // on the next engine start.
+
+        // Save.
+        auto optionalError = saveConfigurationToDisk();
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -273,6 +318,12 @@ namespace ne {
 
     TextureFilteringQuality RenderSettings::getTextureFilteringQuality() const {
         return static_cast<TextureFilteringQuality>(iTextureFilteringQuality);
+    }
+
+    unsigned int RenderSettings::getFpsLimit() const { return iFpsLimit; }
+
+    TextureQuality RenderSettings::getTextureQuality() const {
+        return static_cast<TextureQuality>(iTextureQuality);
     }
 
     std::pair<unsigned int, unsigned int> RenderSettings::getRenderResolution() const {
@@ -333,7 +384,7 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -359,7 +410,7 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -388,12 +439,13 @@ namespace ne {
         iRefreshRateDenominator = refreshRate.second;
 
         // TODO: need to change without restarting
+        // TODO: IF RESTART IS NO LONGER NEEDED - UPDATE FUNCTION DOCS
         // Notify renderer.
         // notifyRendererAboutChangedSettings();
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -439,11 +491,12 @@ namespace ne {
         // Change.
         sGpuToUse = sGpuName;
 
-        // Engine needs to be restarted in order for the setting to be applied.
+        // No need to notify the renderer since the engine needs to be restarted
+        // in order for the setting to be applied.
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
@@ -494,7 +547,7 @@ namespace ne {
 
         // Save.
         auto optionalError = saveConfigurationToDisk();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             Logger::get().error(std::format(
                 "failed to save new render setting configuration, error: \"{}\"",
@@ -532,7 +585,4 @@ namespace ne {
 
         return {};
     }
-
-    unsigned int RenderSettings::getFpsLimit() const { return iFpsLimit; }
-
 } // namespace ne

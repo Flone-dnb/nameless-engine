@@ -2857,6 +2857,8 @@ namespace ne {
         VkImage pImage,
         VkFormat imageFormat,
         VkImageAspectFlags aspect,
+        uint32_t levelCount,
+        uint32_t layerCount,
         VkImageLayout oldLayout,
         VkImageLayout newLayout) {
         // Create one-time submit command buffer.
@@ -2882,9 +2884,9 @@ namespace ne {
         barrier.image = pImage;
         barrier.subresourceRange.aspectMask = aspect;
         barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.levelCount = levelCount;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = layerCount;
 
         VkPipelineStageFlags pipelineStagesBeforeBarrier;
         VkPipelineStageFlags pipelineStagesToWaitOnBarrier;

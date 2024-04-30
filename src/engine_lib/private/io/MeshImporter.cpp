@@ -7,6 +7,7 @@
 #include "misc/ProjectPaths.h"
 #include "game/nodes/MeshNode.h"
 #include "material/Material.h"
+#include "io/TextureImporter.h"
 
 // External.
 #define TINYGLTF_IMPLEMENTATION
@@ -14,14 +15,6 @@
 #include "tinygltf/tiny_gltf.h"
 
 namespace ne {
-
-#if defined(WIN32)
-    inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) { // NOLINT
-#else
-    inline bool textureImportProcess(float percent, int*, int*) { // NOLINT
-#endif
-        return false;
-    }
 
     inline bool
     writeGltfTextureToDisk(const tinygltf::Image& image, const std::filesystem::path& pathToImage) {
@@ -321,7 +314,11 @@ namespace ne {
                 const auto pMeshMaterial = pMeshNode->getMaterial();
 
                 // Check material transparency.
-                if (material.alphaMode == "MASK") {
+                const auto bEnableMaterialTransparency = material.alphaMode == "MASK";
+                if (bEnableMaterialTransparency) {
+                    Logger::get().warn(
+                        "found material with transparency enabled, transparent materials have "
+                        "very serious impact on the performance so you might want to avoid using them");
                     pMeshMaterial->setEnableTransparency(true);
                     pMeshMaterial->setOpacity(
                         1.0F - static_cast<float>(std::clamp(material.alphaCutoff, 0.0, 1.0)));
@@ -360,12 +357,12 @@ namespace ne {
                         }
 
                         // Import texture.
-                        auto optionalError = TextureManager::importTexture(
+                        auto optionalError = TextureImporter::importTexture(
                             pathToDiffuseImage,
-                            TextureType::DIFFUSE,
+                            bEnableMaterialTransparency ? TextureImportFormat::RGB_8BIT_A
+                                                        : TextureImportFormat::RGB,
                             sPathToImportTexturesRelativeRes,
-                            sDiffuseTextureName,
-                            textureImportProcess);
+                            sDiffuseTextureName);
                         if (optionalError.has_value()) [[unlikely]] {
                             auto error = std::move(optionalError.value());
                             error.addCurrentLocationToErrorStack();

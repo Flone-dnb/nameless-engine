@@ -11,6 +11,7 @@
 #include "game/camera/CameraManager.h"
 #include "shader/general/Shader.h"
 #include "shader/general/EngineShaders.hpp"
+#include "io/TextureImporter.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
@@ -18,18 +19,6 @@
 
 // External.
 #include "catch2/catch_test_macros.hpp"
-
-#if defined(WIN32)
-inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
-#else
-inline bool textureImportProcess(float percent, int*, int*) {
-#endif
-    using namespace ne;
-
-    Logger::get().info(std::format("importing texture, progress: {}", percent));
-
-    return false;
-}
 
 static constexpr auto pImportedTexture1DirectoryName = "imported1";
 static constexpr auto pImportedTexture2DirectoryName = "imported2";
@@ -58,12 +47,11 @@ bool prepareDiffuseTextures() {
     }
 
     // Import sample texture.
-    auto optionalError = TextureManager::importTexture(
+    auto optionalError = TextureImporter::importTexture(
         ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "texture.png",
-        TextureType::DIFFUSE,
+        TextureImportFormat::RGB,
         "test/temp",
-        pImportedTexture1DirectoryName,
-        textureImportProcess);
+        pImportedTexture1DirectoryName);
     if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         INFO(optionalError->getFullErrorMessage());
@@ -71,12 +59,11 @@ bool prepareDiffuseTextures() {
         return false;
     }
 
-    optionalError = TextureManager::importTexture(
+    optionalError = TextureImporter::importTexture(
         ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "texture.png",
-        TextureType::DIFFUSE,
+        TextureImportFormat::RGB,
         "test/temp",
-        pImportedTexture2DirectoryName,
-        textureImportProcess);
+        pImportedTexture2DirectoryName);
     if (optionalError.has_value()) [[unlikely]] {
         optionalError->addCurrentLocationToErrorStack();
         INFO(optionalError->getFullErrorMessage());

@@ -2195,33 +2195,17 @@ Note
 In order to use textures in your material you need to first import the textures you want to use. Most of the time you will import new textures through the editor using its GUI but we will show how to do it in C++:
 
 ```Cpp
-#include "material/TextureManager.h"
+#include "io/TextureImporter.h"
 
 using namespace ne;
 
-// Define a function that will print texture import progress.
-#if defined(WIN32)
-inline bool textureImportCallback(float percent, unsigned long long, unsigned long long) {
-#else
-inline bool textureImportCallback(float percent, int*, int*) {
-#endif
-    Logger::get().info(std::format("importing texture, progress: {}", percent));
-
-    return false; // `false` to not cancel the import process
-}
-
-// Import some texture to be used as a diffuse texture in our materials
-// - path to the original image that will be imported: "C:\\somefolder\\textures\\mytexture.png"
-// - path to the directory where the image will be imported: "res/game/player/textures"
-// - path where resulting (imported) textures will be located: "res/game/player/textures/diffuse"
-// (the directory `diffuse` will be created during the import process)
-auto optionalError = TextureManager::importTexture(
-    "C:\\somedirectory\\textures\\mytexture.png",
-    TextureType::DIFFUSE,
-    "game/player/textures",
-    "diffuse",
-    textureImportCallback);
-if (optionalError.has_value()){
+// Import some texture to be used as a diffuse texture in our materials.
+auto optionalError = TextureImporter::importTexture(
+    "C:\\somedirectory\\textures\\mytexture.png", // file to import
+    TextureImportFormat::RGBA,                    // import format
+    "game/player/textures",                       // will be imported to "res/game/player/textures/"
+    "diffuse");                                   // "res/game/player/textures/diffuse/" will be created during import
+if (optionalError.has_value()) {
     // ... process error ...
 }
 // texture is imported

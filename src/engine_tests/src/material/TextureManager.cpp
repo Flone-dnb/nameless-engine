@@ -2,7 +2,7 @@
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/ProjectPaths.h"
-#include "material/TextureManager.h"
+#include "io/TextureImporter.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
 #endif
@@ -10,19 +10,7 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-#if defined(WIN32)
-inline bool textureImportProcess(float percent, unsigned long long, unsigned long long) {
-#else
-inline bool textureImportProcess(float percent, int*, int*) {
-#endif
-    using namespace ne;
-
-    Logger::get().info(std::format("importing texture, progress: {}", percent));
-
-    return false;
-}
-
-TEST_CASE("import texture") {
+TEST_CASE("import texture and make sure it has mipmaps") {
     using namespace ne;
 
     class TestGameInstance : public GameInstance {
@@ -49,12 +37,11 @@ TEST_CASE("import texture") {
                 }
 
                 // Import sample texture.
-                auto optionalError = TextureManager::importTexture(
+                auto optionalError = TextureImporter::importTexture(
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "texture.png",
-                    TextureType::DIFFUSE,
+                    TextureImportFormat::RGB,
                     "test/temp",
-                    pImportedTextureDirectoryName,
-                    textureImportProcess);
+                    pImportedTextureDirectoryName);
                 if (optionalError.has_value()) {
                     optionalError->addCurrentLocationToErrorStack();
                     INFO(optionalError->getFullErrorMessage());

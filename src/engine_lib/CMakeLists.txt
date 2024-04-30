@@ -136,6 +136,8 @@ set(PROJECT_SOURCES
     public/io/ConfigManager.h
     private/io/MeshImporter.cpp
     public/io/MeshImporter.h
+    private/io/TextureImporter.cpp
+    public/io/TextureImporter.h
     private/input/InputManager.cpp
     public/input/InputManager.h
     public/input/MouseButton.hpp

@@ -79,6 +79,7 @@ namespace ne {
         CameraNode::onBeforeNewFrame(timeSincePrevFrameInSec);
 
         // Check for early exit.
+        // Also make sure input direction is not zero to avoid NaNs during `normalize` (see below).
         if (bIgnoreInput ||
             glm::all(glm::epsilonEqual(lastInputDirection, glm::vec3(0.0F, 0.0F, 0.0F), 0.0001F))) { // NOLINT
             return;

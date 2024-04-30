@@ -1301,7 +1301,8 @@ void FlyingCharacterNode::onChildNodesSpawned() {
 }
 
 void FlyingCharacterNode::onBeforeNewFrame(float timeSincePrevFrameInSec) {
-    // Check if input is zero for early exit.
+    // Check for early exit.
+    // Also make sure input direction is not zero to avoid NaNs during `normalize` (see below).
     if (glm::all(glm::epsilonEqual(lastInputDirection, glm::vec2(0.0F, 0.0F), 0.0001F))) {
         return;
     }

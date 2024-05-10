@@ -10,7 +10,7 @@ struct Plane {
 /** Sphere shape. */
 struct Sphere {
     /** Location of the sphere's center point. */
-    vec3 center;
+    vec3 Center;
     
     /** Sphere's radius. */
     float radius;

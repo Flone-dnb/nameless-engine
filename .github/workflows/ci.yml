@@ -17,6 +17,16 @@ jobs:
           echo "Installed $(clang-format --version)."
           cd .github/scripts/run_clang_format_on_source/
           go run . ../../../src
+  shader-formatter:
+    name: Run shader-formatter
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Run shader-formatter
+        run: |
+          cd .github/scripts/run_shader_formatter_on_source/
+          go run . ../../../res
   build-tests-windows:
     name: Build and run tests on Windows
     runs-on: windows-latest

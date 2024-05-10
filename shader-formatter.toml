@@ -1,0 +1,14 @@
+Indentation = "FourSpaces"
+NewLineAroundOpenBraceRule = "After"
+MaxEmptyLines = 1
+SpacesInBrackets = false
+IndentPreprocessor = true
+PreprocessorIfCreatesNesting = true
+RequireDocsOnFunctions = true
+#RequireDocsOnStructs = true Disabled because our `#glsl`/`#hlsl` struct declaration is too complex to handle.
+RequireDocsOnFields = true
+VariableCase = "Camel"
+FunctionCase = "Camel"
+StructCase = "Pascal"
+BoolPrefix = "b"
+IntPrefix = "i"

@@ -4,20 +4,22 @@
 //                                                light index lists
 // --------------------------------------------------------------------------------------------------------------------
 
-/** Stores indices into array of point lights for opaque geometry. */
+/** Stores indices into array of point lights (that array is used during the main pass) for opaque geometry. */
 #hlsl RWStructuredBuffer<uint> opaquePointLightIndexList : register(u1, space6);
-#glsl{
-layout(std430, binding = 100) LIGHT_GRID_QUALIFIER buffer OpaquePointLightIndexListBuffer{
-    uint array[];
-} opaquePointLightIndexList;
+#glsl {
+    layout(std430, binding = 100) LIGHT_GRID_QUALIFIER buffer OpaquePointLightIndexListBuffer {
+        /** Indices into array. */
+        uint array[];
+    } opaquePointLightIndexList;
 }
 
-/** Stores indices into array of spotlights for opaque geometry. */
+/** Stores indices into array of spotlights (that array is used during the main pass) for opaque geometry. */
 #hlsl RWStructuredBuffer<uint> opaqueSpotLightIndexList : register(u2, space6);
-#glsl{
-layout(std430, binding = 101) LIGHT_GRID_QUALIFIER buffer OpaqueSpotLightIndexListBuffer{
-    uint array[];
-} opaqueSpotLightIndexList;
+#glsl {
+    layout(std430, binding = 101) LIGHT_GRID_QUALIFIER buffer OpaqueSpotLightIndexListBuffer {
+        /** Indices into array. */
+        uint array[];
+    } opaqueSpotLightIndexList;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

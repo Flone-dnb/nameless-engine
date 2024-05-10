@@ -7,12 +7,12 @@
  * This macro also defines how much pixels there are in one grid tile.
  */
 #ifndef LIGHT_GRID_TILE_SIZE_IN_PIXELS
-FAIL;
+    FAIL;
 #endif
 
-/** 1 thread per pixel in a tile. 1 thread group per tile. */
 layout (local_size_x = LIGHT_GRID_TILE_SIZE_IN_PIXELS, local_size_y = LIGHT_GRID_TILE_SIZE_IN_PIXELS, local_size_z = 1) in;
-void main(){
+/** 1 thread per pixel in a tile. 1 thread group per tile. */
+void main() {
     // Cull lights.
     cullLightsForTile(
         gl_GlobalInvocationID.x,

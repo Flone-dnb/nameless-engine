@@ -4,7 +4,13 @@
 #include "../../include/constants/ShadowPassConstants.glsl"
 
 [earlydepthstencil]
-float main(VertexOut pin) : SV_Target{
-    // Store distance from light to fragment as a resulting value.
+/**
+ * This function is not expected be called from other shader files.
+ *
+ * @param pin Fragment.
+ *
+ * @return Distance from light source to fragment.
+ */
+float main(VertexOut pin) : SV_Target {
     return length(pin.worldPosition.xyz - shadowPassLightInfo[constants.iShadowPassLightInfoIndex].position.xyz);
 }

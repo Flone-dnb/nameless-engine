@@ -4,20 +4,22 @@
 //                                                light index lists
 // --------------------------------------------------------------------------------------------------------------------
 
-/** Stores indices into array of point lights for transparent geometry. */
+/** Stores indices into array of point lights (that array is used during the main pass) for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentPointLightIndexList : register(u5, space6);
-#glsl{
-layout(std430, binding = 104) LIGHT_GRID_QUALIFIER buffer TransparentPointLightIndexListBuffer{
-    uint array[];
-} transparentPointLightIndexList;
+#glsl {
+    layout(std430, binding = 104) LIGHT_GRID_QUALIFIER buffer TransparentPointLightIndexListBuffer {
+        /** Indices into array. */
+        uint array[];
+    } transparentPointLightIndexList;
 }
 
-/** Stores indices into array of spot lights for transparent geometry. */
+/** Stores indices into array of spot lights (that array is used during the main pass) for transparent geometry. */
 #hlsl RWStructuredBuffer<uint> transparentSpotLightIndexList : register(u6, space6);
-#glsl{
-layout(std430, binding = 105) LIGHT_GRID_QUALIFIER buffer TransparentSpotLightIndexListBuffer{
-    uint array[];
-} transparentSpotLightIndexList;
+#glsl {
+    layout(std430, binding = 105) LIGHT_GRID_QUALIFIER buffer TransparentSpotLightIndexListBuffer {
+        /** Indices into array. */
+        uint array[];
+    } transparentSpotLightIndexList;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

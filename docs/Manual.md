@@ -2513,6 +2513,12 @@ This section expects that you have knowledge in writing programs in HLSL and/or 
 Note: currently we are looking for a solution that will make writing custom shaders easier but right now writing custom shaders is not that simple:
 > Right now if you want to go beyond what Material provides to you and achieve some special look of your meshes you would have to write shaders in both HLSL and GLSL if you want your game to support both DirectX and Vulkan renderers that we have because each graphics API (like DirectX or Vulkan) has its own shading language. If you know that you don't want Vulkan support and don't care about Linux and other non-Windows platforms then you might just write a shader in HLSL and ignore GLSL, this would mean that any attempt to run your game using Vulkan renderer will fail with an error.
 
+### Shader formatter
+
+Similar to `clang-format` we use a special formatter for shaders: https://github.com/Flone-dnb/vscode-shader-formatter
+
+Make sure you use it when writing shaders.
+
 ### Writing custom vertex/pixel/fragment shaders
 
 We will talk about creating a custom pixel/fragment shader but the same idea applies to creating custom vertex shaders. Here are the steps to create a new custom shader:

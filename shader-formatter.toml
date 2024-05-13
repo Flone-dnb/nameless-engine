@@ -1,5 +1,5 @@
 Indentation = "FourSpaces"
-NewLineAroundOpenBraceRule = "After"
+NewLineOnOpenBrace = "After"
 MaxEmptyLines = 1
 SpacesInBrackets = false
 IndentPreprocessor = true

@@ -21,7 +21,7 @@ func main() {
 	}
 
 	var working_directory = os.Args[1]
-	var archive_url = "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2403.1/dxc_2024_03_22.zip"
+	var archive_url = "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2403.2/dxc_2024_03_29.zip"
 
 	download_dxc_build(working_directory, archive_url)
 	remove_old_dxc_build(working_directory)

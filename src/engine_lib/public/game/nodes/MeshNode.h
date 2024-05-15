@@ -12,11 +12,11 @@
 #include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/shapes/AABB.h"
+#include "material/Material.h"
 
 #include "MeshNode.generated.h"
 
 namespace ne RNAMESPACE() {
-    class Material;
     class UploadBuffer;
 
     /**

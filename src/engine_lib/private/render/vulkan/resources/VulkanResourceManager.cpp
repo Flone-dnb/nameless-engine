@@ -717,8 +717,8 @@ namespace ne {
         const auto iImportedTextureMipSkipCount =
             iSkipMipCount >= textureData.levelCount ? textureData.levelCount - 1 : iSkipMipCount;
         const auto iTargetMipCount = textureData.levelCount - iImportedTextureMipSkipCount;
-        const auto iTargetTextureWidth = std::max(1u, textureData.width >> iImportedTextureMipSkipCount);
-        const auto iTargetTextureHeight = std::max(1u, textureData.height >> iImportedTextureMipSkipCount);
+        const auto iTargetTextureWidth = std::max(1U, textureData.width >> iImportedTextureMipSkipCount);
+        const auto iTargetTextureHeight = std::max(1U, textureData.height >> iImportedTextureMipSkipCount);
         auto targetImageResult = createImage(
             sResourceName,
             iTargetTextureWidth,
@@ -729,7 +729,7 @@ namespace ne {
             targetImageTiling,
             targetImageUsage | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             VK_IMAGE_ASPECT_COLOR_BIT,
-            textureData.layerCount == 6);
+            textureData.layerCount == 6); // NOLINT: cubemap face count
         if (std::holds_alternative<Error>(targetImageResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(targetImageResult));
             error.addCurrentLocationToErrorStack();
@@ -764,7 +764,7 @@ namespace ne {
         // Prepare image regions to copy.
         std::vector<VkImageCopy> vImageCopyRegions;
         vImageCopyRegions.reserve(iTargetMipCount);
-        for (uint32_t iSrcMip = iImportedTextureMipSkipCount, iDstMip = 0u; iSrcMip < textureData.levelCount;
+        for (uint32_t iSrcMip = iImportedTextureMipSkipCount, iDstMip = 0U; iSrcMip < textureData.levelCount;
              iSrcMip++, iDstMip++) {
             auto& copyRegion = vImageCopyRegions.emplace_back();
 
@@ -786,9 +786,9 @@ namespace ne {
             copyRegion.dstOffset.y = 0;
             copyRegion.dstOffset.z = 0;
 
-            copyRegion.extent.width = std::max(1u, textureData.width >> iSrcMip);
-            copyRegion.extent.height = std::max(1u, textureData.height >> iSrcMip);
-            copyRegion.extent.depth = std::max(1u, textureData.depth >> iSrcMip);
+            copyRegion.extent.width = std::max(1U, textureData.width >> iSrcMip);
+            copyRegion.extent.height = std::max(1U, textureData.height >> iSrcMip);
+            copyRegion.extent.depth = std::max(1U, textureData.depth >> iSrcMip);
         }
 
         // Record a copy image command.

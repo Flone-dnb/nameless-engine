@@ -270,6 +270,9 @@ namespace ne {
         /** Name of the key for compute shader model, used in global shader cache information. */
         static inline const std::string_view sGlobalShaderCacheHlslCsModelKeyName = "hlsl_cs";
 
+        /** Name of the key for HLSL shader compiler version, used in global shader cache information. */
+        static inline const std::string_view sGlobalShaderCacheHlslCompilerVersion = "hlsl_compiler_version";
+
         /** Name of the key for renderer's type, used in global shader cache information. */
         static inline const std::string_view sGlobalShaderCacheRendererTypeKeyName = "renderer_type";
 

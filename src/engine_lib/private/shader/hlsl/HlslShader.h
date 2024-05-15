@@ -54,6 +54,13 @@ namespace ne {
         virtual ~HlslShader() override = default;
 
         /**
+         * Returns current version of the HLSL shader compiler.
+         *
+         * @return Compiler version.
+         */
+        static std::variant<std::string, Error> getShaderCompilerVersion();
+
+        /**
          * Returns a static sampler description depending on the specified texture filtering mode.
          *
          * @param textureFilteringQuality Returned sampler description will use the specified texture

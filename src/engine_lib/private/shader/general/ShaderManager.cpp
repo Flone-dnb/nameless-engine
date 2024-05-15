@@ -133,13 +133,9 @@ namespace ne {
 
 #if defined(WIN32)
             if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-                // Read HLSL info.
+                // Read vertex shader model.
                 const auto sOldHlslVsModel =
                     configManager.getValue<std::string>("", sGlobalShaderCacheHlslVsModelKeyName, "");
-                const auto sOldHlslPsModel =
-                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslPsModelKeyName, "");
-                const auto sOldHlslCsModel =
-                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslCsModelKeyName, "");
 
                 // Check if vertex shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::getVertexShaderModel()) {
@@ -148,6 +144,10 @@ namespace ne {
                     bUpdateShaderCacheConfig = true;
                 }
 
+                // Read pixel shader model.
+                const auto sOldHlslPsModel =
+                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslPsModelKeyName, "");
+
                 // Check if pixel shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::getPixelShaderModel()) {
                     Logger::get().info(
@@ -155,10 +155,34 @@ namespace ne {
                     bUpdateShaderCacheConfig = true;
                 }
 
+                // Read compute shader model.
+                const auto sOldHlslCsModel =
+                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslCsModelKeyName, "");
+
                 // Check if compute shader model changed.
                 if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::getComputeShaderModel()) {
                     Logger::get().info(
                         "clearing shader cache directory because compute shader model was changed");
+                    bUpdateShaderCacheConfig = true;
+                }
+
+                // Read compiler version.
+                const auto sOldCompilerVersion =
+                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslCompilerVersion, "");
+
+                // Get compiler version.
+                auto compilerVersionResult = HlslShader::getShaderCompilerVersion();
+                if (std::holds_alternative<Error>(compilerVersionResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(compilerVersionResult));
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+                const auto sCompilerVersion = std::get<std::string>(std::move(compilerVersionResult));
+
+                // Check if compiler version changed.
+                if (!bUpdateShaderCacheConfig && sCompilerVersion != sOldCompilerVersion) {
+                    Logger::get().info(
+                        "clearing shader cache directory because shader compiler version was changed");
                     bUpdateShaderCacheConfig = true;
                 }
             }
@@ -187,6 +211,19 @@ namespace ne {
                     "", sGlobalShaderCacheHlslPsModelKeyName, HlslShader::getPixelShaderModel());
                 configManager.setValue<std::string>(
                     "", sGlobalShaderCacheHlslCsModelKeyName, HlslShader::getComputeShaderModel());
+
+                // Get compiler version.
+                auto compilerVersionResult = HlslShader::getShaderCompilerVersion();
+                if (std::holds_alternative<Error>(compilerVersionResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(compilerVersionResult));
+                    error.addCurrentLocationToErrorStack();
+                    return error;
+                }
+                const auto sCompilerVersion = std::get<std::string>(std::move(compilerVersionResult));
+
+                // Write compiler version.
+                configManager.setValue<std::string>(
+                    "", sGlobalShaderCacheHlslCompilerVersion, sCompilerVersion);
             }
 #endif
 

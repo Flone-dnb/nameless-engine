@@ -36,6 +36,30 @@ namespace ne {
             "`getShaderInputElementDescription` needs to be updated");
     }
 
+    std::variant<std::string, Error> HlslShader::getShaderCompilerVersion() {
+        // Get DXC compiler.
+        ComPtr<IDxcCompiler3> pCompiler;
+        HRESULT hResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        // Get version info.
+        ComPtr<IDxcVersionInfo2> pCompilerVersionInfo;
+        hResult = pCompiler.As(&pCompilerVersionInfo);
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+        UINT32 iCommitCount = 0;
+        char* pCommitSha = nullptr;
+        hResult = pCompilerVersionInfo->GetCommitInfo(&iCommitCount, &pCommitSha);
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
+        return std::string(pCommitSha);
+    }
+
     CD3DX12_STATIC_SAMPLER_DESC
     HlslShader::getStaticSamplerDescription(TextureFilteringQuality textureFilteringQuality) {
         switch (textureFilteringQuality) {
@@ -171,11 +195,11 @@ namespace ne {
         ComPtr<IDxcUtils> pUtils;
         ComPtr<IDxcCompiler3> pCompiler;
         HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
         hResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 

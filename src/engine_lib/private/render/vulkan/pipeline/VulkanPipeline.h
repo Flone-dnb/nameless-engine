@@ -21,6 +21,8 @@ namespace ne {
     public:
         /** Stores internal resources. */
         struct InternalResources {
+            InternalResources() = default;
+
             /** Created pipeline layout. */
             VkPipelineLayout pPipelineLayout = nullptr;
 

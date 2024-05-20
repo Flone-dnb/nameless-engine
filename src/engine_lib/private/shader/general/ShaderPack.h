@@ -26,6 +26,8 @@ namespace ne {
     public:
         /** Groups used data. */
         struct InternalResources {
+            InternalResources() = default;
+
             /** Whether @ref renderConfiguration was set or not. */
             bool bIsRenderConfigurationSet = false;
 

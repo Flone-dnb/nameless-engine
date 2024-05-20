@@ -88,8 +88,12 @@ namespace ne RNAMESPACE() {
     public:
         /** Stores internal GPU resources. */
         struct GpuResources {
+            GpuResources() = default;
+
             /** Stores resources used by shaders. */
             struct ShaderResources {
+                ShaderResources() = default;
+
                 /** Shader single (non-array) resources with CPU write access. */
                 std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
 
@@ -332,6 +336,8 @@ namespace ne RNAMESPACE() {
     private:
         /** Groups internal data. */
         struct InternalResources {
+            InternalResources() = default;
+
             /**
              * Used pipeline with pixel/fragment shader enabled.
              *
@@ -372,6 +378,8 @@ namespace ne RNAMESPACE() {
          * @remark Should be exactly the same as constant buffer in shaders.
          */
         struct MaterialShaderConstants {
+            MaterialShaderConstants() = default;
+
             /** Fill color. 4th component stores opacity when transparency is used. */
             alignas(iVkVec4Alignment) glm::vec4 diffuseColor = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
 

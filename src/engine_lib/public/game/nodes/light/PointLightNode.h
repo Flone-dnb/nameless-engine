@@ -132,6 +132,8 @@ namespace ne RNAMESPACE() {
     private:
         /** Data that will be directly copied into shaders. */
         struct PointLightShaderData {
+            PointLightShaderData() = default;
+
             /** Light position in world space. 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 position = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
 
@@ -150,8 +152,12 @@ namespace ne RNAMESPACE() {
 
         /** Groups data related to shaders. */
         struct ShaderData {
+            ShaderData() = default;
+
             /** Groups used in shadow pass. */
             struct ShadowPassDataGroup {
+                ShadowPassDataGroup() = default;
+
                 /** Slot to store @ref shaderData. */
                 std::unique_ptr<ShaderLightArraySlot> pSlot;
 

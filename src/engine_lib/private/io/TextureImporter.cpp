@@ -1,5 +1,8 @@
 #include "io/TextureImporter.h"
 
+// Standard.
+#include <cstring>
+
 // Custom.
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"

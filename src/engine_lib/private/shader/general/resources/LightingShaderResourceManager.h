@@ -69,6 +69,8 @@ namespace ne {
 
         /** Groups GPU related data. */
         struct GpuData {
+            GpuData() = default;
+
             /** Stores data from @ref generalData in the GPU memory. */
             std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
                 vGeneralDataGpuResources;

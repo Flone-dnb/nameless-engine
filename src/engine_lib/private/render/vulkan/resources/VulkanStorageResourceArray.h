@@ -124,6 +124,8 @@ namespace ne {
     public:
         /** Array's internal resources. */
         struct InternalResources {
+            InternalResources() = default;
+
             /** CPU visible storage buffer that stores all elements. */
             std::unique_ptr<UploadBuffer> pStorageBuffer = nullptr;
 

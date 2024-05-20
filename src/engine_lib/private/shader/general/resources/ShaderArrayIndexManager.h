@@ -97,6 +97,8 @@ namespace ne {
 
         /** Groups mutex guarded data. */
         struct InternalData {
+            InternalData() = default;
+
             /** Stores indices that were used some time and no longer being used. */
             std::queue<unsigned int> noLongerUsedIndices;
 

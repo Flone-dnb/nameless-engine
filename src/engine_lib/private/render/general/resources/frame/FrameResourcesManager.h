@@ -53,6 +53,8 @@ namespace ne {
     public:
         /** Stores index and pointer to the current item in @ref vFrameResources. */
         struct CurrentFrameResource {
+            CurrentFrameResource() = default;
+
             /** Current index in frame resources array. */
             size_t iCurrentFrameResourceIndex = 0;
 

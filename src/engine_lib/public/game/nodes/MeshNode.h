@@ -156,6 +156,8 @@ namespace ne RNAMESPACE() {
          * @remark Should be exactly the same as constant buffer in shaders.
          */
         struct MeshShaderConstants {
+            MeshShaderConstants() = default;
+
             /** Matrix to transform positions from model space to worldMatrix space. */
             alignas(iVkMat4Alignment) glm::mat4x4 worldMatrix = glm::identity<glm::mat4x4>();
 
@@ -169,9 +171,12 @@ namespace ne RNAMESPACE() {
 
         /** Stores internal GPU resources. */
         struct GpuResources {
+            GpuResources() = default;
 
             /** Stores mesh GPU resources. */
             struct Mesh {
+                Mesh() = default;
+
                 /** Stores mesh vertices. */
                 std::unique_ptr<GpuResource> pVertexBuffer;
 
@@ -181,6 +186,8 @@ namespace ne RNAMESPACE() {
 
             /** Stores resources used by shaders. */
             struct ShaderResources {
+                ShaderResources() = default;
+
                 /**
                  * Shader single (non-array) resources with CPU write access.
                  *

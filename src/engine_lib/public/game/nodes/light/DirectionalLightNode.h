@@ -104,6 +104,8 @@ namespace ne RNAMESPACE() {
     private:
         /** Data that will be directly copied into shaders. */
         struct DirecionalLightShaderData {
+            DirecionalLightShaderData() = default;
+
             /**
              * Matrix that transforms data (such as positions) to clip (projection) space of the light
              * source (used for shadow mapping).
@@ -125,8 +127,12 @@ namespace ne RNAMESPACE() {
 
         /** Groups data related to shaders. */
         struct ShaderData {
+            ShaderData() = default;
+
             /** Groups used in shadow pass. */
             struct ShadowPassDataGroup {
+                ShadowPassDataGroup() = default;
+
                 /** Slot to store @ref shaderData. */
                 std::unique_ptr<ShaderLightArraySlot> pSlot;
 

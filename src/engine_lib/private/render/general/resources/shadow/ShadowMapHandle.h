@@ -30,6 +30,8 @@ namespace ne {
     public:
         /** Groups GPU resources that a shadow map handle references. */
         struct InternalResources {
+            InternalResources() = default;
+
             /** Depth image. */
             GpuResource* pDepthTexture = nullptr;
 

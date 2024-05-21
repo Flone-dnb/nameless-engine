@@ -6,6 +6,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "io/Logger.h"
 
 // External.
 #define GLFW_INCLUDE_NONE
@@ -15,7 +16,15 @@
 
 namespace ne {
     inline void glfwErrorCallback(int iErrorCode, const char* pDescription) {
-        const Error error("GLFW error (" + std::to_string(iErrorCode) + "): " + std::string(pDescription));
+        const auto sMessage = "GLFW error (" + std::to_string(iErrorCode) + "): " + std::string(pDescription);
+
+        if (iErrorCode == GLFW_FEATURE_UNAVAILABLE) {
+            // Just log an error, this is probably some platform-specific limitation like window icons.
+            Logger::get().error(sMessage);
+            return;
+        }
+
+        const Error error(sMessage);
         error.showError();
         throw std::runtime_error(error.getFullErrorMessage());
     }

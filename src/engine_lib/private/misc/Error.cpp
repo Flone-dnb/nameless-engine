@@ -10,14 +10,14 @@
 #include "misc/MessageBox.h"
 
 namespace ne {
-    Error::Error(std::string_view sMessage, const nostd::source_location location) {
+    Error::Error(std::string_view sMessage, const std::source_location location) {
         this->sMessage = sMessage;
 
         stack.push_back(sourceLocationToInfo(location));
     }
 
 #if defined(WIN32)
-    Error::Error(const HRESULT hResult, const nostd::source_location location) {
+    Error::Error(const HRESULT hResult, const std::source_location location) {
         LPSTR pErrorText = nullptr;
 
         FormatMessageA(
@@ -44,7 +44,7 @@ namespace ne {
         stack.push_back(sourceLocationToInfo(location));
     }
 
-    Error::Error(unsigned long iErrorCode, const nostd::source_location location) {
+    Error::Error(unsigned long iErrorCode, const std::source_location location) {
         LPSTR pMessageBuffer = nullptr;
 
         // Ask Win32 to give us the string version of that message ID.
@@ -77,7 +77,7 @@ namespace ne {
     }
 #endif
 
-    void Error::addCurrentLocationToErrorStack(const nostd::source_location location) {
+    void Error::addCurrentLocationToErrorStack(const std::source_location location) {
         stack.push_back(sourceLocationToInfo(location));
     }
 
@@ -113,7 +113,7 @@ namespace ne {
 #endif
     }
 
-    SourceLocationInfo Error::sourceLocationToInfo(const nostd::source_location& location) {
+    SourceLocationInfo Error::sourceLocationToInfo(const std::source_location& location) {
         SourceLocationInfo info;
         info.sFilename = std::filesystem::path(location.file_name()).filename().string();
         info.sLine = std::to_string(location.line());

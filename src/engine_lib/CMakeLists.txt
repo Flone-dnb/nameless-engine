@@ -297,7 +297,6 @@ message(STATUS "${PROJECT_NAME}: using the following C++ standard: ${CMAKE_CXX_S
 
 # Add includes.
 target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH})
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${RELATIVE_EXT_PATH}/source_location/include)
 target_include_directories(${PROJECT_NAME} PUBLIC public)
 target_include_directories(${PROJECT_NAME} PUBLIC private)
 
@@ -504,7 +503,6 @@ set(REFUREKU_INCLUDE_DIRECTORIES
     ${ABSOLUTE_EXT_PATH}/glfw/include
     ${ABSOLUTE_EXT_PATH}/DirectX-Headers/include
     ${ABSOLUTE_EXT_PATH}/spdlog/include
-    ${ABSOLUTE_EXT_PATH}/source_location/include
     ${ABSOLUTE_EXT_PATH}/glm
     ${ABSOLUTE_EXT_PATH}/sgc/src/sgc_lib/private
     ${ABSOLUTE_EXT_PATH}/sgc/src/sgc_lib/public

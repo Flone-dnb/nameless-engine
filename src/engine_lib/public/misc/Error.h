@@ -4,7 +4,7 @@
 #include <string_view>
 #include <vector>
 #include <string>
-#include "source_location.hpp" // TODO: replace when Clang or GCC will have support for std::source_location
+#include <source_location>
 
 // OS.
 #if defined(WIN32)
@@ -34,7 +34,7 @@ namespace ne {
          */
         Error(
             std::string_view sMessage,
-            const nostd::source_location location = nostd::source_location::current());
+            const std::source_location location = std::source_location::current()); // NOLINT
 
 #if defined(WIN32)
         /**
@@ -43,8 +43,7 @@ namespace ne {
          * @param hResult   `HRESULT` that contains an error.
          * @param location  Should not be specified explicitly (use default value).
          */
-        Error(
-            const HRESULT hResult, const nostd::source_location location = nostd::source_location::current());
+        Error(const HRESULT hResult, const std::source_location location = std::source_location::current());
 
         /**
          * Constructs a new Error object.
@@ -53,8 +52,7 @@ namespace ne {
          * @param location  Should not be specified explicitly (use default value).
          */
         Error(
-            unsigned long iErrorCode,
-            const nostd::source_location location = nostd::source_location::current());
+            unsigned long iErrorCode, const std::source_location location = std::source_location::current());
 #endif
 
         Error() = delete;
@@ -98,7 +96,7 @@ namespace ne {
          * @param location Should not be specified explicitly (use default value).
          */
         void addCurrentLocationToErrorStack(
-            const nostd::source_location location = nostd::source_location::current());
+            const std::source_location location = std::source_location::current()); // NOLINT
 
         /**
          * Creates an error string that contains an error message and an error location stack.
@@ -127,7 +125,7 @@ namespace ne {
          *
          * @return Location information.
          */
-        static SourceLocationInfo sourceLocationToInfo(const nostd::source_location& location);
+        static SourceLocationInfo sourceLocationToInfo(const std::source_location& location);
 
     private:
         /** Initial error message (string version). */

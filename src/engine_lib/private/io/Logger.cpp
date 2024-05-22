@@ -47,7 +47,7 @@ namespace ne {
 
     size_t Logger::getTotalErrorsProduced() { return iTotalErrorsProduced.load(); }
 
-    void Logger::info(std::string_view sText, const nostd::source_location location) const {
+    void Logger::info(std::string_view sText, const std::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;
         }
@@ -59,7 +59,7 @@ namespace ne {
             sText));
     }
 
-    void Logger::warn(std::string_view sText, const nostd::source_location location) const {
+    void Logger::warn(std::string_view sText, const std::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;
         }
@@ -72,7 +72,7 @@ namespace ne {
         iTotalWarningsProduced.fetch_add(1);
     }
 
-    void Logger::error(std::string_view sText, const nostd::source_location location) const {
+    void Logger::error(std::string_view sText, const std::source_location location) const {
         if (pSpdLogger == nullptr) {
             return;
         }

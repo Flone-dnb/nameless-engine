@@ -289,6 +289,13 @@ namespace ne {
         auto pCreatedResource =
             std::unique_ptr<VulkanResource>(new VulkanResource(pResourceManager, sResourceName, ktxTexture));
 
+        // Set name of this image.
+        VulkanRenderer::setObjectDebugOnlyName(
+            pResourceManager->getRenderer(),
+            pCreatedResource->getInternalImage(),
+            VK_OBJECT_TYPE_IMAGE_VIEW,
+            sResourceName);
+
         // Convert renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pResourceManager->getRenderer());
         if (pVulkanRenderer == nullptr) [[unlikely]] {
@@ -323,7 +330,7 @@ namespace ne {
         // Set name of this view.
         VulkanRenderer::setObjectDebugOnlyName(
             pResourceManager->getRenderer(),
-            pCreatedResource->pImageView,
+            pCreatedResource->getInternalImageView(),
             VK_OBJECT_TYPE_IMAGE_VIEW,
             std::format("{} (view)", sResourceName));
 

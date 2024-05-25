@@ -27,6 +27,38 @@
 #include "vulkan/vk_enum_string_helper.h"
 
 namespace ne {
+// Prepare a macro to create a scoped GPU mark for RenderDoc.
+#if defined(DEBUG)
+    /** Pointer to the extension function. */
+    static inline PFN_vkCmdBeginDebugUtilsLabelEXT pVkCmdBeginDebugUtilsLabelEXT = nullptr;
+
+    /** Pointer to the extension function. */
+    static inline PFN_vkCmdEndDebugUtilsLabelEXT pVkCmdEndDebugUtilsLabelEXT = nullptr;
+
+    class GpuDebugMarkScopeGuard {
+    public:
+        GpuDebugMarkScopeGuard(VkCommandBuffer pCommandBuffer, const char* pLabelName) {
+            this->pCommandBuffer = pCommandBuffer;
+
+            VkDebugUtilsLabelEXT label{};
+            label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+            label.pLabelName = pLabelName;
+
+            pVkCmdBeginDebugUtilsLabelEXT(pCommandBuffer, &label);
+        }
+        GpuDebugMarkScopeGuard(const GpuDebugMarkScopeGuard&) = delete;
+        GpuDebugMarkScopeGuard& operator=(const GpuDebugMarkScopeGuard&) = delete;
+        ~GpuDebugMarkScopeGuard() { pVkCmdEndDebugUtilsLabelEXT(pCommandBuffer); }
+
+    private:
+        VkCommandBuffer pCommandBuffer = nullptr;
+    };
+
+#define GPU_MARK_FUNC(pCommandBuffer) GpuDebugMarkScopeGuard gpuMarkFuncGuard(pCommandBuffer, __FUNCTION__);
+#else
+#define GPU_MARK_FUNC(pCommandBuffer) // does nothing
+#endif
+
     VulkanRenderer::VulkanRenderer(GameManager* pGameManager) : Renderer(pGameManager) {
         // Make sure we use the same formats as in DirectX.
         static_assert(
@@ -415,6 +447,10 @@ namespace ne {
             return Error(std::format(
                 "failed to create validation layer debug messenger, error: {}", string_VkResult(result)));
         }
+
+        // Save addresses to some helper debug functions.
+        pVkCmdBeginDebugUtilsLabelEXT = requestVkCmdBeginDebugUtilsLabelEXT(pInstance);
+        pVkCmdEndDebugUtilsLabelEXT = requestVkCmdEndDebugUtilsLabelEXT(pInstance);
 #endif
 
         return {};
@@ -2973,6 +3009,12 @@ namespace ne {
         PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
 
+        // Get command buffer of the current frame resource.
+        const auto pCommandBuffer =
+            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource)->pCommandBuffer;
+
+        GPU_MARK_FUNC(pCommandBuffer);
+
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
@@ -2980,10 +3022,6 @@ namespace ne {
         static constexpr size_t iVertexBufferCount = 1;
         std::array<VkBuffer, iVertexBufferCount> vVertexBuffers{};
         const std::array<VkDeviceSize, iVertexBufferCount> vOffsets = {0};
-
-        // Get command buffer of the current frame resource.
-        const auto pCommandBuffer =
-            reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource)->pCommandBuffer;
 
         // Get pipelines to iterate over.
         const auto& shadowMappingDirectionalSpotPipelines = pGraphicsPipelines->vPipelineTypes.at(
@@ -3335,6 +3373,8 @@ namespace ne {
         const auto pCommandBuffer =
             reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource)->pCommandBuffer;
 
+        GPU_MARK_FUNC(pCommandBuffer);
+
         // Start depth only render pass.
         startDepthOnlyRenderPass(pCommandBuffer, iLastAcquiredImageIndex);
 
@@ -3496,6 +3536,8 @@ namespace ne {
         // Convert frame resource.
         const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
 
+        GPU_MARK_FUNC(pVulkanFrameResource->pCommandBuffer);
+
         // Insert a synchronization barrier.
         vkCmdPipelineBarrier(
             pVulkanFrameResource->pCommandBuffer,
@@ -3538,6 +3580,8 @@ namespace ne {
         const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) {
         // Convert frame resource.
         const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
+
+        GPU_MARK_FUNC(pVulkanFrameResource->pCommandBuffer);
 
         // Start main render pass.
         startMainRenderPass(pVulkanFrameResource->pCommandBuffer, iLastAcquiredImageIndex);
@@ -4138,6 +4182,31 @@ namespace ne {
         }
 
         Logger::get().error(std::format("unable to load \"vkDestroyDebugUtilsMessengerEXT\" function"));
+    }
+
+    PFN_vkCmdBeginDebugUtilsLabelEXT
+    VulkanRenderer::requestVkCmdBeginDebugUtilsLabelEXT(VkInstance pInstance) {
+        auto pFunction = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
+            vkGetInstanceProcAddr(pInstance, "vkCmdBeginDebugUtilsLabelEXT"));
+        if (pFunction == nullptr) [[unlikely]] {
+            Error error("failed to get function address");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        return pFunction;
+    }
+
+    PFN_vkCmdEndDebugUtilsLabelEXT VulkanRenderer::requestVkCmdEndDebugUtilsLabelEXT(VkInstance pInstance) {
+        auto pFunction = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
+            vkGetInstanceProcAddr(pInstance, "vkCmdEndDebugUtilsLabelEXT"));
+        if (pFunction == nullptr) [[unlikely]] {
+            Error error("failed to get function address");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        return pFunction;
     }
 #endif
 } // namespace ne

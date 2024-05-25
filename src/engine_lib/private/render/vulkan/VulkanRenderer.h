@@ -506,6 +506,24 @@ namespace ne {
             VkInstance pInstance,
             VkDebugUtilsMessengerEXT pDebugMessenger,
             const VkAllocationCallbacks* pAllocator);
+
+        /**
+         * Tries to load the extension function and return an address to it.
+         *
+         * @param pInstance      Vulkan instance.
+         *
+         * @return Pointer to the extension function.
+         */
+        static PFN_vkCmdBeginDebugUtilsLabelEXT requestVkCmdBeginDebugUtilsLabelEXT(VkInstance pInstance);
+
+        /**
+         * Tries to load the extension function and return an address to it.
+         *
+         * @param pInstance      Vulkan instance.
+         *
+         * @param Pointer to the extension function.
+         */
+        static PFN_vkCmdEndDebugUtilsLabelEXT requestVkCmdEndDebugUtilsLabelEXT(VkInstance pInstance);
 #endif
 
         /**

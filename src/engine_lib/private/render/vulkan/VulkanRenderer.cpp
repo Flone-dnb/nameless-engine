@@ -35,9 +35,9 @@ namespace ne {
     /** Pointer to the extension function. */
     static inline PFN_vkCmdEndDebugUtilsLabelEXT pVkCmdEndDebugUtilsLabelEXT = nullptr;
 
-    class GpuDebugMarkScopeGuard {
+    class GpuVulkanDebugMarkScopeGuard {
     public:
-        GpuDebugMarkScopeGuard(VkCommandBuffer pCommandBuffer, const char* pLabelName) {
+        GpuVulkanDebugMarkScopeGuard(VkCommandBuffer pCommandBuffer, const char* pLabelName) {
             this->pCommandBuffer = pCommandBuffer;
 
             VkDebugUtilsLabelEXT label{};
@@ -46,15 +46,16 @@ namespace ne {
 
             pVkCmdBeginDebugUtilsLabelEXT(pCommandBuffer, &label);
         }
-        GpuDebugMarkScopeGuard(const GpuDebugMarkScopeGuard&) = delete;
-        GpuDebugMarkScopeGuard& operator=(const GpuDebugMarkScopeGuard&) = delete;
-        ~GpuDebugMarkScopeGuard() { pVkCmdEndDebugUtilsLabelEXT(pCommandBuffer); }
+        GpuVulkanDebugMarkScopeGuard(const GpuVulkanDebugMarkScopeGuard&) = delete;
+        GpuVulkanDebugMarkScopeGuard& operator=(const GpuVulkanDebugMarkScopeGuard&) = delete;
+        ~GpuVulkanDebugMarkScopeGuard() { pVkCmdEndDebugUtilsLabelEXT(pCommandBuffer); }
 
     private:
         VkCommandBuffer pCommandBuffer = nullptr;
     };
 
-#define GPU_MARK_FUNC(pCommandBuffer) GpuDebugMarkScopeGuard gpuMarkFuncGuard(pCommandBuffer, __FUNCTION__);
+#define GPU_MARK_FUNC(pCommandBuffer)                                                                        \
+    GpuVulkanDebugMarkScopeGuard gpuMarkFuncGuard(pCommandBuffer, __FUNCTION__);
 #else
 #define GPU_MARK_FUNC(pCommandBuffer) // does nothing
 #endif

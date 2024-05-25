@@ -29,7 +29,7 @@
 #include "shader/hlsl/HlslComputeShaderInterface.h"
 #include "misc/Profiler.hpp"
 
-// DirectX.
+// OS.
 #pragma comment(lib, "D3D12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -38,8 +38,34 @@
 #include <InitGuid.h>
 #pragma comment(lib, "dxguid.lib")
 #endif
+#include "pix.h"
 
 namespace ne {
+// Prepare a macro to create a scoped GPU mark for RenderDoc.
+#if defined(DEBUG)
+    class GpuDirectXDebugMarkScopeGuard {
+    public:
+        GpuDirectXDebugMarkScopeGuard(
+            const ComPtr<ID3D12CommandQueue>& pCommandQueue, const char* pLabelName) {
+            this->pCommandQueue = pCommandQueue.Get();
+
+            PIXBeginEvent(pCommandQueue.Get(), 0, pLabelName);
+        }
+        GpuDirectXDebugMarkScopeGuard(const GpuDirectXDebugMarkScopeGuard&) = delete;
+        GpuDirectXDebugMarkScopeGuard& operator=(const GpuDirectXDebugMarkScopeGuard&) = delete;
+        ~GpuDirectXDebugMarkScopeGuard() { PIXEndEvent(pCommandQueue); }
+
+    private:
+        ID3D12CommandQueue* pCommandQueue = nullptr;
+    };
+
+#define GPU_MARK_FUNC(pCommandQueue)                                                                         \
+    GpuDirectXDebugMarkScopeGuard gpuMarkFuncGuard(pCommandQueue, __FUNCTION__);
+#else
+#define GPU_MARK_FUNC(pCommandQueue) // does nothing
+#endif
+
+// Define debug layer callback.
 #if defined(DEBUG)
     void d3dInfoQueueMessageCallback(
         D3D12_MESSAGE_CATEGORY Category,
@@ -551,6 +577,8 @@ namespace ne {
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) {
         PROFILE_FUNC;
 
+        GPU_MARK_FUNC(pCommandQueue);
+
         // Prepare command list.
         resetCommandListForGraphics(reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource));
 
@@ -746,6 +774,8 @@ namespace ne {
         size_t iCurrentFrameResourceIndex,
         PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
+
+        GPU_MARK_FUNC(pCommandQueue);
 
         // Prepare command list.
         resetCommandListForGraphics(reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource));
@@ -1184,6 +1214,8 @@ namespace ne {
         size_t iCurrentFrameResourceIndex,
         const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
         const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) {
+        GPU_MARK_FUNC(pCommandQueue);
+
         // Convert frame resource.
         const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
 
@@ -1610,6 +1642,8 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
+
+        GPU_MARK_FUNC(pCommandQueue);
 
         // Set CBV/SRV/UAV descriptor heap.
         const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());

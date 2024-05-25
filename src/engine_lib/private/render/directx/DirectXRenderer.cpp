@@ -59,10 +59,9 @@ namespace ne {
         ID3D12CommandQueue* pCommandQueue = nullptr;
     };
 
-#define GPU_MARK_FUNC(pCommandQueue)                                                                         \
-    GpuDirectXDebugMarkScopeGuard gpuMarkFuncGuard(pCommandQueue, __FUNCTION__);
+#define GPU_MARK_FUNC GpuDirectXDebugMarkScopeGuard gpuMarkFuncGuard(pCommandQueue, __FUNCTION__);
 #else
-#define GPU_MARK_FUNC(pCommandQueue) // does nothing
+#define GPU_MARK_FUNC
 #endif
 
 // Define debug layer callback.
@@ -576,8 +575,7 @@ namespace ne {
         size_t iCurrentFrameResourceIndex,
         const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) {
         PROFILE_FUNC;
-
-        GPU_MARK_FUNC(pCommandQueue);
+        GPU_MARK_FUNC;
 
         // Prepare command list.
         resetCommandListForGraphics(reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource));
@@ -774,8 +772,7 @@ namespace ne {
         size_t iCurrentFrameResourceIndex,
         PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
-
-        GPU_MARK_FUNC(pCommandQueue);
+        GPU_MARK_FUNC;
 
         // Prepare command list.
         resetCommandListForGraphics(reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource));
@@ -1214,7 +1211,7 @@ namespace ne {
         size_t iCurrentFrameResourceIndex,
         const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
         const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) {
-        GPU_MARK_FUNC(pCommandQueue);
+        GPU_MARK_FUNC;
 
         // Convert frame resource.
         const auto pDirectXFrameResource = reinterpret_cast<DirectXFrameResource*>(pCurrentFrameResource);
@@ -1635,6 +1632,8 @@ namespace ne {
             return;
         }
 
+        GPU_MARK_FUNC;
+
         // Open command list to record new commands.
         auto hResult = pComputeCommandList->Reset(pCommandAllocator, nullptr);
         if (FAILED(hResult)) [[unlikely]] {
@@ -1642,8 +1641,6 @@ namespace ne {
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-
-        GPU_MARK_FUNC(pCommandQueue);
 
         // Set CBV/SRV/UAV descriptor heap.
         const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());

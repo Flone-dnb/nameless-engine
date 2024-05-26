@@ -3,22 +3,24 @@
 // Standard.
 #include <filesystem>
 #include <format>
+#include <chrono>
 
 // Custom.
 #include "game/GameManager.h"
 #include "io/Logger.h"
 #include "shader/general/Shader.h"
 #include "render/Renderer.h"
-#include "io/ConfigManager.h"
-#include "misc/ProjectPaths.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
+#include "cache/ShaderCacheManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "shader/hlsl/HlslShader.h"
 #endif
 
 namespace ne {
-    ShaderManager::ShaderManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+    ShaderManager::ShaderManager(Renderer* pRenderer) : pRenderer(pRenderer) {
+        pShaderCacheManager = ShaderCacheManager::create(pRenderer);
+    }
 
     std::optional<std::shared_ptr<ShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
         std::scoped_lock guard(mtxShaderData.first);
@@ -85,161 +87,10 @@ namespace ne {
     std::optional<Error> ShaderManager::refreshShaderCache() {
         std::scoped_lock guard(mtxShaderData.first);
 
-#if defined(DEBUG)
-        constexpr bool bIsReleaseBuild = false;
-#else
-        constexpr bool bIsReleaseBuild = true;
-#endif
-
-        ConfigManager configManager;
-
-        // Prepare paths to shader cache directory and global cache metadata file.
-        const auto shaderCacheDir = ShaderFilesystemPaths::getPathToShaderCacheDirectory();
-        const auto shaderParamsPath =
-            ShaderFilesystemPaths::getPathToShaderCacheDirectory() / sGlobalShaderCacheParametersFileName;
-
-        bool bUpdateShaderCacheConfig = false;
-
-        // Check if global shader cache metadata file exists.
-        if (std::filesystem::exists(shaderParamsPath)) {
-            // Load global shader cache metadata file.
-            auto result = configManager.loadFile(shaderParamsPath);
-            if (result.has_value()) [[unlikely]] {
-                result->addCurrentLocationToErrorStack();
-                return result.value();
-            }
-
-            // Read build mode.
-            const auto bOldShaderCacheInRelease =
-                configManager.getValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, !bIsReleaseBuild);
-
-            // Check if the current build mode differs from the one in the metadata.
-            if (bOldShaderCacheInRelease != bIsReleaseBuild) {
-                Logger::get().info("clearing shader cache directory because build mode was changed");
-                bUpdateShaderCacheConfig = true;
-            }
-
-            if (!bUpdateShaderCacheConfig) {
-                // Read renderer type.
-                const auto iOldRendererType = configManager.getValue<unsigned int>(
-                    "", sGlobalShaderCacheRendererTypeKeyName, std::numeric_limits<unsigned int>::max());
-
-                // Check if renderer was changed.
-                if (static_cast<unsigned int>(pRenderer->getType()) != iOldRendererType) {
-                    Logger::get().info("clearing shader cache directory because renderer was changed");
-                    bUpdateShaderCacheConfig = true;
-                }
-            }
-
-#if defined(WIN32)
-            if (!bUpdateShaderCacheConfig && dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-                // Read vertex shader model.
-                const auto sOldHlslVsModel =
-                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslVsModelKeyName, "");
-
-                // Check if vertex shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslVsModel != HlslShader::getVertexShaderModel()) {
-                    Logger::get().info(
-                        "clearing shader cache directory because vertex shader model was changed");
-                    bUpdateShaderCacheConfig = true;
-                }
-
-                // Read pixel shader model.
-                const auto sOldHlslPsModel =
-                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslPsModelKeyName, "");
-
-                // Check if pixel shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslPsModel != HlslShader::getPixelShaderModel()) {
-                    Logger::get().info(
-                        "clearing shader cache directory because pixel shader model was changed");
-                    bUpdateShaderCacheConfig = true;
-                }
-
-                // Read compute shader model.
-                const auto sOldHlslCsModel =
-                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslCsModelKeyName, "");
-
-                // Check if compute shader model changed.
-                if (!bUpdateShaderCacheConfig && sOldHlslCsModel != HlslShader::getComputeShaderModel()) {
-                    Logger::get().info(
-                        "clearing shader cache directory because compute shader model was changed");
-                    bUpdateShaderCacheConfig = true;
-                }
-
-                // Read compiler version.
-                const auto sOldCompilerVersion =
-                    configManager.getValue<std::string>("", sGlobalShaderCacheHlslCompilerVersion, "");
-
-                // Get compiler version.
-                auto compilerVersionResult = HlslShader::getShaderCompilerVersion();
-                if (std::holds_alternative<Error>(compilerVersionResult)) [[unlikely]] {
-                    auto error = std::get<Error>(std::move(compilerVersionResult));
-                    error.addCurrentLocationToErrorStack();
-                    return error;
-                }
-                const auto sCompilerVersion = std::get<std::string>(std::move(compilerVersionResult));
-
-                // Check if compiler version changed.
-                if (!bUpdateShaderCacheConfig && sCompilerVersion != sOldCompilerVersion) {
-                    Logger::get().info(
-                        "clearing shader cache directory because shader compiler version was changed");
-                    bUpdateShaderCacheConfig = true;
-                }
-            }
-#endif
-        } else {
-            Logger::get().info(std::format(
-                "global shader cache configuration was not found, creating a new {} configuration",
-                bIsReleaseBuild ? "release" : "debug"));
-
-            bUpdateShaderCacheConfig = true;
-        }
-
-        // Clear shader cache if needed.
-        if (bUpdateShaderCacheConfig) {
-            if (std::filesystem::exists(shaderCacheDir)) {
-                std::filesystem::remove_all(shaderCacheDir);
-                std::filesystem::create_directory(shaderCacheDir);
-            }
-
-#if defined(WIN32)
-            if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-                // Set HLSL info.
-                configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslVsModelKeyName, HlslShader::getVertexShaderModel());
-                configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslPsModelKeyName, HlslShader::getPixelShaderModel());
-                configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslCsModelKeyName, HlslShader::getComputeShaderModel());
-
-                // Get compiler version.
-                auto compilerVersionResult = HlslShader::getShaderCompilerVersion();
-                if (std::holds_alternative<Error>(compilerVersionResult)) [[unlikely]] {
-                    auto error = std::get<Error>(std::move(compilerVersionResult));
-                    error.addCurrentLocationToErrorStack();
-                    return error;
-                }
-                const auto sCompilerVersion = std::get<std::string>(std::move(compilerVersionResult));
-
-                // Write compiler version.
-                configManager.setValue<std::string>(
-                    "", sGlobalShaderCacheHlslCompilerVersion, sCompilerVersion);
-            }
-#endif
-
-            // Set build mode.
-            configManager.setValue<bool>("", sGlobalShaderCacheReleaseBuildKeyName, bIsReleaseBuild);
-
-            // Set renderer type.
-            configManager.setValue<unsigned int>(
-                "", sGlobalShaderCacheRendererTypeKeyName, static_cast<unsigned int>(pRenderer->getType()));
-
-            // Save new global shader cache metadata file.
-            auto result = configManager.saveFile(shaderParamsPath, false);
-            if (result.has_value()) [[unlikely]] {
-                result->addCurrentLocationToErrorStack();
-                return result.value();
-            }
+        auto optionalError = pShaderCacheManager->refreshShaderCache();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
         return {};

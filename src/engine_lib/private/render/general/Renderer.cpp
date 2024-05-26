@@ -49,7 +49,6 @@ namespace ne {
         mtxSpawnedEnvironmentNode.second = nullptr;
 
         // Create some objects.
-        pShaderManager = std::make_unique<ShaderManager>(this);
         pPipelineManager = std::make_unique<PipelineManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
     }
@@ -607,6 +606,9 @@ namespace ne {
                 "you can find more information about the error in the most recent log file at \"{}\"",
                 ProjectPaths::getPathToLogsDirectory().string()));
         }
+
+        // Now create shader manager (after derived type is initialized).
+        pCreatedRenderer->pShaderManager = std::make_unique<ShaderManager>(pCreatedRenderer.get());
 
         // Log amount of shader variants per shader pack.
         Logger::get().info(std::format(

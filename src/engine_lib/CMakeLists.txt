@@ -58,6 +58,8 @@ set(PROJECT_WIN32_SOURCES
     private/render/directx/resources/DirectXFrameResource.cpp
     private/render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h
     private/render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.cpp
+    private/shader/hlsl/cache/HlslShaderCacheManager.cpp
+    private/shader/hlsl/cache/HlslShaderCacheManager.h
     # add Windows specific sources here...
 )
 
@@ -143,6 +145,10 @@ set(PROJECT_SOURCES
     public/input/MouseButton.hpp
     public/shader/ShaderManager.h
     private/shader/general/ShaderManager.cpp
+    private/shader/general/cache/ShaderCacheManager.cpp
+    private/shader/general/cache/ShaderCacheManager.h
+    private/shader/glsl/cache/GlslShaderCacheManager.cpp
+    private/shader/glsl/cache/GlslShaderCacheManager.h
     private/shader/general/DescriptorConstants.hpp
     private/shader/general/Shader.cpp
     private/shader/general/Shader.h

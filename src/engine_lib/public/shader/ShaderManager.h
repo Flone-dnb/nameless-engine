@@ -4,14 +4,12 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
-#include <filesystem>
 #include <functional>
 #include <mutex>
 #include <optional>
 #include <atomic>
 #include <variant>
 #include <array>
-#include <chrono>
 
 // Custom.
 #include "misc/Error.h"
@@ -21,6 +19,7 @@
 namespace ne {
     class Shader;
     class Renderer;
+    class ShaderCacheManager;
 
     /** Handles shader compilation and controls shader registry. */
     class ShaderManager {
@@ -237,8 +236,8 @@ namespace ne {
             std::vector<std::string> vShadersToBeRemoved;
         };
 
-        /** Do not delete. Parent renderer that uses this shader manager. */
-        Renderer* pRenderer;
+        /** Handles everything related to shader cache. */
+        std::unique_ptr<ShaderCacheManager> pShaderCacheManager;
 
         /** Internal shader data guarded by mutex. */
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
@@ -249,32 +248,8 @@ namespace ne {
          */
         std::atomic<size_t> iTotalCompileShadersQueries = 0;
 
-        /**
-         * Name of the file used to store global shader cache information.
-         * Global shader cache information is used to determine if all shader cache is valid
-         * or not (needs to be recompiled or not).
-         *
-         * Starts with a dot on purpose (because no shader can start with a dot - reserved for internal use).
-         */
-        static inline const std::string_view sGlobalShaderCacheParametersFileName = ".shader_cache.toml";
-
-        /** Name of the key for build mode, used in global shader cache information. */
-        static inline const std::string_view sGlobalShaderCacheReleaseBuildKeyName = "is_release_build";
-
-        /** Name of the key for vertex shader model, used in global shader cache information. */
-        static inline const std::string_view sGlobalShaderCacheHlslVsModelKeyName = "hlsl_vs";
-
-        /** Name of the key for pixel shader model, used in global shader cache information. */
-        static inline const std::string_view sGlobalShaderCacheHlslPsModelKeyName = "hlsl_ps";
-
-        /** Name of the key for compute shader model, used in global shader cache information. */
-        static inline const std::string_view sGlobalShaderCacheHlslCsModelKeyName = "hlsl_cs";
-
-        /** Name of the key for HLSL shader compiler version, used in global shader cache information. */
-        static inline const std::string_view sGlobalShaderCacheHlslCompilerVersion = "hlsl_compiler_version";
-
-        /** Name of the key for renderer's type, used in global shader cache information. */
-        static inline const std::string_view sGlobalShaderCacheRendererTypeKeyName = "renderer_type";
+        /** Do not delete. Parent renderer that uses this shader manager. */
+        Renderer* const pRenderer = nullptr;
 
         /**
          * Array of characters that can be used for shader name.

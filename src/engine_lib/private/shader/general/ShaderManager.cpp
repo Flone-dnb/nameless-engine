@@ -11,7 +11,6 @@
 #include "shader/general/Shader.h"
 #include "render/Renderer.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
-#include "cache/ShaderCacheManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "shader/hlsl/HlslShader.h"

@@ -14,12 +14,12 @@
 // Custom.
 #include "misc/Error.h"
 #include "shader/ShaderDescription.h"
+#include "shader/general/cache/ShaderCacheManager.h"
 #include "shader/general/ShaderPack.h"
 
 namespace ne {
     class Shader;
     class Renderer;
-    class ShaderCacheManager;
 
     /** Handles shader compilation and controls shader registry. */
     class ShaderManager {

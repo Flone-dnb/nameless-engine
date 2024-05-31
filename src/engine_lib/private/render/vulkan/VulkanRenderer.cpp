@@ -1682,8 +1682,8 @@ namespace ne {
         // Specify dependency before subpass.
         auto& beforeSubpassDependency = vSubpassDependencies[0];
         beforeSubpassDependency.sType = VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY_2;
-        beforeSubpassDependency.srcSubpass = 0;
-        beforeSubpassDependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+        beforeSubpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        beforeSubpassDependency.dstSubpass = 0;
         beforeSubpassDependency.srcStageMask =
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT; // make commands before our subpass reach fragment shader
                                                    // stage

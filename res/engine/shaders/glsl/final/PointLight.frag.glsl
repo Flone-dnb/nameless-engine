@@ -3,15 +3,18 @@
 #include "../../include/constants/MeshNodeConstants.glsl" // include to make push constants layout as in vertex
 #include "../../include/constants/ShadowPassConstants.glsl"
 
-/** Input parameters. */
-layout(location = 0) in vec4 fragmentWorldPosition;
+#define LAYOUT_FRAGMENT_SHADER
+#include "../formats/MeshNodeVertexLayout.glsl"
 
-/** Output parameters. */
 layout(location = 0) out float outputValue;
 
 layout(early_fragment_tests) in;
-
-/** This function is not expected be called from other shader files. */
+/**
+ * This fragment shader is used during shadow mapping: for point lights we draw all meshes using their usual vertex shader and a special
+ * fragment shader (this one).
+ *
+ * @remark This function is not expected be called from other shader files.
+ */
 void main() {
     // Store distance from light to fragment as a resulting value.
     outputValue = length(

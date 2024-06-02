@@ -3,9 +3,14 @@
 #include "../../include/constants/MeshNodeConstants.glsl" // include to make root constants layout as in vertex
 #include "../../include/constants/ShadowPassConstants.glsl"
 
+#include "../formats/MeshNodeVertex.hlsl"
+
 [earlydepthstencil]
 /**
- * This function is not expected be called from other shader files.
+ * This pixel shader is used during shadow mapping: for point lights we draw all meshes using their usual vertex shader and a special
+ * pixel shader (this one).
+ *
+ * @remark This function is not expected be called from other shader files.
  *
  * @param pin Fragment.
  *

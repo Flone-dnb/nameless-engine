@@ -83,7 +83,7 @@ namespace ne {
                     EngineShaderNames::PointLight::getFragmentShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "PointLight.frag"),
                     ShaderType::FRAGMENT_SHADER,
-                    {},
+                    VertexFormat::MESH_NODE,
                     "main",
                     {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro(),
                      {"POINT_LIGHT_SHADOW_PASS", ""}});

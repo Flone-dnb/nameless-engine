@@ -27,6 +27,7 @@ TEST_CASE("unable to compile shader with a name that contains forbidden characte
                 ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
                     "test/shaders/hlsl/CustomMeshNode.hlsl",
                 ShaderType::VERTEX_SHADER,
+                {},
                 "vsCustomMeshNode",
                 {})};
 

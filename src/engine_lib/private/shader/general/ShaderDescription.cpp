@@ -14,6 +14,7 @@ namespace ne {
         const std::string& sShaderName,
         const std::filesystem::path& pathToShaderFile,
         ShaderType shaderType,
+        std::optional<VertexFormat> vertexFormat,
         const std::string& sShaderEntryFunctionName,
         const std::unordered_map<std::string, std::string>& definedShaderMacros) {
         this->sShaderName = sShaderName;
@@ -21,6 +22,7 @@ namespace ne {
         this->shaderType = shaderType;
         this->sShaderEntryFunctionName = sShaderEntryFunctionName;
         this->definedShaderMacros = definedShaderMacros;
+        this->vertexFormat = vertexFormat;
     }
 
     void ShaderDescription::from_toml(const toml::value& data) { // NOLINT

@@ -11,7 +11,6 @@
 #include "misc/Globals.h"
 #include "render/directx/DirectXRenderer.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
-#include "game/nodes/MeshNode.h"
 #include "misc/Profiler.hpp"
 
 // External.
@@ -25,15 +24,11 @@ namespace ne {
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
         ShaderType shaderType,
+        const std::optional<VertexFormat>& vertexFormat,
         const std::string& sSourceFileHash)
-        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {
+        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, vertexFormat) {
         // Save source file hash.
         this->sSourceFileHash = sSourceFileHash;
-
-        // Check if vertex description needs to be updated.
-        static_assert(
-            sizeof(MeshVertex) == 32, // NOLINT: current size
-            "`getShaderInputElementDescription` needs to be updated");
     }
 
     std::variant<std::string, Error> HlslShader::getShaderCompilerVersion() {
@@ -140,64 +135,17 @@ namespace ne {
 
     UINT HlslShader::getStaticSamplerShaderRegisterSpace() { return iStaticSamplerShaderRegisterSpace; }
 
-    std::vector<D3D12_INPUT_ELEMENT_DESC> HlslShader::getShaderInputElementDescription() {
-        return {
-            {"POSITION",
-             0,
-             DXGI_FORMAT_R32G32B32_FLOAT,
-             0,
-             offsetof(MeshVertex, position),
-             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-             0},
-            {"NORMAL",
-             0,
-             DXGI_FORMAT_R32G32B32_FLOAT,
-             0,
-             offsetof(MeshVertex, normal),
-             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-             0},
-            {"UV",
-             0,
-             DXGI_FORMAT_R32G32_FLOAT,
-             0,
-             offsetof(MeshVertex, uv),
-             D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-             0}};
-    }
-
-    std::string HlslShader::getVertexShaderModel() { return sVertexShaderModel; }
-
-    std::string HlslShader::getPixelShaderModel() { return sPixelShaderModel; }
-
-    std::string HlslShader::getComputeShaderModel() { return sComputeShaderModel; }
-
-    std::variant<std::shared_ptr<Shader>, std::string, Error> HlslShader::compileShader(
-        Renderer* pRenderer,
-        const std::filesystem::path& cacheDirectory,
-        const std::string& sConfiguration,
-        const ShaderDescription& shaderDescription) {
-        // Check that the renderer is DirectX renderer.
-        const auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer);
-        if (pDirectXRenderer == nullptr) [[unlikely]] {
-            return Error("the specified renderer is not a DirectX renderer");
-        }
-
-        // Calculate source file hash (to use later).
-        const auto sSourceFileHash =
-            ShaderDescription::getFileHash(shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
-        if (sSourceFileHash.empty()) {
-            return Error(std::format(
-                "unable to calculate shader source file hash (shader path: \"{}\")",
-                shaderDescription.pathToShaderFile.string()));
-        }
-
-        // Create compiler and utils.
+    std::variant<ComPtr<IDxcResult>, std::string, Error> HlslShader::compileShaderToBytecode(
+        const ShaderDescription& shaderDescription, const std::optional<std::filesystem::path>& pathToPdb) {
+        // Create utils.
         ComPtr<IDxcUtils> pUtils;
-        ComPtr<IDxcCompiler3> pCompiler;
         HRESULT hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
+
+        // Create compiler.
+        ComPtr<IDxcCompiler3> pCompiler;
         hResult = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
         if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
@@ -214,13 +162,13 @@ namespace ne {
         std::wstring sShaderModel;
         switch (shaderDescription.shaderType) {
         case ShaderType::VERTEX_SHADER:
-            sShaderModel = Globals::stringToWstring(sVertexShaderModel);
+            sShaderModel = Globals::stringToWstring(std::string(sVertexShaderModel));
             break;
         case ShaderType::FRAGMENT_SHADER:
-            sShaderModel = Globals::stringToWstring(sPixelShaderModel);
+            sShaderModel = Globals::stringToWstring(std::string(sPixelShaderModel));
             break;
         case ShaderType::COMPUTE_SHADER:
-            sShaderModel = Globals::stringToWstring(sComputeShaderModel);
+            sShaderModel = Globals::stringToWstring(std::string(sComputeShaderModel));
             break;
         }
 
@@ -240,11 +188,10 @@ namespace ne {
 #if defined(DEBUG)
         vArgs.push_back(DXC_ARG_DEBUG);
         vArgs.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
-        vArgs.push_back(L"-Fd");
-        auto shaderPdbPath = cacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
-        shaderPdbPath += sConfiguration;
-        shaderPdbPath += ".pdb";
-        vArgs.push_back(shaderPdbPath);
+        if (pathToPdb.has_value()) {
+            vArgs.push_back(L"-Fd");
+            vArgs.push_back(pathToPdb.value());
+        }
 #else
         vArgs.push_back(DXC_ARG_OPTIMIZATION_LEVEL3);
 #endif
@@ -259,6 +206,25 @@ namespace ne {
             }
         }
 
+        // Make sure the file has extension.
+        if (!shaderDescription.pathToShaderFile.has_extension()) [[unlikely]] {
+            return Error(std::format(
+                "expected the file \"{}\" to have an extension",
+                shaderDescription.pathToShaderFile.string()));
+        }
+
+        // Get shader file extension.
+        auto shaderFileExtension = shaderDescription.pathToShaderFile.extension().string();
+
+        // Transform it to lowercase.
+        std::transform(
+            shaderFileExtension.begin(),
+            shaderFileExtension.end(),
+            shaderFileExtension.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+
+        std::string sFullShaderSourceCode;
+
         // Parse source code.
         auto parseResult = CombinedShaderLanguageParser::parseHlsl(shaderDescription.pathToShaderFile);
         if (std::holds_alternative<CombinedShaderLanguageParser::Error>(parseResult)) [[unlikely]] {
@@ -268,7 +234,7 @@ namespace ne {
                 error.sErrorMessage,
                 error.pathToErrorFile.string()));
         }
-        const auto sFullShaderSourceCode = std::get<std::string>(std::move(parseResult));
+        sFullShaderSourceCode = std::get<std::string>(std::move(parseResult));
 
         // Load source code.
         ComPtr<IDxcBlobEncoding> pSource = nullptr;
@@ -277,7 +243,7 @@ namespace ne {
             static_cast<UINT32>(sFullShaderSourceCode.size()),
             iShaderFileCodepage,
             &pSource);
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
@@ -300,29 +266,68 @@ namespace ne {
             static_cast<UINT32>(vArgs.size()),
             pIncludeHandler.Get(),
             IID_PPV_ARGS(&pResults));
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
         // See if errors occurred.
         ComPtr<IDxcBlobUtf8> pErrors = nullptr;
         hResult = pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
-        if (pErrors != nullptr && pErrors->GetStringLength() > 0) {
+        if (pErrors != nullptr && pErrors->GetStringLength() > 0) [[unlikely]] {
             return std::string{pErrors->GetStringPointer(), pErrors->GetStringLength()};
         }
 
         // See if the compilation failed.
         pResults->GetStatus(&hResult);
-        if (FAILED(hResult)) {
+        if (FAILED(hResult)) [[unlikely]] {
             return Error(hResult);
         }
 
+        return pResults;
+    }
+
+    std::variant<std::shared_ptr<Shader>, std::string, Error> HlslShader::compileShader(
+        Renderer* pRenderer,
+        const std::filesystem::path& cacheDirectory,
+        const std::string& sConfiguration,
+        const ShaderDescription& shaderDescription) {
+        // Check that the renderer is DirectX renderer.
+        const auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(pRenderer);
+        if (pDirectXRenderer == nullptr) [[unlikely]] {
+            return Error("the specified renderer is not a DirectX renderer");
+        }
+
+        // Calculate source file hash (to use later) but make sure it's not empty.
+        const auto sSourceFileHash =
+            ShaderDescription::getFileHash(shaderDescription.pathToShaderFile, shaderDescription.sShaderName);
+        if (sSourceFileHash.empty()) [[unlikely]] {
+            return Error(std::format(
+                "unable to calculate shader source file hash (shader path: \"{}\")",
+                shaderDescription.pathToShaderFile.string()));
+        }
+
+        // Prepare path to the PDB file.
+        auto pathToPdb = cacheDirectory / ShaderFilesystemPaths::getShaderCacheBaseFileName();
+        pathToPdb += sConfiguration;
+        pathToPdb += ".pdb";
+
+        // Compile.
+        auto compilationResult = compileShaderToBytecode(shaderDescription, pathToPdb);
+        if (std::holds_alternative<Error>(compilationResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(compilationResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        } else if (std::holds_alternative<std::string>(std::move(compilationResult))) [[unlikely]] {
+            return std::get<std::string>(std::move(compilationResult));
+        }
+        auto pResults = std::get<ComPtr<IDxcResult>>(std::move(compilationResult));
+
         // Get reflection.
         ComPtr<IDxcBlob> pReflectionData;
-        hResult = pResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&pReflectionData), nullptr);
+        HRESULT hResult = pResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&pReflectionData), nullptr);
         if (FAILED(hResult)) {
             return Error(hResult);
         }
@@ -353,6 +358,13 @@ namespace ne {
             static_cast<long long>(pCompiledShaderBlob->GetBufferSize()));
         shaderCacheFile.close();
 
+        // Create utils.
+        ComPtr<IDxcUtils> pUtils;
+        hResult = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
+        if (FAILED(hResult)) [[unlikely]] {
+            return Error(hResult);
+        }
+
         // Create reflection interface.
         DxcBuffer reflectionData{};
         reflectionData.Encoding = iShaderFileCodepage;
@@ -378,18 +390,18 @@ namespace ne {
         shaderReflectionFile.close();
 
 #if defined(DEBUG)
-        // Save pdb file.
+        // Save PDB file.
         ComPtr<IDxcBlob> pShaderPdb = nullptr;
         ComPtr<IDxcBlobUtf16> pShaderPdbName = nullptr;
         pResults->GetOutput(DXC_OUT_PDB, IID_PPV_ARGS(&pShaderPdb), &pShaderPdbName);
-        if (pShaderPdb == nullptr) {
+        if (pShaderPdb == nullptr) [[unlikely]] {
             return Error(
                 std::format("no PDB was generated for {}", shaderDescription.pathToShaderFile.string()));
         }
 
-        std::ofstream shaderPdbFile(shaderPdbPath, std::ios::binary);
-        if (!shaderPdbFile.is_open()) {
-            return Error(std::format("failed to save shader PDB at {}", shaderPdbPath.string()));
+        std::ofstream shaderPdbFile(pathToPdb, std::ios::binary);
+        if (!shaderPdbFile.is_open()) [[unlikely]] {
+            return Error(std::format("failed to save shader PDB at {}", pathToPdb.string()));
         }
         shaderPdbFile.write(
             static_cast<char*>(pShaderPdb->GetBufferPointer()),
@@ -403,13 +415,14 @@ namespace ne {
             pathToCompiledShader,
             shaderDescription.sShaderName,
             shaderDescription.shaderType,
+            shaderDescription.vertexFormat,
             sSourceFileHash);
 
         // Make sure we are able to collect root signature info from reflection
-        // (check that there are no errors)
+        // (check that there are no errors).
         auto result =
             RootSignatureGenerator::collectInfoFromReflection(pDirectXRenderer->getD3dDevice(), pReflection);
-        if (std::holds_alternative<Error>(result)) {
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();
             return err;
@@ -650,8 +663,8 @@ namespace ne {
 
             // Collect root signature info from reflection.
             auto result = RootSignatureGenerator::collectInfoFromReflection(
-                dynamic_cast<DirectXRenderer*>(getUsedRenderer())->getD3dDevice(), pReflection);
-            if (std::holds_alternative<Error>(result)) {
+                dynamic_cast<DirectXRenderer*>(getRenderer())->getD3dDevice(), pReflection);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto err = std::get<Error>(std::move(result));
                 err.addCurrentLocationToErrorStack();
                 return err;

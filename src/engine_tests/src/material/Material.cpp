@@ -314,6 +314,7 @@ TEST_CASE("unused materials unload shaders from memory") {
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
                         "test/shaders/hlsl/CustomMeshNode.vert.hlsl",
                     ShaderType::VERTEX_SHADER,
+                    VertexFormat::MESH_NODE,
                     "vsCustomMeshNode",
                     EngineShaders::MeshNode::getVertexShader(false) // language does not matter because we
                         .definedShaderMacros),                      // only want to "derive" macros
@@ -322,6 +323,7 @@ TEST_CASE("unused materials unload shaders from memory") {
                     ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
                         "test/shaders/hlsl/CustomMeshNode.frag.hlsl",
                     ShaderType::FRAGMENT_SHADER,
+                    VertexFormat::MESH_NODE,
                     "psCustomMeshNode",
                     EngineShaders::MeshNode::getFragmentShader(false) // language does not matter because we
                         .definedShaderMacros)};                       // only want to "derive" macros

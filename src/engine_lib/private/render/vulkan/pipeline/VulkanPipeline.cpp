@@ -12,6 +12,7 @@
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "shader/glsl/DescriptorSetLayoutGenerator.h"
+#include "shader/glsl/formats/GlslVertexFormatDescription.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"
@@ -506,9 +507,18 @@ namespace ne {
             vShaderStages.push_back(fragmentShaderStageInfo);
         }
 
+        // Get vertex format.
+        const auto optionalVertexFormat = pVertexShader->getVertexFormat();
+        if (optionalVertexFormat.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "expected vertex format to be set for vertex shader \"{}\"", pVertexShader->getShaderName()));
+        }
+        const auto pVertexFormat =
+            GlslVertexFormatDescription::createDescription(optionalVertexFormat.value());
+
         // Get bindings and attributes.
-        const auto bindingDescription = GlslShader::getVertexBindingDescription();
-        const auto attributeDescriptions = GlslShader::getVertexAttributeDescriptions();
+        const auto bindingDescription = pVertexFormat->getVertexBindingDescription();
+        const auto attributeDescriptions = pVertexFormat->getVertexAttributeDescriptions();
 
         // Describe the vertex input.
         VkPipelineVertexInputStateCreateInfo vertexInputStateInfo{};

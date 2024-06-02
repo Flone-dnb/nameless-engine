@@ -22,12 +22,10 @@ namespace ne {
         Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType) {
-        this->pathToCompiledShader = std::move(pathToCompiledShader);
-        this->sShaderName = sShaderName;
-        this->shaderType = shaderType;
-        this->pUsedRenderer = pRenderer;
-    }
+        ShaderType shaderType,
+        std::optional<VertexFormat> vertexFormat)
+        : pRenderer(pRenderer), optionalVertexFormat(vertexFormat), sShaderName(std::move(sShaderName)),
+          shaderType(shaderType), pathToCompiledShader(std::move(pathToCompiledShader)) {}
 
     size_t Shader::getCurrentAmountOfShadersInMemory() { return iTotalShaderInMemoryCount.load(); }
 
@@ -234,7 +232,8 @@ namespace ne {
             shaderDescription.pathToShaderFile,
             pathToCompiledShaderBytecode,
             shaderDescription.sShaderName,
-            shaderDescription.shaderType);
+            shaderDescription.shaderType,
+            shaderDescription.vertexFormat);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -268,7 +267,8 @@ namespace ne {
         const std::filesystem::path& pathToSourceShaderFile,
         const std::filesystem::path& pathToCompiledShaderBytecode,
         const std::string& sShaderName,
-        ShaderType shaderType) {
+        ShaderType shaderType,
+        std::optional<VertexFormat> vertexFormat) {
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
             // Calculate source file hash so that we could determine what pixel/fragment/vertex shaders
@@ -281,12 +281,17 @@ namespace ne {
             }
 
             return std::make_shared<HlslShader>(
-                pRenderer, pathToCompiledShaderBytecode, sShaderName, shaderType, sSourceFileHash);
+                pRenderer,
+                pathToCompiledShaderBytecode,
+                sShaderName,
+                shaderType,
+                vertexFormat,
+                sSourceFileHash);
         }
 #endif
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
             return std::make_shared<GlslShader>(
-                pRenderer, pathToCompiledShaderBytecode, sShaderName, shaderType);
+                pRenderer, pathToCompiledShaderBytecode, sShaderName, shaderType, vertexFormat);
         }
 
         return Error("unsupported renderer");
@@ -303,7 +308,9 @@ namespace ne {
         return pathToCompiledShader;
     }
 
-    Renderer* Shader::getUsedRenderer() const { return pUsedRenderer; }
+    std::optional<VertexFormat> Shader::getVertexFormat() const { return optionalVertexFormat; }
+
+    Renderer* Shader::getRenderer() const { return pRenderer; }
 
     ShaderType Shader::getShaderType() const { return shaderType; }
 } // namespace ne

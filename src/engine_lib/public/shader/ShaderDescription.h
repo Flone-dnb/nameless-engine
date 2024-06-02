@@ -5,6 +5,7 @@
 
 // Custom.
 #include "io/ConfigManager.h"
+#include "shader/general/formats/VertexFormat.h"
 
 namespace ne {
     /**
@@ -86,6 +87,8 @@ namespace ne {
          * @param sShaderName              Globally unique shader name.
          * @param pathToShaderFile         Path to the shader file.
          * @param shaderType               Type of the shader.
+         * @param vertexFormat             Vertex format that the shader uses (can be empty if not
+         * applicable, for example if this shader is a compute shader).
          * @param sShaderEntryFunctionName Name of the shader's entry function name.
          * For example: if the shader type is vertex shader, then this value should
          * contain name of the function used for vertex processing (from shader's file, "VS" for
@@ -97,6 +100,7 @@ namespace ne {
             const std::string& sShaderName,
             const std::filesystem::path& pathToShaderFile,
             ShaderType shaderType,
+            std::optional<VertexFormat> vertexFormat,
             const std::string& sShaderEntryFunctionName,
             const std::unordered_map<std::string, std::string>& definedShaderMacros);
 
@@ -193,6 +197,13 @@ namespace ne {
 
         /** Type of the shader. */
         ShaderType shaderType = ShaderType::VERTEX_SHADER;
+
+        /**
+         * Used vertex format.
+         *
+         * @remark Can be empty if not applicable (for example if this is a compute shader).
+         */
+        std::optional<VertexFormat> vertexFormat;
 
         /** Name of the shader's entry function name. */
         std::string sShaderEntryFunctionName;

@@ -26,12 +26,15 @@ namespace ne {
          * @param pathToCompiledShader Path to compiled shader bytecode on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
+         * @param vertexFormat         Vertex format that this shader uses (can be empty if not applicable,
+         * for example if this is a compute shader).
          */
         GlslShader(
             Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType);
+            ShaderType shaderType,
+            const std::optional<VertexFormat>& vertexFormat);
 
         GlslShader() = delete;
         GlslShader(const GlslShader&) = delete;
@@ -40,18 +43,16 @@ namespace ne {
         virtual ~GlslShader() override = default;
 
         /**
-         * Returns vertex description for vertex input binding.
+         * Compiles the specified shader file to bytecode.
          *
-         * @return Vertex input binding description.
-         */
-        static VkVertexInputBindingDescription getVertexBindingDescription();
-
-        /**
-         * Returns description of all vertex attributes.
+         * @param shaderDescription Describes the shader and how the shader should be
+         * compiled.
          *
-         * @return Vertex attribute descriptions.
+         * @return One of the three values: compiled bytecode, string containing shader compilation
+         * error/warning or an internal error.
          */
-        static std::array<VkVertexInputAttributeDescription, 3> getVertexAttributeDescriptions();
+        static std::variant<std::vector<uint32_t>, std::string, Error>
+        compileShaderToBytecode(const ShaderDescription& shaderDescription);
 
         /**
          * Compiles a shader.
@@ -160,9 +161,6 @@ namespace ne {
          */
         std::pair<std::mutex, std::optional<DescriptorSetLayoutGenerator::Collected>>
             mtxDescriptorSetLayoutInfo;
-
-        /** Index of the vertex input binding. */
-        static constexpr uint32_t iVertexBindingIndex = 0;
 
         /** Name of the section used to store descriptor set layout info. */
         static inline const auto sDescriptorSetLayoutSectionName = "Descriptor Set Layout";

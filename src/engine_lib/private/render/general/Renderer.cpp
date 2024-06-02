@@ -77,7 +77,7 @@ namespace ne {
         // Prepare callbacks.
         auto onProgress = [](size_t iCompiledShaderCount, size_t iTotalShadersToCompile) {};
         auto onError = [](ShaderDescription shaderDescription, std::variant<std::string, Error> error) {
-            if (std::holds_alternative<std::string>(error)) {
+            if (std::holds_alternative<std::string>(error)) [[unlikely]] {
                 const auto sErrorMessage = std::format(
                     "failed to compile shader \"{}\" due to the following compilation error:\n{}",
                     shaderDescription.sShaderName,
@@ -87,18 +87,21 @@ namespace ne {
                 throw std::runtime_error(err.getFullErrorMessage());
             }
 
+            // Show an error message.
             const auto sErrorMessage = std::format(
                 "failed to compile shader \"{}\" due to the following internal error:\n{}",
                 shaderDescription.sShaderName,
                 std::get<Error>(std::move(error)).getFullErrorMessage());
             const Error err(sErrorMessage);
             err.showError();
+
             MessageBox::info(
                 "Info",
                 std::format(
                     "Try restarting the application or deleting the directory \"{}\", if this "
                     "does not help contact the developers.",
                     ShaderFilesystemPaths::getPathToShaderCacheDirectory().string()));
+
             throw std::runtime_error(err.getFullErrorMessage());
         };
         auto onCompleted = [pPromiseFinish]() { pPromiseFinish->set_value(false); };
@@ -109,7 +112,7 @@ namespace ne {
         // Compile shaders.
         auto error =
             getShaderManager()->compileShaders(std::move(vEngineShaders), onProgress, onError, onCompleted);
-        if (error.has_value()) {
+        if (error.has_value()) [[unlikely]] {
             error->addCurrentLocationToErrorStack();
             error->showError();
             throw std::runtime_error(error->getFullErrorMessage());

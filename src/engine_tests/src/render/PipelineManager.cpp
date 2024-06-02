@@ -54,6 +54,7 @@ TEST_CASE("manager correctly manages compute pipelines") {
                     "test.compute",
                     shaderPathNoExtension.string() + ".hlsl",
                     ShaderType::COMPUTE_SHADER,
+                    {},
                     "cs",
                     {});
             }
@@ -68,6 +69,7 @@ TEST_CASE("manager correctly manages compute pipelines") {
                     "test.compute",
                     shaderPathNoExtension.string() + ".comp",
                     ShaderType::COMPUTE_SHADER,
+                    {},
                     "main",
                     {});
             }

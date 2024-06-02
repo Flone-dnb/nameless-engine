@@ -10,7 +10,6 @@
 #include "io/Logger.h"
 #include "misc/Globals.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
-#include "game/nodes/MeshNode.h"
 #include "misc/Profiler.hpp"
 #include "render/vulkan/VulkanRenderer.h"
 
@@ -52,56 +51,9 @@ namespace ne {
         Renderer* pRenderer,
         std::filesystem::path pathToCompiledShader,
         const std::string& sShaderName,
-        ShaderType shaderType)
-        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType) {
-        // Make sure vertex attributes don't need update.
-        static_assert(
-            sizeof(MeshVertex) == 32, // NOLINT: current size
-            "`getVertexAttributeDescriptions` needs to be updated");
-    }
-
-    VkVertexInputBindingDescription GlslShader::getVertexBindingDescription() {
-        VkVertexInputBindingDescription bindingDescription{};
-        bindingDescription.binding = iVertexBindingIndex;
-        bindingDescription.stride = sizeof(MeshVertex);
-        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-        return bindingDescription;
-    }
-
-    std::array<VkVertexInputAttributeDescription, 3> GlslShader::getVertexAttributeDescriptions() {
-        std::array<VkVertexInputAttributeDescription, 3> vAttributeDescriptions{};
-
-        // Prepare some constants.
-        constexpr VkFormat vec3Format = VK_FORMAT_R32G32B32_SFLOAT;
-        constexpr VkFormat vec2Format = VK_FORMAT_R32G32_SFLOAT;
-        constexpr uint32_t iPositionAttributeOffset = 0;
-        constexpr uint32_t iNormalAttributeOffset = 1;
-        constexpr uint32_t iUvAttributeOffset = 2;
-
-        // Describe position attribute.
-        auto& positionAttribute = vAttributeDescriptions[iPositionAttributeOffset];
-        positionAttribute.binding = iVertexBindingIndex;
-        positionAttribute.location = iPositionAttributeOffset;
-        positionAttribute.format = vec3Format;
-        positionAttribute.offset = offsetof(MeshVertex, position);
-
-        // Describe normal attribute.
-        auto& normalAttribute = vAttributeDescriptions[iNormalAttributeOffset];
-        normalAttribute.binding = iVertexBindingIndex;
-        normalAttribute.location = iNormalAttributeOffset;
-        normalAttribute.format = vec3Format;
-        normalAttribute.offset = offsetof(MeshVertex, normal);
-
-        // Describe UV attribute.
-        auto& uvAttribute = vAttributeDescriptions[iUvAttributeOffset];
-        uvAttribute.binding = iVertexBindingIndex;
-        uvAttribute.location = iUvAttributeOffset;
-        uvAttribute.format = vec2Format;
-        uvAttribute.offset = offsetof(MeshVertex, uv);
-
-        return vAttributeDescriptions;
-    }
+        ShaderType shaderType,
+        const std::optional<VertexFormat>& vertexFormat)
+        : Shader(pRenderer, std::move(pathToCompiledShader), sShaderName, shaderType, vertexFormat) {}
 
     std::variant<std::shared_ptr<Shader>, std::string, Error> GlslShader::compileShader(
         Renderer* pRenderer,
@@ -222,7 +174,11 @@ namespace ne {
         shaderCacheFile.close();
 
         return std::make_shared<GlslShader>(
-            pRenderer, pathToCompiledShader, shaderDescription.sShaderName, shaderDescription.shaderType);
+            pRenderer,
+            pathToCompiledShader,
+            shaderDescription.sShaderName,
+            shaderDescription.shaderType,
+            shaderDescription.vertexFormat);
     }
 
     bool GlslShader::releaseShaderDataFromMemoryIfLoaded() {

@@ -46,6 +46,7 @@ namespace ne {
                     EngineShaderNames::MeshNode::getVertexShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "MeshNode.vert"),
                     ShaderType::VERTEX_SHADER,
+                    VertexFormat::MESH_NODE,
                     "main",
                     {});
             }
@@ -62,6 +63,7 @@ namespace ne {
                     EngineShaderNames::MeshNode::getFragmentShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "MeshNode.frag"),
                     ShaderType::FRAGMENT_SHADER,
+                    VertexFormat::MESH_NODE,
                     "main",
                     {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro()});
             }
@@ -81,6 +83,7 @@ namespace ne {
                     EngineShaderNames::PointLight::getFragmentShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "PointLight.frag"),
                     ShaderType::FRAGMENT_SHADER,
+                    {},
                     "main",
                     {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro(),
                      {"POINT_LIGHT_SHADOW_PASS", ""}});
@@ -102,6 +105,7 @@ namespace ne {
                     EngineShaderNames::ForwardPlus::getCalculateFrustumGridComputeShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "light_culling/CalculateGridFrustums.comp"),
                     ShaderType::COMPUTE_SHADER,
+                    {},
                     "main",
                     {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro()});
             }
@@ -119,6 +123,7 @@ namespace ne {
                     EngineShaderNames::ForwardPlus::getPrepareLightCullingComputeShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "light_culling/PrepareLightCulling.comp"),
                     ShaderType::COMPUTE_SHADER,
+                    {},
                     "main",
                     {});
             }
@@ -135,6 +140,7 @@ namespace ne {
                     EngineShaderNames::ForwardPlus::getLightCullingComputeShaderName(),
                     constructPathToShaderSourceFile(bIsHlsl, "light_culling/LightCulling.comp"),
                     ShaderType::COMPUTE_SHADER,
+                    {},
                     "main",
                     {EngineShaderConstantMacros::ForwardPlus::getLightGridTileSizeMacro(),
                      EngineShaderConstantMacros::ForwardPlus::getAveragePointLightNumPerTileMacro(),

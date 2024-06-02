@@ -57,7 +57,7 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                                     "}\n";
                 vertexShaderFile.close();
                 ShaderDescription vertexDescription{
-                    pTestVertexShaderName, shaderPath, ShaderType::VERTEX_SHADER, "main", {}};
+                    pTestVertexShaderName, shaderPath, ShaderType::VERTEX_SHADER, {}, "main", {}};
 
                 // Compile vertex shader.
                 auto compileResult =
@@ -89,7 +89,7 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                                       "}\n";
                 fragmentShaderFile.close();
                 ShaderDescription fragmentDescription{
-                                                      pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
+                    pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, {}, "main", {}};
 
                 // Compile fragment shader.
                 compileResult =
@@ -122,7 +122,7 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                     std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
                 REQUIRE(pFragmentShader != nullptr);
 
-                // Get vertex shader bytecode and generate its descriptor layout.
+                // Make sure vertex shader bytecode is generated without errors.
                 auto shaderBytecode = pVertexShader->getCompiledBytecode();
                 if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
                     auto err = std::get<Error>(std::move(shaderBytecode));
@@ -130,10 +130,8 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMtxVertexShaderBytecode =
-                    std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
-                // Get fragment shader bytecode and generate its descriptor layout.
+                // Make sure fragment shader bytecode is generated without errors.
                 shaderBytecode = pFragmentShader->getCompiledBytecode();
                 if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
                     auto err = std::get<Error>(std::move(shaderBytecode));
@@ -141,8 +139,6 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMtxFragmentShaderBytecode =
-                    std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
                 // Generate one descriptor layout from both shaders.
                 auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
@@ -227,7 +223,7 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                                     "}\n";
                 vertexShaderFile.close();
                 ShaderDescription vertexDescription{
-                    pTestVertexShaderName, shaderPath, ShaderType::VERTEX_SHADER, "main", {}};
+                    pTestVertexShaderName, shaderPath, ShaderType::VERTEX_SHADER, {}, "main", {}};
 
                 // Compile vertex shader.
                 auto compileResult =
@@ -259,7 +255,7 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                                       "}\n";
                 fragmentShaderFile.close();
                 ShaderDescription fragmentDescription{
-                                                      pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
+                    pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, {}, "main", {}};
 
                 // Compile fragment shader.
                 compileResult =
@@ -292,7 +288,7 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                     std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
                 REQUIRE(pFragmentShader != nullptr);
 
-                // Get vertex shader bytecode and generate its descriptor layout.
+                // Make sure vertex shader bytecode is generated without errors.
                 auto shaderBytecode = pVertexShader->getCompiledBytecode();
                 if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
                     auto err = std::get<Error>(std::move(shaderBytecode));
@@ -300,10 +296,8 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMtxVertexShaderBytecode =
-                    std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
-                // Get fragment shader bytecode and generate its descriptor layout.
+                // Make sure fragment shader bytecode is generated without errors.
                 shaderBytecode = pFragmentShader->getCompiledBytecode();
                 if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
                     auto err = std::get<Error>(std::move(shaderBytecode));
@@ -311,8 +305,6 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMtxFragmentShaderBytecode =
-                    std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
                 // Generate one descriptor layout from both shaders.
                 auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
@@ -397,7 +389,7 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                                     "}\n";
                 vertexShaderFile.close();
                 ShaderDescription vertexDescription{
-                    pTestVertexShaderName, shaderPath, ShaderType::VERTEX_SHADER, "main", {}};
+                    pTestVertexShaderName, shaderPath, ShaderType::VERTEX_SHADER, {}, "main", {}};
 
                 // Compile vertex shader.
                 auto compileResult =
@@ -429,7 +421,7 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                                       "}\n";
                 fragmentShaderFile.close();
                 ShaderDescription fragmentDescription{
-                                                      pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, "main", {}};
+                    pTestVertexShaderName, shaderPath, ShaderType::FRAGMENT_SHADER, {}, "main", {}};
 
                 // Compile fragment shader.
                 compileResult =
@@ -462,7 +454,7 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                     std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
                 REQUIRE(pFragmentShader != nullptr);
 
-                // Get vertex shader bytecode and generate its descriptor layout.
+                // Make sure vertex shader bytecode is generated without errors.
                 auto shaderBytecode = pVertexShader->getCompiledBytecode();
                 if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
                     auto err = std::get<Error>(std::move(shaderBytecode));
@@ -470,10 +462,8 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMtxVertexShaderBytecode =
-                    std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
-                // Get fragment shader bytecode and generate its descriptor layout.
+                // Make sure fragment shader bytecode is generated without errors.
                 shaderBytecode = pFragmentShader->getCompiledBytecode();
                 if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
                     auto err = std::get<Error>(std::move(shaderBytecode));
@@ -481,8 +471,6 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                     INFO(err.getFullErrorMessage());
                     REQUIRE(false);
                 }
-                const auto pMtxFragmentShaderBytecode =
-                    std::get<std::pair<std::recursive_mutex, std::vector<char>>*>(std::move(shaderBytecode));
 
                 // Generate one descriptor layout from both shaders.
                 auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(

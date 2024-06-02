@@ -9,6 +9,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "shader/ShaderDescription.h"
+#include "shader/general/formats/VertexFormat.h"
 
 namespace ne {
     class Renderer;
@@ -102,6 +103,14 @@ namespace ne {
         ShaderType getShaderType() const;
 
         /**
+         * Returns vertex format used by this shader.
+         *
+         * @return Empty if not applicable (for example if this shader is a compute shader),
+         * otherwise used vertex format.
+         */
+        std::optional<VertexFormat> getVertexFormat() const;
+
+        /**
          * Releases underlying shader bytecode for each shader from memory (this object will not be deleted)
          * if the shader bytecode was loaded into memory.
          * Next time this shader will be needed it will be loaded from disk.
@@ -118,12 +127,15 @@ namespace ne {
          * @param pathToCompiledShader Path to compiled shader bytecode on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
+         * @param vertexFormat         Vertex format that this shader uses (can be empty if not applicable,
+         * for example if this is a compute shader).
          */
         Shader(
             Renderer* pRenderer,
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
-            ShaderType shaderType);
+            ShaderType shaderType,
+            std::optional<VertexFormat> vertexFormat);
 
         /**
          * Derived shader classes should call this function once they load shader bytecode
@@ -177,11 +189,11 @@ namespace ne {
         std::variant<std::filesystem::path, Error> getPathToCompiledShader();
 
         /**
-         * Returns used renderer.
+         * Returns renderer.
          *
-         * @return Used renderer.
+         * @return renderer.
          */
-        Renderer* getUsedRenderer() const;
+        Renderer* getRenderer() const;
 
     private:
         /**
@@ -212,6 +224,8 @@ namespace ne {
          * @param pathToCompiledShaderBytecode Path to compiled shader bytecode on disk.
          * @param sShaderName                  Unique name of this shader.
          * @param shaderType                   Type of this shader.
+         * @param vertexFormat                 Can be empty if non applicable (for example if this shader is a
+         * compute shader).
          *
          * @return Error if something went wrong, otherwise created shader.
          */
@@ -220,19 +234,27 @@ namespace ne {
             const std::filesystem::path& pathToSourceShaderFile,
             const std::filesystem::path& pathToCompiledShaderBytecode,
             const std::string& sShaderName,
-            ShaderType shaderType);
+            ShaderType shaderType,
+            std::optional<VertexFormat> vertexFormat);
 
         /** Do not delete. Used renderer. */
-        Renderer* pUsedRenderer = nullptr;
+        Renderer* const pRenderer = nullptr;
+
+        /**
+         * Vertex format that this shader uses.
+         *
+         * @remark Can be empty if non applicable (for example if this shader is a compute shader).
+         */
+        const std::optional<VertexFormat> optionalVertexFormat;
 
         /** Unique shader name received from ShaderManager. */
-        std::string sShaderName;
+        const std::string sShaderName;
 
         /** Type of this shader. */
-        ShaderType shaderType;
+        const ShaderType shaderType;
 
         /** Path to compiled shader. */
-        std::filesystem::path pathToCompiledShader;
+        const std::filesystem::path pathToCompiledShader;
 
         /** Name of the key used to store compiled bytecode hash in the metadata file. */
         static inline const auto sCompiledBytecodeHashKeyName = "compiled_bytecode_hash";

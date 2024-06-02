@@ -6,6 +6,7 @@
 #include "shader/hlsl/RootSignatureGenerator.h"
 #include "io/Logger.h"
 #include "render/RenderSettings.h"
+#include "shader/hlsl/formats/HlslVertexFormatDescription.h"
 
 namespace ne {
     DirectXPso::DirectXPso(
@@ -254,8 +255,17 @@ namespace ne {
         // Prepare to create a PSO using these shaders.
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
+        // Get vertex format.
+        const auto optionalVertexFormat = pVertexShader->getVertexFormat();
+        if (!optionalVertexFormat.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "expected vertex format to be set for vertex shader \"{}\"", pVertexShader->getShaderName()));
+        }
+        const auto pVertexFormat =
+            HlslVertexFormatDescription::createDescription(optionalVertexFormat.value());
+
         // Setup input layout and shaders.
-        const auto vInputLayout = pVertexShader->getShaderInputElementDescription();
+        const auto vInputLayout = pVertexFormat->getShaderInputElementDescription();
         psoDesc.InputLayout = {vInputLayout.data(), static_cast<UINT>(vInputLayout.size())};
         psoDesc.pRootSignature = mtxInternalResources.second.pRootSignature.Get();
         psoDesc.VS = {pVertexShaderBytecode->GetBufferPointer(), pVertexShaderBytecode->GetBufferSize()};

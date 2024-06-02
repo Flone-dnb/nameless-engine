@@ -72,11 +72,11 @@ namespace ne {
 
     std::optional<Error> HlslShaderCacheManager::writeLanguageSpecificParameters(ConfigManager& cacheConfig) {
         // Write shader model.
-        cacheConfig.setValue<std::string>(
+        cacheConfig.setValue<std::string_view>(
             sHlslSectionName, GlobalShaderCacheParameterNames::sVsModel, HlslShader::getVertexShaderModel());
-        cacheConfig.setValue<std::string>(
+        cacheConfig.setValue<std::string_view>(
             sHlslSectionName, GlobalShaderCacheParameterNames::sPsModel, HlslShader::getPixelShaderModel());
-        cacheConfig.setValue<std::string>(
+        cacheConfig.setValue<std::string_view>(
             sHlslSectionName, GlobalShaderCacheParameterNames::sCsModel, HlslShader::getComputeShaderModel());
 
         // Get compiler version.

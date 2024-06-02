@@ -37,6 +37,8 @@ namespace ne {
          * @param pathToCompiledShader Path to compiled shader bytecode on disk.
          * @param sShaderName          Unique name of this shader.
          * @param shaderType           Type of this shader.
+         * @param vertexFormat         Vertex format that this shader uses (can be empty if not applicable,
+         * for example if this is a compute shader).
          * @param sSourceFileHash      Shader source file hash, used to tell what shaders were compiled from
          * the same file.
          */
@@ -45,6 +47,7 @@ namespace ne {
             std::filesystem::path pathToCompiledShader,
             const std::string& sShaderName,
             ShaderType shaderType,
+            const std::optional<VertexFormat>& vertexFormat,
             const std::string& sSourceFileHash);
 
         HlslShader() = delete;
@@ -52,6 +55,27 @@ namespace ne {
         HlslShader& operator=(const HlslShader&) = delete;
 
         virtual ~HlslShader() override = default;
+
+        /**
+         * Returns used vertex shader model version.
+         *
+         * @return Vertex shader model version.
+         */
+        static constexpr std::string_view getVertexShaderModel() { return sVertexShaderModel; }
+
+        /**
+         * Returns used pixel shader model version.
+         *
+         * @return Pixel shader model version.
+         */
+        static constexpr std::string_view getPixelShaderModel() { return sPixelShaderModel; }
+
+        /**
+         * Returns used compute shader model version.
+         *
+         * @return Compute shader model version.
+         */
+        static constexpr std::string_view getComputeShaderModel() { return sComputeShaderModel; }
 
         /**
          * Returns current version of the HLSL shader compiler.
@@ -86,32 +110,19 @@ namespace ne {
         static UINT getStaticSamplerShaderRegisterSpace();
 
         /**
-         * Returns shader input layout description (vertex attribute description).
+         * Compiles the specified shader file to bytecode.
          *
-         * @return Input layout description.
-         */
-        static std::vector<D3D12_INPUT_ELEMENT_DESC> getShaderInputElementDescription();
-
-        /**
-         * Returns used vertex shader model version.
+         * @param shaderDescription Describes the shader and how the shader should be
+         * compiled.
+         * @param pathToPdb         Path where the PDB will be saved after compilation (outside
+         * of this function) in debug builds.
          *
-         * @return Vertex shader model version.
+         * @return One of the three values: results of the compilation, string containing shader compilation
+         * error/warning or an internal error.
          */
-        static std::string getVertexShaderModel();
-
-        /**
-         * Returns used pixel shader model version.
-         *
-         * @return Pixel shader model version.
-         */
-        static std::string getPixelShaderModel();
-
-        /**
-         * Returns used compute shader model version.
-         *
-         * @return Compute shader model version.
-         */
-        static std::string getComputeShaderModel();
+        static std::variant<ComPtr<IDxcResult>, std::string, Error> compileShaderToBytecode(
+            const ShaderDescription& shaderDescription,
+            const std::optional<std::filesystem::path>& pathToPdb);
 
         /**
          * Compiles a shader.
@@ -256,11 +267,11 @@ namespace ne {
         // ! if adding new shader models add them to cache config in ShaderManager !
         // -------------------------------------------------------------------------
         /** Used vertex shader model. */
-        static inline const std::string sVertexShaderModel = "vs_6_0";
+        static constexpr std::string_view sVertexShaderModel = "vs_6_0";
         /** Used pixel shader model. */
-        static inline const std::string sPixelShaderModel = "ps_6_0";
+        static constexpr std::string_view sPixelShaderModel = "ps_6_0";
         /** Used compute shader model. */
-        static inline const std::string sComputeShaderModel = "cs_6_0";
+        static constexpr std::string_view sComputeShaderModel = "cs_6_0";
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !
         // -------------------------------------------------------------------------

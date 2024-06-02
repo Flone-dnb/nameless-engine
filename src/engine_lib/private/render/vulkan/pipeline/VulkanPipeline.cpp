@@ -509,7 +509,7 @@ namespace ne {
 
         // Get vertex format.
         const auto optionalVertexFormat = pVertexShader->getVertexFormat();
-        if (optionalVertexFormat.has_value()) [[unlikely]] {
+        if (!optionalVertexFormat.has_value()) [[unlikely]] {
             return Error(std::format(
                 "expected vertex format to be set for vertex shader \"{}\"", pVertexShader->getShaderName()));
         }

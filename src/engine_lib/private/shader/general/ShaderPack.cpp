@@ -8,6 +8,7 @@
 #include "shader/general/Shader.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
+#include "shader/glsl/formats/GlslVertexFormatDescription.h"
 
 namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, Error> ShaderPack::createFromCache(
@@ -48,11 +49,8 @@ namespace ne {
             // Prepare shader description.
             auto currentShaderDescription = shaderDescription;
 
-            // Specify defined macros for this shader.
-            auto vParameterNames = convertShaderMacrosToText(macros);
-            for (const auto& sParameter : vParameterNames) {
-                currentShaderDescription.definedShaderMacros[sParameter] = ""; // valueless macro
-            }
+            // Add engine macros for this shader.
+            addEngineMacrosToShaderDescription(currentShaderDescription, macros, pRenderer);
 
             // Add hash of the configuration to the shader name for logging.
             const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
@@ -70,7 +68,7 @@ namespace ne {
                 currentShaderDescription,
                 shaderDescription.sShaderName,
                 cacheInvalidationReason);
-            if (std::holds_alternative<Error>(result)) {
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 // Shader cache is corrupted or invalid. Delete invalid cache directory.
                 std::filesystem::remove_all(
                     ShaderFilesystemPaths::getPathToShaderCacheDirectory() / shaderDescription.sShaderName);
@@ -118,15 +116,12 @@ namespace ne {
             // Prepare shader description.
             auto currentShaderDescription = shaderDescription;
 
-            // Add configuration macros to description.
-            auto vParameterNames = convertShaderMacrosToText(macros);
-            for (const auto& sParameter : vParameterNames) {
-                currentShaderDescription.definedShaderMacros[sParameter] = ""; // valueless macro
-            }
+            // Add engine macros for this shader.
+            addEngineMacrosToShaderDescription(currentShaderDescription, macros, pRenderer);
 
+            // Add hash of the configuration to the shader name for logging.
             const auto sConfigurationText = ShaderMacroConfigurations::convertConfigurationToText(macros);
-            currentShaderDescription.sShaderName +=
-                sConfigurationText; // add configuration to name for logging
+            currentShaderDescription.sShaderName += sConfigurationText;
 
             // Prepare path to cache directory.
             auto currentPathToCompiledShader = ShaderFilesystemPaths::getPathToShaderCacheDirectory() /
@@ -249,6 +244,48 @@ namespace ne {
 
     std::pair<std::mutex, ShaderPack::InternalResources>* ShaderPack::getInternalResources() {
         return &mtxInternalResources;
+    }
+
+    void ShaderPack::addEngineMacrosToShaderDescription(
+        ShaderDescription& description,
+        const std::set<ShaderMacro>& shaderConfigurationMacros,
+        Renderer* pRenderer) {
+        // Specify configuration macros.
+        auto vParameterNames = convertShaderMacrosToText(shaderConfigurationMacros);
+        for (const auto& sParameter : vParameterNames) {
+            description.definedShaderMacros[sParameter] = ""; // valueless macro
+        }
+
+        // See if we need to specify vertex format related macros.
+        if (!description.vertexFormat.has_value()) {
+            // Nothing more to do.
+            return;
+        }
+
+        // Get shader file extension (don't check for renderer as we could run DirectX here, see below).
+        auto shaderFileExtension = description.pathToShaderFile.extension().string();
+
+        // Transform it to lowercase.
+        std::transform(
+            shaderFileExtension.begin(),
+            shaderFileExtension.end(),
+            shaderFileExtension.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+
+        if (shaderFileExtension != ".glsl") {
+            // HLSL shaders don't need more macros.
+            return;
+        }
+
+        // Get layout macros.
+        const auto pVertexFormat =
+            GlslVertexFormatDescription::createDescription(description.vertexFormat.value());
+        const auto vLayoutMacros = pVertexFormat->getVertexLayoutBindingIndexMacros();
+
+        // Define layout macros.
+        for (size_t i = 0; i < vLayoutMacros.size(); i++) {
+            description.definedShaderMacros[vLayoutMacros[i]] = std::to_string(i);
+        }
     }
 
     ShaderPack::ShaderPack(const std::string& sShaderName, ShaderType shaderType) {

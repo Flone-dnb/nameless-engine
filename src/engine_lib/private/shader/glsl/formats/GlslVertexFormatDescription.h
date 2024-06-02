@@ -2,6 +2,7 @@
 
 // Standard.
 #include <vector>
+#include <string>
 
 // Custom.
 #include "shader/general/formats/VertexFormat.h"
@@ -26,6 +27,13 @@ namespace ne {
         static std::unique_ptr<GlslVertexFormatDescription> createDescription(VertexFormat type);
 
         /**
+         * Returns an array of macros (related to vertex format) used in GLSL shader.
+         *
+         * @return Array of macro names where index in the array means binding location (index).
+         */
+        virtual std::vector<std::string> getVertexLayoutBindingIndexMacros() = 0;
+
+        /**
          * Returns vertex description for vertex input binding.
          *
          * @return Vertex input binding description.
@@ -45,7 +53,7 @@ namespace ne {
          *
          * @return Binding index.
          */
-        constexpr uint32_t getVertexBindingIndex() { return iVertexBindingIndex; }
+        static constexpr uint32_t getVertexBindingIndex() { return iVertexBindingIndex; }
 
     private:
         /** Index of the vertex input binding. */

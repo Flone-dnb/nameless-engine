@@ -6,10 +6,8 @@
 #define READ_ONLY_LIGHT_GRID
 #include "../../include/Lighting.glsl"
 
-/** Input parameters. */
-layout(location = 0) in vec4 fragmentWorldPosition;
-layout(location = 1) in vec3 fragmentWorldNormal;
-layout(location = 2) in vec2 fragmentUv;
+#define LAYOUT_FRAGMENT_SHADER
+#include "../formats/MeshNodeVertexLayout.glsl"
 
 /** Output parameters. */
 layout(location = 0) out vec4 outputColor;

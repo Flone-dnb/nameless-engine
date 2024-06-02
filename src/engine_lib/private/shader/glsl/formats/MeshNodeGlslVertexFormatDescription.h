@@ -11,6 +11,13 @@ namespace ne {
         virtual ~MeshNodeGlslVertexFormatDescription() override = default;
 
         /**
+         * Returns an array of macros (related to vertex format) used in GLSL shader.
+         *
+         * @return Array of macro names where index in the array means binding location (index).
+         */
+        virtual std::vector<std::string> getVertexLayoutBindingIndexMacros() override;
+
+        /**
          * Returns vertex description for vertex input binding.
          *
          * @return Vertex input binding description.

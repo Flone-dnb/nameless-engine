@@ -5,11 +5,31 @@
 
 namespace ne {
 
+    std::vector<std::string> MeshNodeGlslVertexFormatDescription::getVertexLayoutBindingIndexMacros() {
+        // Make sure vertex attributes don't need an update.
+        static_assert(
+            sizeof(MeshVertex) == 32, // NOLINT: current size
+            "vertex binding indices needs to be updated");
+
+        std::vector<std::string> vMacros;
+
+        static_assert(offsetof(MeshVertex, position) == 0, "update push_back order");
+        vMacros.push_back("VERTEX_LAYOUT_POS_BINDING_INDEX");
+
+        static_assert(offsetof(MeshVertex, normal) == 12, "update push_back order");
+        vMacros.push_back("VERTEX_LAYOUT_NORMAL_BINDING_INDEX");
+
+        static_assert(offsetof(MeshVertex, uv) == 24, "update push_back order");
+        vMacros.push_back("VERTEX_LAYOUT_UV_BINDING_INDEX");
+
+        return vMacros;
+    }
+
     VkVertexInputBindingDescription MeshNodeGlslVertexFormatDescription::getVertexBindingDescription() {
         // Make sure vertex attributes don't need an update.
         static_assert(
             sizeof(MeshVertex) == 32, // NOLINT: current size
-            "vertex bindings needs to be updated");
+            "vertex bindings need to be updated");
 
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = getVertexBindingIndex();

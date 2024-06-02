@@ -137,6 +137,18 @@ namespace ne {
 
     private:
         /**
+         * Adds additional defined macros to shader description that engine shaders expect.
+         *
+         * @param description               Shader description to modify.
+         * @param shaderConfigurationMacros Macros of the current shader configuration to add.
+         * @param pRenderer                 Used renderer.
+         */
+        static void addEngineMacrosToShaderDescription(
+            ShaderDescription& description,
+            const std::set<ShaderMacro>& shaderConfigurationMacros,
+            Renderer* pRenderer);
+
+        /**
          * Constructor to create an empty shader pack.
          *
          * @param sShaderName Initial name of the shader.

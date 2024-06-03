@@ -9,7 +9,8 @@
 
 namespace ne {
 
-    std::unique_ptr<GlslVertexFormatDescription> GlslVertexFormatDescription::createDescription(VertexFormat type) {
+    std::unique_ptr<GlslVertexFormatDescription>
+    GlslVertexFormatDescription::createDescription(VertexFormat type) {
         switch (type) {
         case (VertexFormat::MESH_NODE): {
             return std::make_unique<MeshNodeGlslVertexFormatDescription>();

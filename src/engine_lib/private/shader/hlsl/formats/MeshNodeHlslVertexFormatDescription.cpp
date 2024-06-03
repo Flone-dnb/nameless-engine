@@ -25,7 +25,8 @@ namespace ne {
         return vVertexSemantics;
     }
 
-    std::vector<D3D12_INPUT_ELEMENT_DESC> MeshNodeHlslVertexFormatDescription::getShaderInputElementDescription() {
+    std::vector<D3D12_INPUT_ELEMENT_DESC>
+    MeshNodeHlslVertexFormatDescription::getShaderInputElementDescription() {
         // Check if vertex description needs to be updated.
         static_assert(
             sizeof(MeshVertex) == 32, // NOLINT: current size

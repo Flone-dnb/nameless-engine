@@ -9,6 +9,7 @@
 #include "shader/general/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
 #include "shader/glsl/formats/GlslVertexFormatDescription.h"
+#include "render/vulkan/VulkanRenderer.h"
 
 namespace ne {
     std::variant<std::shared_ptr<ShaderPack>, Error> ShaderPack::createFromCache(
@@ -262,17 +263,7 @@ namespace ne {
             return;
         }
 
-        // Get shader file extension (don't check for renderer as we could run DirectX here, see below).
-        auto shaderFileExtension = description.pathToShaderFile.extension().string();
-
-        // Transform it to lowercase.
-        std::transform(
-            shaderFileExtension.begin(),
-            shaderFileExtension.end(),
-            shaderFileExtension.begin(),
-            [](unsigned char c) { return std::tolower(c); });
-
-        if (shaderFileExtension != ".glsl") {
+        if (dynamic_cast<VulkanRenderer*>(pRenderer) == nullptr) {
             // HLSL shaders don't need more macros.
             return;
         }

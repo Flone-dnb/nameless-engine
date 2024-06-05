@@ -9,9 +9,7 @@
 vec4 convertNdcSpaceToViewSpace(vec3 ndcSpaceCoordinates, mat4 inverseProjectionMatrix) {
     // Undo projection
     // (NDC `w` is always 1 because after perspective divide).
-    vec4 viewSpaceCoordinates
-    #hlsl = mul(inverseProjectionMatrix, float4(ndcSpaceCoordinates, 1.0F));
-    #glsl = inverseProjectionMatrix * vec4(ndcSpaceCoordinates, 1.0F);
+    vec4 viewSpaceCoordinates = mul(inverseProjectionMatrix, vec4(ndcSpaceCoordinates, 1.0F));
     
     // Undo perspective divide.
     viewSpaceCoordinates = viewSpaceCoordinates / viewSpaceCoordinates.w;

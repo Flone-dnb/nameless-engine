@@ -166,21 +166,14 @@ void calculateTileMinMaxDepth(float pixelDepth) {
     // Reinterpret float as uint so that we will be able to do atomic operations on it.
     // Since our depth is in range [0..1] (we don't have negative depth values) doing `asuint` is enough
     // and we don't need to change float sign bit and we don't need to invert negative bits and etc.
-    uint iDepth =
-    #hlsl asuint(pixelDepth);
-    #glsl floatBitsToUint(pixelDepth);
+    uint iDepth = floatBitsToUint(pixelDepth);
     
-    // Do atomic min on depth.
-    #hlsl InterlockedMin(iTileMinDepth, iDepth);
-    #glsl atomicMin(iTileMinDepth, iDepth);
+    // Store min/max depth.
+    atomicMin(iTileMinDepth, iDepth);
+    atomicMax(iTileMaxDepth, iDepth);
     
-    // Do atomic min on depth.
-    #hlsl InterlockedMax(iTileMaxDepth, iDepth);
-    #glsl atomicMax(iTileMaxDepth, iDepth);
-    
-    // Wait for all threads from group.
-    #hlsl GroupMemoryBarrierWithGroupSync();
-    #glsl groupMemoryBarrier(); barrier();
+    // Wait for all threads from group to finish finding min/max depth.
+    GroupMemoryBarrierWithGroupSync();
 }
 
 /**
@@ -365,21 +358,14 @@ void cullLightsForTile(
     }
     
     // Make sure all group shared writes were finished and all threads from the group reached this line.
-    #hlsl GroupMemoryBarrierWithGroupSync();
-    #glsl groupMemoryBarrier(); barrier();
+    GroupMemoryBarrierWithGroupSync();
     
     // Calculate min/max depth for tile.
     calculateTileMinMaxDepth(pixelDepth); // waits inside of the function
     
-    // Get tile min depth.
-    float tileMinDepth =
-    #hlsl asfloat(iTileMinDepth);
-    #glsl uintBitsToFloat(iTileMinDepth);
-    
-    // Get tile max depth.
-    float tileMaxDepth = 
-    #hlsl asfloat(iTileMaxDepth);
-    #glsl uintBitsToFloat(iTileMaxDepth);
+    // Get tile min/max depth.
+    const float tileMinDepth = uintBitsToFloat(iTileMinDepth);
+    const float tileMaxDepth = uintBitsToFloat(iTileMaxDepth);
     
     // Convert depth values to view space.
     float tileMinDepthViewSpace
@@ -413,9 +399,7 @@ void cullLightsForTile(
         #glsl pointLights.array[iPointLightIndex];
         
         // Calculate light view space position.
-        vec3 lightViewSpacePosition = 
-        #hlsl mul(frameData.viewMatrix, float4(pointLight.position.xyz, 1.0F)).xyz;
-        #glsl (frameData.viewMatrix * vec4(pointLight.position.xyz, 1.0F)).xyz;
+        vec3 lightViewSpacePosition = mul(frameData.viewMatrix, vec4(pointLight.position.xyz, 1.0F)).xyz;
         
         // Construct a sphere according to point light's radius for sphere/frustum test.
         Sphere pointLightSphereViewSpace;
@@ -453,14 +437,10 @@ void cullLightsForTile(
         #glsl spotlights.array[iSpotlightIndex];
         
         // Calculate light view space position.
-        vec3 lightViewSpacePosition = 
-        #hlsl mul(frameData.viewMatrix, float4(spotlight.position.xyz, 1.0F)).xyz;
-        #glsl (frameData.viewMatrix * vec4(spotlight.position.xyz, 1.0F)).xyz;
+        vec3 lightViewSpacePosition = mul(frameData.viewMatrix, vec4(spotlight.position.xyz, 1.0F)).xyz;
         
         // Calculate light view space direction.
-        vec3 lightViewSpaceDirection = 
-        #hlsl mul(frameData.viewMatrix, float4(spotlight.direction.xyz, 0.0F)).xyz;
-        #glsl (frameData.viewMatrix * vec4(spotlight.direction.xyz, 0.0F)).xyz;
+        vec3 lightViewSpaceDirection = mul(frameData.viewMatrix, vec4(spotlight.direction.xyz, 0.0F)).xyz;
         
         // Construct a cone according to spotlight data for cone/frustum test.
         Cone spotlightConeViewSpace;
@@ -488,8 +468,7 @@ void cullLightsForTile(
     }
     
     // Wait for all group threads to cull lights and finish writing to groupshared memory.
-    #hlsl GroupMemoryBarrierWithGroupSync();
-    #glsl groupMemoryBarrier(); barrier();
+    GroupMemoryBarrierWithGroupSync();
     
     if (iThreadIdInGroup == 0) {
         // Write non-culled lights to light grid and reserve space in global light list.
@@ -497,8 +476,7 @@ void cullLightsForTile(
     }
     
     // Wait for all group threads before updating global light index list.
-    #hlsl GroupMemoryBarrierWithGroupSync();
-    #glsl groupMemoryBarrier(); barrier();
+    GroupMemoryBarrierWithGroupSync();
     
     // Write local light index list into the global light index list.
     // Start with opaque geometry.

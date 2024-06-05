@@ -182,9 +182,7 @@ struct Spotlight {
      */
     vec3 transformWorldPositionToShadowMapSpace(vec3 worldPosition, mat4 viewProjectionMatrix) {
         // Transform to light's projection space.
-        vec4 posShadowMapSpace =
-        #hlsl mul(viewProjectionMatrix, float4(worldPosition, 1.0F));
-        #glsl viewProjectionMatrix * vec4(worldPosition, 1.0F);
+        vec4 posShadowMapSpace = mul(viewProjectionMatrix, vec4(worldPosition, 1.0F));
         
         // Perspective divide.
         posShadowMapSpace = posShadowMapSpace / posShadowMapSpace.w;

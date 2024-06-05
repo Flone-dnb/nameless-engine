@@ -107,8 +107,8 @@ namespace ne {
         bIsBeingDestroyed = true;
 
         // Log destruction so that it will be slightly easier to read logs.
-        Logger::get().info("\n\n");
-        Logger::get().info("starting game manager destruction...");
+        Logger::get().info("\n\n\n-------------------- starting game manager destruction... "
+                           "--------------------\n\n");
         Logger::get().flushToDisk();
 
         // Wait for GPU to finish all work.
@@ -222,8 +222,8 @@ namespace ne {
         }
 
         // Log game start so that it will be slightly easier to read logs.
-        Logger::get().info("\n\n");
-        Logger::get().info("game started");
+        Logger::get().info(
+            "\n\n\n------------------------------ game started ------------------------------\n\n");
         Logger::get().flushToDisk();
 
         pGameInstance->onGameStarted();

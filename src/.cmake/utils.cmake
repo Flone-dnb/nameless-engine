@@ -38,16 +38,3 @@ function(enable_doxygen DOCS_DIRECTORY)
     add_dependencies(${PROJECT_NAME} ${DOXYGEN_TARGET_NAME})
     message(STATUS "${PROJECT_NAME}: doxygen is enabled.")
 endfunction()
-
-# Enables clang-tidy.
-function(enable_clang_tidy CLANG_TIDY_CONFIG_PATH)
-    find_program (CLANG_TIDY NAMES "clang-tidy" REQUIRED)
-    set(RUN_CLANG_TIDY
-        "${CLANG_TIDY}"
-        "--config-file=${CLANG_TIDY_CONFIG_PATH}")
-    set_target_properties(${PROJECT_NAME} PROPERTIES CXX_CLANG_TIDY "${RUN_CLANG_TIDY}")
-    if(MSVC)
-        target_compile_options(${PROJECT_NAME} PUBLIC -EHsc) # needed for clang-tidy when running MSVC to enable exceptions
-    endif()
-    message(STATUS "${PROJECT_NAME}: Clang-tidy is enabled.")
-endfunction()

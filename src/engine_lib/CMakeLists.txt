@@ -321,11 +321,6 @@ if(NOT IS_RELEASE_BUILD AND NOT WIN32)
     enable_address_sanitizer()
 endif()
 
-# Enable Clang-tidy in `Release` builds.
-if (IS_RELEASE_BUILD)
-    enable_clang_tidy(${CMAKE_CURRENT_LIST_DIR}/../../.clang-tidy)
-endif()
-
 # -------------------------------------------------------------------------------------------------
 #                                       DEPENDENCIES
 # -------------------------------------------------------------------------------------------------

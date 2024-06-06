@@ -357,13 +357,6 @@ namespace ne {
             pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
             ComputeExecutionStage::AFTER_DEPTH_PREPASS);
 
-        // Draw main pass on non-culled meshes.
-        drawMeshesMainPass(
-            pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshPipelinesInFrustum->vOpaquePipelines,
-            pMeshPipelinesInFrustum->vTransparentPipelines);
-
         // Present the frame on the screen, flip swapchain images, etc.
         present(
             pMtxCurrentFrameResource->second.pResource,

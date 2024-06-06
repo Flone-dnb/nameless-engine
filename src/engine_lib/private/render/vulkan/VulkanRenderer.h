@@ -828,21 +828,6 @@ namespace ne {
             ComputeExecutionStage stage) override;
 
         /**
-         * Submits commands to draw meshes for main (color) pass.
-         *
-         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
-         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
-         * @param vOpaquePipelines            Opaque pipelines to draw.
-         * @param vTransparentPipelines       Transparent pipelines to draw.
-         */
-        virtual void drawMeshesMainPass(
-            FrameResource* pCurrentFrameResource,
-            size_t iCurrentFrameResourceIndex,
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines)
-            override;
-
-        /**
          * Does the final frame rendering logic to present the frame on the screen.
          *
          * @param pCurrentFrameResource       Frame resource of the frame being submitted.

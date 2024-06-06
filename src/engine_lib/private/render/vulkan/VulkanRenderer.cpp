@@ -3326,39 +3326,6 @@ namespace ne {
         }
     }
 
-    void VulkanRenderer::drawMeshesMainPass(
-        FrameResource* pCurrentFrameResource,
-        size_t iCurrentFrameResourceIndex,
-        const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines,
-        const std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vTransparentPipelines) {
-        // Convert frame resource.
-        const auto pVulkanFrameResource = reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
-
-        // Start main render pass.
-        startMainRenderPass(pVulkanFrameResource->pCommandBuffer, iLastAcquiredImageIndex);
-
-        // Draw opaque meshes.
-        drawMeshesMainPassSpecificPipelines(
-            vOpaquePipelines, pVulkanFrameResource->pCommandBuffer, iCurrentFrameResourceIndex);
-
-        // Draw transparent meshes.
-        drawMeshesMainPassSpecificPipelines(
-            vTransparentPipelines, pVulkanFrameResource->pCommandBuffer, iCurrentFrameResourceIndex);
-
-        // Mark render pass end.
-        vkCmdEndRenderPass(pVulkanFrameResource->pCommandBuffer);
-
-        // Mark end of command recording.
-        auto result = vkEndCommandBuffer(pVulkanFrameResource->pCommandBuffer);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            Error error(std::format(
-                "failed to finish recording commands into a command buffer, error: {}",
-                string_VkResult(result)));
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-    }
-
     void VulkanRenderer::present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
 

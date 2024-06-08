@@ -763,14 +763,6 @@ namespace ne {
             CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) override;
 
         /**
-         * Adds render pass start commands to the specified command buffer with @ref pMainRenderPass.
-         *
-         * @param pCommandBuffer      Command buffer to modify.
-         * @param iAcquiredImageIndex Index of the framebuffer to use.
-         */
-        void startMainRenderPass(VkCommandBuffer pCommandBuffer, size_t iAcquiredImageIndex);
-
-        /**
          * Adds render pass start commands to the specified command buffer with @ref pDepthOnlyRenderPass.
          *
          * @param pCommandBuffer      Command buffer to modify.
@@ -835,18 +827,6 @@ namespace ne {
          */
         virtual void
         present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) override;
-
-        /**
-         * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
-         *
-         * @param pipelinesOfSpecificType    Pipelines to use.
-         * @param pCommandBuffer             Command buffer to use.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         */
-        void drawMeshesMainPassSpecificPipelines(
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
-            VkCommandBuffer pCommandBuffer,
-            size_t iCurrentFrameResourceIndex);
 
         /**
          * Queries the current render settings for MSAA quality and updates @ref msaaSampleCount.

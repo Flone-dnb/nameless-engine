@@ -22,8 +22,7 @@ namespace ne {
         const std::string& sPixelShaderName,
         const std::set<ShaderMacro>& additionalPixelShaderMacros,
         const std::string& sComputeShaderName,
-        bool bEnableDepthBias,
-        bool bUsePixelBlending)
+        bool bEnableDepthBias)
         : ShaderUser(pRenderer->getShaderManager()), sVertexShaderName(sVertexShaderName),
           sPixelShaderName(sPixelShaderName), sComputeShaderName(sComputeShaderName) {
         this->pRenderer = pRenderer;
@@ -32,8 +31,6 @@ namespace ne {
 
         this->additionalVertexShaderMacros = additionalVertexShaderMacros;
         this->additionalPixelShaderMacros = additionalPixelShaderMacros;
-
-        bIsUsingPixelBlending = bUsePixelBlending;
     }
 
     void
@@ -83,8 +80,6 @@ namespace ne {
 
         return it->second;
     }
-
-    bool Pipeline::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
 
     bool Pipeline::isDepthBiasEnabled() const { return bEnableDepthBias; }
 

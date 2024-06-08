@@ -6,27 +6,18 @@ namespace ne {
         const std::string& sVertexShaderName,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
         const std::string& sPixelShaderName,
-        std::set<ShaderMacro> additionalPixelShaderMacros,
-        bool bUsePixelBlending)
+        std::set<ShaderMacro> additionalPixelShaderMacros)
         : PipelineCreationSettings(sVertexShaderName, additionalVertexShaderMacros),
           additionalPixelShaderMacros(std::move(additionalPixelShaderMacros)),
-          sPixelShaderName(sPixelShaderName), bUsePixelBlending(bUsePixelBlending) {}
+          sPixelShaderName(sPixelShaderName) {}
 
-    PipelineType ColorPipelineCreationSettings::getType() {
-        if (bUsePixelBlending) {
-            return PipelineType::PT_TRANSPARENT;
-        }
-
-        return PipelineType::PT_OPAQUE;
-    }
+    PipelineType ColorPipelineCreationSettings::getType() { return PipelineType::PT_OPAQUE; }
 
     std::set<ShaderMacro> ColorPipelineCreationSettings::getAdditionalPixelShaderMacros() {
         return additionalPixelShaderMacros;
     }
 
     std::string ColorPipelineCreationSettings::getPixelShaderName() { return sPixelShaderName; }
-
-    bool ColorPipelineCreationSettings::isPixelBlendingEnabled() { return bUsePixelBlending; }
 
     DepthPipelineCreationSettings::DepthPipelineCreationSettings(
         const std::string& sVertexShaderName,

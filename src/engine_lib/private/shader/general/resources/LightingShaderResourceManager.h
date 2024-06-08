@@ -427,56 +427,6 @@ namespace ne {
                      ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
         }
 
-        /**
-         * Sets views (CBV/SRV) of light grids and light index lists for transparent geometry to the specified
-         * command list.
-         *
-         * @warning Expects that the specified pipeline's shaders indeed use lighting resources.
-         *
-         * @warning Expects that the specified pipeline's internal resources mutex is locked.
-         *
-         * @param pPso         PSO to query for root signature index of the lighting resources.
-         * @param pCommandList Command list to set views to.
-         */
-        inline void setTransparentLightGridResourcesViewToCommandList(
-            DirectXPso* pPso, const ComPtr<ID3D12GraphicsCommandList>& pCommandList) const {
-            auto& pipelineData = pPso->getInternalResources()->second;
-
-            // Bind point light index list.
-            pCommandList->SetGraphicsRootUnorderedAccessView(
-                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_INDEX_LIST)],
-                reinterpret_cast<DirectXResource*>(
-                    lightCullingComputeShaderData.resources.pTransparentPointLightIndexList.get())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress());
-
-            // Bind spotlight index list.
-            pCommandList->SetGraphicsRootUnorderedAccessView(
-                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_INDEX_LIST)],
-                reinterpret_cast<DirectXResource*>(
-                    lightCullingComputeShaderData.resources.pTransparentSpotLightIndexList.get())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress());
-
-            // Bind point light grid.
-            pCommandList->SetGraphicsRootDescriptorTable(
-                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::LIGHT_CULLING_POINT_LIGHT_GRID)],
-                *reinterpret_cast<DirectXResource*>(
-                     lightCullingComputeShaderData.resources.pTransparentPointLightGrid.get())
-                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
-
-            // Bind spotlight light grid.
-            pCommandList->SetGraphicsRootDescriptorTable(
-                pipelineData.vSpecialRootParameterIndices[static_cast<size_t>(
-                    SpecialRootParameterSlot::LIGHT_CULLING_SPOT_LIGHT_GRID)],
-                *reinterpret_cast<DirectXResource*>(
-                     lightCullingComputeShaderData.resources.pTransparentSpotLightGrid.get())
-                     ->getBindedDescriptorGpuHandle(DirectXDescriptorType::UAV));
-        }
-
 #endif
 
     private:
@@ -643,12 +593,6 @@ namespace ne {
 
                     /** Index into spotlight index light for opaque geometry. */
                     alignas(iVkScalarAlignment) unsigned int iSpotlightListOpaque = 0;
-
-                    /** Index into point light index light for transparent geometry. */
-                    alignas(iVkScalarAlignment) unsigned int iPointLightListTransparent = 0;
-
-                    /** Index into spotlight index light for transparent geometry. */
-                    alignas(iVkScalarAlignment) unsigned int iSpotlightListTransparent = 0;
                 };
 
                 /**
@@ -679,12 +623,6 @@ namespace ne {
                     /** Stores indices into array of spotlights for opaque geometry. */
                     std::unique_ptr<GpuResource> pOpaqueSpotLightIndexList;
 
-                    /** Stores indices into array of point lights for transparent geometry. */
-                    std::unique_ptr<GpuResource> pTransparentPointLightIndexList;
-
-                    /** Stores indices into array of spotlights for transparent geometry. */
-                    std::unique_ptr<GpuResource> pTransparentSpotLightIndexList;
-
                     /**
                      * 2D texture where every pixel stores 2 values: offset into light index list and the
                      * number of elements to read from that offset.
@@ -696,18 +634,6 @@ namespace ne {
                      * number of elements to read from that offset.
                      */
                     std::unique_ptr<GpuResource> pOpaqueSpotLightGrid;
-
-                    /**
-                     * 2D texture where every pixel stores 2 values: offset into light index list and the
-                     * number of elements to read from that offset.
-                     */
-                    std::unique_ptr<GpuResource> pTransparentPointLightGrid;
-
-                    /**
-                     * 2D texture where every pixel stores 2 values: offset into light index list and the
-                     * number of elements to read from that offset.
-                     */
-                    std::unique_ptr<GpuResource> pTransparentSpotLightGrid;
 
                     /**
                      * The number of tiles in the X direction of the light grid that were set the last time we

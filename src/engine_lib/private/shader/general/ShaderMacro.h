@@ -27,7 +27,6 @@ namespace ne {
      */
     enum class ShaderMacro : int {
         PS_USE_DIFFUSE_TEXTURE,
-        PS_USE_MATERIAL_TRANSPARENCY,
         VS_SHADOW_MAPPING_PASS,
 
         // ... add new entries here...
@@ -180,13 +179,7 @@ namespace ne {
          * @remark Also consider @ref dependentMacros.
          */
         static inline const std::set<std::set<ShaderMacro>> validPixelShaderMacroConfigurations =
-            combineConfigurations(
-                {{ShaderMacro::PS_USE_DIFFUSE_TEXTURE},
-                 {ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY},
-                 {ShaderMacro::PS_USE_DIFFUSE_TEXTURE, ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY}},
-                {},
-                {},
-                true);
+            combineConfigurations({{ShaderMacro::PS_USE_DIFFUSE_TEXTURE}}, {}, {}, true);
 
         /** Valid combinations of compute shader macros. */
         static inline const std::set<std::set<ShaderMacro>> validComputeShaderMacroConfigurations = {{}};

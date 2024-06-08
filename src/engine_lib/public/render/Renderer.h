@@ -349,9 +349,6 @@ namespace ne {
 
             /** Meshes in frustum that use opaque pipeline. */
             std::vector<PipelineInFrustumInfo> vOpaquePipelines;
-
-            /** Meshes in frustum that use pipeline with pixel blending. */
-            std::vector<PipelineInFrustumInfo> vTransparentPipelines;
         };
 
         /** Groups pointers to information about light sources in frustum. */

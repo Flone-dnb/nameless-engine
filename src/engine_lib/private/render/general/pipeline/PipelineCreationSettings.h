@@ -68,13 +68,6 @@ namespace ne {
         virtual std::string getPixelShaderName() { return ""; }
 
         /**
-         * Tells whether pixel blending should be enabled or not.
-         *
-         * @return `true` to enable, `false` to disable.
-         */
-        virtual bool isPixelBlendingEnabled() { return false; }
-
-        /**
          * Tells whether depth bias (offset is enabled or not).
          *
          * @return `true` to enable, `false` to disable.
@@ -102,14 +95,12 @@ namespace ne {
          * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
          * @param sPixelShaderName             Name of the compiled pixel shader to use.
          * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
-         * @param bUsePixelBlending            `true` to enable transparency, `false` to disable.
          */
         ColorPipelineCreationSettings(
             const std::string& sVertexShaderName,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
             const std::string& sPixelShaderName,
-            std::set<ShaderMacro> additionalPixelShaderMacros,
-            bool bUsePixelBlending);
+            std::set<ShaderMacro> additionalPixelShaderMacros);
 
         /**
          * Returns type of the pipeline that the object describes.
@@ -133,22 +124,12 @@ namespace ne {
          */
         virtual std::string getPixelShaderName() override;
 
-        /**
-         * Tells whether pixel blending should be enabled or not.
-         *
-         * @return `true` to enable, `false` to disable.
-         */
-        virtual bool isPixelBlendingEnabled() override;
-
     protected:
         /** Additional macros to enable for pixel shader configuration. */
         std::set<ShaderMacro> additionalPixelShaderMacros;
 
         /** Name of the compiled pixel shader to use. */
         const std::string sPixelShaderName;
-
-        /** `true` to enable transparency, `false` to disable. */
-        const bool bUsePixelBlending;
     };
 
     /** Pipeline that only uses vertex shader to draw depth. */

@@ -123,8 +123,6 @@ namespace ne RNAMESPACE() {
          * (see ShaderManager::compileShaders) to use.
          * @param sPixelShaderName  Name of the compiled pixel shader
          * (see ShaderManager::compileShaders) to use.
-         * @param bUseTransparency  Whether this material should enable transparency after being created or
-         * not (see @ref setEnableTransparency).
          * @param sMaterialName     Name of this material.
          *
          * @return Error if something went wrong, otherwise created material.
@@ -132,15 +130,7 @@ namespace ne RNAMESPACE() {
         static std::variant<std::shared_ptr<Material>, Error> create(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUseTransparency,
             const std::string& sMaterialName = "Material");
-
-        /**
-         * Enables/disables transparency.
-         *
-         * @param bEnable Whether to enable transparency or not.
-         */
-        void setEnableTransparency(bool bEnable);
 
         /**
          * Sets material's fill color.
@@ -180,23 +170,6 @@ namespace ne RNAMESPACE() {
         void setRoughness(float roughness);
 
         /**
-         * Sets material's opacity.
-         *
-         * @remark Only works if the material has transparency enabled (see @ref create or
-         * @ref setEnableTransparency).
-         *
-         * @param opacity Value in range [0.0F; 1.0F], will be clamped if outside of this range.
-         */
-        void setOpacity(float opacity = 1.0F);
-
-        /**
-         * Tells whether transparency on this material is enabled or not.
-         *
-         * @return `true` if enabled, `false` otherwise.
-         */
-        bool isTransparencyEnabled();
-
-        /**
          * Returns fill color of this material.
          *
          * @return Color in the RGB format.
@@ -224,13 +197,6 @@ namespace ne RNAMESPACE() {
          * @return Value in range [0.0F; 1.0F].
          */
         float getRoughness() const;
-
-        /**
-         * Returns opacity of this material.
-         *
-         * @return Value in range [0.0F; 1.0F].
-         */
-        float getOpacity() const;
 
         /**
          * Returns array of mesh nodes that currently use this material.
@@ -384,14 +350,12 @@ namespace ne RNAMESPACE() {
          *
          * @param sVertexShaderName Name of the vertex shader that this material is using.
          * @param sPixelShaderName  Name of the pixel shader that this material is using.
-         * @param bUseTransparency  Whether this material will use transparency or not.
          * @param pPipelineManager  Pipeline manager that the renderer owns.
          * @param sMaterialName     Name of this material.
          */
         Material(
             const std::string& sVertexShaderName,
             const std::string& sPixelShaderName,
-            bool bUseTransparency,
             PipelineManager* pPipelineManager,
             const std::string& sMaterialName = "Material");
 
@@ -639,18 +603,6 @@ namespace ne RNAMESPACE() {
         /** Defines how much specular light will be reflected. Value in range [0.0F; 1.0F]. */
         RPROPERTY(Serialize)
         float roughness = 0.7F;
-
-        /**
-         * Opacity in range [0.0; 1.0].
-         *
-         * @remark Only used when @ref bUseTransparency is enabled.
-         */
-        RPROPERTY(Serialize)
-        float opacity = 0.6F;
-
-        /** Whether this material will use transparency or not. */
-        RPROPERTY(Serialize)
-        bool bUseTransparency = false;
 
         /** Whether @ref allocateShaderResources was called or not. */
         bool bIsShaderResourcesAllocated = false;

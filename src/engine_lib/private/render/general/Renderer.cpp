@@ -948,7 +948,6 @@ namespace ne {
 
         // Clear information from the last frame.
         meshesInFrustumLastFrame.vOpaquePipelines.clear();
-        meshesInFrustumLastFrame.vTransparentPipelines.clear();
 #if defined(DEBUG) && defined(WIN32)
         static_assert(sizeof(MeshesInFrustum::PipelineInFrustumInfo) == 40, "clear new arrays"); // NOLINT
 #elif defined(DEBUG)
@@ -1026,18 +1025,14 @@ namespace ne {
         // Get pipelines to iterate over.
         const auto& opaquePipelines =
             pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_OPAQUE));
-        const auto& transparentPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_TRANSPARENT));
 
         // Attempt to minimize allocations in the code below.
         meshesInFrustumLastFrame.vOpaquePipelines.reserve(opaquePipelines.size());
-        meshesInFrustumLastFrame.vTransparentPipelines.reserve(transparentPipelines.size());
 
-        // Iterate only over opaque and transparent pipelines since opaque materials will reference two
+        // Iterate only over opaque pipelines since opaque materials will reference two
         // pipelines at the same time (opaque pipeline and depth only pipeline) so don't iterate over depth
         // only pipelines to avoid doing frustum culling twice on the same meshes.
         frustumCullPipelines(opaquePipelines, meshesInFrustumLastFrame.vOpaquePipelines);
-        frustumCullPipelines(transparentPipelines, meshesInFrustumLastFrame.vTransparentPipelines);
 
         // Increment total time spent in frustum culling.
         {

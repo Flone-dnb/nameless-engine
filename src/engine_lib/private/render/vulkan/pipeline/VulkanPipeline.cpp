@@ -68,8 +68,7 @@ namespace ne {
             pPipelineCreationSettings->getPixelShaderName(),
             pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
             "", // no compute shader
-            pPipelineCreationSettings->isDepthBiasEnabled(),
-            pPipelineCreationSettings->isPixelBlendingEnabled()));
+            pPipelineCreationSettings->isDepthBiasEnabled()));
 
         // Generate Vulkan pipeline.
         auto optionalError = pPipeline->generateGraphicsPipeline();
@@ -209,8 +208,7 @@ namespace ne {
         const std::string& sFragmentShaderName,
         const std::set<ShaderMacro>& additionalFragmentShaderMacros,
         const std::string& sComputeShaderName,
-        bool bEnableDepthBias,
-        bool bUsePixelBlending)
+        bool bEnableDepthBias)
         : Pipeline(
               pRenderer,
               pPipelineManager,
@@ -219,20 +217,11 @@ namespace ne {
               sFragmentShaderName,
               additionalFragmentShaderMacros,
               sComputeShaderName,
-              bEnableDepthBias,
-              bUsePixelBlending) {}
+              bEnableDepthBias) {}
 
     std::optional<Error> VulkanPipeline::generateGraphicsPipeline() {
         // Prepare pipeline type.
         const auto bDepthOnlyPipeline = getPixelShaderName().empty();
-
-        // Make sure pixel shader is specified when blending is enabled.
-        if (isUsingPixelBlending() && bDepthOnlyPipeline) [[unlikely]] {
-            return Error(std::format(
-                "unable to create a pipeline with pixel blending because fragment shader is not specified "
-                "(vertex shader \"{}\")",
-                getVertexShaderName()));
-        }
 
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
@@ -278,8 +267,8 @@ namespace ne {
         }
 
         // Create graphics pipeline.
-        auto optionalError = createGraphicsPipeline(
-            pVulkanRenderer, pVertexShader.get(), pFragmentShader.get(), isUsingPixelBlending());
+        auto optionalError =
+            createGraphicsPipeline(pVulkanRenderer, pVertexShader.get(), pFragmentShader.get());
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();
@@ -368,10 +357,7 @@ namespace ne {
     }
 
     std::optional<Error> VulkanPipeline::createGraphicsPipeline(
-        VulkanRenderer* pVulkanRenderer,
-        GlslShader* pVertexShader,
-        GlslShader* pFragmentShader,
-        bool bUsePixelBlending) {
+        VulkanRenderer* pVulkanRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader) {
         // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBytecode();
         if (std::holds_alternative<Error>(shaderBytecode)) [[unlikely]] {
@@ -547,7 +533,7 @@ namespace ne {
         rasterizerStateInfo.rasterizerDiscardEnable = VK_FALSE;
         rasterizerStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizerStateInfo.lineWidth = 1.0F;
-        rasterizerStateInfo.cullMode = bUsePixelBlending ? VK_CULL_MODE_NONE : VK_CULL_MODE_BACK_BIT;
+        rasterizerStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
         rasterizerStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
         rasterizerStateInfo.depthBiasEnable = VK_FALSE;
         rasterizerStateInfo.depthBiasConstantFactor = 0.0F;
@@ -606,7 +592,7 @@ namespace ne {
         VkPipelineColorBlendAttachmentState colorBlendAttachmentStateInfo{};
         colorBlendAttachmentStateInfo.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                                        VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachmentStateInfo.blendEnable = bUsePixelBlending ? VK_TRUE : VK_FALSE;
+        colorBlendAttachmentStateInfo.blendEnable = VK_FALSE;
         colorBlendAttachmentStateInfo.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
         colorBlendAttachmentStateInfo.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         colorBlendAttachmentStateInfo.colorBlendOp = VK_BLEND_OP_ADD;

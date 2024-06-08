@@ -134,8 +134,6 @@ namespace ne {
          * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
          * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
          * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
-         * @param bUsePixelBlending  Whether the pixels of the mesh that uses this PSO should blend with
-         * existing pixels on back buffer or not (for transparency).
          */
         DirectXPso(
             Renderer* pRenderer,
@@ -145,8 +143,7 @@ namespace ne {
             const std::string& sPixelShaderName,
             const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
             const std::string& sComputeShaderName = "",
-            bool bEnableDepthBias = false,
-            bool bUsePixelBlending = false);
+            bool bEnableDepthBias = false);
 
         /**
          * (Re)generates DirectX graphics pipeline state object.

@@ -317,13 +317,6 @@ namespace ne {
                 auto& material = model.materials[primitive.material];
                 const auto pMeshMaterial = pMeshNode->getMaterial();
 
-                // Check material transparency.
-                if (material.alphaMode == "MASK") {
-                    pMeshMaterial->setEnableTransparency(true);
-                    pMeshMaterial->setOpacity(
-                        1.0F - static_cast<float>(std::clamp(material.alphaCutoff, 0.0, 1.0)));
-                }
-
                 // Process base color.
                 pMeshMaterial->setDiffuseColor(glm::vec3(
                     material.pbrMetallicRoughness.baseColorFactor[0],

@@ -89,13 +89,6 @@ namespace ne {
         std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
 
         /**
-         * Tells whether this pipeline is using pixel blending or not.
-         *
-         * @return Whether this pipeline is using pixel blending or not.
-         */
-        bool isUsingPixelBlending() const;
-
-        /**
          * Tells whether this pipeline has depth bias (offset) enabled.
          *
          * @return Whether depth bias is enabled or not.
@@ -161,8 +154,6 @@ namespace ne {
          * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
          * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
          * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
-         * @param bUsePixelBlending  Whether the pixels of the mesh that uses this Pipeline should blend
-         * with existing pixels on back buffer or not (for transparency).
          */
         Pipeline(
             Renderer* pRenderer,
@@ -172,8 +163,7 @@ namespace ne {
             const std::string& sPixelShaderName = "",
             const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
             const std::string& sComputeShaderName = "",
-            bool bEnableDepthBias = false,
-            bool bUsePixelBlending = false);
+            bool bEnableDepthBias = false);
 
         /**
          * Saves shader configuration of the currently used shader.
@@ -345,9 +335,6 @@ namespace ne {
 
         /** Name of the compiled compute shader that this Pipeline uses (empty if graphics pipeline). */
         const std::string sComputeShaderName;
-
-        /** Whether this Pipeline is using pixel blending or not. */
-        bool bIsUsingPixelBlending = false;
 
         /** Whether depth bias (offset) should be used or not (generally used for shadow map pipelines). */
         bool bEnableDepthBias = false;

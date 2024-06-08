@@ -258,22 +258,6 @@ namespace ne {
         present(FrameResource* pCurrentFrameResource, size_t iCurrentFrameResourceIndex) override;
 
         /**
-         * Submits commands to draw meshes and pipelines of specific types (only opaque or transparent).
-         *
-         * @param pCurrentFrameResource       Frame resource of the frame being submitted.
-         * @param iCurrentFrameResourceIndex  Index of the current frame resource.
-         * @param pipelinesOfSpecificType     Pipelines to use.
-         * @param directionalShadowMapsHandle GPU handle to array of directional shadow maps.
-         * @param bIsDrawingTransparentMeshes `true` if transparent pipelines are used, `false` otherwise.
-         */
-        void drawMeshesMainPassSpecificPipelines(
-            DirectXFrameResource* pCurrentFrameResource,
-            size_t iCurrentFrameResourceIndex,
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& pipelinesOfSpecificType,
-            D3D12_GPU_DESCRIPTOR_HANDLE directionalShadowMapsHandle,
-            const bool bIsDrawingTransparentMeshes);
-
-        /**
          * Called after some render setting is changed to recreate internal resources to match the current
          * settings.
          *

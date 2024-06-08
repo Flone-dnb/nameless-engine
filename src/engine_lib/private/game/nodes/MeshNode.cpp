@@ -779,7 +779,6 @@ namespace ne {
         auto result = Material::create(
             EngineShaderNames::MeshNode::getVertexShaderName(),
             EngineShaderNames::MeshNode::getFragmentShaderName(),
-            false,
             "Mesh Node's default material");
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));

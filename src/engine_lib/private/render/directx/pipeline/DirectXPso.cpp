@@ -16,8 +16,7 @@ namespace ne {
         const std::string& sPixelShaderName,
         const std::set<ShaderMacro>& additionalPixelShaderMacros,
         const std::string& sComputeShaderName,
-        bool bEnableDepthBias,
-        bool bUsePixelBlending)
+        bool bEnableDepthBias)
         : Pipeline(
               pRenderer,
               pPipelineManager,
@@ -26,8 +25,7 @@ namespace ne {
               sPixelShaderName,
               additionalPixelShaderMacros,
               sComputeShaderName,
-              bEnableDepthBias,
-              bUsePixelBlending) {}
+              bEnableDepthBias) {}
 
     DirectXPso::~DirectXPso() {
         std::scoped_lock guard(mtxInternalResources.first);
@@ -57,8 +55,7 @@ namespace ne {
             pPipelineCreationSettings->getPixelShaderName(),
             pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
             "", // no compute shader
-            pPipelineCreationSettings->isDepthBiasEnabled(),
-            pPipelineCreationSettings->isPixelBlendingEnabled()));
+            pPipelineCreationSettings->isDepthBiasEnabled()));
 
         // Generate graphics PSO.
         auto optionalError = pPso->generateGraphicsPso();
@@ -151,14 +148,6 @@ namespace ne {
     std::optional<Error> DirectXPso::generateGraphicsPso() {
         // Prepare pipeline type.
         const auto bDepthOnlyPipeline = getPixelShaderName().empty();
-
-        // Make sure pixel shader is specified when blending is enabled.
-        if (isUsingPixelBlending() && bDepthOnlyPipeline) [[unlikely]] {
-            return Error(std::format(
-                "unable to create a pipeline with pixel blending because pixel shader is not specified "
-                "(vertex shader \"{}\")",
-                getVertexShaderName()));
-        }
 
         // Get settings.
         const auto pRenderSettings = getRenderer()->getRenderSettings();
@@ -258,8 +247,7 @@ namespace ne {
 
         // Setup rasterizer description.
         psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-        psoDesc.RasterizerState.CullMode =
-            isUsingPixelBlending() ? D3D12_CULL_MODE_NONE : D3D12_CULL_MODE_BACK;
+        psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
         psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
 
         // Specify depth bias settings.
@@ -271,21 +259,6 @@ namespace ne {
 
         // Setup pixel blend description (if needed).
         psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-        if (isUsingPixelBlending()) {
-            D3D12_RENDER_TARGET_BLEND_DESC blendDesc;
-            blendDesc.BlendEnable = 1;
-            blendDesc.LogicOpEnable = 0;
-            blendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-            blendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-            blendDesc.BlendOp = D3D12_BLEND_OP_ADD;
-            blendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
-            blendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
-            blendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-            blendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
-            blendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-            psoDesc.BlendState.RenderTarget[0] = blendDesc;
-            psoDesc.BlendState.AlphaToCoverageEnable = 0;
-        }
 
         // Describe depth stencil state.
         psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);

@@ -12,9 +12,6 @@ namespace ne {
             case (ShaderMacro::PS_USE_DIFFUSE_TEXTURE):
                 vMacroNames.push_back("PS_USE_DIFFUSE_TEXTURE");
                 break;
-            case (ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY):
-                vMacroNames.push_back("PS_USE_MATERIAL_TRANSPARENCY");
-                break;
             case (ShaderMacro::VS_SHADOW_MAPPING_PASS):
                 vMacroNames.push_back("VS_SHADOW_MAPPING_PASS");
                 break;

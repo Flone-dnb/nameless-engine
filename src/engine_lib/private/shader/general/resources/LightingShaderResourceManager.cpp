@@ -471,24 +471,6 @@ namespace ne {
             return optionalError;
         }
 
-        // Bind transparent point light index list.
-        optionalError = bindLightIndexListResource(
-            "transparentPointLightIndexList",
-            lightCullingComputeShaderData.resources.pTransparentPointLightIndexList.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Bind transparent spot light index list.
-        optionalError = bindLightIndexListResource(
-            "transparentSpotLightIndexList",
-            lightCullingComputeShaderData.resources.pTransparentSpotLightIndexList.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Prepare a lambda to bind resource.
         const auto bindLightGridResource = [&](const std::string& sShaderResourceName,
                                                GpuResource* pResourceToBind) -> std::optional<Error> {
@@ -528,24 +510,6 @@ namespace ne {
         // Bind opaque spot light grid.
         optionalError = bindLightGridResource(
             "opaqueSpotLightGrid", lightCullingComputeShaderData.resources.pOpaqueSpotLightGrid.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Bind transparent point light grid.
-        optionalError = bindLightGridResource(
-            "transparentPointLightGrid",
-            lightCullingComputeShaderData.resources.pTransparentPointLightGrid.get());
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        // Bind transparent spot light grid.
-        optionalError = bindLightGridResource(
-            "transparentSpotLightGrid",
-            lightCullingComputeShaderData.resources.pTransparentSpotLightGrid.get());
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -1065,7 +1029,7 @@ namespace ne {
             std::string sShaderResourceName;
             size_t iResourceElementCount = 0;
         };
-        const std::array<LightIndexListCreationInfo, 4> vResourcesToCreate = {
+        const std::array<LightIndexListCreationInfo, 2> vResourcesToCreate = {
             LightIndexListCreationInfo(
                 &resources.pOpaquePointLightIndexList,
                 "opaque point",
@@ -1075,16 +1039,6 @@ namespace ne {
                 &resources.pOpaqueSpotLightIndexList,
                 "opaque spot",
                 "opaqueSpotLightIndexList",
-                iSpotLightIndexListSize),
-            LightIndexListCreationInfo(
-                &resources.pTransparentPointLightIndexList,
-                "transparent point",
-                "transparentPointLightIndexList",
-                iPointLightIndexListSize),
-            LightIndexListCreationInfo(
-                &resources.pTransparentSpotLightIndexList,
-                "transparent spot",
-                "transparentSpotLightIndexList",
                 iSpotLightIndexListSize)};
 
         // Create light index lists.
@@ -1130,13 +1084,9 @@ namespace ne {
             std::string sResourceDescription;
             std::string sShaderResourceName;
         };
-        const std::array<LightGridCreationInfo, 4> vGridsToCreate = {
+        const std::array<LightGridCreationInfo, 2> vGridsToCreate = {
             LightGridCreationInfo(&resources.pOpaquePointLightGrid, "opaque point", "opaquePointLightGrid"),
-            LightGridCreationInfo(&resources.pOpaqueSpotLightGrid, "opaque spot", "opaqueSpotLightGrid"),
-            LightGridCreationInfo(
-                &resources.pTransparentPointLightGrid, "transparent point", "transparentPointLightGrid"),
-            LightGridCreationInfo(
-                &resources.pTransparentSpotLightGrid, "transparent spot", "transparentSpotLightGrid")};
+            LightGridCreationInfo(&resources.pOpaqueSpotLightGrid, "opaque spot", "opaqueSpotLightGrid")};
 
         // Create light grids.
         for (const auto& info : vGridsToCreate) {

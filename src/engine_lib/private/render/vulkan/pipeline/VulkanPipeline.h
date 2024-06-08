@@ -170,8 +170,6 @@ namespace ne {
          * configuration.
          * @param sComputeShaderName  Name of the compiled compute shader to use (empty if not used).
          * @param bEnableDepthBias    Whether depth bias (offset) is enabled or not.
-         * @param bUsePixelBlending   Whether the pixels of the mesh that uses this pipeline should blend with
-         * existing pixels on back buffer or not (for transparency).
          */
         VulkanPipeline(
             Renderer* pRenderer,
@@ -181,8 +179,7 @@ namespace ne {
             const std::string& sFragmentShaderName,
             const std::set<ShaderMacro>& additionalFragmentShaderMacros = {},
             const std::string& sComputeShaderName = "",
-            bool bEnableDepthBias = false,
-            bool bUsePixelBlending = false);
+            bool bEnableDepthBias = false);
 
         /**
          * (Re)generates Vulkan pipeline and pipeline layout.
@@ -217,15 +214,11 @@ namespace ne {
          * @param pVertexShader     Vertex shader to use in the pipeline.
          * @param pFragmentShader   Fragment shader to use in the pipeline. Specify `nullptr` if you want
          * to create depth only pipeline (used for z-prepass).
-         * @param bUsePixelBlending Whether the pipeline should use blending or not (for transparency).
          *
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> createGraphicsPipeline(
-            VulkanRenderer* pVulkanRenderer,
-            GlslShader* pVertexShader,
-            GlslShader* pFragmentShader,
-            bool bUsePixelBlending);
+            VulkanRenderer* pVulkanRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader);
 
         /**
          * Fully initializes @ref mtxInternalResources by creating a compute pipeline for the specified

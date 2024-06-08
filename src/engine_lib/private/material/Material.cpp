@@ -46,13 +46,11 @@ namespace ne {
     Material::Material(
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
-        bool bUseTransparency,
         PipelineManager* pPipelineManager,
         const std::string& sMaterialName)
         : Material() {
         this->sVertexShaderName = sVertexShaderName;
         this->sPixelShaderName = sPixelShaderName;
-        this->bUseTransparency = bUseTransparency;
         this->pPipelineManager = pPipelineManager;
         this->sMaterialName = sMaterialName;
     }
@@ -283,7 +281,6 @@ namespace ne {
     std::variant<std::shared_ptr<Material>, Error> Material::create(
         const std::string& sVertexShaderName,
         const std::string& sPixelShaderName,
-        bool bUseTransparency,
         const std::string& sMaterialName) {
         // Get pipeline manager.
         auto result = getPipelineManagerForNewMaterial(sVertexShaderName, sPixelShaderName);
@@ -295,8 +292,8 @@ namespace ne {
         const auto pPipelineManager = std::get<PipelineManager*>(result);
 
         // Create material.
-        return std::shared_ptr<Material>(new Material(
-            sVertexShaderName, sPixelShaderName, bUseTransparency, pPipelineManager, sMaterialName));
+        return std::shared_ptr<Material>(
+            new Material(sVertexShaderName, sPixelShaderName, pPipelineManager, sMaterialName));
     }
 
     std::pair<std::mutex, MeshNodesThatUseThisMaterial>* Material::getSpawnedMeshNodesThatUseThisMaterial() {
@@ -304,8 +301,6 @@ namespace ne {
     }
 
     std::string Material::getMaterialName() const { return sMaterialName; }
-
-    bool Material::isUsingTransparency() const { return bUseTransparency; }
 
     void Material::onSpawnedMeshNodeChangedVisibility(MeshNode* pMeshNode, bool bOldVisibility) {
         std::scoped_lock guard(mtxSpawnedMeshNodesThatUseThisMaterial.first);
@@ -400,7 +395,7 @@ namespace ne {
         }
 
         // Copy up to date data to shaders.
-        mtxShaderMaterialDataConstants.second.diffuseColor = glm::vec4(diffuseColor, opacity);
+        mtxShaderMaterialDataConstants.second.diffuseColor = glm::vec4(diffuseColor, 1.0F);
         mtxShaderMaterialDataConstants.second.roughness = roughness;
         mtxShaderMaterialDataConstants.second.specularColor = glm::vec4(specularColor, 0.0F);
 #if defined(WIN32) && defined(DEBUG)
@@ -661,18 +656,6 @@ namespace ne {
         markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
     }
 
-    void Material::setOpacity(float opacity) {
-        std::scoped_lock guard(mtxShaderMaterialDataConstants.first);
-
-        // Save new opacity (to serialize).
-        this->opacity = std::clamp(opacity, 0.0F, 1.0F);
-
-        // Save new opacity for shaders.
-        mtxShaderMaterialDataConstants.second.diffuseColor.w = this->opacity;
-
-        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
-    }
-
     std::string Material::getVertexShaderName() const { return sVertexShaderName; }
 
     std::string Material::getPixelShaderName() const { return sPixelShaderName; }
@@ -732,37 +715,6 @@ namespace ne {
 #elif defined(DEBUG)
         static_assert(sizeof(MeshNodesThatUseThisMaterial) == 112, "notify new nodes here");
 #endif
-    }
-
-    void Material::setEnableTransparency(bool bEnable) {
-        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
-
-        if (bUseTransparency == bEnable) {
-            // Nothing to do.
-            return;
-        }
-
-        // Save new transparency option.
-        bUseTransparency = bEnable;
-
-        // See if we need to re-request a pipeline.
-        if (!mtxInternalResources.second.pColorPipeline.isInitialized()) {
-            // No more things to do here.
-            return;
-        }
-
-        // Get renderer.
-        const auto pRenderer = mtxInternalResources.second.pColorPipeline->getRenderer();
-
-        // Make sure no rendering happens during the following process
-        // (since we might delete some resources and also want to avoid deleting resources in the
-        // middle of the `draw` function, any resource deletion will cause this thread to wait for
-        // renderer to finish its current `draw` function which might create deadlocks if not called
-        // right now).
-        std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
-        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
-
-        updateToNewPipeline();
     }
 
     void Material::setDiffuseTexture(const std::string& sTextureResourcePathRelativeRes) {
@@ -861,8 +813,6 @@ namespace ne {
 
     glm::vec3 Material::getDiffuseColor() const { return diffuseColor; }
 
-    float Material::getOpacity() const { return opacity; }
-
     std::string Material::getPathToDiffuseTextureResource() {
         std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
 
@@ -887,19 +837,12 @@ namespace ne {
         // Apply deserialized values to shaders.
         setDiffuseColor(diffuseColor);
         setSpecularColor(specularColor);
-        setOpacity(opacity);
         setRoughness(roughness);
 #if defined(WIN32) && defined(DEBUG)
         static_assert(
             sizeof(MaterialShaderConstants) == 48,
             "consider copying new data to shaders here"); // NOLINT: current size
 #endif
-    }
-
-    bool Material::isTransparencyEnabled() {
-        std::scoped_lock internalResourcesGuard(mtxInternalResources.first);
-
-        return bUseTransparency;
     }
 
     std::variant<PipelineManager*, Error> Material::getPipelineManagerForNewMaterial(
@@ -958,11 +901,7 @@ namespace ne {
         // Get color pipeline.
         auto result = pPipelineManager->getGraphicsPipelineForMaterial(
             std::unique_ptr<ColorPipelineCreationSettings>(new ColorPipelineCreationSettings(
-                sVertexShaderName,
-                materialVertexMacros,
-                sPixelShaderName,
-                materialPixelMacros,
-                bUseTransparency)),
+                sVertexShaderName, materialVertexMacros, sPixelShaderName, materialPixelMacros)),
             this);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
@@ -970,33 +909,6 @@ namespace ne {
             return error;
         }
         mtxInternalResources.second.pColorPipeline = std::get<PipelineSharedPtr>(std::move(result));
-
-        if (!bUseTransparency) {
-            // Get depth only pipeline.
-            result = pPipelineManager->getGraphicsPipelineForMaterial(
-                std::unique_ptr<DepthPipelineCreationSettings>(
-                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, false)),
-                this);
-            if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-            mtxInternalResources.second.pDepthOnlyPipeline = std::get<PipelineSharedPtr>(std::move(result));
-
-            // Get shadow mapping pipeline.
-            result = pPipelineManager->getGraphicsPipelineForMaterial(
-                std::unique_ptr<DepthPipelineCreationSettings>(
-                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, true)),
-                this);
-            if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-            mtxInternalResources.second.pShadowMappingPipeline =
-                std::get<PipelineSharedPtr>(std::move(result));
-        }
 
 #if defined(DEBUG)
         static_assert(sizeof(InternalResources) == 96, "consider adding new pipelines here"); // NOLINT
@@ -1025,11 +937,6 @@ namespace ne {
         // Define diffuse texture macro (if texture is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
             pixelMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
-        }
-
-        // Define transparency macro (if enabled).
-        if (bUseTransparency) {
-            pixelMacros.insert(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
         }
 
         return pixelMacros;

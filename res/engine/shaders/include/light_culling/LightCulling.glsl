@@ -11,10 +11,6 @@
 //                                          general resources
 // --------------------------------------------------------------------------------------------------------------------
 
-/** Depth buffer from depth prepass. */
-#hlsl Texture2D depthTexture : register(t0, space6);
-#glsl layout(binding = 7) uniform sampler2D depthTexture;
-
 /** Calculated grid of frustums in view space. */
 #hlsl StructuredBuffer<Frustum> calculatedFrustums : register(t1, space6);
 #glsl {
@@ -130,36 +126,6 @@ void initializeGroupSharedVariables(uint iThreadGroupXIdInDispatch, uint iThread
 }
 
 /**
- * Performs atomic min/max operation on the specified depth value to calculate tile's min and max depth.
- * Also waits for all threads from group to perform atomic min/max operations so that after the function
- * is finished the tile's min/max depth is finally calculated.
- *
- * @warning Expects the depth value to be in range [0.0; 1.0].
- *
- * @param pixelDepth Depth in range [0.0; 1.0] of a pixel (thread) to count for tile's min/max depth.
- */
-void calculateTileMinMaxDepth(float pixelDepth) {
-    // Reinterpret float as uint so that we will be able to do atomic operations on it.
-    // Since our depth is in range [0..1] (we don't have negative depth values) doing `asuint` is enough
-    // and we don't need to change float sign bit and we don't need to invert negative bits and etc.
-    uint iDepth =
-#hlsl asuint(pixelDepth);
-#glsl floatBitsToUint(pixelDepth);
-    
-    // Do atomic min on depth.
-#hlsl InterlockedMin(iTileMinDepth, iDepth);
-#glsl atomicMin(iTileMinDepth, iDepth);
-    
-    // Do atomic min on depth.
-#hlsl InterlockedMax(iTileMaxDepth, iDepth);
-#glsl atomicMax(iTileMaxDepth, iDepth);
-    
-    // Wait for all threads from group.
-#hlsl GroupMemoryBarrierWithGroupSync();
-#glsl groupMemoryBarrier(); barrier();
-}
-
-/**
  * "Reserves" space for thread group in light grid and light lists and writes information about non-culled
  * lights of a tile into the light grid.
  *
@@ -261,11 +227,6 @@ void cullLightsForTile(
         return;
     }
     
-    // Get depth of this pixel.
-    pixelDepth =
-#hlsl depthTexture.Load(int3(iThreadIdXInDispatch, iThreadIdYInDispatch, 0)).r;
-#glsl texelFetch(depthTexture, ivec2(iThreadIdXInDispatch, iThreadIdYInDispatch), 0).r;
-    
     if (iThreadIdInGroup == 0) {
         // Only one thread in the group should initialize group shared variables.
         initializeGroupSharedVariables(iThreadGroupXIdInDispatch, iThreadGroupYIdInDispatch);
@@ -275,18 +236,9 @@ void cullLightsForTile(
 #hlsl GroupMemoryBarrierWithGroupSync();
 #glsl groupMemoryBarrier(); barrier();
     
-    // Calculate min/max depth for tile.
-    calculateTileMinMaxDepth(pixelDepth); // waits inside of the function
-    
-    // Get tile min depth.
-    float tileMinDepth =
-#hlsl asfloat(iTileMinDepth);
-#glsl uintBitsToFloat(iTileMinDepth);
-    
-    // Get tile max depth.
-    float tileMaxDepth = 
-#hlsl asfloat(iTileMaxDepth);
-#glsl uintBitsToFloat(iTileMaxDepth);
+    // Hardcoded tile min/max depth.
+    const float tileMinDepth = 0.0F;
+    const float tileMaxDepth = 1.0F;
     
     // Convert depth values to view space.
     float tileMinDepthViewSpace

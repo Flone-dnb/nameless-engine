@@ -327,29 +327,9 @@ namespace ne {
         // Prepare for drawing a new frame.
         prepareForDrawingNextFrame(pActiveCameraProperties, pMtxCurrentFrameResource->second.pResource);
 
-        // Get graphics pipelines.
-        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
-        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
-
         // Cull lights.
         cullLightsOutsideCameraFrustum(
             pActiveCameraProperties, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
-
-        // Capture shadow maps.
-        drawShadowMappingPass(
-            pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            &pMtxGraphicsPipelines->second);
-
-        // Cull meshes.
-        const auto pMeshPipelinesInFrustum =
-            getMeshesInCameraFrustum(pActiveCameraProperties, &pMtxGraphicsPipelines->second);
-
-        // Draw depth prepass on non-culled meshes.
-        drawMeshesDepthPrepass(
-            pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
-            pMeshPipelinesInFrustum->vOpaquePipelines);
 
         // Run compute shaders after depth prepass.
         executeComputeShadersOnGraphicsQueue(

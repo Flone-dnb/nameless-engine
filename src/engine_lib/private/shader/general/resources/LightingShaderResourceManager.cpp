@@ -1143,24 +1143,8 @@ namespace ne {
         // - thread group count
         // were binded in our initialize function.
 
-        // Get renderer's depth texture pointer.
-        const auto pDepthTexture = pRenderer->getDepthTextureNoMultisampling();
-        if (pDepthTexture == nullptr) [[unlikely]] {
-            return Error("depth texture is `nullptr`");
-        }
-
-        // (Re)bind renderer's depth image (this pointer may change every frame,
-        // don't check if pointer is the same (we had this and it made us skip rebinding sometimes after
-        // non-MSAA depth texture was recreated), just force rebind every frame).
-        auto optionalError = pComputeInterface->bindResource(
-            pDepthTexture, sDepthTextureShaderResourceName, ComputeResourceUsage::READ_ONLY_TEXTURE, true);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // (Re)bind current frame resource (because the resource will change every frame).
-        optionalError = pComputeInterface->bindResource(
+        auto optionalError = pComputeInterface->bindResource(
             pCurrentFrameResource->pFrameConstantBuffer->getInternalResource(),
             "frameData",
             ComputeResourceUsage::CONSTANT_BUFFER,

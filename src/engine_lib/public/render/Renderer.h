@@ -496,34 +496,6 @@ namespace ne {
             CameraProperties* pCameraProperties, FrameResource* pCurrentFrameResource) = 0;
 
         /**
-         * Submits commands to draw world from the perspective of all spawned light sources to capture
-         * shadow maps.
-         *
-         * @warning Expects to be called after @ref cullLightsOutsideCameraFrustum to capture shadow maps
-         * only for lights in frustum.
-         *
-         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         * @param pGraphicsPipelines         Graphics pipelines to draw.
-         */
-        virtual void drawShadowMappingPass(
-            FrameResource* pCurrentFrameResource,
-            size_t iCurrentFrameResourceIndex,
-            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) = 0;
-
-        /**
-         * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
-         *
-         * @param pCurrentFrameResource      Frame resource of the frame being submitted.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
-         * @param vOpaquePipelines           Opaque pipelines (depth pipeline will be retrieved from them).
-         */
-        virtual void drawMeshesDepthPrepass(
-            FrameResource* pCurrentFrameResource,
-            size_t iCurrentFrameResourceIndex,
-            const std::vector<Renderer::MeshesInFrustum::PipelineInFrustumInfo>& vOpaquePipelines) = 0;
-
-        /**
          * Executes compute shaders of the specified stage.
          *
          * @warning Expects that mutex for compute shaders is locked.

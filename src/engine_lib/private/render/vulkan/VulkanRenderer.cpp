@@ -2410,30 +2410,6 @@ namespace ne {
 
         PROFILE_SCOPE_END;
 
-        PROFILE_SCOPE_START(AcquireNextImage);
-
-        // Acquire an image from the swapchain.
-        result = vkAcquireNextImageKHR(
-            pLogicalDevice,
-            pSwapChain,
-            UINT64_MAX,
-            vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore,
-            VK_NULL_HANDLE,
-            &iLastAcquiredImageIndex);
-        if (result != VK_SUCCESS) {
-            if (result != VK_SUBOPTIMAL_KHR) [[unlikely]] {
-                Error error(std::format(
-                    "failed to acquire next swap chain image, error: {}", string_VkResult(result)));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
-            // Mark swapchain as needs to be re-created.
-            bNeedToRecreateSwapchain = true;
-        }
-
-        PROFILE_SCOPE_END;
-
         // Convert frame resource.
         const auto pCurrentVulkanFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
@@ -2868,50 +2844,27 @@ namespace ne {
         const auto pVulkanCurrentFrameResource =
             reinterpret_cast<VulkanFrameResource*>(pCurrentFrameResource);
 
-        PROFILE_SCOPE_START(WaitForAcquiredImageToBeUnused);
-
-        // Since the next acquired image might be not in the order we expect (i.e. it may be used
-        // by other frame resource - not the one we are using right now) make sure this image is not used
-        // by the GPU.
-        auto result = vkWaitForFences(
-            pLogicalDevice, 1, &vSwapChainImageFenceRefs[iLastAcquiredImageIndex].first, VK_TRUE, UINT64_MAX);
+        // Finish recording commands.
+        auto result = vkEndCommandBuffer(pVulkanCurrentFrameResource->pCommandBuffer);
         if (result != VK_SUCCESS) [[unlikely]] {
-            Error error(
-                std::format("failed to wait for acquired image fence, error: {}", string_VkResult(result)));
+            Error error(std::format(
+                "failed to finish recording commands into a one-time submit command buffer, error: {}",
+                string_VkResult(result)));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
-
-        PROFILE_SCOPE_END;
-
-        // Mark the image as being used by this frame resource.
-        vSwapChainImageFenceRefs[iLastAcquiredImageIndex].first = pVulkanCurrentFrameResource->pFence;
-        vSwapChainImageFenceRefs[iLastAcquiredImageIndex].second = iCurrentFrameResourceIndex;
 
         // Prepare to submit command buffer for execution.
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-        // Specify semaphores to wait for before starting execution.
-        const std::array<VkSemaphore, 1> semaphoresToWaitFor = {
-            vImageSemaphores[iCurrentImageSemaphore].pAcquireImageSemaphore};
-        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(semaphoresToWaitFor.size());
-        submitInfo.pWaitSemaphores = semaphoresToWaitFor.data();
-
-        // Specify which stages will wait.
-        const std::array<VkPipelineStageFlags, semaphoresToWaitFor.size()> waitStages = {
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        submitInfo.pWaitDstStageMask = waitStages.data();
+        submitInfo.waitSemaphoreCount = 0;
 
         // Specify which command buffers to execute.
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &pVulkanCurrentFrameResource->pCommandBuffer;
 
-        // Specify which semaphores will be signaled once the command buffer(s) have finished execution.
-        std::array<VkSemaphore, 1> vSemaphoresAfterCommandBufferFinished = {
-            vImageSemaphores[iCurrentImageSemaphore].pQueueSubmitSemaphore};
-        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
-        submitInfo.pSignalSemaphores = vSemaphoresAfterCommandBufferFinished.data();
+        submitInfo.signalSemaphoreCount = 0;
 
         // Make fence to be in "unsignaled" state.
         result = vkResetFences(pLogicalDevice, 1, &pVulkanCurrentFrameResource->pFence);
@@ -2931,40 +2884,6 @@ namespace ne {
                 "failed to submit command buffer(s) for execution, error: {}", string_VkResult(result)));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        PROFILE_SCOPE_END;
-
-        // Prepare for presenting.
-        VkPresentInfoKHR presentInfo{};
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = static_cast<uint32_t>(vSemaphoresAfterCommandBufferFinished.size());
-        presentInfo.pWaitSemaphores = vSemaphoresAfterCommandBufferFinished.data();
-
-        // Specify which swapchain/image to present.
-        std::array<VkSwapchainKHR, 1> vSwapChains = {pSwapChain};
-        presentInfo.swapchainCount = static_cast<uint32_t>(vSwapChains.size());
-        presentInfo.pSwapchains = vSwapChains.data();
-        presentInfo.pImageIndices = &iLastAcquiredImageIndex;
-
-        // No using multiple swapchains so leave `pResults` empty as we will get result for our single
-        // swapchain from `vkQueuePresentKHR`.
-        presentInfo.pResults = nullptr;
-
-        PROFILE_SCOPE_START(Present);
-
-        // Present.
-        result = vkQueuePresentKHR(pPresentQueue, &presentInfo);
-        if (result != VK_SUCCESS) {
-            if (result != VK_SUBOPTIMAL_KHR) [[unlikely]] {
-                Error error(
-                    std::format("failed to present a swapchain image, error: {}", string_VkResult(result)));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
-            // Mark swapchain as needs to be re-created.
-            bNeedToRecreateSwapchain = true;
         }
 
         PROFILE_SCOPE_END;

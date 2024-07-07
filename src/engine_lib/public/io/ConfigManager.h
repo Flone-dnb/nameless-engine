@@ -10,8 +10,7 @@
 #include "misc/Error.h"
 
 // External.
-#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
-#include "toml11/toml.hpp"
+#include "toml11/single_include/toml.hpp"
 
 namespace ne {
     /**

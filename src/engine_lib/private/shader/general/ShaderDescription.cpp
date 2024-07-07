@@ -87,7 +87,7 @@ namespace ne {
         std::string sIncludeChainText(sInitialIncludeChainText);
         serializeShaderIncludeTree(pathToShaderFile, sIncludeChainText, tomlTable);
 
-        if (tomlTable.is_uninitialized()) {
+        if (tomlTable.type() == toml::value_t::empty) {
             // Shader source file has no "#include" entries.
             return;
         }

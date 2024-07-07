@@ -64,11 +64,11 @@ namespace ne {
         } else if (fieldType.match(rfk::getType<float>())) {
             // Store float as string for better precision.
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
-                toml::format(toml::value(pField->getUnsafe<float>(pFieldOwner)));
+                floatingToString(pField->getUnsafe<float>(pFieldOwner));
         } else if (fieldType.match(rfk::getType<double>())) {
             // Store double as string for better precision.
             pTomlData->operator[](sSectionName).operator[](pFieldName) =
-                toml::format(toml::value(pField->getUnsafe<double>(pFieldOwner)));
+                floatingToString(pField->getUnsafe<double>(pFieldOwner));
         } else [[unlikely]] {
             return Error(std::format(
                 "The type \"{}\" of the specified field \"{}\" is not supported by this serializer.",
@@ -124,7 +124,7 @@ namespace ne {
         } else if (fieldType.match(rfk::getType<float>()) && pTomlValue->is_string()) {
             // We store float as a string for better precision.
             try {
-                float fieldValue = std::stof(pTomlValue->as_string().str);
+                float fieldValue = std::stof(pTomlValue->as_string());
                 pField->setUnsafe<float>(pFieldOwner, std::move(fieldValue)); // NOLINT
             } catch (std::exception& ex) {
                 return Error(std::format(
@@ -133,7 +133,7 @@ namespace ne {
         } else if (fieldType.match(rfk::getType<double>()) && pTomlValue->is_string()) {
             // We store double as a string for better precision.
             try {
-                double fieldValue = std::stod(pTomlValue->as_string().str);
+                double fieldValue = std::stod(pTomlValue->as_string());
                 pField->setUnsafe<double>(pFieldOwner, std::move(fieldValue)); // NOLINT
             } catch (std::exception& ex) {
                 return Error(std::format(

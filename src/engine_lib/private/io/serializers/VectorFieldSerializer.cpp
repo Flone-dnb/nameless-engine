@@ -89,7 +89,7 @@ namespace ne {
             // Store float as string for better precision.
             std::vector<std::string> vStrArray(vArray.size());
             for (size_t i = 0; i < vArray.size(); i++) {
-                vStrArray[i] = toml::format(toml::value(vArray[i]));
+                vStrArray[i] = floatingToString(vArray[i]);
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
 
@@ -98,7 +98,7 @@ namespace ne {
             // Store double as string for better precision.
             std::vector<std::string> vStrArray(vArray.size());
             for (size_t i = 0; i < vArray.size(); i++) {
-                vStrArray[i] = toml::format(toml::value(vArray[i]));
+                vStrArray[i] = floatingToString(vArray[i]);
             }
             pTomlData->operator[](sSectionName).operator[](pFieldName) = vStrArray;
 
@@ -284,7 +284,7 @@ namespace ne {
                         pFieldName));
                 }
                 try {
-                    vArray.push_back(std::stof(item.as_string().str));
+                    vArray.push_back(std::stof(item.as_string()));
                 } catch (std::exception& ex) {
                     return Error(std::format(
                         "The type \"{}\" of the specified field \"{}\" is supported by this serializer, "
@@ -308,7 +308,7 @@ namespace ne {
                         pFieldName));
                 }
                 try {
-                    vArray.push_back(std::stod(item.as_string().str));
+                    vArray.push_back(std::stod(item.as_string()));
                 } catch (std::exception& ex) {
                     return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "

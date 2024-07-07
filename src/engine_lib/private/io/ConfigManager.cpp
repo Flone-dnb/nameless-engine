@@ -262,7 +262,7 @@ namespace ne {
         if (!outFile.is_open()) {
             return Error(std::format("failed to open file {} for writing", pathToConfigFile.string()));
         }
-        outFile << tomlData;
+        outFile << toml::format(tomlData);
         outFile.close();
 
         if (bEnableBackup) {

@@ -590,14 +590,10 @@ namespace ne {
             std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
         const float timeTookInSec = static_cast<float>(durationInMs) / 1000.0F; // NOLINT
 
-        // Limit precision to 1 digit.
-        std::stringstream durationStream;
-        durationStream << std::fixed << std::setprecision(1) << timeTookInSec;
-
         Logger::get().info(std::format(
-            "[{}] finished checking all GUID uniqueness, took: {} sec.",
+            "[{}] finished checking all GUID uniqueness, took: {:.1f} sec.",
             Globals::getDebugOnlyLoggingPrefix(),
-            durationStream.str()));
+            timeTookInSec));
     }
 
     void SerializableObjectFieldSerializer::collectGuids(

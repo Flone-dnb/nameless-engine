@@ -681,7 +681,7 @@ namespace ne RNAMESPACE() {
 
                 // Deserialize original entity.
                 auto deserializeResult = Serializable::deserialize<SmartPointer>(
-                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / value.as_string().str);
+                    ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / value.as_string());
                 if (std::holds_alternative<Error>(deserializeResult)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(deserializeResult));
                     error.addCurrentLocationToErrorStack();
@@ -696,7 +696,7 @@ namespace ne RNAMESPACE() {
                 }
 
                 // Add attribute.
-                customAttributes[sKey.substr(sCustomAttributePrefix.size())] = value.as_string().str;
+                customAttributes[sKey.substr(sCustomAttributePrefix.size())] = value.as_string();
             } else {
                 fieldsToDeserialize[sKey] = &value;
             }
@@ -839,7 +839,7 @@ namespace ne RNAMESPACE() {
                         pField->getName(),
                         optionalPathToFile.value().string()));
                 }
-                const auto sExternalFileName = pFieldTomlValue->as_string().str;
+                const auto sExternalFileName = pFieldTomlValue->as_string();
                 const auto pathToExternalFile = optionalPathToFile.value().parent_path() / sExternalFileName;
 
                 // Get field object.

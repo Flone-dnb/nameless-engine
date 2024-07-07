@@ -20,7 +20,8 @@ namespace ne {
     std::vector<std::string> vecFloatToString(const std::vector<float>& vInitial) {
         std::vector<std::string> vOutput;
         for (size_t i = 0; i < vInitial.size(); i++) {
-            vOutput.push_back(toml::format(toml::value(vInitial[i])));
+            // Store as string for better precision.
+            vOutput.push_back(floatingToString(vInitial[i]));
         }
         return vOutput;
     }
@@ -106,7 +107,7 @@ namespace ne {
                 }
 
                 try {
-                    floatArray.push_back(std::stof(item.as_string().str));
+                    floatArray.push_back(std::stof(item.as_string()));
                 } catch (std::exception& ex) {
                     return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
@@ -146,7 +147,7 @@ namespace ne {
                 }
 
                 try {
-                    floatArray.push_back(std::stof(item.as_string().str));
+                    floatArray.push_back(std::stof(item.as_string()));
                 } catch (std::exception& ex) {
                     return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "
@@ -186,7 +187,7 @@ namespace ne {
                 }
 
                 try {
-                    floatArray.push_back(std::stof(item.as_string().str));
+                    floatArray.push_back(std::stof(item.as_string()));
                 } catch (std::exception& ex) {
                     return Error(std::format(
                         "the type \"{}\" of the specified field \"{}\" is supported by this serializer, "

@@ -7,8 +7,7 @@
 #include "io/serializers/IFieldSerializer.hpp"
 
 // External.
-#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
-#include "toml11/toml.hpp"
+#include "toml11/single_include/toml.hpp"
 
 #include "Serializable.generated_impl.h"
 
@@ -78,7 +77,7 @@ namespace ne {
                 "failed to open the file \"{}\" (maybe because it's marked as read-only)",
                 pathToFile.string()));
         }
-        file << tomlData;
+        file << toml::format(tomlData);
         file.close();
 
         if (bEnableBackup) {
@@ -310,7 +309,7 @@ namespace ne {
                 "failed to open the file \"{}\" (maybe because it's marked as read-only)",
                 pathToFile.string()));
         }
-        file << tomlData;
+        file << toml::format(tomlData);
         file.close();
 
         if (bEnableBackup) {

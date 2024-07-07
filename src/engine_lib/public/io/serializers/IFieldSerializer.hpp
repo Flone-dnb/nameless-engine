@@ -2,17 +2,26 @@
 
 // Standard.
 #include <optional>
+#include <format>
 
 // Custom.
 #include "misc/Error.h"
 
 // External.
 #include "Refureku/Refureku.h"
-#define TOML11_PRESERVE_COMMENTS_BY_DEFAULT
-#include "toml11/toml.hpp"
+#include "toml11/single_include/toml.hpp"
 
 namespace ne {
     class Serializable;
+
+    /**
+     * Used by various serializers to store float and double values as string for better precision.
+     *
+     * @param value Value to convert.
+     *
+     * @return Converted values with fixed precision.
+     */
+    inline std::string floatingToString(double value) { return std::format("{:.15f}", value); }
 
     /**
      * Interface for implementing support for serialization of new field types.

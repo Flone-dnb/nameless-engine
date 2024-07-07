@@ -51,8 +51,7 @@ namespace ne {
 #define SERIALIZE_UNORDERED_MAP_TYPE(TYPEA, TYPEB)                                                           \
     if (sFieldCanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
         const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
-        if (std::string(#TYPEB) == "float" || std::string(#TYPEB) == "double" ||                             \
-            std::string(#TYPEB) == "unsigned long long") {                                                   \
+        if (std::string(#TYPEB) == "unsigned long long") {                                                   \
             std::unordered_map<std::string, std::string> map;                                                \
             for (const auto& [key, value] : originalMap) {                                                   \
                 map[std::format("{}", key)] = std::format("{}", value);                                      \
@@ -67,6 +66,16 @@ namespace ne {
         }                                                                                                    \
         return {};                                                                                           \
     }
+#define SERIALIZE_UNORDERED_MAP_TYPE_FLOATING(TYPEA, TYPEB)                                                  \
+    if (sFieldCanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {              \
+        const auto originalMap = pField->getUnsafe<std::unordered_map<TYPEA, TYPEB>>(pFieldOwner);           \
+        std::unordered_map<std::string, std::string> map;                                                    \
+        for (const auto& [key, value] : originalMap) {                                                       \
+            map[std::format("{}", key)] = floatingToString(value);                                           \
+        }                                                                                                    \
+        pTomlData->operator[](sSectionName).operator[](sFieldName) = map;                                    \
+        return {};                                                                                           \
+    }
         // and another helper macro.
 #define SERIALIZE_UNORDERED_MAP_TYPES(TYPE)                                                                  \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, bool)                                                                 \
@@ -74,8 +83,8 @@ namespace ne {
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned int)                                                         \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, long long)                                                            \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, unsigned long long)                                                   \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, float)                                                                \
-    SERIALIZE_UNORDERED_MAP_TYPE(TYPE, double)                                                               \
+    SERIALIZE_UNORDERED_MAP_TYPE_FLOATING(TYPE, float)                                                       \
+    SERIALIZE_UNORDERED_MAP_TYPE_FLOATING(TYPE, double)                                                      \
     SERIALIZE_UNORDERED_MAP_TYPE(TYPE, std::basic_string<char>)
 
         SERIALIZE_UNORDERED_MAP_TYPES(bool)
@@ -246,7 +255,7 @@ namespace ne {
         if (!value.is_string()) {
             return {};
         }
-        return value.as_string().str;
+        return value.as_string();
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -390,9 +399,6 @@ namespace ne {
         if (sFieldACanonicalTypeName != sFieldBCanonicalTypeName) {
             return false;
         }
-
-        constexpr auto floatDelta = 0.00001F;
-        constexpr auto doubleDelta = 0.0000000000001;
 
 #define COMPARE_UNORDERED_MAPS(TYPEA, TYPEB)                                                                 \
     if (sFieldACanonicalTypeName == std::format("std::unordered_map<{}, {}>", #TYPEA, #TYPEB)) {             \

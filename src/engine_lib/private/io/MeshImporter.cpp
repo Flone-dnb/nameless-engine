@@ -40,7 +40,7 @@ namespace ne {
 
         // Write image to disk.
         return tinygltf::WriteImageData(
-            &sBasePath, &sFilename, &image, false, &uriCallbacks, &sOutputUri, &fsCallbacks);
+            &sBasePath, &sFilename, &image, false, &fsCallbacks, &uriCallbacks, &sOutputUri, nullptr);
     }
 
     inline std::variant<Error, sgc::GcVector<sgc::GcPtr<MeshNode>>> processGltfMesh( // NOLINT: too complex

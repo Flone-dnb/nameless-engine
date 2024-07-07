@@ -46,7 +46,7 @@ namespace ne {
         const auto pFieldName = pField->getName();
 
         if (sFieldCanonicalTypeName == sStringCanonicalTypeName && pTomlValue->is_string()) {
-            auto fieldValue = pTomlValue->as_string().str;
+            auto fieldValue = pTomlValue->as_string();
             pField->setUnsafe<std::string>(pFieldOwner, std::move(fieldValue));
         } else [[unlikely]] {
             if (!pTomlValue->is_string()) {

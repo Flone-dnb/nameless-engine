@@ -1928,11 +1928,11 @@ const auto idResult = Serializable::getIdsFromFile(pathToFile);
 if (std::holds_alternative<Error>(idResult)) {
     // ... handle error ...
 }
-const auto ids = std::get<std::set<std::string>>(idResult);
+const auto [ids, tomlData] = std::get<std::pair<std::set<std::string>, toml::value>>(idResult);
 // `ids` contains 2 values: "0" and "1", this information might be helpful.
 
-// Deserialize with IDs 0 and 1.
-const auto result = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile, {"0", "1"});
+// Deserialize with IDs 0 and 1. Reuse previously parsed TOML data for faster deserialization.
+const auto result = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(tomlData, {"0", "1"}, pathToFile);
 if (std::holds_alternative<Error>(result)) {
     // ... handle error ...
 }

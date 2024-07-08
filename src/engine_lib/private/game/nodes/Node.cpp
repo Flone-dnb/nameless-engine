@@ -559,10 +559,11 @@ namespace ne {
             err.addCurrentLocationToErrorStack();
             return err;
         }
-        const auto ids = std::get<std::set<std::string>>(idResult);
+        auto [ids, tomlData] = std::get<std::pair<std::set<std::string>, toml::value>>(idResult);
 
         // Deserialize all nodes.
-        auto deserializeResult = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile, ids);
+        auto deserializeResult =
+            Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(tomlData, ids, pathToFile);
         if (std::holds_alternative<Error>(deserializeResult)) [[unlikely]] {
             auto err = std::get<Error>(deserializeResult);
             err.addCurrentLocationToErrorStack();

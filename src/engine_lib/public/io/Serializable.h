@@ -259,9 +259,10 @@ namespace ne RNAMESPACE() {
          * automatically if not specified in the path.
          *
          * @return Error if something went wrong, otherwise array of unique IDs of objects that exist
-         * in the specified file.
+         * in the specified file and parsed TOML data that you can reuse.
          */
-        static std::variant<std::set<std::string>, Error> getIdsFromFile(std::filesystem::path pathToFile);
+        static std::variant<std::pair<std::set<std::string>, toml::value>, Error>
+        getIdsFromFile(std::filesystem::path pathToFile);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a file.
@@ -365,6 +366,27 @@ namespace ne RNAMESPACE() {
         deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids);
 
         /**
+         * Deserializes multiple objects and their reflected fields (including inherited) from the
+         * specified TOML data.
+         *
+         * @param tomlData TOML data to deserialize from.
+         * @param ids Array of object IDs (that you specified in @ref serialize) to deserialize
+         * and return. You can use @ref getIdsFromFile to get IDs of all objects in the file.
+         * @param optionalPathToFile Optional. Path to the file that this TOML data is deserialized from.
+         * Used for fields marked as `Serialize(AsExternal)`
+         *
+         * @return Error if something went wrong, otherwise an array of pointers to deserialized objects.
+         */
+        template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
+            requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
+                     std::same_as<SmartPointer, std::unique_ptr<Serializable>>
+        static std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
+        deserializeMultiple(
+            const toml::value& tomlData,
+            const std::set<std::string>& ids,
+            const std::optional<std::filesystem::path>& optionalPathToFile = {});
+
+        /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
@@ -392,7 +414,7 @@ namespace ne RNAMESPACE() {
             const toml::value& tomlData,
             std::unordered_map<std::string, std::string>& customAttributes,
             std::string sEntityId = "",
-            std::optional<std::filesystem::path> optionalPathToFile = {});
+            const std::optional<std::filesystem::path>& optionalPathToFile = {});
 
         /**
          * If this object was deserialized from a file that is located in the `res` directory
@@ -539,7 +561,15 @@ namespace ne RNAMESPACE() {
         // Parse file.
         toml::value tomlData;
         try {
+            const auto startTime = std::chrono::steady_clock::now();
+
             tomlData = toml::parse(pathToFile);
+
+            const auto endTime = std::chrono::steady_clock::now();
+            const auto timeTookInMs =
+                std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
+
+            Logger::get().info(std::format("parse took: {:.1f} ms", timeTookInMs));
         } catch (std::exception& exception) {
             return Error(std::format(
                 "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
@@ -551,6 +581,44 @@ namespace ne RNAMESPACE() {
             // Deserialize object with the specified entity ID.
             std::unordered_map<std::string, std::string> customAttributes;
             auto result = deserialize<SmartPointer>(tomlData, customAttributes, sEntityId, pathToFile);
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+
+            // Save object info.
+            DeserializedObjectInformation objectInfo(
+                std::get<SmartPointer>(std::move(result)), sEntityId, customAttributes);
+            deserializedObjects.push_back(std::move(objectInfo));
+        }
+
+        return deserializedObjects;
+    }
+
+    template <typename SmartPointer, typename InnerType>
+        requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
+                 std::same_as<SmartPointer, std::unique_ptr<Serializable>>
+    std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
+    Serializable::deserializeMultiple(
+        const toml::value& tomlData,
+        const std::set<std::string>& ids,
+        const std::optional<std::filesystem::path>& optionalPathToFile) {
+        // Check that specified IDs don't have dots in them.
+        for (const auto& sId : ids) {
+            if (sId.contains('.')) [[unlikely]] {
+                return Error(
+                    std::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
+            }
+        }
+
+        // Deserialize.
+        std::vector<DeserializedObjectInformation<SmartPointer>> deserializedObjects;
+        for (const auto& sEntityId : ids) {
+            // Deserialize object with the specified entity ID.
+            std::unordered_map<std::string, std::string> customAttributes;
+            auto result =
+                deserialize<SmartPointer>(tomlData, customAttributes, sEntityId, optionalPathToFile);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -603,7 +671,7 @@ namespace ne RNAMESPACE() {
         const toml::value& tomlData,
         std::unordered_map<std::string, std::string>& customAttributes,
         std::string sEntityId,
-        std::optional<std::filesystem::path> optionalPathToFile) {
+        const std::optional<std::filesystem::path>& optionalPathToFile) {
         if (sEntityId.empty()) {
             // Put something as entity ID so it would not look weird.
             sEntityId = "0";

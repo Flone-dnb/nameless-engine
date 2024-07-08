@@ -147,24 +147,13 @@ namespace ne {
         return getClassForGuid(&selfArchetype, sGuid);
     }
 
-    std::variant<std::set<std::string>, Error>
+    std::variant<std::pair<std::set<std::string>, toml::value>, Error>
     Serializable::getIdsFromFile(std::filesystem::path pathToFile) {
-        // Add TOML extension to file.
-        if (!pathToFile.string().ends_with(".toml")) {
-            pathToFile += ".toml";
-        }
-
-        // Handle backup file.
-        std::filesystem::path backupFile = pathToFile;
-        backupFile += ConfigManager::getBackupFileExtension();
-
-        if (!std::filesystem::exists(pathToFile)) {
-            // Check if backup file exists.
-            if (std::filesystem::exists(backupFile)) {
-                std::filesystem::copy_file(backupFile, pathToFile);
-            } else {
-                return Error("file or backup file do not exist");
-            }
+        auto optionalError = resolvePathToToml(pathToFile);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
         }
 
         // Load file.
@@ -186,7 +175,7 @@ namespace ne {
         }
 
         // Check that we have at least one section.
-        if (vSections.empty()) {
+        if (vSections.empty()) [[unlikely]] {
             return Error(std::format(
                 "the specified file \"{}\" has 0 sections while expected at least 1 section",
                 pathToFile.string()));
@@ -196,7 +185,7 @@ namespace ne {
         std::set<std::string> vIds;
         for (const auto& sSectionName : vSections) {
             const auto iFirstDotPos = sSectionName.find('.');
-            if (iFirstDotPos == std::string::npos) {
+            if (iFirstDotPos == std::string::npos) [[unlikely]] {
                 return Error(std::format(
                     "the specified file \"{}\" does not have dots in section names (corrupted file)",
                     pathToFile.string()));
@@ -205,7 +194,7 @@ namespace ne {
             vIds.insert(sSectionName.substr(0, iFirstDotPos));
         }
 
-        return vIds;
+        return std::pair<std::set<std::string>, toml::value>{vIds, std::move(tomlData)};
     }
 
     std::optional<Error> Serializable::serializeMultiple(

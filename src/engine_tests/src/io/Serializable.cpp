@@ -754,7 +754,7 @@ TEST_CASE("serialize and deserialize fields of different types") {
             INFO(err.getFullErrorMessage());
             REQUIRE(false);
         }
-        const auto ids = std::get<std::set<std::string>>(idResult);
+        const auto [ids, tomlData] = std::get<std::pair<std::set<std::string>, toml::value>>(idResult);
         REQUIRE(ids.size() == 1);
         REQUIRE(ids.find("0") != ids.end());
 
@@ -1092,7 +1092,7 @@ TEST_CASE("serialize and deserialize multiple nodes") {
         INFO(err.getFullErrorMessage());
         REQUIRE(false);
     }
-    const auto ids = std::get<std::set<std::string>>(idResult);
+    const auto [ids, tomlData] = std::get<std::pair<std::set<std::string>, toml::value>>(idResult);
     REQUIRE(ids.size() == 2);
     REQUIRE(ids.find("0") != ids.end());
     REQUIRE(ids.find("1") != ids.end());

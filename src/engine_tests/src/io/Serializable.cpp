@@ -1098,7 +1098,7 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     REQUIRE(ids.find("1") != ids.end());
 
     // Deserialize.
-    const auto result = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile, {"0", "1"});
+    const auto result = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile);
     if (std::holds_alternative<Error>(result)) {
         auto err = std::get<Error>(std::move(result));
         err.addCurrentLocationToErrorStack();
@@ -1111,8 +1111,8 @@ TEST_CASE("serialize and deserialize multiple nodes") {
     // Check results.
     REQUIRE(vDeserializedObjects.size() == 2);
 
-    const auto pNode1 = sgc::GcPtr<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[0].pObject));
-    const auto pNode2 = sgc::GcPtr<Node>(dynamic_cast<Node*>(&*vDeserializedObjects[1].pObject));
+    const auto pNode1 = sgc::GcPtr<Node>(dynamic_cast<Node*>(vDeserializedObjects[0].pObject.get()));
+    const auto pNode2 = sgc::GcPtr<Node>(dynamic_cast<Node*>(vDeserializedObjects[1].pObject.get()));
 
     REQUIRE(pNode1 != nullptr);
     REQUIRE(pNode2 != nullptr);

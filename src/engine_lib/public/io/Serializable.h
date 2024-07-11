@@ -119,6 +119,18 @@ namespace ne RNAMESPACE() {
         virtual ~Serializable() override = default;
 
         /**
+         * Analyzes the file for serialized objects, gathers and returns unique IDs of those objects.
+         *
+         * @param pathToFile File to read serialized data from. The ".toml" extension will be added
+         * automatically if not specified in the path.
+         *
+         * @return Error if something went wrong, otherwise array of unique IDs of objects that exist
+         * in the specified file and parsed TOML data that you can reuse.
+         */
+        static std::variant<std::pair<std::set<std::string>, toml::value>, Error>
+        getIdsFromFile(std::filesystem::path pathToFile);
+
+        /**
          * Serializes the object and all reflected fields (including inherited) that
          * are marked with `ne::Serialize` property into a file.
          * Serialized object can later be deserialized using @ref deserialize.
@@ -253,18 +265,6 @@ namespace ne RNAMESPACE() {
             bool bEnableBackup = false);
 
         /**
-         * Analyzes the file for serialized objects, gathers and returns unique IDs of those objects.
-         *
-         * @param pathToFile File to read serialized data from. The ".toml" extension will be added
-         * automatically if not specified in the path.
-         *
-         * @return Error if something went wrong, otherwise array of unique IDs of objects that exist
-         * in the specified file and parsed TOML data that you can reuse.
-         */
-        static std::variant<std::pair<std::set<std::string>, toml::value>, Error>
-        getIdsFromFile(std::filesystem::path pathToFile);
-
-        /**
          * Deserializes an object and all reflected fields (including inherited) from a file.
          * Specify the type of an object (that is located in the file) as the T template parameter, which
          * can be entity's actual type or entity's parent (up to Serializable).
@@ -354,8 +354,6 @@ namespace ne RNAMESPACE() {
          *
          * @param pathToFile File to read reflected data from. The ".toml" extension will be added
          * automatically if not specified in the path.
-         * @param ids        Array of object IDs (that you specified in @ref serialize) to deserialize
-         * and return. You can use @ref getIdsFromFile to get IDs of all objects in the file.
          *
          * @return Error if something went wrong, otherwise an array of pointers to deserialized objects.
          */
@@ -363,28 +361,7 @@ namespace ne RNAMESPACE() {
             requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
                      std::same_as<SmartPointer, std::unique_ptr<Serializable>>
         static std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
-        deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids);
-
-        /**
-         * Deserializes multiple objects and their reflected fields (including inherited) from the
-         * specified TOML data.
-         *
-         * @param tomlData TOML data to deserialize from.
-         * @param ids Array of object IDs (that you specified in @ref serialize) to deserialize
-         * and return. You can use @ref getIdsFromFile to get IDs of all objects in the file.
-         * @param optionalPathToFile Optional. Path to the file that this TOML data is deserialized from.
-         * Used for fields marked as `Serialize(AsExternal)`
-         *
-         * @return Error if something went wrong, otherwise an array of pointers to deserialized objects.
-         */
-        template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
-            requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
-                     std::same_as<SmartPointer, std::unique_ptr<Serializable>>
-        static std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
-        deserializeMultiple(
-            const toml::value& tomlData,
-            const std::set<std::string>& ids,
-            const std::optional<std::filesystem::path>& optionalPathToFile = {});
+        deserializeMultiple(std::filesystem::path pathToFile);
 
         /**
          * Deserializes an object and all reflected fields (including inherited) from a toml value.
@@ -477,6 +454,35 @@ namespace ne RNAMESPACE() {
         getClassForGuid(const rfk::Struct* pArchetypeToAnalyze, const std::string& sGuid);
 
         /**
+         * Deserializes an object and all reflected fields (including inherited) from a file.
+         * Specify the type of an object (that is located in the file) as the T template parameter, which
+         * can be entity's actual type or entity's parent (up to Serializable).
+         *
+         * @remark This is an overloaded function, see a more detailed documentation for the other overload.
+         *
+         * @param tomlData           Toml value to retrieve an object from.
+         * @param customAttributes   Pairs of values that were associated with this object.
+         * @param sSectionName       Name of the TOML section to deserialize.
+         * @param sTypeGuid          GUID of the type to deserialize (taken from section name).
+         * @param sEntityId          Entity ID chain string.
+         * @param optionalPathToFile Optional. Path to the file that this TOML data is deserialized from.
+         * Used for fields marked as `Serialize(AsExternal)`
+         *
+         * @return Error if something went wrong, otherwise a pointer to deserialized object.
+         */
+        template <typename SmartPointer, typename InnerType = typename SmartPointer::element_type>
+            requires std::derived_from<InnerType, Serializable> &&
+                     (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
+                      std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
+        static std::variant<SmartPointer, Error> deserializeFromSection(
+            const toml::value& tomlData,
+            std::unordered_map<std::string, std::string>& customAttributes,
+            const std::string& sSectionName,
+            const std::string& sTypeGuid,
+            const std::string& sEntityId,
+            const std::optional<std::filesystem::path>& optionalPathToFile);
+
+        /**
          * If this object was deserialized from a file that is located in the `res` directory
          * of this project, this field will contain a pair of values:
          * - path to this file relative to the `res` directory,
@@ -541,15 +547,7 @@ namespace ne RNAMESPACE() {
         requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
                  std::same_as<SmartPointer, std::unique_ptr<Serializable>>
     std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
-    Serializable::deserializeMultiple(std::filesystem::path pathToFile, const std::set<std::string>& ids) {
-        // Check that specified IDs don't have dots in them.
-        for (const auto& sId : ids) {
-            if (sId.contains('.')) [[unlikely]] {
-                return Error(
-                    std::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
-            }
-        }
-
+    Serializable::deserializeMultiple(std::filesystem::path pathToFile) {
         // Resolve path.
         auto optionalError = resolvePathToToml(pathToFile);
         if (optionalError.has_value()) [[unlikely]] {
@@ -561,64 +559,42 @@ namespace ne RNAMESPACE() {
         // Parse file.
         toml::value tomlData;
         try {
-            const auto startTime = std::chrono::steady_clock::now();
-
             tomlData = toml::parse(pathToFile);
-
-            const auto endTime = std::chrono::steady_clock::now();
-            const auto timeTookInMs =
-                std::chrono::duration<float, std::chrono::milliseconds::period>(endTime - startTime).count();
-
-            Logger::get().info(std::format("parse took: {:.1f} ms", timeTookInMs));
         } catch (std::exception& exception) {
             return Error(std::format(
                 "failed to parse TOML file at \"{}\", error: {}", pathToFile.string(), exception.what()));
         }
 
-        // Deserialize.
-        std::vector<DeserializedObjectInformation<SmartPointer>> deserializedObjects;
-        for (const auto& sEntityId : ids) {
-            // Deserialize object with the specified entity ID.
-            std::unordered_map<std::string, std::string> customAttributes;
-            auto result = deserialize<SmartPointer>(tomlData, customAttributes, sEntityId, pathToFile);
-            if (std::holds_alternative<Error>(result)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(result));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-
-            // Save object info.
-            DeserializedObjectInformation objectInfo(
-                std::get<SmartPointer>(std::move(result)), sEntityId, customAttributes);
-            deserializedObjects.push_back(std::move(objectInfo));
-        }
-
-        return deserializedObjects;
-    }
-
-    template <typename SmartPointer, typename InnerType>
-        requires std::same_as<SmartPointer, sgc::GcPtr<Serializable>> ||
-                 std::same_as<SmartPointer, std::unique_ptr<Serializable>>
-    std::variant<std::vector<DeserializedObjectInformation<SmartPointer>>, Error>
-    Serializable::deserializeMultiple(
-        const toml::value& tomlData,
-        const std::set<std::string>& ids,
-        const std::optional<std::filesystem::path>& optionalPathToFile) {
-        // Check that specified IDs don't have dots in them.
-        for (const auto& sId : ids) {
-            if (sId.contains('.')) [[unlikely]] {
-                return Error(
-                    std::format("the specified object ID \"{}\" is not allowed to have dots in it", sId));
-            }
+        // Get TOML as table.
+        const auto fileTable = tomlData.as_table();
+        if (fileTable.empty()) [[unlikely]] {
+            return Error("provided toml value has 0 sections while expected at least 1 section");
         }
 
         // Deserialize.
         std::vector<DeserializedObjectInformation<SmartPointer>> deserializedObjects;
-        for (const auto& sEntityId : ids) {
-            // Deserialize object with the specified entity ID.
+        for (const auto& [sSectionName, tomlValue] : fileTable) {
+            // Get type GUID.
+            const auto iIdEndDotPos = sSectionName.rfind('.');
+            if (iIdEndDotPos == std::string::npos) [[unlikely]] {
+                return Error("provided toml value does not contain entity ID");
+            }
+            const auto sTypeGuid = sSectionName.substr(iIdEndDotPos + 1);
+
+            // Get entity ID chain.
+            const auto sEntityId = sSectionName.substr(0, iIdEndDotPos);
+
+            // Check if this is a sub-entity.
+            if (sEntityId.contains('.')) {
+                // Only deserialize top-level entities because sub-entities (fields)
+                // will be deserialized while we deserialize top-level entities.
+                continue;
+            }
+
+            // Deserialize object from this section.
             std::unordered_map<std::string, std::string> customAttributes;
-            auto result =
-                deserialize<SmartPointer>(tomlData, customAttributes, sEntityId, optionalPathToFile);
+            auto result = deserializeFromSection<SmartPointer>(
+                tomlData, customAttributes, sSectionName, sTypeGuid, sEntityId, pathToFile);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -677,10 +653,8 @@ namespace ne RNAMESPACE() {
             sEntityId = "0";
         }
 
-        // Read TOML as table.
+        // Get TOML as table.
         const auto fileTable = tomlData.as_table();
-
-        // Check that we have at least one section.
         if (fileTable.empty()) [[unlikely]] {
             return Error("provided toml value has 0 sections while expected at least 1 section");
         }
@@ -699,7 +673,7 @@ namespace ne RNAMESPACE() {
             // Get ID end position (GUID start position).
             const auto iIdEndDotPos = sSectionName.rfind('.');
             if (iIdEndDotPos == std::string::npos) [[unlikely]] {
-                return Error("provided toml value does not contain entity ID");
+                return Error(std::format("section name \"{}\" does not contain entity ID", sSectionName));
             }
             if (iIdEndDotPos + 1 == sSectionName.size()) [[unlikely]] {
                 return Error(std::format("section name \"{}\" does not have a GUID", sSectionName));
@@ -727,10 +701,25 @@ namespace ne RNAMESPACE() {
             return Error(std::format("could not find entity with ID \"{}\"", sEntityId));
         }
 
+        return deserializeFromSection<SmartPointer>(
+            tomlData, customAttributes, sTargetSection, sTypeGuid, sEntityId, optionalPathToFile);
+    }
+
+    template <typename SmartPointer, typename InnerType>
+        requires std::derived_from<InnerType, Serializable> &&
+                 (std::same_as<SmartPointer, sgc::GcPtr<InnerType>> ||
+                  std::same_as<SmartPointer, std::unique_ptr<InnerType>>)
+    std::variant<SmartPointer, Error> Serializable::deserializeFromSection(
+        const toml::value& tomlData,
+        std::unordered_map<std::string, std::string>& customAttributes,
+        const std::string& sSectionName,
+        const std::string& sTypeGuid,
+        const std::string& sEntityId,
+        const std::optional<std::filesystem::path>& optionalPathToFile) {
         // Get all keys (field names) from this section.
-        const auto& targetSection = fileTable.at(sTargetSection);
+        const auto& targetSection = tomlData.at(sSectionName);
         if (!targetSection.is_table()) [[unlikely]] {
-            return Error(std::format("found \"{}\" section is not a section", sTargetSection));
+            return Error(std::format("found \"{}\" section is not a section", sSectionName));
         }
 
         // Collect keys from target section.
@@ -983,7 +972,7 @@ namespace ne RNAMESPACE() {
                         pFieldTomlValue,
                         pSmartPointerInstance.get(),
                         pField,
-                        sTargetSection,
+                        sSectionName,
                         sEntityId,
                         customAttributes);
                     if (optionalError.has_value()) [[unlikely]] {

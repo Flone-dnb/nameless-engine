@@ -552,18 +552,8 @@ namespace ne {
     }
 
     std::variant<sgc::GcPtr<Node>, Error> Node::deserializeNodeTree(const std::filesystem::path& pathToFile) {
-        // Get all IDs from this file.
-        const auto idResult = Serializable::getIdsFromFile(pathToFile);
-        if (std::holds_alternative<Error>(idResult)) [[unlikely]] {
-            auto err = std::get<Error>(idResult);
-            err.addCurrentLocationToErrorStack();
-            return err;
-        }
-        auto [ids, tomlData] = std::get<std::pair<std::set<std::string>, toml::value>>(idResult);
-
         // Deserialize all nodes.
-        auto deserializeResult =
-            Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(tomlData, ids, pathToFile);
+        auto deserializeResult = Serializable::deserializeMultiple<sgc::GcPtr<Serializable>>(pathToFile);
         if (std::holds_alternative<Error>(deserializeResult)) [[unlikely]] {
             auto err = std::get<Error>(deserializeResult);
             err.addCurrentLocationToErrorStack();

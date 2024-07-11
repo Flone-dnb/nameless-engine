@@ -90,6 +90,56 @@ namespace ne {
         return {};
     }
 
+    std::variant<std::pair<std::set<std::string>, toml::value>, Error>
+    Serializable::getIdsFromFile(std::filesystem::path pathToFile) {
+        auto optionalError = resolvePathToToml(pathToFile);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = std::move(optionalError.value());
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Load file.
+        toml::value tomlData;
+        try {
+            tomlData = toml::parse(pathToFile);
+        } catch (std::exception& exception) {
+            return Error(
+                std::format("failed to load file \"{}\", error: {}", pathToFile.string(), exception.what()));
+        }
+
+        // Read all sections.
+        std::vector<std::string> vSections;
+        const auto fileTable = tomlData.as_table();
+        for (const auto& [key, value] : fileTable) {
+            if (value.is_table()) {
+                vSections.push_back(key);
+            }
+        }
+
+        // Check that we have at least one section.
+        if (vSections.empty()) [[unlikely]] {
+            return Error(std::format(
+                "the specified file \"{}\" has 0 sections while expected at least 1 section",
+                pathToFile.string()));
+        }
+
+        // Cycle over each section and get string before first dot.
+        std::set<std::string> vIds;
+        for (const auto& sSectionName : vSections) {
+            const auto iFirstDotPos = sSectionName.find('.');
+            if (iFirstDotPos == std::string::npos) [[unlikely]] {
+                return Error(std::format(
+                    "the specified file \"{}\" does not have dots in section names (corrupted file)",
+                    pathToFile.string()));
+            }
+
+            vIds.insert(sSectionName.substr(0, iFirstDotPos));
+        }
+
+        return std::pair<std::set<std::string>, toml::value>{vIds, std::move(tomlData)};
+    }
+
     std::variant<std::string, Error> Serializable::serialize(
         toml::value& tomlData,
         const std::string& sEntityId,
@@ -145,56 +195,6 @@ namespace ne {
         }
 
         return getClassForGuid(&selfArchetype, sGuid);
-    }
-
-    std::variant<std::pair<std::set<std::string>, toml::value>, Error>
-    Serializable::getIdsFromFile(std::filesystem::path pathToFile) {
-        auto optionalError = resolvePathToToml(pathToFile);
-        if (optionalError.has_value()) [[unlikely]] {
-            auto error = std::move(optionalError.value());
-            error.addCurrentLocationToErrorStack();
-            return error;
-        }
-
-        // Load file.
-        toml::value tomlData;
-        try {
-            tomlData = toml::parse(pathToFile);
-        } catch (std::exception& exception) {
-            return Error(
-                std::format("failed to load file \"{}\", error: {}", pathToFile.string(), exception.what()));
-        }
-
-        // Read all sections.
-        std::vector<std::string> vSections;
-        const auto fileTable = tomlData.as_table();
-        for (const auto& [key, value] : fileTable) {
-            if (value.is_table()) {
-                vSections.push_back(key);
-            }
-        }
-
-        // Check that we have at least one section.
-        if (vSections.empty()) [[unlikely]] {
-            return Error(std::format(
-                "the specified file \"{}\" has 0 sections while expected at least 1 section",
-                pathToFile.string()));
-        }
-
-        // Cycle over each section and get string before first dot.
-        std::set<std::string> vIds;
-        for (const auto& sSectionName : vSections) {
-            const auto iFirstDotPos = sSectionName.find('.');
-            if (iFirstDotPos == std::string::npos) [[unlikely]] {
-                return Error(std::format(
-                    "the specified file \"{}\" does not have dots in section names (corrupted file)",
-                    pathToFile.string()));
-            }
-
-            vIds.insert(sSectionName.substr(0, iFirstDotPos));
-        }
-
-        return std::pair<std::set<std::string>, toml::value>{vIds, std::move(tomlData)};
     }
 
     std::optional<Error> Serializable::serializeMultiple(

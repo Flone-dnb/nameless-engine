@@ -307,11 +307,11 @@ if (std::filesystem::exists(shaderDescription.pathToShaderFile)) [[likely]] {
 
         // ... some other code ...
     }else{
-        return Error(fmt::format(
+        return Error(std::format(
             "the specified shader path {} is not a file", shaderDescription.pathToShaderFile.string()));
     }
 }else{
-    return Error(fmt::format(
+    return Error(std::format(
         "the specified shader file {} does not exist", shaderDescription.pathToShaderFile.string()));
 }
 ```
@@ -321,13 +321,13 @@ good:
 ```C++
 // Make sure the specified file exists.
 if (!std::filesystem::exists(shaderDescription.pathToShaderFile)) [[unlikely]] {
-    return Error(fmt::format(
+    return Error(std::format(
         "the specified shader file {} does not exist", shaderDescription.pathToShaderFile.string()));
 }
 
 // Make sure the specified path is a file.
 if (std::filesystem::is_directory(shaderDescription.pathToShaderFile)) [[unlikely]] {
-        return Error(fmt::format(
+        return Error(std::format(
             "the specified shader path {} is not a file", shaderDescription.pathToShaderFile.string()));
 }
 

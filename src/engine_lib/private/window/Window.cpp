@@ -291,20 +291,14 @@ namespace ne {
 
     void Window::showErrorIfNotOnMainThread() const {
         const auto currentThreadId = std::this_thread::get_id();
-        if (currentThreadId != mainThreadId) {
-            std::stringstream currentThreadIdString;
-            currentThreadIdString << currentThreadId;
-
-            std::stringstream mainThreadIdString;
-            mainThreadIdString << mainThreadId;
-
-            Error err(std::format(
+        if (currentThreadId != mainThreadId) [[unlikely]] {
+            Error error(std::format(
                 "an attempt was made to call a function that should only be called on the main thread "
                 "in a non main thread (main thread ID: {}, current thread ID: {})",
-                mainThreadIdString.str(),
-                currentThreadIdString.str()));
-            err.showError();
-            throw std::runtime_error(err.getFullErrorMessage());
+                mainThreadId,
+                currentThreadId));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
     }
 

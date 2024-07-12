@@ -239,19 +239,13 @@ namespace ne {
         // Make sure this function is being executed on the main thread.
         const auto currentThreadId = std::this_thread::get_id();
         if (currentThreadId != mainThreadId) [[unlikely]] {
-            std::stringstream currentThreadIdString;
-            currentThreadIdString << currentThreadId;
-
-            std::stringstream mainThreadIdString;
-            mainThreadIdString << mainThreadId;
-
-            Error err(std::format(
+            Error error(std::format(
                 "an attempt was made to call a function that should only be called on the main thread "
                 "in a non main thread (main thread ID: {}, current thread ID: {})",
-                mainThreadIdString.str(),
-                currentThreadIdString.str()));
-            err.showError();
-            throw std::runtime_error(err.getFullErrorMessage());
+                mainThreadId,
+                currentThreadId));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
         }
 
         if (!bForce) {

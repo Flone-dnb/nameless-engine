@@ -75,6 +75,9 @@ namespace ne {
 
             /** Renderer type. */
             static constexpr std::string_view sRenderer = "renderer";
+
+            /** Version of the used shader parser that we use before compiling the shader. */
+            static constexpr std::string_view sShaderParserVersion = "shader_parser_version";
         };
 
         /**

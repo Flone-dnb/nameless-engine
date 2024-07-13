@@ -4,6 +4,7 @@
 #include "shader/general/ShaderFilesystemPaths.hpp"
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/cache/GlslShaderCacheManager.h"
+#include "CombinedShaderLanguageParser.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #include "shader/hlsl/cache/HlslShaderCacheManager.h"
@@ -114,6 +115,12 @@ namespace ne {
         cacheConfig.setValue<unsigned int>(
             "", GlobalShaderCacheParameterNames::sRenderer, static_cast<unsigned int>(pRenderer->getType()));
 
+        // Write shader parser version.
+        cacheConfig.setValue<std::string_view>(
+            "",
+            GlobalShaderCacheParameterNames::sShaderParserVersion,
+            CombinedShaderLanguageParser::getCommitHash());
+
         // Write language-specific parameters.
         auto optionalError = writeLanguageSpecificParameters(cacheConfig);
         if (optionalError.has_value()) [[unlikely]] {
@@ -159,6 +166,17 @@ namespace ne {
             // Compare renderer.
             if (static_cast<unsigned int>(pRenderer->getType()) != iOldRenderer) {
                 return "renderer changed";
+            }
+        }
+
+        {
+            // Read parser version.
+            const auto sOldParserVersion = cacheConfig.getValue<std::string>(
+                "", GlobalShaderCacheParameterNames::sShaderParserVersion, "");
+
+            // Compare version.
+            if (CombinedShaderLanguageParser::getCommitHash() != sOldParserVersion) {
+                return "shader parser version changed";
             }
         }
 

@@ -3,6 +3,7 @@
 #include "game/Window.h"
 #include "misc/ProjectPaths.h"
 #include "io/TextureImporter.h"
+#include "render/general/resources/GpuResourceManager.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
 #endif

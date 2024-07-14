@@ -770,7 +770,7 @@ namespace ne {
     void DirectXRenderer::drawShadowMappingPass(
         FrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
-        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
         GPU_MARK_FUNC;
 
@@ -895,167 +895,163 @@ namespace ne {
         };
 
         // Prepare lambda to draw scene to shadow map.
-        const auto drawSceneToShadowMap =
-            [&](const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToRender,
-                ShadowMapHandle* pShadowMapHandle,
-                unsigned int iIndexIntoShadowPassLightInfoArray,
-                size_t iCubemapFaceIndex = 0) {
-                // Get shadow map texture.
-                const auto pMtxShadowResources = pShadowMapHandle->getResources();
-                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
+        const auto drawSceneToShadowMap = [&](const std::unordered_map<std::string, ShaderPipelines>&
+                                                  pipelinesToRender,
+                                              ShadowMapHandle* pShadowMapHandle,
+                                              unsigned int iIndexIntoShadowPassLightInfoArray,
+                                              size_t iCubemapFaceIndex = 0) {
+            // Get shadow map texture.
+            const auto pMtxShadowResources = pShadowMapHandle->getResources();
+            std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
 
-                // Set viewport size.
-                setViewportSizeToShadowMap(pShadowMapHandle);
+            // Set viewport size.
+            setViewportSizeToShadowMap(pShadowMapHandle);
 
-                // Iterate over all shadow mapping pipelines that have different vertex shaders.
-                for (const auto& [sShaderNames, pipelines] : pipelinesToRender) {
+            // Iterate over all shadow mapping pipelines that have different vertex shaders.
+            for (const auto& [sShaderNames, pipelines] : pipelinesToRender) {
 
-                    // Iterate over all shadow mapping pipelines that use the same vertex shader but different
-                    // shader macros (if there are different macro variations).
-                    for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
-                        // Convert pipeline type.
-                        const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
+                // Iterate over all shadow mapping pipelines that use the same vertex shader but different
+                // shader macros (if there are different macro variations).
+                for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                    // Convert pipeline type.
+                    const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
 
-                        // Get root constants manager.
-                        const auto pMtxRootConstantsManager = pPipeline->getShaderConstants();
+                    // Get root constants manager.
+                    const auto pMtxRootConstantsManager = pPipeline->getShaderConstants();
 
-                        // Get pipeline's resources.
-                        auto pMtxPsoResources = pDirectXPso->getInternalResources();
-                        std::scoped_lock guardPsoResources(
-                            pMtxPsoResources->first, pMtxRootConstantsManager->first);
+                    // Get pipeline's resources.
+                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
+                    std::scoped_lock guardPsoResources(
+                        pMtxPsoResources->first, pMtxRootConstantsManager->first);
 
-                        // Set PSO and root signature.
-                        pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
-                        pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
+                    // Set PSO and root signature.
+                    pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
+                    pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
 
-                        // After setting root signature we can set root parameters.
+                    // After setting root signature we can set root parameters.
 
-                        // Don't set frame data buffer because it's not used in shadow mapping.
+                    // Don't set frame data buffer because it's not used in shadow mapping.
 
-                        // Bind array of viewProjection matrix array for lights.
-                        getLightingShaderResourceManager()->setShadowPassLightInfoViewToCommandList(
-                            pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
+                    // Bind array of viewProjection matrix array for lights.
+                    getLightingShaderResourceManager()->setShadowPassLightInfoViewToCommandList(
+                        pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
 
 #if defined(DEBUG)
-                        // Self check: make sure root constants are used.
-                        if (!pMtxRootConstantsManager->second.has_value()) [[unlikely]] {
-                            Error error(std::format(
-                                "expected root constants to be used on pipeline \"{}\"",
-                                pPipeline->getPipelineIdentifier()));
-                            error.showError();
-                            throw std::runtime_error(error.getFullErrorMessage());
-                        }
+                    // Self check: make sure root constants are used.
+                    if (!pMtxRootConstantsManager->second.has_value()) [[unlikely]] {
+                        Error error(std::format(
+                            "expected root constants to be used on pipeline \"{}\"",
+                            pPipeline->getPipelineIdentifier()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
 #endif
 
-                        // Copy shadow pass info index to constants.
-                        pMtxRootConstantsManager->second->findOffsetAndCopySpecialValueToConstant(
-                            pPipeline.get(),
-                            PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
-                            iIndexIntoShadowPassLightInfoArray);
+                    // Copy shadow pass info index to constants.
+                    pMtxRootConstantsManager->second->findOffsetAndCopySpecialValueToConstant(
+                        pPipeline.get(),
+                        PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
+                        iIndexIntoShadowPassLightInfoArray);
 
-                        // Get root constants manager.
-                        const auto pRootConstantsManager =
-                            pMtxRootConstantsManager->second->pConstantsManager.get();
+                    // Get root constants manager.
+                    const auto pRootConstantsManager =
+                        pMtxRootConstantsManager->second->pConstantsManager.get();
 
-                        // Bind root constants.
-                        pCommandList->SetGraphicsRoot32BitConstants(
-                            pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
-                                SpecialRootParameterSlot::ROOT_CONSTANTS)],
-                            pRootConstantsManager->getVariableCount(),
-                            pRootConstantsManager->getData(),
-                            0);
+                    // Bind root constants.
+                    pCommandList->SetGraphicsRoot32BitConstants(
+                        pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                            SpecialRootParameterSlot::ROOT_CONSTANTS)],
+                        pRootConstantsManager->getVariableCount(),
+                        pRootConstantsManager->getData(),
+                        0);
 
-                        // Get materials.
-                        const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                        std::scoped_lock materialsGuard(pMtxMaterials->first);
+                    // Get materials.
+                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                    std::scoped_lock materialsGuard(pMtxMaterials->first);
 
-                        for (const auto& pMaterial : pMtxMaterials->second) {
-                            // No need to bind material's shader resources since they are not used in vertex
-                            // shader (since we are in shadow mapping pass).
+                    for (const auto& pMaterial : pMtxMaterials->second) {
+                        // No need to bind material's shader resources since they are not used in vertex
+                        // shader (since we are in shadow mapping pass).
 
-                            // Get meshes.
-                            const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-                            std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+                        // Get meshes.
+                        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
 
-                            // Iterate over all visible mesh nodes that use this material.
-                            for (const auto& [pMeshNode, vIndexBuffers] :
-                                 pMtxMeshNodes->second.visibleMeshNodes) {
-                                // Get mesh data.
-                                auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
-                                auto mtxMeshData = pMeshNode->getMeshData();
+                        // Iterate over all visible mesh nodes that use this material.
+                        for (const auto& [pMeshNode, vIndexBuffers] :
+                             pMtxMeshNodes->second.visibleMeshNodes) {
+                            // Get mesh data.
+                            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                            auto mtxMeshData = pMeshNode->getMeshData();
 
-                                // Note: if you will ever need it - don't lock mesh node's spawning/despawning
-                                // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
-                                // example).
-                                std::scoped_lock geometryGuard(
-                                    pMtxMeshGpuResources->first, *mtxMeshData.first);
+                            // Note: if you will ever need it - don't lock mesh node's spawning/despawning
+                            // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
+                            // example).
+                            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
-                                // Find and bind mesh data resource since only it is used in vertex shader.
-                                const auto& meshDataIt =
-                                    pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
-                                        MeshNode::getMeshShaderConstantBufferName());
+                            // Find and bind mesh data resource since only it is used in vertex shader.
+                            const auto& meshDataIt =
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                    MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
-                                if (meshDataIt == pMtxMeshGpuResources->second.shaderResources
-                                                      .shaderCpuWriteResources.end()) [[unlikely]] {
-                                    Error error(std::format(
-                                        "expected to find \"{}\" shader resource",
-                                        MeshNode::getMeshShaderConstantBufferName()));
-                                    error.showError();
-                                    throw std::runtime_error(error.getFullErrorMessage());
-                                }
+                            if (meshDataIt ==
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                                [[unlikely]] {
+                                Error error(std::format(
+                                    "expected to find \"{}\" shader resource",
+                                    MeshNode::getMeshShaderConstantBufferName()));
+                                error.showError();
+                                throw std::runtime_error(error.getFullErrorMessage());
+                            }
 #endif
-                                // Set resource.
-                                reinterpret_cast<HlslShaderCpuWriteResource*>(
-                                    meshDataIt->second.getResource())
-                                    ->setConstantBufferViewOfPipeline(
-                                        pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+                            // Set resource.
+                            reinterpret_cast<HlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
+                                ->setConstantBufferViewOfPipeline(
+                                    pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
 
-                                // Prepare vertex buffer view.
-                                D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-                                vertexBufferView.BufferLocation =
-                                    reinterpret_cast<DirectXResource*>(
-                                        pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                            // Prepare vertex buffer view.
+                            D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+                            vertexBufferView.BufferLocation =
+                                reinterpret_cast<DirectXResource*>(
+                                    pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                    ->getInternalResource()
+                                    ->GetGPUVirtualAddress();
+                            vertexBufferView.StrideInBytes = sizeof(MeshVertex);
+                            vertexBufferView.SizeInBytes = static_cast<UINT>(
+                                mtxMeshData.second->getVertices()->size() * vertexBufferView.StrideInBytes);
+
+                            // Set vertex buffer view.
+                            pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+                            // Iterate over all index buffers of a specific mesh node that use this
+                            // material.
+                            for (const auto& indexBufferInfo : vIndexBuffers) {
+                                // Prepare index buffer view.
+                                static_assert(
+                                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int), "change `Format`");
+                                D3D12_INDEX_BUFFER_VIEW indexBufferView;
+                                indexBufferView.BufferLocation =
+                                    reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
                                         ->getInternalResource()
                                         ->GetGPUVirtualAddress();
-                                vertexBufferView.StrideInBytes = sizeof(MeshVertex);
-                                vertexBufferView.SizeInBytes = static_cast<UINT>(
-                                    mtxMeshData.second->getVertices()->size() *
-                                    vertexBufferView.StrideInBytes);
+                                indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+                                indexBufferView.SizeInBytes = static_cast<UINT>(
+                                    indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
 
-                                // Set vertex buffer view.
-                                pCommandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+                                // Set vertex/index buffer.
+                                pCommandList->IASetIndexBuffer(&indexBufferView);
 
-                                // Iterate over all index buffers of a specific mesh node that use this
-                                // material.
-                                for (const auto& indexBufferInfo : vIndexBuffers) {
-                                    // Prepare index buffer view.
-                                    static_assert(
-                                        sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
-                                        "change `Format`");
-                                    D3D12_INDEX_BUFFER_VIEW indexBufferView;
-                                    indexBufferView.BufferLocation =
-                                        reinterpret_cast<DirectXResource*>(indexBufferInfo.pIndexBuffer)
-                                            ->getInternalResource()
-                                            ->GetGPUVirtualAddress();
-                                    indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-                                    indexBufferView.SizeInBytes = static_cast<UINT>(
-                                        indexBufferInfo.iIndexCount * sizeof(MeshData::meshindex_t));
+                                // Add a draw command.
+                                pCommandList->DrawIndexedInstanced(indexBufferInfo.iIndexCount, 1, 0, 0, 0);
 
-                                    // Set vertex/index buffer.
-                                    pCommandList->IASetIndexBuffer(&indexBufferView);
-
-                                    // Add a draw command.
-                                    pCommandList->DrawIndexedInstanced(
-                                        indexBufferInfo.iIndexCount, 1, 0, 0, 0);
-
-                                    // Increment draw call counter.
-                                    pDrawCallCounter->fetch_add(1);
-                                }
+                                // Increment draw call counter.
+                                pDrawCallCounter->fetch_add(1);
                             }
                         }
                     }
                 }
-            };
+            }
+        };
 
         {
             // Get directional lights.

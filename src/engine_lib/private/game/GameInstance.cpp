@@ -5,6 +5,7 @@
 #include "misc/Timer.h"
 #include "io/Logger.h"
 #include "game/Window.h"
+#include "shader/ShaderManager.h"
 
 namespace ne {
     GameInstance::GameInstance(Window* pGameWindow, GameManager* pGameManager, InputManager* pInputManager) {

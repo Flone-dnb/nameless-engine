@@ -21,6 +21,7 @@
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "render/general/resources/shadow/ShadowMapHandle.h"
 #include "shader/glsl/GlslComputeShaderInterface.h"
+#include "shader/general/resources/LightingShaderResourceManager.h"
 #include "misc/Profiler.hpp"
 
 // External.
@@ -3007,7 +3008,7 @@ namespace ne {
     void VulkanRenderer::drawShadowMappingPass(
         FrameResource* pCurrentFrameResource,
         size_t iCurrentFrameResourceIndex,
-        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
 
         // Get command buffer of the current frame resource.
@@ -3056,170 +3057,169 @@ namespace ne {
         };
 
         // Prepare lambda to draw scene to shadow map.
-        const auto drawSceneToShadowMap =
-            [&](VkRenderPass pRenderPass,
-                const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToRender,
-                ShadowMapHandle* pShadowMapHandle,
-                unsigned int iIndexIntoShadowPassInfoArray,
-                size_t iCubemapFaceIndex = 0) {
-                // Get shadow map texture.
-                const auto pMtxShadowResources = pShadowMapHandle->getResources();
-                std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
+        const auto drawSceneToShadowMap = [&](VkRenderPass pRenderPass,
+                                              const std::unordered_map<std::string, ShaderPipelines>&
+                                                  pipelinesToRender,
+                                              ShadowMapHandle* pShadowMapHandle,
+                                              unsigned int iIndexIntoShadowPassInfoArray,
+                                              size_t iCubemapFaceIndex = 0) {
+            // Get shadow map texture.
+            const auto pMtxShadowResources = pShadowMapHandle->getResources();
+            std::scoped_lock shadowMapGuard(pMtxShadowResources->first);
 
-                // Start shadow mapping render pass with light's framebuffer.
-                startShadowMappingRenderPass(
-                    pRenderPass,
-                    pCommandBuffer,
-                    pMtxShadowResources->second.vShadowMappingFramebuffers[iCubemapFaceIndex],
-                    static_cast<uint32_t>(pShadowMapHandle->getShadowMapSize()));
+            // Start shadow mapping render pass with light's framebuffer.
+            startShadowMappingRenderPass(
+                pRenderPass,
+                pCommandBuffer,
+                pMtxShadowResources->second.vShadowMappingFramebuffers[iCubemapFaceIndex],
+                static_cast<uint32_t>(pShadowMapHandle->getShadowMapSize()));
 
-                // Set viewport size.
-                setViewportSizeToShadowMap(pShadowMapHandle);
+            // Set viewport size.
+            setViewportSizeToShadowMap(pShadowMapHandle);
 
-                // Iterate over all shadow mapping pipelines that have different vertex shaders.
-                for (const auto& [sShaderNames, pipelines] : pipelinesToRender) {
-                    // Iterate over all shadow mapping pipelines that use the same vertex shader but different
-                    // shader macros (if there are different macro variations).
-                    for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
-                        // Convert pipeline type.
-                        const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
+            // Iterate over all shadow mapping pipelines that have different vertex shaders.
+            for (const auto& [sShaderNames, pipelines] : pipelinesToRender) {
+                // Iterate over all shadow mapping pipelines that use the same vertex shader but different
+                // shader macros (if there are different macro variations).
+                for (const auto& [macros, pPipeline] : pipelines.shaderPipelines) {
+                    // Convert pipeline type.
+                    const auto pVulkanPipeline = reinterpret_cast<VulkanPipeline*>(pPipeline.get());
 
-                        // Get push constants and pipeline's resources.
-                        const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
-                        auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
+                    // Get push constants and pipeline's resources.
+                    const auto pMtxPushConstants = pVulkanPipeline->getShaderConstants();
+                    auto pMtxPipelineResources = pVulkanPipeline->getInternalResources();
 
-                        // Lock both.
-                        std::scoped_lock guardPipelineResources(
-                            pMtxPipelineResources->first, pMtxPushConstants->first);
+                    // Lock both.
+                    std::scoped_lock guardPipelineResources(
+                        pMtxPipelineResources->first, pMtxPushConstants->first);
 
-                        // Bind pipeline.
-                        vkCmdBindPipeline(
-                            pCommandBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pMtxPipelineResources->second.pPipeline);
+                    // Bind pipeline.
+                    vkCmdBindPipeline(
+                        pCommandBuffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pMtxPipelineResources->second.pPipeline);
 
-                        // Bind descriptor sets.
-                        vkCmdBindDescriptorSets(
-                            pCommandBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pMtxPipelineResources->second.pPipelineLayout,
-                            0,
-                            1,
-                            &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
-                            0,
-                            nullptr);
+                    // Bind descriptor sets.
+                    vkCmdBindDescriptorSets(
+                        pCommandBuffer,
+                        VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pMtxPipelineResources->second.pPipelineLayout,
+                        0,
+                        1,
+                        &pMtxPipelineResources->second.vDescriptorSets[iCurrentFrameResourceIndex],
+                        0,
+                        nullptr);
 
 #if defined(DEBUG)
-                        // Self check: make sure push constants are used.
-                        if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
-                            Error error(std::format(
-                                "expected push constants to be used on the pipeline \"{}\"",
-                                pVulkanPipeline->getPipelineIdentifier()));
-                            error.showError();
-                            throw std::runtime_error(error.getFullErrorMessage());
-                        }
+                    // Self check: make sure push constants are used.
+                    if (!pMtxPushConstants->second.has_value()) [[unlikely]] {
+                        Error error(std::format(
+                            "expected push constants to be used on the pipeline \"{}\"",
+                            pVulkanPipeline->getPipelineIdentifier()));
+                        error.showError();
+                        throw std::runtime_error(error.getFullErrorMessage());
+                    }
 #endif
 
-                        // Copy shadow pass info index to constants.
-                        pMtxPushConstants->second->findOffsetAndCopySpecialValueToConstant(
-                            pPipeline.get(),
-                            PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
-                            iIndexIntoShadowPassInfoArray);
+                    // Copy shadow pass info index to constants.
+                    pMtxPushConstants->second->findOffsetAndCopySpecialValueToConstant(
+                        pPipeline.get(),
+                        PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
+                        iIndexIntoShadowPassInfoArray);
 
-                        // Get push constants manager to be used later.
-                        const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
+                    // Get push constants manager to be used later.
+                    const auto pPushConstantsManager = pMtxPushConstants->second->pConstantsManager.get();
 
-                        // Get materials.
-                        const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
-                        std::scoped_lock materialsGuard(pMtxMaterials->first);
+                    // Get materials.
+                    const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
+                    std::scoped_lock materialsGuard(pMtxMaterials->first);
 
-                        for (const auto& pMaterial : pMtxMaterials->second) {
-                            // No need to bind material's shader resources since they are not used in vertex
-                            // shader (since we are in shadow mapping pass).
+                    for (const auto& pMaterial : pMtxMaterials->second) {
+                        // No need to bind material's shader resources since they are not used in vertex
+                        // shader (since we are in shadow mapping pass).
 
-                            // Get meshes.
-                            const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
-                            std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
+                        // Get meshes.
+                        const auto pMtxMeshNodes = pMaterial->getSpawnedMeshNodesThatUseThisMaterial();
+                        std::scoped_lock meshNodesGuard(pMtxMeshNodes->first);
 
-                            // Iterate over all visible mesh nodes that use this material.
-                            for (const auto& [pMeshNode, vIndexBuffers] :
-                                 pMtxMeshNodes->second.visibleMeshNodes) {
-                                // Get mesh data.
-                                auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
+                        // Iterate over all visible mesh nodes that use this material.
+                        for (const auto& [pMeshNode, vIndexBuffers] :
+                             pMtxMeshNodes->second.visibleMeshNodes) {
+                            // Get mesh data.
+                            auto pMtxMeshGpuResources = pMeshNode->getMeshGpuResources();
 
-                                // Note: if you will ever need it - don't lock mesh node's spawning/despawning
-                                // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
-                                // example).
-                                std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
+                            // Note: if you will ever need it - don't lock mesh node's spawning/despawning
+                            // mutex here as it might cause a deadlock (see MeshNode::setMaterial for
+                            // example).
+                            std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
 
-                                // Find and bind mesh data resource since only it is used in vertex shader.
-                                const auto& meshDataIt =
-                                    pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
-                                        MeshNode::getMeshShaderConstantBufferName());
+                            // Find and bind mesh data resource since only it is used in vertex shader.
+                            const auto& meshDataIt =
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                    MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
-                                if (meshDataIt == pMtxMeshGpuResources->second.shaderResources
-                                                      .shaderCpuWriteResources.end()) [[unlikely]] {
-                                    Error error(std::format(
-                                        "expected to find \"{}\" shader resource",
-                                        MeshNode::getMeshShaderConstantBufferName()));
-                                    error.showError();
-                                    throw std::runtime_error(error.getFullErrorMessage());
-                                }
+                            if (meshDataIt ==
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                                [[unlikely]] {
+                                Error error(std::format(
+                                    "expected to find \"{}\" shader resource",
+                                    MeshNode::getMeshShaderConstantBufferName()));
+                                error.showError();
+                                throw std::runtime_error(error.getFullErrorMessage());
+                            }
 #endif
-                                reinterpret_cast<GlslShaderCpuWriteResource*>(
-                                    meshDataIt->second.getResource())
-                                    ->copyResourceIndexOfPipelineToPushConstants(
-                                        pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+                            reinterpret_cast<GlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
+                                ->copyResourceIndexOfPipelineToPushConstants(
+                                    pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
 
-                                // Bind vertex buffer.
-                                vVertexBuffers[0] = {
-                                    reinterpret_cast<VulkanResource*>(
-                                        pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
-                                        ->getInternalBufferResource()};
-                                vkCmdBindVertexBuffers(
+                            // Bind vertex buffer.
+                            vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
+                                                     pMtxMeshGpuResources->second.mesh.pVertexBuffer.get())
+                                                     ->getInternalBufferResource()};
+                            vkCmdBindVertexBuffers(
+                                pCommandBuffer,
+                                0,
+                                static_cast<uint32_t>(vVertexBuffers.size()),
+                                vVertexBuffers.data(),
+                                vOffsets.data());
+
+                            // Set push constants.
+                            vkCmdPushConstants(
+                                pCommandBuffer,
+                                pMtxPipelineResources->second.pPipelineLayout,
+                                VK_SHADER_STAGE_ALL_GRAPHICS,
+                                0,
+                                pPushConstantsManager->getTotalSizeInBytes(),
+                                pPushConstantsManager->getData());
+
+                            // Iterate over all index buffers of a specific mesh node that use this
+                            // material.
+                            for (const auto& indexBufferInfo : vIndexBuffers) {
+                                // Bind index buffer.
+                                static_assert(
+                                    sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
+                                    "change `indexTypeFormat`");
+                                vkCmdBindIndexBuffer(
                                     pCommandBuffer,
+                                    reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
+                                        ->getInternalBufferResource(),
                                     0,
-                                    static_cast<uint32_t>(vVertexBuffers.size()),
-                                    vVertexBuffers.data(),
-                                    vOffsets.data());
+                                    indexTypeFormat);
 
-                                // Set push constants.
-                                vkCmdPushConstants(
-                                    pCommandBuffer,
-                                    pMtxPipelineResources->second.pPipelineLayout,
-                                    VK_SHADER_STAGE_ALL_GRAPHICS,
-                                    0,
-                                    pPushConstantsManager->getTotalSizeInBytes(),
-                                    pPushConstantsManager->getData());
+                                // Add a draw command.
+                                vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
 
-                                // Iterate over all index buffers of a specific mesh node that use this
-                                // material.
-                                for (const auto& indexBufferInfo : vIndexBuffers) {
-                                    // Bind index buffer.
-                                    static_assert(
-                                        sizeof(MeshData::meshindex_t) == sizeof(unsigned int),
-                                        "change `indexTypeFormat`");
-                                    vkCmdBindIndexBuffer(
-                                        pCommandBuffer,
-                                        reinterpret_cast<VulkanResource*>(indexBufferInfo.pIndexBuffer)
-                                            ->getInternalBufferResource(),
-                                        0,
-                                        indexTypeFormat);
-
-                                    // Add a draw command.
-                                    vkCmdDrawIndexed(pCommandBuffer, indexBufferInfo.iIndexCount, 1, 0, 0, 0);
-
-                                    // Increment draw call counter.
-                                    pDrawCallCounter->fetch_add(1);
-                                }
+                                // Increment draw call counter.
+                                pDrawCallCounter->fetch_add(1);
                             }
                         }
                     }
                 }
+            }
 
-                // Finish shadow mapping render pass with light's framebuffer.
-                vkCmdEndRenderPass(pCommandBuffer);
-            };
+            // Finish shadow mapping render pass with light's framebuffer.
+            vkCmdEndRenderPass(pCommandBuffer);
+        };
 
         {
             // Get directional lights.

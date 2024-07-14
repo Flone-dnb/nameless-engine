@@ -3,9 +3,7 @@
 // Standard.
 #include <string>
 #include <memory>
-#include <variant>
 #include <functional>
-#include <mutex>
 #include <unordered_set>
 #include <optional>
 
@@ -17,6 +15,7 @@ namespace ne {
     class Pipeline;
     class GpuResource;
     class UploadBuffer;
+    class ShaderCpuWriteResourceManager;
 
     /**
      * Base class for shader resources.

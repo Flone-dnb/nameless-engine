@@ -9,6 +9,7 @@
 #include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 
 namespace ne {
 

@@ -3,7 +3,11 @@
 // Custom.
 #include "io/Logger.h"
 #include "render/Renderer.h"
+#include "render/general/resources/GpuResourceManager.h"
 #include "shader/ComputeShaderInterface.h"
+#include "shader/general/resources/LightingShaderResourceManager.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
 
 namespace ne {
     PipelineManager::PipelineManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }

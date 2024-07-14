@@ -12,6 +12,8 @@
 #include "shader/general/Shader.h"
 #include "shader/general/EngineShaders.hpp"
 #include "io/TextureImporter.h"
+#include "render/general/resources/GpuResourceManager.h"
+#include "shader/ShaderManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

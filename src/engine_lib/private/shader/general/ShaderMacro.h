@@ -7,6 +7,8 @@
 #include <unordered_map>
 
 namespace ne {
+    class Renderer;
+
     /**
      * Defines macros that can be used in shaders,
      * macros will change based on the current render settings.
@@ -190,6 +192,38 @@ namespace ne {
 
         /** Valid combinations of compute shader macros. */
         static inline const std::set<std::set<ShaderMacro>> validComputeShaderMacroConfigurations = {{}};
+    };
+
+    /** Describes a group of shader macros. */
+    class ShaderConfiguration {
+    public:
+        ShaderConfiguration() = delete;
+
+        /**
+         * Saves render to use.
+         *
+         * @param pRenderer Renderer to use.
+         */
+        ShaderConfiguration(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+
+        /**
+         * Updates the current shader configuration (settings) for the current renderer based on the current
+         * values from this struct.
+         *
+         * @remark Flushes the command queue and recreates pipelines' internal resources so that they
+         * will use new shader configuration.
+         */
+        void updateShaderConfiguration();
+
+        /** Vertex shader macros. */
+        std::set<ShaderMacro> currentVertexShaderConfiguration;
+
+        /** Pixel shader macros. */
+        std::set<ShaderMacro> currentPixelShaderConfiguration;
+
+    private:
+        /** Used renderer. */
+        Renderer* pRenderer = nullptr;
     };
 
     /** Provides hash operator() for std::set<ShaderMacro>. */

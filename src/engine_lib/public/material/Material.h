@@ -13,35 +13,13 @@
 #include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "material/TextureManager.h"
+#include "render/general/resources/MeshData.h"
 
 #include "Material.generated.h"
 
 namespace ne RNAMESPACE() {
     class MeshNode;
     class GpuResource;
-
-    /** Groups information about an index buffer of a mesh. */
-    struct MeshIndexBufferInfo {
-        /** Creates uninitialized object. */
-        MeshIndexBufferInfo() = default;
-
-        /**
-         * Initializes the object.
-         *
-         * @param pIndexBuffer Index buffer that this material should display.
-         * @param iIndexCount  The total number of indices stores in the specified index buffer.
-         */
-        MeshIndexBufferInfo(GpuResource* pIndexBuffer, unsigned int iIndexCount) {
-            this->pIndexBuffer = pIndexBuffer;
-            this->iIndexCount = iIndexCount;
-        }
-
-        /** A non-owning pointer to mesh's index buffer. */
-        GpuResource* pIndexBuffer = nullptr;
-
-        /** The total number of indices stores in @ref pIndexBuffer. */
-        unsigned int iIndexCount = 0;
-    };
 
     /** Groups mesh nodes by visibility. */
     struct MeshNodesThatUseThisMaterial {

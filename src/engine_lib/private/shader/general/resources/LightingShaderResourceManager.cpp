@@ -7,6 +7,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
+#include "render/general/resources/GpuResourceManager.h"
 #include "shader/ComputeShaderInterface.h"
 #include "shader/general/EngineShaderConstantMacros.hpp"
 #include "shader/general/EngineShaderNames.hpp"

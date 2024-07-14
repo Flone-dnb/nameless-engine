@@ -17,6 +17,7 @@
 #include "misc/EditorNodeCreationHelpers.hpp"
 #include "nodes/EditorCameraNode.h"
 #include "input/EditorInputEventIds.hpp"
+#include "render/general/resources/GpuResourceManager.h"
 
 namespace ne {
     const char* EditorGameInstance::getEditorWindowTitle() { return pEditorWindowTitle; }

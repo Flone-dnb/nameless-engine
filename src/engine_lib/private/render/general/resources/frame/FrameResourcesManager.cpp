@@ -9,6 +9,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #endif
+#include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
 

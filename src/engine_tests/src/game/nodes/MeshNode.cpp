@@ -8,6 +8,7 @@
 #include "shader/general/EngineShaderNames.hpp"
 #include "io/ReflectionTest.h"
 #include "misc/PrimitiveMeshGenerator.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "TestHelpers.hpp"
 
 // External.

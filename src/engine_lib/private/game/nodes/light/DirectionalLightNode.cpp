@@ -4,6 +4,7 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/shadow/ShadowMapManager.h"
+#include "render/general/resources/GpuResourceManager.h"
 
 #include "DirectionalLightNode.generated_impl.h"
 

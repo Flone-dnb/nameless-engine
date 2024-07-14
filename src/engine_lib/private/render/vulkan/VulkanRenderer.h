@@ -854,7 +854,7 @@ namespace ne {
         virtual void drawShadowMappingPass(
             FrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
-            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) override;
+            GraphicsPipelineRegistry* pGraphicsPipelines) override;
 
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.

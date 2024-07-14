@@ -6,6 +6,7 @@
 #include "misc/ProjectPaths.h"
 #include "shader/general/EngineShaderNames.hpp"
 #include "shader/general/Shader.h"
+#include "shader/ShaderManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

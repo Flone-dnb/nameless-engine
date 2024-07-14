@@ -4,13 +4,12 @@
 #include <format>
 
 // Custom.
-#include "io/Logger.h"
 #include "shader/hlsl/HlslShader.h"
 #include "misc/Error.h"
-#include "render/directx/DirectXRenderer.h"
-#include "shader/general/DescriptorConstants.hpp"
 #include "misc/Profiler.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
+#include "render/general/resources/shadow/ShadowMapManager.h"
+#include "render/Renderer.h"
 
 namespace ne {
     std::variant<RootSignatureGenerator::CollectedInfo, Error>

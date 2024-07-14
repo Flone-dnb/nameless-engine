@@ -7,6 +7,7 @@
 #include "io/Logger.h"
 #include "render/RenderSettings.h"
 #include "shader/hlsl/formats/HlslVertexFormatDescription.h"
+#include "render/general/resources/shadow/ShadowMapManager.h"
 
 namespace ne {
     DirectXPso::DirectXPso(

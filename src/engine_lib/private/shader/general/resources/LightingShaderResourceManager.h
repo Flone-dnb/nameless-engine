@@ -10,12 +10,12 @@
 // Custom.
 #include "render/general/resources/UploadBuffer.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
+#include "shader/general/resources/ShaderLightArray.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
 #include "render/directx/pipeline/DirectXPso.h"
 #endif
-#include "shader/general/resources/ShaderLightArray.h"
 
 // External.
 #include "vulkan/vulkan_core.h"

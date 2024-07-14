@@ -95,10 +95,13 @@ set(PROJECT_SOURCES
     private/render/general/pipeline/PipelineSharedPtr.h
     private/render/general/pipeline/PipelineSharedPtr.cpp
     private/render/general/pipeline/PipelineShaderConstantsManager.hpp
+    private/render/general/pipeline/PipelineRegistry.hpp
     private/render/vulkan/pipeline/VulkanPipeline.h
     private/render/vulkan/pipeline/VulkanPipeline.cpp
     private/render/general/resources/GpuResource.h
     private/render/general/resources/GpuResource.cpp
+    private/render/general/resources/MeshData.h
+    private/render/general/resources/MeshData.cpp
     private/render/general/resources/frame/FrameResourcesManager.h
     private/render/general/resources/frame/FrameResourcesManager.cpp
     private/render/general/resources/frame/FrameResource.h
@@ -175,6 +178,7 @@ set(PROJECT_SOURCES
     private/shader/general/resources/ShaderResource.cpp
     private/shader/general/resources/ShaderArrayIndexManager.h
     private/shader/general/resources/ShaderArrayIndexManager.cpp
+    private/shader/general/resources/ShaderLightsInFrustumSingleType.hpp
     private/shader/glsl/GlslShader.h
     private/shader/glsl/GlslShader.cpp
     private/shader/glsl/resources/GlslShaderCpuWriteResource.h

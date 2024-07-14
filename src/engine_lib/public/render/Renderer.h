@@ -8,17 +8,13 @@
 #include <memory>
 
 // Custom.
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
 #include "misc/Error.h"
-#include "shader/ShaderManager.h"
-#include "render/general/resources/GpuResourceManager.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
-#include "shader/general/resources/LightingShaderResourceManager.h"
-#include "material/Material.h"
 #include "render/RenderStatistics.h"
+#include "render/general/resources/MeshData.h"
+#include "shader/ComputeShaderInterface.h"
 
 namespace ne {
     class GameManager;
@@ -34,6 +30,14 @@ namespace ne {
     class DirectionalLightNode;
     class SpotlightNode;
     class PointLightNode;
+    class GpuResourceManager;
+    class LightingShaderResourceManager;
+    class ShaderCpuWriteResourceManager;
+    class ShaderTextureResourceManager;
+    class ShaderLightArray;
+    class ShaderManager;
+    struct ShaderLightsInFrustumSingleType;
+    struct GraphicsPipelineRegistry;
 
     /** Defines a base class for renderers to implement. */
     class Renderer {
@@ -58,7 +62,7 @@ namespace ne {
         Renderer(const Renderer&) = delete;
         Renderer& operator=(const Renderer&) = delete;
 
-        virtual ~Renderer() = default;
+        virtual ~Renderer();
 
         /**
          * Returns the minimum value for depth.
@@ -356,10 +360,10 @@ namespace ne {
         /** Groups pointers to information about light sources in frustum. */
         struct LightsInFrustum {
             /** Point lights in frustum of the camera. */
-            std::pair<std::recursive_mutex*, ShaderLightArray::LightsInFrustum*> mtxPointLightsInFrustum;
+            std::pair<std::recursive_mutex*, ShaderLightsInFrustumSingleType*> mtxPointLightsInFrustum;
 
             /** Spotlights in frustum of the camera. */
-            std::pair<std::recursive_mutex*, ShaderLightArray::LightsInFrustum*> mtxSpotlightsInFrustum;
+            std::pair<std::recursive_mutex*, ShaderLightsInFrustumSingleType*> mtxSpotlightsInFrustum;
 
             // No directional lights here because directional lights can't be culled.
         };
@@ -555,7 +559,7 @@ namespace ne {
         virtual void drawShadowMappingPass(
             FrameResource* pCurrentFrameResource,
             size_t iCurrentFrameResourceIndex,
-            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) = 0;
+            GraphicsPipelineRegistry* pGraphicsPipelines) = 0;
 
         /**
          * Submits commands to draw meshes and the specified depth only (vertex shader only) pipelines.
@@ -697,8 +701,7 @@ namespace ne {
          * @return Pipelines, material and meshes inside camera's frustum.
          */
         MeshesInFrustum* getMeshesInCameraFrustum(
-            CameraProperties* pActiveCameraProperties,
-            PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines);
+            CameraProperties* pActiveCameraProperties, GraphicsPipelineRegistry* pGraphicsPipelines);
 
         /**
          * Culls all light nodes that are outside of active camera's frustum so that they will
@@ -890,37 +893,5 @@ namespace ne {
 
         /** Maximum value for depth. */
         static constexpr float maxDepth = 1.0F;
-    };
-
-    /** Describes a group of shader macros. */
-    class ShaderConfiguration {
-    public:
-        ShaderConfiguration() = delete;
-
-        /**
-         * Saves render to use.
-         *
-         * @param pRenderer Renderer to use.
-         */
-        ShaderConfiguration(Renderer* pRenderer) { this->pRenderer = pRenderer; }
-
-        /**
-         * Updates the current shader configuration (settings) for the current renderer based on the current
-         * values from this struct.
-         *
-         * @remark Flushes the command queue and recreates pipelines' internal resources so that they
-         * will use new shader configuration.
-         */
-        void updateShaderConfiguration() { pRenderer->updateShaderConfiguration(); }
-
-        /** Vertex shader macros. */
-        std::set<ShaderMacro> currentVertexShaderConfiguration;
-
-        /** Pixel shader macros. */
-        std::set<ShaderMacro> currentPixelShaderConfiguration;
-
-    private:
-        /** Used renderer. */
-        Renderer* pRenderer = nullptr;
     };
 } // namespace ne

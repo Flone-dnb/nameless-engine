@@ -9,6 +9,7 @@
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
 #include "shader/general/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 

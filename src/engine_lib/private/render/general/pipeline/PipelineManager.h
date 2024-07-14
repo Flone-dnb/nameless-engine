@@ -15,6 +15,7 @@
 #include "shader/ComputeShaderInterface.h"
 #include "render/general/pipeline/PipelineType.hpp"
 #include "render/general/pipeline/PipelineCreationSettings.h"
+#include "render/general/pipeline/PipelineRegistry.hpp"
 
 namespace ne {
     class Renderer;
@@ -97,29 +98,6 @@ namespace ne {
         friend class ComputeShaderInterface;
 
     public:
-        /** Groups information about pipelines that use the same shaders. */
-        struct ShaderPipelines {
-            /**
-             * Map of pairs "material defined macros" and
-             * "pipelines that were created from the same shader to use these different macros".
-             *
-             * @remark Since shader macros have prefixes that define which shader stage they are
-             * valid for we won't have problems with same macros on different shader stages
-             * (because of combining and storing all macros in just one `std::set`).
-             */
-            std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Pipeline>, ShaderMacroSetHash>
-                shaderPipelines;
-        };
-
-        /** Stores pipelines of different types. */
-        struct GraphicsPipelineRegistry {
-            /** Map key is vertex (and pixel if specified) shader name(s). */
-            std::array<
-                std::unordered_map<std::string, ShaderPipelines>,
-                static_cast<size_t>(PipelineType::SIZE)>
-                vPipelineTypes;
-        };
-
         /**
          * Creates a new pipeline manager.
          *

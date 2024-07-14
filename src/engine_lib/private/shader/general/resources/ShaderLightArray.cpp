@@ -7,6 +7,7 @@
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif
+#include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/Logger.h"
 #include "render/general/pipeline/PipelineManager.h"

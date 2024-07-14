@@ -11,6 +11,7 @@
 #include "game/nodes/light/PointLightNode.h"
 #include "game/camera/CameraManager.h"
 #include "TestHelpers.hpp"
+#include "shader/ShaderManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

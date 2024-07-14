@@ -12,17 +12,27 @@
 #include "misc/MessageBox.h"
 #include "shader/general/ShaderMacro.h"
 #include "render/vulkan/VulkanRenderer.h"
+#include "render/general/pipeline/PipelineManager.h"
 #include "misc/Profiler.hpp"
 #include "game/nodes/EnvironmentNode.h"
 #include "render/general/pipeline/PipelineManager.h"
+#include "render/general/resources/GpuResourceManager.h"
+#include "shader/general/resources/LightingShaderResourceManager.h"
+#include "shader/general/resources/ShaderLightsInFrustumSingleType.hpp"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/ShaderMacro.h"
+#include "shader/ShaderManager.h"
 #include "game/nodes/MeshNode.h"
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"
 #include "shader/general/EngineShaders.hpp"
+#include "shader/general/resources/ShaderLightArray.h"
 #include "game/nodes/light/PointLightNode.h"
 #include "game/nodes/light/DirectionalLightNode.h"
 #include "game/nodes/light/SpotlightNode.h"
 #include "game/nodes/CameraNode.h"
+#include "material/Material.h"
 #if defined(WIN32)
 #pragma comment(lib, "Winmm.lib")
 #include "render/directx/DirectXRenderer.h"
@@ -51,6 +61,10 @@ namespace ne {
         // Create some objects.
         pPipelineManager = std::make_unique<PipelineManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
+    }
+
+    Renderer::~Renderer() {
+        // Intentionally left empty to allow using forward declarations for types in `std::unique_ptr` fields.
     }
 
     std::optional<Error> Renderer::compileEngineShaders() const {
@@ -955,8 +969,7 @@ namespace ne {
     }
 
     Renderer::MeshesInFrustum* Renderer::getMeshesInCameraFrustum(
-        CameraProperties* pActiveCameraProperties,
-        PipelineManager::GraphicsPipelineRegistry* pGraphicsPipelines) {
+        CameraProperties* pActiveCameraProperties, GraphicsPipelineRegistry* pGraphicsPipelines) {
         PROFILE_FUNC;
 
         // Record start time.
@@ -978,7 +991,7 @@ namespace ne {
         // Prepare lambda to cull meshes by pipelines.
         const auto frustumCullPipelines =
             [this, pCameraFrustum](
-                const std::unordered_map<std::string, PipelineManager::ShaderPipelines>& pipelinesToScan,
+                const std::unordered_map<std::string, ShaderPipelines>& pipelinesToScan,
                 std::vector<MeshesInFrustum::PipelineInFrustumInfo>& vPipelinesInFrustum) {
                 // Iterate over all specified pipelines.
                 for (const auto& [sShaderNames, pipelines] : pipelinesToScan) {

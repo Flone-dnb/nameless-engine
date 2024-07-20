@@ -69,16 +69,16 @@ namespace ne {
             auto result = VulkanStorageResourceArray::create(
                 pResourceManager,
                 pShaderResource->getResourceName(),
-                pShaderResource->getOriginalResourceSizeInBytes(),
-                FrameResourcesManager::getFrameResourcesCount()); // because we insert
-                                                                  // `getFrameResourcesCount` slots at once
+                pShaderResource->getOriginalResourceSizeInBytes());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
+            auto pCreatedArray = std::get<std::unique_ptr<VulkanStorageResourceArray>>(std::move(result));
+            auto pCreatedArrayRaw = pCreatedArray.get();
             mtxGlslShaderCpuWriteResources.second[pShaderResource->getResourceName()] =
-                std::get<std::unique_ptr<VulkanStorageResourceArray>>(std::move(result));
+                std::move(pCreatedArray);
 
             // Calculate total size of all arrays now.
             size_t iTotalSizeInBytes = 0;
@@ -88,8 +88,9 @@ namespace ne {
 
             // Log creation.
             Logger::get().info(std::format(
-                "created a new storage array to handle \"{}\" shader CPU write resource data "
-                "(storage arrays now in total: {}, total size: {})",
+                "created a new storage array (with capacity step size {}) to handle the data of the shader "
+                "CPU write resource \"{}\" (storage arrays now in total: {} and their total size: {})",
+                pCreatedArrayRaw->getCapacityStepSize(),
                 pShaderResource->getResourceName(),
                 mtxGlslShaderCpuWriteResources.second.size(),
                 formatBytesToMegabytes(iTotalSizeInBytes)));

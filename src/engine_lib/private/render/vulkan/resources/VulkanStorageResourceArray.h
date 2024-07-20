@@ -23,12 +23,12 @@ namespace ne {
     class VulkanPipeline;
 
     /**
-     * Represents a used slot (place) in the array.
+     * Represents a used slot (place) in a storage array.
      *
      * @remark Automatically notifies the array to free the slot (mark as unused) in destructor.
      */
     class VulkanStorageResourceArraySlot {
-        // Only arrays are allowed to create and modify the index.
+        // Only arrays are allowed to create and modify the internal index of this slot.
         friend class VulkanStorageResourceArray;
 
     public:
@@ -110,19 +110,19 @@ namespace ne {
     };
 
     /**
-     * Dynamic array. Allows storing elements of the same size in one storage buffer.
+     * Dynamic array. Allows storing elements of the same size in one Vulkan storage buffer.
      *
      * @remark Dynamically grows and shrinks when adding/removing elements from the array.
      */
     class VulkanStorageResourceArray {
-        // Only slots can mark slots as unused.
+        // Slots notify the array in their destructor.
         friend class VulkanStorageResourceArraySlot;
 
         // Only manager can create and manage storage arrays.
         friend class VulkanStorageResourceArrayManager;
 
     public:
-        /** Array's internal resources. */
+        /** Groups mutex-guarded internal resources. */
         struct InternalResources {
             InternalResources() = default;
 
@@ -146,11 +146,11 @@ namespace ne {
              */
             size_t iNextFreeArrayIndex = 0;
 
-            /** Indices in the array that were previously used (inserted) but now erased and are free. */
+            /** Indices in the array that were previously used but now unused. */
             std::queue<size_t> noLongerUsedArrayIndices;
 
             /**
-             * Set of slots that were inserted (equal to @ref iSize).
+             * Set of slots that were inserted (size equal to @ref iSize).
              *
              * Storing a raw pointer here because it's only used to update
              * slot's index if the array was resized. Before the slot
@@ -219,23 +219,18 @@ namespace ne {
         /**
          * Creates a new array.
          *
-         * @param pResourceManager     Resource manager that will allocate storage buffers.
+         * @param pResourceManager     Resource manager that will be used to allocate storage buffers.
          * @param sHandledResourceName Name of the shader resource this array handles. It will be used
          * to update descriptors in all pipelines once the array is resized (recreated) to make descriptors
          * reference a new VkBuffer.
          * @param iElementSizeInBytes  Size (in bytes) of one element in the array.
-         * @param iCapacityStepSizeMultiplier Specify value bigger than 1 if you plan to store
-         * multiple copies of each data for different frame resources (frames in-flight). Resulting
-         * capacity step size will be multiplied by this value. Should be bigger than 0 and smaller
-         * or equal to the number of frame in-flight.
          *
          * @return Error if something went wrong, otherwise created array.
          */
         static std::variant<std::unique_ptr<VulkanStorageResourceArray>, Error> create(
             GpuResourceManager* pResourceManager,
             const std::string& sHandledResourceName,
-            size_t iElementSizeInBytes,
-            size_t iCapacityStepSizeMultiplier = 1);
+            size_t iElementSizeInBytes);
 
         /**
          * Creates initialized array.
@@ -268,15 +263,12 @@ namespace ne {
         /**
          * Calculates array capacity step size depending on the size of the elements in the array.
          *
-         * @param iElementSizeInBytes         Size (in bytes) of one element in the array.
-         * @param iCapacityStepSizeMultiplier Multiplier for calculated capacity step size.
-         * Should be in range [1; FrameResourcesManager::getFrameResourcesCount()].
+         * @param iElementSizeInBytes Size (in bytes) of one element in the array.
          *
          * @return Error if something went wrong, otherwise capacity step size to add/remove
          * this value when expanding/shrinking the array.
          */
-        static std::variant<size_t, Error>
-        calculateCapacityStepSize(size_t iElementSizeInBytes, size_t iCapacityStepSizeMultiplier = 1);
+        static std::variant<size_t, Error> calculateCapacityStepSize(size_t iElementSizeInBytes);
 
         /**
          * Binds internal storage array to descriptors of the specified pipeline at the specified binding

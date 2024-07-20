@@ -16,10 +16,9 @@ namespace ne {
     std::variant<std::unique_ptr<VulkanStorageResourceArray>, Error> VulkanStorageResourceArray::create(
         GpuResourceManager* pResourceManager,
         const std::string& sHandledResourceName,
-        size_t iElementSizeInBytes,
-        size_t iCapacityStepSizeMultiplier) {
+        size_t iElementSizeInBytes) {
         // Calculate capacity step size.
-        auto result = calculateCapacityStepSize(iElementSizeInBytes, iCapacityStepSizeMultiplier);
+        auto result = calculateCapacityStepSize(iElementSizeInBytes);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -184,8 +183,8 @@ namespace ne {
                 1024.0F); // NOLINT: magic number (size of one kilobyte in bytes)
     }
 
-    std::variant<size_t, Error> VulkanStorageResourceArray::calculateCapacityStepSize(
-        size_t iElementSizeInBytes, size_t iCapacityStepSizeMultiplier) {
+    std::variant<size_t, Error>
+    VulkanStorageResourceArray::calculateCapacityStepSize(size_t iElementSizeInBytes) {
         static constexpr size_t iMaxElementSizeForCapacity = 1024 * 1024 * 2; // NOLINT
         static constexpr size_t iMaxCapacityStepSize = 40;                    // NOLINT
         static constexpr size_t iMinCapacityStepSize = 2;                     // NOLINT
@@ -203,35 +202,17 @@ namespace ne {
             iMaxCapacityStepSize);
 
         if (iCalculatedCapacityStepSize % 2 != 0) {
-            // Make even.
-            // Because min/max are even this means that we are between min/max and we just
-            // need to decide to add or remove 1.
+            // Make calculated capacity even.
+            // Because min/max are even:
             static_assert(iMaxCapacityStepSize % 2 == 0);
             static_assert(iMinCapacityStepSize % 2 == 0);
-            if (capacityCoef > 0.5F) { // NOLINT: magic number
+            // This means that we are between min/max and we just need to decide to add or remove 1.
+            if (capacityCoef > 0.5F) { // NOLINT
                 iCalculatedCapacityStepSize += 1;
             } else {
                 iCalculatedCapacityStepSize -= 1;
             }
         }
-
-        // Make sure that the specified capacity step multiplier is bigger than 0.
-        if (iCapacityStepSizeMultiplier == 0) [[unlikely]] {
-            return Error("the specified capacity step size multiplier is zero");
-        }
-
-        // Make sure that the specified capacity step multiplier is equal or smaller than
-        // frames in-flight.
-        if (iCapacityStepSizeMultiplier > FrameResourcesManager::getFrameResourcesCount()) [[unlikely]] {
-            return Error(std::format(
-                "the specified capacity step size multiplier {} is bigger than available frame resource "
-                "count {}",
-                iCapacityStepSizeMultiplier,
-                FrameResourcesManager::getFrameResourcesCount()));
-        }
-
-        // Multiply the capacity step size.
-        iCalculatedCapacityStepSize *= iCapacityStepSizeMultiplier;
 
         return iCalculatedCapacityStepSize;
     }

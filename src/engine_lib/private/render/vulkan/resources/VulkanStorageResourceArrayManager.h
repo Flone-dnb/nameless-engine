@@ -43,8 +43,8 @@ namespace ne {
          * uses internal `erase`, see documentation on the returned slot object.
          *
          * @param pShaderResource Shader resource that requires a slot in the array.
-         * If the array will resize the specified resource (if it has an active slot in the array)
-         * will be marked as "needs update" through the shader resource manager.
+         * If the array will resize, the specified resource (if it has an active slot in the array)
+         * will be automatically marked as "needs update" through the shader resource manager.
          *
          * @return Error if something went wrong, otherwise slot of the newly added element in
          * the array.

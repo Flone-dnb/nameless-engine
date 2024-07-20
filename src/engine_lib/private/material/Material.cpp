@@ -12,6 +12,8 @@
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "shader/general/resources/texture/ShaderTextureResourceManager.h"
 #include "shader/ShaderManager.h"
+#include "render/general/pipeline/PipelineManager.h"
+#include "material/TextureManager.h"
 
 #include "Material.generated_impl.h"
 

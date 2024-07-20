@@ -4,6 +4,7 @@
 #include "game/Window.h"
 #include "game/nodes/MeshNode.h"
 #include "render/general/pipeline/Pipeline.h"
+#include "render/general/pipeline/PipelineManager.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

@@ -10,6 +10,7 @@
 #include "misc/PrimitiveMeshGenerator.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "TestHelpers.hpp"
+#include "render/general/pipeline/PipelineManager.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

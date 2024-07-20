@@ -5,21 +5,22 @@
 #include <unordered_map>
 
 // Custom.
-#include "render/general/pipeline/PipelineManager.h"
 #include "io/Serializable.h"
 #include "shader/general/ShaderMacro.h"
 #include "math/GLMath.hpp"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
-#include "material/TextureManager.h"
 #include "render/general/resources/MeshData.h"
+#include "render/general/pipeline/PipelineSharedPtr.h"
 
 #include "Material.generated.h"
 
 namespace ne RNAMESPACE() {
     class MeshNode;
     class GpuResource;
+    class Pipeline;
+    class PipelineManager;
 
     /** Groups mesh nodes by visibility. */
     struct MeshNodesThatUseThisMaterial {

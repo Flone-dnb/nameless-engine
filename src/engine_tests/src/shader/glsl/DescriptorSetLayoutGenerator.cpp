@@ -4,6 +4,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/DescriptorSetLayoutGenerator.h"
 #include "shader/glsl/GlslShader.h"
+#include "shader/general/ShaderPack.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

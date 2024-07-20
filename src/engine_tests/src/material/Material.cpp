@@ -14,6 +14,7 @@
 #include "io/TextureImporter.h"
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/ShaderManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

@@ -14,7 +14,7 @@
 #include "render/general/pipeline/PipelineSharedPtr.h"
 #include "shader/ComputeShaderInterface.h"
 #include "render/general/pipeline/PipelineType.hpp"
-#include "render/general/pipeline/PipelineCreationSettings.h"
+#include "render/general/pipeline/PipelineConfiguration.h"
 #include "render/general/pipeline/PipelineRegistry.hpp"
 
 namespace ne {
@@ -130,14 +130,14 @@ namespace ne {
          * they will be released from the memory once the pipeline object is destroyed (not the shared
          * pointer) and no other object is using them.
          *
-         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
-         * @param pMaterial                 Material that requests the pipeline.
+         * @param pPipelineConfiguration Settings that determine pipeline usage and usage details.
+         * @param pMaterial              Material that requests the pipeline.
          *
          * @return Error if one or both shaders were not found in ShaderManager or if failed to generate
          * pipeline, otherwise created pipeline.
          */
         std::variant<PipelineSharedPtr, Error> getGraphicsPipelineForMaterial(
-            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings, Material* pMaterial);
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration, Material* pMaterial);
 
         /**
          * Returns all compute shaders and their pipelines to be executed on the graphics queue.
@@ -318,11 +318,11 @@ namespace ne {
          * Assigns vertex and pixel shaders to create a render specific graphics pipeline (for usual
          * rendering).
          *
-         * @param pipelines            Pipelines of specific type to look in.
-         * @param sShaderNames         Shader or shaders (map key value) for target pipeline.
-         * @param macrosToUse          Macros that are set (can be only vertex or combined).
-         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
-         * @param pMaterial            Material that requests the pipeline.
+         * @param pipelines              Pipelines of specific type to look in.
+         * @param sShaderNames           Shader or shaders (map key value) for target pipeline.
+         * @param macrosToUse            Macros that are set (can be only vertex or combined).
+         * @param pPipelineConfiguration Settings that determine pipeline usage and usage details.
+         * @param pMaterial              Material that requests the pipeline.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate pipeline,
          * otherwise created pipeline.
@@ -331,7 +331,7 @@ namespace ne {
             std::unordered_map<std::string, ShaderPipelines>& pipelines,
             const std::string& sShaderNames,
             const std::set<ShaderMacro>& macrosToUse,
-            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration,
             Material* pMaterial);
 
         /**
@@ -354,11 +354,11 @@ namespace ne {
         /**
          * Looks for a pipeline and returns it if found, otherwise creates and return it.
          *
-         * @param pipelines                    Pipelines of specific type to look in.
-         * @param sKeyToLookFor                Shader or shaders (map key value) for target pipeline.
-         * @param macrosToLookFor              Macros that are set (can be only vertex or combined).
-         * @param pPipelineCreationSettings    Settings that determine pipeline usage and usage details.
-         * @param pMaterial                    Material that requests the pipeline.
+         * @param pipelines                 Pipelines of specific type to look in.
+         * @param sKeyToLookFor             Shader or shaders (map key value) for target pipeline.
+         * @param macrosToLookFor           Macros that are set (can be only vertex or combined).
+         * @param pPipelineConfiguration    Settings that determine pipeline usage and usage details.
+         * @param pMaterial                 Material that requests the pipeline.
          *
          * @return Error if something went wrong, otherwise valid pipeline pointer.
          */
@@ -366,7 +366,7 @@ namespace ne {
             std::unordered_map<std::string, ShaderPipelines>& pipelines,
             const std::string& sKeyToLookFor,
             const std::set<ShaderMacro>& macrosToLookFor,
-            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration,
             Material* pMaterial);
 
         /** Groups all graphics pipelines. */

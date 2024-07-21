@@ -100,10 +100,9 @@ namespace ne {
         /**
          * Assigns vertex and pixel shaders to create a graphics pipeline (for usual rendering).
          *
-         * @param pRenderer                 Used renderer.
-         * @param pPipelineManager          Pipeline manager that owns this pipeline.
-         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
-         * configuration.
+         * @param pRenderer              Used renderer.
+         * @param pPipelineManager       Pipeline manager that owns this pipeline.
+         * @param pPipelineConfiguration Settings that determine pipeline usage and usage details.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate pipeline,
          * otherwise created pipeline.
@@ -111,7 +110,7 @@ namespace ne {
         static std::variant<std::shared_ptr<VulkanPipeline>, Error> createGraphicsPipeline(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
 
         /**
          * Assigns compute shader to create a compute pipeline.

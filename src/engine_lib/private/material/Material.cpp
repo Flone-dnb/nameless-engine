@@ -966,7 +966,7 @@ namespace ne {
 
         // Get color pipeline.
         auto result = pPipelineManager->getGraphicsPipelineForMaterial(
-            std::unique_ptr<ColorPipelineCreationSettings>(new ColorPipelineCreationSettings(
+            std::unique_ptr<ColorPipelineConfiguration>(new ColorPipelineConfiguration(
                 sVertexShaderName,
                 materialVertexMacros,
                 sPixelShaderName,
@@ -983,8 +983,8 @@ namespace ne {
         if (!bUseTransparency) {
             // Get depth only pipeline for depth prepass.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
-                std::unique_ptr<DepthPipelineCreationSettings>(
-                    new DepthPipelineCreationSettings(sVertexShaderName, materialVertexMacros, {})),
+                std::unique_ptr<DepthPipelineConfiguration>(
+                    new DepthPipelineConfiguration(sVertexShaderName, materialVertexMacros, {})),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
@@ -995,7 +995,7 @@ namespace ne {
 
             // Get shadow mapping pipeline for directional and spot lights.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
-                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(
+                std::unique_ptr<DepthPipelineConfiguration>(new DepthPipelineConfiguration(
                     sVertexShaderName,
                     materialVertexMacros,
                     PipelineShadowMappingUsage::DIRECTIONAL_AND_SPOT_LIGHTS)),
@@ -1010,7 +1010,7 @@ namespace ne {
 
             // Get shadow mapping pipeline for point lights.
             result = pPipelineManager->getGraphicsPipelineForMaterial(
-                std::unique_ptr<DepthPipelineCreationSettings>(new DepthPipelineCreationSettings(
+                std::unique_ptr<DepthPipelineConfiguration>(new DepthPipelineConfiguration(
                     sVertexShaderName, materialVertexMacros, PipelineShadowMappingUsage::POINT_LIGHTS)),
                 this);
             if (std::holds_alternative<Error>(result)) [[unlikely]] {

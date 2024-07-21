@@ -59,23 +59,23 @@ namespace ne {
     std::variant<std::shared_ptr<VulkanPipeline>, Error> VulkanPipeline::createGraphicsPipeline(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
-        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration) {
         // Get shadow mapping usage.
-        const auto optionalShadowMappingUsage = pPipelineCreationSettings->getShadowMappingUsage();
+        const auto optionalShadowMappingUsage = pPipelineConfiguration->getShadowMappingUsage();
 
         // Create pipeline.
         auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
             pRenderer,
             pPipelineManager,
-            pPipelineCreationSettings->getVertexShaderName(),
-            pPipelineCreationSettings->getAdditionalVertexShaderMacros(),
-            pPipelineCreationSettings->getPixelShaderName(),
-            pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
+            pPipelineConfiguration->getVertexShaderName(),
+            pPipelineConfiguration->getAdditionalVertexShaderMacros(),
+            pPipelineConfiguration->getPixelShaderName(),
+            pPipelineConfiguration->getAdditionalPixelShaderMacros(),
             "", // no compute shader
-            pPipelineCreationSettings->isDepthBiasEnabled(),
+            pPipelineConfiguration->isDepthBiasEnabled(),
             optionalShadowMappingUsage.has_value() &&
                 optionalShadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS,
-            pPipelineCreationSettings->isPixelBlendingEnabled()));
+            pPipelineConfiguration->isPixelBlendingEnabled()));
 
         // Generate Vulkan pipeline.
         auto optionalError = pPipeline->generateGraphicsPipeline();

@@ -6,7 +6,7 @@
 
 // Custom.
 #include "shader/general/ShaderUser.h"
-#include "render/general/pipeline/PipelineCreationSettings.h"
+#include "render/general/pipeline/PipelineConfiguration.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 
 namespace ne {
@@ -253,9 +253,9 @@ namespace ne {
          * Assigns vertex and pixel shaders to create a render specific graphics pipeline
          * (for usual rendering).
          *
-         * @param pRenderer                 Parent renderer that owns this pipeline.
-         * @param pPipelineManager          Pipeline manager that owns this pipeline.
-         * @param pPipelineCreationSettings Settings that determine pipeline usage and usage details.
+         * @param pRenderer              Parent renderer that owns this pipeline.
+         * @param pPipelineManager       Pipeline manager that owns this pipeline.
+         * @param pPipelineConfiguration Settings that determine pipeline usage and usage details.
          *
          * @return Error if one or both were not found in ShaderManager or if failed to generate Pipeline,
          * otherwise created Pipeline.
@@ -263,7 +263,7 @@ namespace ne {
         static std::variant<std::shared_ptr<Pipeline>, Error> createGraphicsPipeline(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings);
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
 
         /**
          * Assigns compute shader to create a render specific compute pipeline.

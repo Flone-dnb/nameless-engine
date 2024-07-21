@@ -11,7 +11,7 @@
 #include "shader/general/ShaderMacro.h"
 #include "render/general/pipeline/PipelineType.hpp"
 
-namespace ne{
+namespace ne {
     class Pipeline;
 
     /** Groups information about pipelines that use the same shaders. */
@@ -30,9 +30,7 @@ namespace ne{
     /** Stores pipelines of different types. */
     struct GraphicsPipelineRegistry {
         /** Map key is vertex (and pixel if specified) shader name(s). */
-        std::array<
-            std::unordered_map<std::string, ShaderPipelines>,
-            static_cast<size_t>(PipelineType::SIZE)>
+        std::array<std::unordered_map<std::string, ShaderPipelines>, static_cast<size_t>(PipelineType::SIZE)>
             vPipelineTypes;
     };
 }

@@ -89,8 +89,8 @@ set(PROJECT_SOURCES
     private/render/general/pipeline/PipelineManager.cpp
     private/render/general/pipeline/Pipeline.h
     private/render/general/pipeline/Pipeline.cpp
-    private/render/general/pipeline/PipelineCreationSettings.cpp
-    private/render/general/pipeline/PipelineCreationSettings.h
+    private/render/general/pipeline/PipelineConfiguration.cpp
+    private/render/general/pipeline/PipelineConfiguration.h
     private/render/general/pipeline/PipelineType.hpp
     private/render/general/pipeline/PipelineSharedPtr.h
     private/render/general/pipeline/PipelineSharedPtr.cpp

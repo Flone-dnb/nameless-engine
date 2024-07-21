@@ -8,7 +8,7 @@
 // Custom.
 #include "render/general/resources/frame/FrameResourcesManager.h"
 
-namespace ne{
+namespace ne {
     class Node;
 
     /**

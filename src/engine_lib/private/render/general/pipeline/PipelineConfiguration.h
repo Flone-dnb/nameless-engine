@@ -16,24 +16,15 @@ namespace ne {
     };
 
     /**
-     * Base class for pipeline creation options.
+     * Base class for pipeline options.
      *
-     * @remark In order to specify pipeline creation settings create a new object of type that derives from
+     * @remark In order to specify pipeline settings create a new object of a type that derives from
      * this class.
      */
-    class PipelineCreationSettings {
+    class PipelineConfiguration {
     public:
-        PipelineCreationSettings() = delete;
-        virtual ~PipelineCreationSettings() = default;
-
-        /**
-         * Initializes options.
-         *
-         * @param sVertexShaderName            Name of the compiled vertex shader to use.
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         */
-        PipelineCreationSettings(
-            const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros);
+        PipelineConfiguration() = delete;
+        virtual ~PipelineConfiguration() = default;
 
         /**
          * Returns additional macros to enable for vertex shader configuration.
@@ -97,6 +88,15 @@ namespace ne {
         virtual std::optional<PipelineShadowMappingUsage> getShadowMappingUsage() { return {}; }
 
     protected:
+        /**
+         * Initializes options.
+         *
+         * @param sVertexShaderName            Name of the compiled vertex shader to use.
+         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         */
+        PipelineConfiguration(
+            const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros);
+
         /** Additional macros to enable for vertex shader configuration. */
         std::set<ShaderMacro> additionalVertexShaderMacros;
 
@@ -105,10 +105,10 @@ namespace ne {
     };
 
     /** Pipeline that uses pixel/fragment shaders to draw color. */
-    class ColorPipelineCreationSettings : public PipelineCreationSettings {
+    class ColorPipelineConfiguration : public PipelineConfiguration {
     public:
-        ColorPipelineCreationSettings() = delete;
-        virtual ~ColorPipelineCreationSettings() override = default;
+        ColorPipelineConfiguration() = delete;
+        virtual ~ColorPipelineConfiguration() override = default;
 
         /**
          * Initializes options.
@@ -119,7 +119,7 @@ namespace ne {
          * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
          * @param bUsePixelBlending            `true` to enable transparency, `false` to disable.
          */
-        ColorPipelineCreationSettings(
+        ColorPipelineConfiguration(
             const std::string& sVertexShaderName,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
             const std::string& sPixelShaderName,
@@ -167,10 +167,10 @@ namespace ne {
     };
 
     /** Pipeline that only uses vertex shader to draw depth. */
-    class DepthPipelineCreationSettings : public PipelineCreationSettings {
+    class DepthPipelineConfiguration : public PipelineConfiguration {
     public:
-        DepthPipelineCreationSettings() = delete;
-        virtual ~DepthPipelineCreationSettings() override = default;
+        DepthPipelineConfiguration() = delete;
+        virtual ~DepthPipelineConfiguration() override = default;
 
         /**
          * Initializes options.
@@ -181,7 +181,7 @@ namespace ne {
          * mapping, otherwise specify which light sources will be able to use this pipeline in shadow mapping
          * and thus shadow bias should be used.
          */
-        explicit DepthPipelineCreationSettings(
+        explicit DepthPipelineConfiguration(
             const std::string& sVertexShaderName,
             const std::set<ShaderMacro>& additionalVertexShaderMacros,
             std::optional<PipelineShadowMappingUsage> shadowMappingUsage);

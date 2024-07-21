@@ -51,23 +51,23 @@ namespace ne {
     std::variant<std::shared_ptr<DirectXPso>, Error> DirectXPso::createGraphicsPso(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
-        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings) {
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration) {
         // Get shadow mapping usage.
-        const auto optionalShadowMappingUsage = pPipelineCreationSettings->getShadowMappingUsage();
+        const auto optionalShadowMappingUsage = pPipelineConfiguration->getShadowMappingUsage();
 
         // Create PSO.
         auto pPso = std::shared_ptr<DirectXPso>(new DirectXPso(
             pRenderer,
             pPipelineManager,
-            pPipelineCreationSettings->getVertexShaderName(),
-            pPipelineCreationSettings->getAdditionalVertexShaderMacros(),
-            pPipelineCreationSettings->getPixelShaderName(),
-            pPipelineCreationSettings->getAdditionalPixelShaderMacros(),
+            pPipelineConfiguration->getVertexShaderName(),
+            pPipelineConfiguration->getAdditionalVertexShaderMacros(),
+            pPipelineConfiguration->getPixelShaderName(),
+            pPipelineConfiguration->getAdditionalPixelShaderMacros(),
             "", // no compute shader
-            pPipelineCreationSettings->isDepthBiasEnabled(),
+            pPipelineConfiguration->isDepthBiasEnabled(),
             optionalShadowMappingUsage.has_value() &&
                 optionalShadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS,
-            pPipelineCreationSettings->isPixelBlendingEnabled()));
+            pPipelineConfiguration->isPixelBlendingEnabled()));
 
         // Generate graphics PSO.
         auto optionalError = pPso->generateGraphicsPso();

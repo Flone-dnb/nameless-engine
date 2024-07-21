@@ -21,14 +21,14 @@ namespace ne {
         std::unordered_map<std::string, ShaderPipelines>& pipelines,
         const std::string& sKeyToLookFor,
         const std::set<ShaderMacro>& macrosToLookFor,
-        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration,
         Material* pMaterial) {
         // Find pipeline for the specified shader(s).
         const auto foundPipelineIt = pipelines.find(sKeyToLookFor);
         if (foundPipelineIt == pipelines.end()) {
             // There are no pipelines that use this shader combination.
             return createGraphicsPipelineForMaterial(
-                pipelines, sKeyToLookFor, macrosToLookFor, std::move(pPipelineCreationSettings), pMaterial);
+                pipelines, sKeyToLookFor, macrosToLookFor, std::move(pPipelineConfiguration), pMaterial);
         }
 
         // Check if we already have a pipeline that uses the same shader macro combination.
@@ -36,7 +36,7 @@ namespace ne {
         if (shaderPipelinesIt == foundPipelineIt->second.shaderPipelines.end()) {
             // There is no pipeline that uses the same shader macros.
             return createGraphicsPipelineForMaterial(
-                pipelines, sKeyToLookFor, macrosToLookFor, std::move(pPipelineCreationSettings), pMaterial);
+                pipelines, sKeyToLookFor, macrosToLookFor, std::move(pPipelineConfiguration), pMaterial);
         }
 
         // Just create a new shared pointer to already existing pipeline.
@@ -44,15 +44,14 @@ namespace ne {
     }
 
     std::variant<PipelineSharedPtr, Error> PipelineManager::getGraphicsPipelineForMaterial(
-        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings, Material* pMaterial) {
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration, Material* pMaterial) {
         // Self check: make sure settings are not `nullptr`.
-        if (pPipelineCreationSettings == nullptr) [[unlikely]] {
+        if (pPipelineConfiguration == nullptr) [[unlikely]] {
             return Error("settings cannot be `nullptr`");
         }
 
-        const auto additionalVertexShaderMacros =
-            pPipelineCreationSettings->getAdditionalVertexShaderMacros();
-        const auto additionalPixelShaderMacros = pPipelineCreationSettings->getAdditionalPixelShaderMacros();
+        const auto additionalVertexShaderMacros = pPipelineConfiguration->getAdditionalVertexShaderMacros();
+        const auto additionalPixelShaderMacros = pPipelineConfiguration->getAdditionalPixelShaderMacros();
         {
             // Self check: make sure vertex macros have "VS_" prefix and pixel macros "PS_" prefix.
             const auto vVertexMacros = convertShaderMacrosToText(additionalVertexShaderMacros);
@@ -80,17 +79,16 @@ namespace ne {
 
         std::scoped_lock guard(mtxGraphicsPipelines.first);
 
-        const auto iPipelineTypeIndex = static_cast<size_t>(pPipelineCreationSettings->getType());
+        const auto iPipelineTypeIndex = static_cast<size_t>(pPipelineConfiguration->getType());
         const auto sKeyToLookFor = Pipeline::combineShaderNames(
-            pPipelineCreationSettings->getVertexShaderName(),
-            pPipelineCreationSettings->getPixelShaderName());
+            pPipelineConfiguration->getVertexShaderName(), pPipelineConfiguration->getPixelShaderName());
 
         // Find existing or create a new pipeline.
         return findOrCreatePipeline(
             mtxGraphicsPipelines.second.vPipelineTypes[iPipelineTypeIndex],
             sKeyToLookFor,
             additionalVertexAndPixelShaderMacros,
-            std::move(pPipelineCreationSettings),
+            std::move(pPipelineConfiguration),
             pMaterial);
     }
 
@@ -150,10 +148,10 @@ namespace ne {
         std::unordered_map<std::string, ShaderPipelines>& pipelines,
         const std::string& sShaderNames,
         const std::set<ShaderMacro>& macrosToUse,
-        std::unique_ptr<PipelineCreationSettings> pPipelineCreationSettings,
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration,
         Material* pMaterial) {
         // Create pipeline.
-        auto result = Pipeline::createGraphicsPipeline(pRenderer, this, std::move(pPipelineCreationSettings));
+        auto result = Pipeline::createGraphicsPipeline(pRenderer, this, std::move(pPipelineConfiguration));
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

@@ -4,8 +4,8 @@
 #include <cstddef>
 
 namespace ne {
-    /** Describes various pipeline types. */
-    enum class PipelineType : size_t {
+    /** Describes various graphics pipeline types. */
+    enum class GraphicsPipelineType : size_t {
         PT_OPAQUE = 0,                      //< OPAQUE is a Windows macro, thus adding a prefix
         PT_TRANSPARENT,                     //< TRANSPARENT is a Windows macro, thus adding a prefix
         PT_DEPTH_ONLY,                      //< vertex shader only

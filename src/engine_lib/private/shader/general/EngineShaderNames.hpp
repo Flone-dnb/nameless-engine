@@ -35,7 +35,7 @@ namespace ne {
              *
              * @return Shader name.
              */
-            static inline std::string getFragmentShaderName() { return "engine.pointlight.fs"; }
+            static inline std::string_view getFragmentShaderName() { return "engine.pointlight.fs"; }
         };
 
         /** Groups info about shaders used in Forward+ light culling process. */

@@ -162,31 +162,14 @@ namespace ne {
         /**
          * Constructs uninitialized pipeline.
          *
-         * @param pRenderer           Used renderer.
-         * @param pPipelineManager    Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName   Name of the compiled vertex shader to use (empty if not used).
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param sFragmentShaderName Name of the compiled pixel shader to use (empty if not used).
-         * @param additionalFragmentShaderMacros Additional macros to enable for fragment shader
-         * configuration.
-         * @param sComputeShaderName  Name of the compiled compute shader to use (empty if not used).
-         * @param bEnableDepthBias    Whether depth bias (offset) is enabled or not.
-         * @param bIsUsedForPointLightsShadowMapping Whether this pipeline is used for shadow mapping of point
-         * lights or not.
-         * @param bUsePixelBlending   Whether the pixels of the mesh that uses this pipeline should blend with
-         * existing pixels on back buffer or not (for transparency).
+         * @param pRenderer              Used renderer.
+         * @param pPipelineManager       Pipeline manager that owns this pipeline.
+         * @param pPipelineConfiguration Settings and usage details.
          */
         VulkanPipeline(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::string& sFragmentShaderName,
-            const std::set<ShaderMacro>& additionalFragmentShaderMacros = {},
-            const std::string& sComputeShaderName = "",
-            bool bEnableDepthBias = false,
-            bool bIsUsedForPointLightsShadowMapping = false,
-            bool bUsePixelBlending = false);
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
 
         /**
          * (Re)generates Vulkan pipeline and pipeline layout.

@@ -3027,9 +3027,9 @@ namespace ne {
 
         // Get pipelines to iterate over.
         const auto& shadowMappingDirectionalSpotPipelines = pGraphicsPipelines->vPipelineTypes.at(
-            static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT));
+            static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT));
         const auto& shadowMappingPointPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_POINT));
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_POINT));
 
         // Prepare lambda to set viewport size according to shadow map size.
         const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {

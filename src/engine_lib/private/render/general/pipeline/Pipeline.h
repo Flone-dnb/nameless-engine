@@ -62,7 +62,7 @@ namespace ne {
         };
 
         /**
-         * Combines shader names into one string.
+         * Combines shader names into a one string.
          *
          * @remark This function exists to avoid duplicating the shader name combination
          * formatting.
@@ -70,32 +70,14 @@ namespace ne {
          * @param sVertexShaderName  Name of the vertex shader that pipeline is using.
          * @param sPixelShaderName   Name of the pixel shader that pipeline is using. If empty only
          * vertex shader name will be returned.
+         * @param sComputeShaderName Name of the compute shader that pipeline is using. Can be empty.
          *
          * @return A (not unique) pipeline identifier.
          */
-        static std::string
-        combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName);
-
-        /**
-         * Returns name of the vertex shader that this pipeline is using.
-         *
-         * @return Empty if not using vertex shader, otherwise name of the used vertex shader.
-         */
-        std::string getVertexShaderName();
-
-        /**
-         * Returns name of the pixel shader that this pipeline is using.
-         *
-         * @return Empty if not using pixel shader, otherwise name of the used pixel shader.
-         */
-        std::string getPixelShaderName();
-
-        /**
-         * Returns name of the compute shader that this pipeline is using.
-         *
-         * @return Empty if not using compute shader, otherwise name of the used compute shader.
-         */
-        std::string getComputeShaderName();
+        static std::string combineShaderNames(
+            std::string_view sVertexShaderName,
+            std::string_view sPixelShaderName,
+            std::string_view sComputeShaderName = "");
 
         /**
          * Returns a shader configuration of the currently used shader.
@@ -106,27 +88,6 @@ namespace ne {
          * configuration.
          */
         std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
-
-        /**
-         * Tells whether this pipeline is using pixel blending or not.
-         *
-         * @return Whether this pipeline is using pixel blending or not.
-         */
-        bool isUsingPixelBlending() const;
-
-        /**
-         * Tells whether this pipeline has depth bias (offset) enabled.
-         *
-         * @return Whether depth bias is enabled or not.
-         */
-        bool isDepthBiasEnabled() const;
-
-        /**
-         * Tells whether this pipeline is used for shadow mapping of point lights.
-         *
-         * @return `true` if used, `false` otherwise.
-         */
-        bool isUsedForPointLightsShadowMapping() const;
 
         /**
          * Returns an array of materials that currently reference this Pipeline.
@@ -151,20 +112,13 @@ namespace ne {
         Renderer* getRenderer() const;
 
         /**
-         * Returns additional macros that were specified during pipeline creation to be enabled for
-         * vertex shader configuration.
+         * Returns pipeline's settings and usage details.
          *
-         * @return Additional macros to enable for vertex shader.
-         */
-        std::set<ShaderMacro> getAdditionalVertexShaderMacros() const;
-
-        /**
-         * Returns additional macros that were specified during pipeline creation to be enabled for
-         * pixel/fragment shader configuration.
+         * @warning Do not delete (free) returned pointer. It's guaranteed to live while the object is alive.
          *
-         * @return Additional macros to enable for pixel/fragment shader.
+         * @return Settings.
          */
-        std::set<ShaderMacro> getAdditionalPixelShaderMacros() const;
+        const PipelineConfiguration* getConfiguration() const;
 
         /**
          * Returns push/root constants used in the pipeline (if were specified in the shaders).
@@ -179,30 +133,14 @@ namespace ne {
         /**
          * Creates a new empty (no internal GPU resource is created) pipeline.
          *
-         * @param pRenderer          Current renderer.
-         * @param pPipelineManager   Pipeline manager that owns this pipeline.
-         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if not used).
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if not used).
-         * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
-         * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
-         * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
-         * @param bIsUsedForPointLightsShadowMapping Whether this pipeline is used for shadow mapping of point
-         * lights or not.
-         * @param bUsePixelBlending  Whether the pixels of the mesh that uses this Pipeline should blend
-         * with existing pixels on back buffer or not (for transparency).
+         * @param pRenderer              Current renderer.
+         * @param pPipelineManager       Pipeline manager that owns this pipeline.
+         * @param pPipelineConfiguration Settings and usage details.
          */
         explicit Pipeline(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::string& sPixelShaderName = "",
-            const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
-            const std::string& sComputeShaderName = "",
-            bool bEnableDepthBias = false,
-            bool bIsUsedForPointLightsShadowMapping = false,
-            bool bUsePixelBlending = false);
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
 
         /**
          * Saves shader configuration of the currently used shader.
@@ -342,46 +280,17 @@ namespace ne {
         std::pair<std::mutex, std::optional<ShaderConstantsData>> mtxShaderConstantsData;
 
         /**
-         * Additional macros that were specified during pipeline creation to be enabled for
-         * vertex shader configuration.
-         *
-         * @remark Generally used in @ref restoreInternalResources.
+         * Full shader configuration (might include renderer's configuration) of a currently used shader(s).
          */
-        std::set<ShaderMacro> additionalVertexShaderMacros;
-
-        /**
-         * Additional macros that were specified during pipeline creation to be enabled for
-         * pixel/fragment shader configuration.
-         *
-         * @remark Generally used in @ref restoreInternalResources.
-         */
-        std::set<ShaderMacro> additionalPixelShaderMacros;
-
-        /** Full shader configuration (might include renderer's configuration) of a currently used shader. */
         std::unordered_map<ShaderType, std::set<ShaderMacro>> usedShaderConfiguration;
 
+        /** Usage details of this pipeline. */
+        const std::unique_ptr<PipelineConfiguration> pPipelineConfiguration;
+
         /** Do not delete (free) this pointer. Pipeline manager that owns this Pipeline. */
-        PipelineManager* pPipelineManager = nullptr;
+        PipelineManager* const pPipelineManager = nullptr;
 
         /** Do not delete (free) this pointer. Current renderer. */
-        Renderer* pRenderer = nullptr;
-
-        /** Name of the compiled vertex shader that this Pipeline uses (empty if compute pipeline). */
-        const std::string sVertexShaderName;
-
-        /** Name of the compiled pixel shader that this Pipeline uses (empty if compute pipeline). */
-        const std::string sPixelShaderName;
-
-        /** Name of the compiled compute shader that this Pipeline uses (empty if graphics pipeline). */
-        const std::string sComputeShaderName;
-
-        /** Whether this Pipeline is using pixel blending or not. */
-        bool bIsUsingPixelBlending = false;
-
-        /** Whether depth bias (offset) should be used or not (generally used for shadow map pipelines). */
-        bool bEnableDepthBias = false;
-
-        /** Whether this pipeline is used for shadow mapping of point lights or not. */
-        bool bIsUsedForPointLightsShadowMapping = false;
+        Renderer* const pRenderer = nullptr;
     };
 } // namespace ne

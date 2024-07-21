@@ -106,10 +106,10 @@ TEST_CASE("there are only 2 shadow mapping pipelines per vertex shader") {
                 // Get shadow mapping pipelines.
                 const auto& directionalSpotPipelines =
                     pMtxPipelines->second.vPipelineTypes[static_cast<size_t>(
-                        PipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT)];
+                        GraphicsPipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT)];
                 const auto& pointPipelines =
                     pMtxPipelines->second
-                        .vPipelineTypes[static_cast<size_t>(PipelineType::PT_SHADOW_MAPPING_POINT)];
+                        .vPipelineTypes[static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_POINT)];
 
                 // Check the number of pipelines.
                 REQUIRE(directionalSpotPipelines.size() == 1);

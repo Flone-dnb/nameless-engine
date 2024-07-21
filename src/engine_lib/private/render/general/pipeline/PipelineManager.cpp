@@ -77,11 +77,17 @@ namespace ne {
             additionalVertexAndPixelShaderMacros.insert(macro);
         }
 
+        // Prepare to find or create a pipeline.
         std::scoped_lock guard(mtxGraphicsPipelines.first);
 
-        const auto iPipelineTypeIndex = static_cast<size_t>(pPipelineConfiguration->getType());
         const auto sKeyToLookFor = Pipeline::combineShaderNames(
             pPipelineConfiguration->getVertexShaderName(), pPipelineConfiguration->getPixelShaderName());
+
+        auto optionalGraphicsType = pPipelineConfiguration->getGraphicsType();
+        if (!optionalGraphicsType.has_value()) [[unlikely]] {
+            return Error(std::format("expected pipeline \"{}\" to be a graphics pipeline", sKeyToLookFor));
+        }
+        const auto iPipelineTypeIndex = static_cast<size_t>(optionalGraphicsType.value());
 
         // Find existing or create a new pipeline.
         return findOrCreatePipeline(

@@ -1055,9 +1055,9 @@ namespace ne {
 
         // Get pipelines to iterate over.
         const auto& opaquePipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_OPAQUE));
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(GraphicsPipelineType::PT_OPAQUE));
         const auto& transparentPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(PipelineType::PT_TRANSPARENT));
+            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(GraphicsPipelineType::PT_TRANSPARENT));
 
         // Attempt to minimize allocations in the code below.
         meshesInFrustumLastFrame.vOpaquePipelines.reserve(opaquePipelines.size());

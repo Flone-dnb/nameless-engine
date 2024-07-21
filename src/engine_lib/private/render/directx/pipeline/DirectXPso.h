@@ -123,30 +123,14 @@ namespace ne {
         /**
          * Constructs uninitialized pipeline.
          *
-         * @param pRenderer          Used renderer.
-         * @param pPipelineManager   Pipeline manager that owns this PSO.
-         * @param sVertexShaderName  Name of the compiled vertex shader to use (empty if not used).
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param sPixelShaderName   Name of the compiled pixel shader to use (empty if not used).
-         * @param additionalPixelShaderMacros Additional macros to enable for pixel shader configuration.
-         * @param sComputeShaderName Name of the compiled compute shader to use (empty if not used).
-         * @param bEnableDepthBias   Whether depth bias (offset) is enabled or not.
-         * @param bIsUsedForPointLightsShadowMapping Whether this pipeline is used for shadow mapping of point
-         * lights or not.
-         * @param bUsePixelBlending  Whether the pixels of the mesh that uses this PSO should blend with
-         * existing pixels on back buffer or not (for transparency).
+         * @param pRenderer              Used renderer.
+         * @param pPipelineManager       Pipeline manager that owns this PSO.
+         * @param pPipelineConfiguration Settings and usage details.
          */
         explicit DirectXPso(
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
-            const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::string& sPixelShaderName,
-            const std::set<ShaderMacro>& additionalPixelShaderMacros = {},
-            const std::string& sComputeShaderName = "",
-            bool bEnableDepthBias = false,
-            bool bIsUsedForPointLightsShadowMapping = false,
-            bool bUsePixelBlending = false);
+            std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
 
         /**
          * (Re)generates DirectX graphics pipeline state object.

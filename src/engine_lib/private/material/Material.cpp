@@ -799,8 +799,9 @@ namespace ne {
         bool bNeedNewPipeline = false;
 
         // Get pipeline macros.
-        const auto currentAdditionalPixelMacros =
-            mtxInternalResources.second.pColorPipeline.getPipeline()->getAdditionalPixelShaderMacros();
+        const auto currentAdditionalPixelMacros = mtxInternalResources.second.pColorPipeline.getPipeline()
+                                                      ->getConfiguration()
+                                                      ->getAdditionalPixelShaderMacros();
         const auto bPipelineDefinedDiffuseTextureMacro =
             currentAdditionalPixelMacros.find(ShaderMacro::PS_USE_DIFFUSE_TEXTURE) !=
             currentAdditionalPixelMacros.end();

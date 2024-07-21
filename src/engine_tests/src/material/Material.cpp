@@ -616,7 +616,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
 
                     auto& mtxOpaquePipelines =
                         pMtxGraphicsPipelines->second
-                            .vPipelineTypes[static_cast<size_t>(PipelineType::PT_OPAQUE)];
+                            .vPipelineTypes[static_cast<size_t>(GraphicsPipelineType::PT_OPAQUE)];
 
                     // Make sure opaque pipelines don't have transparency macro defined.
                     for (const auto& [sShaderNames, pipelines] : mtxOpaquePipelines) {

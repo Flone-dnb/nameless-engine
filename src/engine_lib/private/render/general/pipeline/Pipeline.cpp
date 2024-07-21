@@ -17,26 +17,10 @@ namespace ne {
     Pipeline::Pipeline(
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::string& sPixelShaderName,
-        const std::set<ShaderMacro>& additionalPixelShaderMacros,
-        const std::string& sComputeShaderName,
-        bool bEnableDepthBias,
-        bool bIsUsedForPointLightsShadowMapping,
-        bool bUsePixelBlending)
-        : ShaderUser(pRenderer->getShaderManager()), sVertexShaderName(sVertexShaderName),
-          sPixelShaderName(sPixelShaderName), sComputeShaderName(sComputeShaderName) {
-        this->pRenderer = pRenderer;
-        this->pPipelineManager = pPipelineManager;
-        this->bEnableDepthBias = bEnableDepthBias;
-        this->bIsUsedForPointLightsShadowMapping = bIsUsedForPointLightsShadowMapping;
-
-        this->additionalVertexShaderMacros = additionalVertexShaderMacros;
-        this->additionalPixelShaderMacros = additionalPixelShaderMacros;
-
-        bIsUsingPixelBlending = bUsePixelBlending;
-    }
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration)
+        : ShaderUser(pRenderer->getShaderManager()),
+          pPipelineConfiguration(std::move(pPipelineConfiguration)), pPipelineManager(pPipelineManager),
+          pRenderer(pRenderer) {}
 
     void
     Pipeline::saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration) {
@@ -62,20 +46,20 @@ namespace ne {
         mtxShaderConstantsData.second = std::move(data);
     }
 
-    std::string
-    Pipeline::combineShaderNames(const std::string& sVertexShaderName, const std::string& sPixelShaderName) {
-        if (sPixelShaderName.empty()) {
-            // Just return vertex shader name if pixel shader is not used.
-            return sVertexShaderName;
+    std::string Pipeline::combineShaderNames(
+        std::string_view sVertexShaderName,
+        std::string_view sPixelShaderName,
+        std::string_view sComputeShaderName) {
+        if (!sComputeShaderName.empty()) {
+            return std::string(sComputeShaderName);
         }
-        return sVertexShaderName + " / " + sPixelShaderName;
+
+        if (sPixelShaderName.empty()) {
+            return std::string(sVertexShaderName);
+        }
+
+        return std::format("{} / {}", sVertexShaderName, sPixelShaderName);
     }
-
-    std::string Pipeline::getVertexShaderName() { return sVertexShaderName; }
-
-    std::string Pipeline::getPixelShaderName() { return sPixelShaderName; }
-
-    std::string Pipeline::getComputeShaderName() { return sComputeShaderName; }
 
     std::optional<std::set<ShaderMacro>> Pipeline::getCurrentShaderConfiguration(ShaderType shaderType) {
         auto it = usedShaderConfiguration.find(shaderType);
@@ -85,12 +69,6 @@ namespace ne {
 
         return it->second;
     }
-
-    bool Pipeline::isUsingPixelBlending() const { return bIsUsingPixelBlending; }
-
-    bool Pipeline::isDepthBiasEnabled() const { return bEnableDepthBias; }
-
-    bool Pipeline::isUsedForPointLightsShadowMapping() const { return bIsUsedForPointLightsShadowMapping; }
 
     std::pair<std::mutex, std::unordered_set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
         return &mtxMaterialsThatUseThisPipeline;
@@ -181,18 +159,10 @@ namespace ne {
     }
 
     std::string Pipeline::getPipelineIdentifier() const {
-        if (!sComputeShaderName.empty()) {
-            return sComputeShaderName;
-        }
-        return combineShaderNames(sVertexShaderName, sPixelShaderName);
-    }
-
-    std::set<ShaderMacro> Pipeline::getAdditionalVertexShaderMacros() const {
-        return additionalVertexShaderMacros;
-    }
-
-    std::set<ShaderMacro> Pipeline::getAdditionalPixelShaderMacros() const {
-        return additionalPixelShaderMacros;
+        return combineShaderNames(
+            pPipelineConfiguration->getVertexShaderName(),
+            pPipelineConfiguration->getPixelShaderName(),
+            pPipelineConfiguration->getComputeShaderName());
     }
 
     std::pair<std::mutex, std::optional<Pipeline::ShaderConstantsData>>* Pipeline::getShaderConstants() {
@@ -286,10 +256,12 @@ namespace ne {
         // Notify manager (this call might cause this object to be deleted thus we used a
         // nested scope for mutex).
         pPipelineManager->onPipelineNoLongerUsedByComputeShaderInterface(
-            sComputeShaderName, pComputeShaderInterface);
+            std::string(pPipelineConfiguration->getComputeShaderName()), pComputeShaderInterface);
     }
 
     Renderer* Pipeline::getRenderer() const { return pRenderer; }
+
+    const PipelineConfiguration* Pipeline::getConfiguration() const { return pPipelineConfiguration.get(); }
 
     void Pipeline::ShaderConstantsData::findOffsetAndCopySpecialValueToConstant(
         Pipeline* pPipeline, const char* pConstantName, unsigned int iValueToCopy) {

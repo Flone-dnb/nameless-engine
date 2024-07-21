@@ -19,6 +19,12 @@
 
 namespace ne {
 
+    VulkanPipeline::VulkanPipeline(
+        Renderer* pRenderer,
+        PipelineManager* pPipelineManager,
+        std::unique_ptr<PipelineConfiguration> pPipelineConfiguration)
+        : Pipeline(pRenderer, pPipelineManager, std::move(pPipelineConfiguration)) {}
+
     VulkanPipeline::~VulkanPipeline() {
         std::scoped_lock guard(mtxInternalResources.first);
 
@@ -60,22 +66,9 @@ namespace ne {
         Renderer* pRenderer,
         PipelineManager* pPipelineManager,
         std::unique_ptr<PipelineConfiguration> pPipelineConfiguration) {
-        // Get shadow mapping usage.
-        const auto optionalShadowMappingUsage = pPipelineConfiguration->getShadowMappingUsage();
-
         // Create pipeline.
-        auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
-            pRenderer,
-            pPipelineManager,
-            pPipelineConfiguration->getVertexShaderName(),
-            pPipelineConfiguration->getAdditionalVertexShaderMacros(),
-            pPipelineConfiguration->getPixelShaderName(),
-            pPipelineConfiguration->getAdditionalPixelShaderMacros(),
-            "", // no compute shader
-            pPipelineConfiguration->isDepthBiasEnabled(),
-            optionalShadowMappingUsage.has_value() &&
-                optionalShadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS,
-            pPipelineConfiguration->isPixelBlendingEnabled()));
+        auto pPipeline = std::shared_ptr<VulkanPipeline>(
+            new VulkanPipeline(pRenderer, pPipelineManager, std::move(pPipelineConfiguration)));
 
         // Generate Vulkan pipeline.
         auto optionalError = pPipeline->generateGraphicsPipeline();
@@ -90,8 +83,8 @@ namespace ne {
     std::variant<std::shared_ptr<VulkanPipeline>, Error> VulkanPipeline::createComputePipeline(
         Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName) {
         // Create pipeline.
-        auto pPipeline = std::shared_ptr<VulkanPipeline>(
-            new VulkanPipeline(pRenderer, pPipelineManager, "", {}, "", {}, sComputeShaderName));
+        auto pPipeline = std::shared_ptr<VulkanPipeline>(new VulkanPipeline(
+            pRenderer, pPipelineManager, std::make_unique<ComputePipelineConfiguration>(sComputeShaderName)));
 
         // Generate Vulkan pipeline.
         auto optionalError = pPipeline->generateComputePipelineForShader(sComputeShaderName);
@@ -207,39 +200,16 @@ namespace ne {
         return range;
     }
 
-    VulkanPipeline::VulkanPipeline(
-        Renderer* pRenderer,
-        PipelineManager* pPipelineManager,
-        const std::string& sVertexShaderName,
-        const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::string& sFragmentShaderName,
-        const std::set<ShaderMacro>& additionalFragmentShaderMacros,
-        const std::string& sComputeShaderName,
-        bool bEnableDepthBias,
-        bool bIsUsedForPointLightsShadowMapping,
-        bool bUsePixelBlending)
-        : Pipeline(
-              pRenderer,
-              pPipelineManager,
-              sVertexShaderName,
-              additionalVertexShaderMacros,
-              sFragmentShaderName,
-              additionalFragmentShaderMacros,
-              sComputeShaderName,
-              bEnableDepthBias,
-              bIsUsedForPointLightsShadowMapping,
-              bUsePixelBlending) {}
-
     std::optional<Error> VulkanPipeline::generateGraphicsPipeline() {
         // Prepare pipeline type.
-        const auto bDepthOnlyPipeline = getPixelShaderName().empty();
+        const auto bDepthOnlyPipeline = getConfiguration()->getPixelShaderName().empty();
 
         // Make sure pixel shader is specified when blending is enabled.
-        if (isUsingPixelBlending() && bDepthOnlyPipeline) [[unlikely]] {
+        if (getConfiguration()->isPixelBlendingEnabled() && bDepthOnlyPipeline) [[unlikely]] {
             return Error(std::format(
                 "unable to create a pipeline with pixel blending because fragment shader is not specified "
                 "(vertex shader \"{}\")",
-                getVertexShaderName()));
+                getConfiguration()->getVertexShaderName()));
         }
 
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
@@ -253,13 +223,15 @@ namespace ne {
         }
 
         // Assign vertex shader.
-        if (addShader(getVertexShaderName())) {
-            return Error(std::format("unable to find a shader named \"{}\"", getVertexShaderName()));
+        if (addShader(std::string(getConfiguration()->getVertexShaderName()))) {
+            return Error(std::format(
+                "unable to find a shader named \"{}\"", getConfiguration()->getVertexShaderName()));
         }
 
         if (!bDepthOnlyPipeline) {
-            if (addShader(getPixelShaderName())) {
-                return Error(std::format("unable to find a shader named \"{}\"", getPixelShaderName()));
+            if (addShader(std::string(getConfiguration()->getPixelShaderName()))) {
+                return Error(std::format(
+                    "unable to find a shader named \"{}\"", getConfiguration()->getPixelShaderName()));
             }
         }
 
@@ -269,14 +241,14 @@ namespace ne {
 
         // Get vertex shader.
         const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
-        auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(
-            pVertexShaderPack->getShader(getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
+        auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader(
+            getConfiguration()->getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
 
         std::shared_ptr<GlslShader> pFragmentShader;
         if (!bDepthOnlyPipeline) {
             const auto pFragmentShaderPack = getShader(ShaderType::FRAGMENT_SHADER).value();
             pFragmentShader = std::dynamic_pointer_cast<GlslShader>(pFragmentShaderPack->getShader(
-                getAdditionalPixelShaderMacros(), fullFragmentShaderConfiguration));
+                getConfiguration()->getAdditionalPixelShaderMacros(), fullFragmentShaderConfiguration));
         }
 
         // Get Vulkan renderer.
@@ -287,7 +259,10 @@ namespace ne {
 
         // Create graphics pipeline.
         auto optionalError = createGraphicsPipeline(
-            pVulkanRenderer, pVertexShader.get(), pFragmentShader.get(), isUsingPixelBlending());
+            pVulkanRenderer,
+            pVertexShader.get(),
+            pFragmentShader.get(),
+            getConfiguration()->isPixelBlendingEnabled());
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();
@@ -586,7 +561,7 @@ namespace ne {
         rasterizerStateInfo.depthBiasSlopeFactor = 0.0F;
 
         // Specify depth bias settings.
-        if (isDepthBiasEnabled()) {
+        if (getConfiguration()->isDepthBiasEnabled()) {
             rasterizerStateInfo.depthBiasEnable = VK_TRUE;
             rasterizerStateInfo.depthBiasConstantFactor = static_cast<float>(
                 ShadowMapManager::getShadowPassDepthBias() /
@@ -603,8 +578,9 @@ namespace ne {
         VkPipelineMultisampleStateCreateInfo multisamplingStateInfo{};
         multisamplingStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisamplingStateInfo.sampleShadingEnable = VK_FALSE;
-        multisamplingStateInfo.rasterizationSamples =
-            isDepthBiasEnabled() ? VK_SAMPLE_COUNT_1_BIT : pVulkanRenderer->getMsaaSampleCount();
+        multisamplingStateInfo.rasterizationSamples = getConfiguration()->isDepthBiasEnabled()
+                                                          ? VK_SAMPLE_COUNT_1_BIT
+                                                          : pVulkanRenderer->getMsaaSampleCount();
         multisamplingStateInfo.minSampleShading = 1.0F;
         multisamplingStateInfo.pSampleMask = nullptr;
         multisamplingStateInfo.alphaToOneEnable = VK_FALSE;
@@ -623,7 +599,7 @@ namespace ne {
         depthStencilStateInfo.front = {}; // for stencil
         depthStencilStateInfo.back = {};  // for stencil
 
-        if (!isDepthBiasEnabled() && pFragmentShader != nullptr) {
+        if (!getConfiguration()->isDepthBiasEnabled() && pFragmentShader != nullptr) {
             // This is main pass pipeline.
 
             // Disable depth writes because depth buffer will be filled during depth prepass
@@ -729,13 +705,14 @@ namespace ne {
         // Specify render pass.
         pipelineInfo.subpass = 0;
         if (pFragmentShader != nullptr) {
-            if (isUsedForPointLightsShadowMapping()) {
+            auto shadowUsage = getConfiguration()->getShadowMappingUsage();
+            if (shadowUsage.has_value() && *shadowUsage == PipelineShadowMappingUsage::POINT_LIGHTS) {
                 pipelineInfo.renderPass = pVulkanRenderer->getShadowMappingRenderPass(true);
             } else {
                 pipelineInfo.renderPass = pVulkanRenderer->getMainRenderPass();
             }
         } else {
-            if (isDepthBiasEnabled()) {
+            if (getConfiguration()->isDepthBiasEnabled()) {
                 pipelineInfo.renderPass = pVulkanRenderer->getShadowMappingRenderPass(false);
             } else {
                 pipelineInfo.renderPass = pVulkanRenderer->getDepthOnlyRenderPass();
@@ -744,7 +721,7 @@ namespace ne {
 
         // Specify dynamic state.
         std::vector<VkDynamicState> vDynamicStates;
-        if (isDepthBiasEnabled()) {
+        if (getConfiguration()->isDepthBiasEnabled()) {
             // We will change viewport/scissor depending on the shadow map size.
             vDynamicStates = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
         }

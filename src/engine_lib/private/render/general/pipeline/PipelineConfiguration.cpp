@@ -15,21 +15,21 @@ namespace ne {
           additionalPixelShaderMacros(std::move(additionalPixelShaderMacros)),
           sPixelShaderName(sPixelShaderName), bUsePixelBlending(bUsePixelBlending) {}
 
-    PipelineType ColorPipelineConfiguration::getType() {
+    std::optional<GraphicsPipelineType> ColorPipelineConfiguration::getGraphicsType() const {
         if (bUsePixelBlending) {
-            return PipelineType::PT_TRANSPARENT;
+            return GraphicsPipelineType::PT_TRANSPARENT;
         }
 
-        return PipelineType::PT_OPAQUE;
+        return GraphicsPipelineType::PT_OPAQUE;
     }
 
-    std::set<ShaderMacro> ColorPipelineConfiguration::getAdditionalPixelShaderMacros() {
+    std::set<ShaderMacro> ColorPipelineConfiguration::getAdditionalPixelShaderMacros() const {
         return additionalPixelShaderMacros;
     }
 
-    std::string ColorPipelineConfiguration::getPixelShaderName() { return sPixelShaderName; }
+    std::string_view ColorPipelineConfiguration::getPixelShaderName() const { return sPixelShaderName; }
 
-    bool ColorPipelineConfiguration::isPixelBlendingEnabled() { return bUsePixelBlending; }
+    bool ColorPipelineConfiguration::isPixelBlendingEnabled() const { return bUsePixelBlending; }
 
     DepthPipelineConfiguration::DepthPipelineConfiguration(
         const std::string& sVertexShaderName,
@@ -43,36 +43,43 @@ namespace ne {
         }
     }
 
-    PipelineType DepthPipelineConfiguration::getType() {
+    std::optional<GraphicsPipelineType> DepthPipelineConfiguration::getGraphicsType() const {
         if (shadowMappingUsage.has_value()) {
             if (shadowMappingUsage.value() == PipelineShadowMappingUsage::DIRECTIONAL_AND_SPOT_LIGHTS) {
-                return PipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT;
+                return GraphicsPipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT;
             }
 
-            return PipelineType::PT_SHADOW_MAPPING_POINT;
+            return GraphicsPipelineType::PT_SHADOW_MAPPING_POINT;
         }
 
-        return PipelineType::PT_DEPTH_ONLY;
+        return GraphicsPipelineType::PT_DEPTH_ONLY;
     }
 
-    bool DepthPipelineConfiguration::isDepthBiasEnabled() { return shadowMappingUsage.has_value(); }
+    bool DepthPipelineConfiguration::isDepthBiasEnabled() const { return shadowMappingUsage.has_value(); }
 
-    std::string DepthPipelineConfiguration::getPixelShaderName() {
+    std::string_view DepthPipelineConfiguration::getPixelShaderName() const {
         if (shadowMappingUsage.has_value() &&
             shadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS) {
-            // Usage a special fragment shader for shadow passes.
+            // Use a special fragment shader for shadow passes.
             return EngineShaderNames::PointLight::getFragmentShaderName();
         }
 
         return ""; // no pixel/fragment shader
     }
 
-    std::optional<PipelineShadowMappingUsage> DepthPipelineConfiguration::getShadowMappingUsage() {
+    std::optional<PipelineShadowMappingUsage> DepthPipelineConfiguration::getShadowMappingUsage() const {
         return shadowMappingUsage;
     }
 
     PipelineConfiguration::PipelineConfiguration(
         const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros)
         : additionalVertexShaderMacros(additionalVertexShaderMacros), sVertexShaderName(sVertexShaderName) {}
+
+    ComputePipelineConfiguration::ComputePipelineConfiguration(const std::string& sComputeShaderName)
+        : PipelineConfiguration("", {}), sComputeShaderName(sComputeShaderName) {}
+
+    std::optional<GraphicsPipelineType> ComputePipelineConfiguration::getGraphicsType() const { return {}; }
+
+    std::string_view ComputePipelineConfiguration::getComputeShaderName() const { return sComputeShaderName; }
 
 }

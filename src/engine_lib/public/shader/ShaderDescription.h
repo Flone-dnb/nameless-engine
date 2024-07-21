@@ -97,7 +97,7 @@ namespace ne {
          * "value" (no value if empty).
          */
         ShaderDescription(
-            const std::string& sShaderName,
+            std::string_view sShaderName,
             const std::filesystem::path& pathToShaderFile,
             ShaderType shaderType,
             std::optional<VertexFormat> vertexFormat,

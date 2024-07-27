@@ -465,73 +465,28 @@ namespace ne {
                 sShaderResourceName));
         }
 
-        // Get pipeline's internal resources.
-        const auto pMtxPipelineInternalResources = pPipeline->getInternalResources();
+        std::scoped_lock guard(mtxInternalResources.first);
 
-        // Get both pipeline resources and internal resources.
-        std::scoped_lock guard(mtxInternalResources.first, pMtxPipelineInternalResources->first);
-
-        // Get internal GPU resource.
-        const auto pInternalStorageResource =
-            dynamic_cast<VulkanResource*>(mtxInternalResources.second.pStorageBuffer->getInternalResource());
-        if (pInternalStorageResource == nullptr) [[unlikely]] {
-            return Error("expected internal GPU resource to be a Vulkan resource");
+        // Gather buffers to bind.
+        const auto pInternalResource = mtxInternalResources.second.pStorageBuffer->getInternalResource();
+        std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vBuffers;
+        for (size_t i = 0; i < vBuffers.size(); i++) {
+            vBuffers[i] = pInternalResource;
         }
 
-        // Get internal VkBuffer.
-        const auto pInternalVkBuffer = pInternalStorageResource->getInternalBufferResource();
-
-        // Get logical device to be used.
-        const auto pLogicalDevice = pRenderer->getLogicalDevice();
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("logical device is `nullptr`");
-        }
-
-        // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            // Prepare info to bind storage buffer slot to descriptor.
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = pInternalVkBuffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = iElementSizeInBytes * mtxInternalResources.second.iCapacity;
-
-            // Bind reserved space to descriptor.
-            VkWriteDescriptorSet descriptorUpdateInfo{};
-            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorUpdateInfo.dstSet =
-                pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
-            descriptorUpdateInfo.dstBinding = iBindingIndex;              // descriptor binding index
-            descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-            descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
-            descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
-
-            // Update descriptor.
-            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        // Bind to all pipelines.
+        auto optionalError =
+            pPipeline->bindBuffersIfUsed(vBuffers, sHandledResourceName, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
         return {};
     }
 
     std::optional<Error> VulkanStorageResourceArray::updateDescriptors(VulkanRenderer* pVulkanRenderer) {
-        // Get internal resources.
         std::scoped_lock guard(mtxInternalResources.first);
-
-        // Get internal GPU resource.
-        const auto pInternalStorageResource =
-            dynamic_cast<VulkanResource*>(mtxInternalResources.second.pStorageBuffer->getInternalResource());
-        if (pInternalStorageResource == nullptr) [[unlikely]] {
-            return Error("expected internal GPU resource to be a Vulkan resource");
-        }
-
-        // Get internal VkBuffer.
-        const auto pInternalVkBuffer = pInternalStorageResource->getInternalBufferResource();
-
-        // Get logical device to be used later.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("logical device is `nullptr`");
-        }
 
         // Get pipeline manager.
         const auto pPipelineManager = pVulkanRenderer->getPipelineManager();
@@ -539,62 +494,19 @@ namespace ne {
             return Error("pipeline manager is `nullptr`");
         }
 
-        // Get graphics pipelines.
-        const auto pMtxGraphicsPipelines = pPipelineManager->getGraphicsPipelines();
-        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
+        // Gather buffers to bind.
+        const auto pInternalResource = mtxInternalResources.second.pStorageBuffer->getInternalResource();
+        std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vBuffers;
+        for (size_t i = 0; i < vBuffers.size(); i++) {
+            vBuffers[i] = pInternalResource;
+        }
 
-        // Iterate over graphics pipelines of all types.
-        for (auto& pipelinesOfSpecificType : pMtxGraphicsPipelines->second.vPipelineTypes) {
-
-            // Iterate over all active shader combinations.
-            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
-
-                // Iterate over all active unique material macros combinations (for example:
-                // if we have 2 materials where one uses diffuse texture (defined DIFFUSE_TEXTURE
-                // macro for shaders) and the second one is not we will have 2 pipelines here).
-                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
-
-                    // Convert to a Vulkan pipeline.
-                    const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
-                    if (pVulkanPipeline == nullptr) [[unlikely]] {
-                        return Error("expected a Vulkan pipeline");
-                    }
-
-                    // Get pipeline's internal resources.
-                    const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-                    std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
-
-                    // See if this pipeline uses a resource we are handling.
-                    auto it =
-                        pMtxPipelineInternalResources->second.resourceBindings.find(sHandledResourceName);
-                    if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-                        continue;
-                    }
-
-                    // Update one descriptor in set per frame resource.
-                    for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-                        // Prepare info to bind storage buffer slot to descriptor.
-                        VkDescriptorBufferInfo bufferInfo{};
-                        bufferInfo.buffer = pInternalVkBuffer;
-                        bufferInfo.offset = 0;
-                        bufferInfo.range = iElementSizeInBytes * mtxInternalResources.second.iCapacity;
-
-                        // Bind reserved space to descriptor.
-                        VkWriteDescriptorSet descriptorUpdateInfo{};
-                        descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                        descriptorUpdateInfo.dstSet = pMtxPipelineInternalResources->second
-                                                          .vDescriptorSets[i]; // descriptor set to update
-                        descriptorUpdateInfo.dstBinding = it->second;          // descriptor binding index
-                        descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-                        descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                        descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
-                        descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
-
-                        // Update descriptor.
-                        vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
-                    }
-                }
-            }
+        // Bind to all pipelines.
+        auto optionalError = pPipelineManager->bindBuffersToAllVulkanPipelinesIfUsed(
+            vBuffers, sHandledResourceName, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
         return {};

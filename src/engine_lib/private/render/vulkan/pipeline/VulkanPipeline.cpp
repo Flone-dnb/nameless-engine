@@ -96,6 +96,131 @@ namespace ne {
         return pPipeline;
     }
 
+    std::optional<Error> VulkanPipeline::bindBuffersIfUsed(
+        const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+        const std::string& sShaderResourceName,
+        VkDescriptorType descriptorType) {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // See if this pipeline uses this resource.
+        auto resourceIt = mtxInternalResources.second.resourceBindings.find(sShaderResourceName);
+        if (resourceIt == mtxInternalResources.second.resourceBindings.end()) { // don't mark as unlikely
+            // That's OK, a common situation, just return.
+            return {};
+        }
+        const auto iBindingIndex = resourceIt->second;
+
+        // Gather VkBuffers to bind.
+        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vVkBuffersToBind;
+        for (size_t i = 0; i < vVkBuffersToBind.size(); i++) {
+            // Convert to Vulkan resource.
+            const auto pVulkanResource = dynamic_cast<VulkanResource*>(vResources[i]);
+            if (pVulkanResource == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan resource");
+            }
+
+            // Save buffer resource.
+            vVkBuffersToBind[i] = pVulkanResource->getInternalBufferResource();
+        }
+
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a vulkan renderer");
+        }
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Update one descriptor in set per frame resource.
+        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            // Prepare info to bind storage buffer slot to descriptor.
+            VkDescriptorBufferInfo bufferInfo{};
+            bufferInfo.buffer = vVkBuffersToBind[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = vResources[0]->getElementCount() * vResources[0]->getElementSizeInBytes();
+
+            // Bind reserved space to descriptor.
+            VkWriteDescriptorSet descriptorUpdateInfo{};
+            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorUpdateInfo.dstSet =
+                mtxInternalResources.second.vDescriptorSets[i]; // descriptor set to update
+            descriptorUpdateInfo.dstBinding = iBindingIndex;    // descriptor binding index
+            descriptorUpdateInfo.dstArrayElement = 0;           // first descriptor in array to update
+            descriptorUpdateInfo.descriptorType = descriptorType;
+            descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
+            descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
+
+            // Update descriptor.
+            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        }
+
+        return {};
+    }
+
+    std::optional<Error> VulkanPipeline::bindImageIfUsed(
+        GpuResource* pImageResourceToBind,
+        std::string_view sShaderResourceName,
+        VkDescriptorType descriptorType,
+        VkImageLayout imageLayout,
+        VkSampler pSampler) {
+        std::scoped_lock guard(mtxInternalResources.first);
+
+        // See if this pipeline uses this resource.
+        auto resourceIt = mtxInternalResources.second.resourceBindings.find(sShaderResourceName);
+        if (resourceIt == mtxInternalResources.second.resourceBindings.end()) {
+            // That's OK, a common situation, just return.
+            return {};
+        }
+        const auto iBindingIndex = resourceIt->second;
+
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            return Error("expected a vulkan renderer");
+        }
+
+        // Get logical device.
+        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        if (pLogicalDevice == nullptr) [[unlikely]] {
+            return Error("expected logical device to be valid");
+        }
+
+        // Convert to Vulkan resource.
+        const auto pVulkanImage = dynamic_cast<VulkanResource*>(pImageResourceToBind);
+        if (pVulkanImage == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan resource");
+        }
+
+        // Update one descriptor in set per frame resource.
+        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            // Prepare info to bind an image view to descriptor.
+            VkDescriptorImageInfo imageInfo{};
+            imageInfo.imageLayout = imageLayout;
+            imageInfo.imageView = pVulkanImage->getInternalImageView();
+            imageInfo.sampler = pSampler;
+
+            // Bind reserved space to descriptor.
+            VkWriteDescriptorSet descriptorUpdateInfo{};
+            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorUpdateInfo.dstSet =
+                mtxInternalResources.second.vDescriptorSets[i]; // descriptor set to update
+            descriptorUpdateInfo.dstBinding = iBindingIndex;    // descriptor binding index
+            descriptorUpdateInfo.dstArrayElement = 0;           // first descriptor in array to update
+            descriptorUpdateInfo.descriptorType = descriptorType;
+            descriptorUpdateInfo.descriptorCount = 1;     // how much descriptors in array to update
+            descriptorUpdateInfo.pImageInfo = &imageInfo; // descriptor refers to image data
+
+            // Update descriptor.
+            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        }
+
+        return {};
+    }
+
     std::optional<Error> VulkanPipeline::releaseInternalResources() {
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
@@ -171,7 +296,7 @@ namespace ne {
 
     std::variant<VkPushConstantRange, Error> VulkanPipeline::definePushConstants(
         const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
-        const std::unordered_map<std::string, uint32_t>& resourceBindings) {
+        const std::unordered_map<std::string, uint32_t, StdStringHash, std::equal_to<>>& resourceBindings) {
         std::scoped_lock guard(mtxInternalResources.first);
 
         // Make sure push constants are specified.

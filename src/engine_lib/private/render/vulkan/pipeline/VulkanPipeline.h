@@ -8,6 +8,7 @@
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
+#include "misc/StdHashes.hpp"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -61,7 +62,7 @@ namespace ne {
              * @remark Generally used to bind/update data of some GLSL resource to a specific
              * descriptor in a descriptor set.
              */
-            std::unordered_map<std::string, uint32_t> resourceBindings;
+            std::unordered_map<std::string, uint32_t, StdStringHash, std::equal_to<>> resourceBindings;
 
             /**
              * Stores pairs of "shader resource name" - "shader array index manager".
@@ -124,6 +125,40 @@ namespace ne {
          */
         static std::variant<std::shared_ptr<VulkanPipeline>, Error> createComputePipeline(
             Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName);
+
+        /**
+         * Binds the specified GPU resources (buffers, not images) to this pipeline if it uses the specified
+         * shader resource.
+         *
+         * @param vResources          Resources to bind.
+         * @param sShaderResourceName Name of the shader resource (name from shader code) to bind to.
+         * @param descriptorType      Type of the descriptor to bind.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindBuffersIfUsed(
+            const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+            const std::string& sShaderResourceName,
+            VkDescriptorType descriptorType);
+
+        /**
+         * Binds the specified GPU resource (image, not buffer) to this pipeline if it uses the specified
+         * shader resource.
+         *
+         * @param pImageResourceToBind Image to bind.
+         * @param sShaderResourceName  Name of the shader resource (name from shader code) to bind to.
+         * @param descriptorType       Type of the descriptor to bind.
+         * @param imageLayout          Layout of the image.
+         * @param pSampler             Sampler to use for the image.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindImageIfUsed(
+            GpuResource* pImageResourceToBind,
+            std::string_view sShaderResourceName,
+            VkDescriptorType descriptorType,
+            VkImageLayout imageLayout,
+            VkSampler pSampler);
 
         /**
          * Returns internal resources that this pipeline uses.
@@ -248,7 +283,8 @@ namespace ne {
          */
         std::variant<VkPushConstantRange, Error> definePushConstants(
             const std::unordered_map<std::string, size_t>& pushConstantUintFieldOffsets,
-            const std::unordered_map<std::string, uint32_t>& resourceBindings);
+            const std::unordered_map<std::string, uint32_t, StdStringHash, std::equal_to<>>&
+                resourceBindings);
 
         /**
          * Internal resources.

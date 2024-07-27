@@ -8,9 +8,80 @@
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "render/vulkan/pipeline/VulkanPipeline.h"
 
 namespace ne {
     PipelineManager::PipelineManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+
+    std::optional<Error> PipelineManager::bindBuffersToAllVulkanPipelinesIfUsed(
+        const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+        const std::string& sShaderResourceName,
+        VkDescriptorType descriptorType) {
+        std::scoped_lock pipelinesGuard(mtxGraphicsPipelines.first);
+
+        // Iterate over graphics pipelines of all types.
+        for (auto& pipelinesOfSpecificType : mtxGraphicsPipelines.second.vPipelineTypes) {
+
+            // Iterate over all active shader combinations.
+            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
+
+                // Iterate over all active unique material macros combinations.
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Get pipeline.
+                    const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
+                    if (pVulkanPipeline == nullptr) [[unlikely]] {
+                        return Error("expected a Vulkan pipeline");
+                    }
+
+                    // Rebind resources to pipeline.
+                    auto optionalError =
+                        pVulkanPipeline->bindBuffersIfUsed(vResources, sShaderResourceName, descriptorType);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
+                    }
+                }
+            }
+        }
+
+        return {};
+    }
+
+    std::optional<Error> PipelineManager::bindImageToAllVulkanPipelinesIfUsed(
+        GpuResource* pImageResourceToBind,
+        const std::string& sShaderResourceName,
+        VkDescriptorType descriptorType,
+        VkImageLayout imageLayout,
+        VkSampler pSampler) {
+        std::scoped_lock pipelinesGuard(mtxGraphicsPipelines.first);
+
+        // Iterate over graphics pipelines of all types.
+        for (auto& pipelinesOfSpecificType : mtxGraphicsPipelines.second.vPipelineTypes) {
+
+            // Iterate over all active shader combinations.
+            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
+
+                // Iterate over all active unique material macros combinations.
+                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
+                    // Get pipeline.
+                    const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
+                    if (pVulkanPipeline == nullptr) [[unlikely]] {
+                        return Error("expected a Vulkan pipeline");
+                    }
+
+                    // Rebind image to pipeline.
+                    auto optionalError = pVulkanPipeline->bindImageIfUsed(
+                        pImageResourceToBind, sShaderResourceName, descriptorType, imageLayout, pSampler);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
+                    }
+                }
+            }
+        }
+
+        return {};
+    }
 
     DelayedPipelineResourcesCreation
     PipelineManager::clearGraphicsPipelinesInternalResourcesAndDelayRestoring() {

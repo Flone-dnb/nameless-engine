@@ -20,7 +20,7 @@ namespace ne {
             Error error(std::format(
                 "\"{}\" index manager is being destroyed but there are still {} registered shadow map "
                 "handle(s) alive",
-                *getShaderArrayResourceName(),
+                getShaderArrayResourceName(),
                 mtxRegisteredShadowMaps.second.size()));
             error.showError();
             return; // don't throw in destructor
@@ -106,7 +106,7 @@ namespace ne {
             return Error(std::format(
                 "\"{}\" was requested to register a shadow map handle \"{}\" but this shadow map handle was "
                 "already registered",
-                *getShaderArrayResourceName(),
+                getShaderArrayResourceName(),
                 pDepthTexture->getResourceName()));
         }
 
@@ -115,7 +115,7 @@ namespace ne {
             return Error(std::format(
                 "\"{}\" was requested to register a shadow map handle \"{}\" but the GPU resource of this "
                 "shadow map handle already has an SRV binded to it which is unexpected",
-                *getShaderArrayResourceName(),
+                getShaderArrayResourceName(),
                 pSrvResource->getResourceName()));
         }
 
@@ -154,7 +154,7 @@ namespace ne {
             return Error(std::format(
                 "\"{}\" index manager is unable to unregister the specified shadow map handle because it was "
                 "not registered previously",
-                *getShaderArrayResourceName()));
+                getShaderArrayResourceName()));
         }
 
         // Remove handle.
@@ -203,7 +203,7 @@ namespace ne {
                 "\"{}\" index manager failed to calculate descriptor offset from range start (descriptor "
                 "offset from heap: {}, range offset from heap: {}) because resulting descriptor offset from "
                 "range start is negative: {})",
-                *getShaderArrayResourceName(),
+                getShaderArrayResourceName(),
                 iDescriptorOffsetFromHeapStart,
                 iRangeStartFromHeapStart,
                 iDescriptorOffsetFromRangeStart));

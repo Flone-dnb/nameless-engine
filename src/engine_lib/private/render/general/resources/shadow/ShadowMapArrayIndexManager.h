@@ -116,11 +116,9 @@ namespace ne {
         /**
          * Returns name of the array (defined in shaders) that this manager controls.
          *
-         * @warning Do not delete (free) returned pointer.
-         *
          * @return Array name.
          */
-        std::string const* getShaderArrayResourceName();
+        std::string_view getShaderArrayResourceName();
 
         /**
          * Returns renderer.

@@ -509,37 +509,6 @@ namespace ne {
         // Don't check if slots are empty because we need to provide a valid binding anyway
         // and even if there are no active slots a resource is guaranteed to exist (see field docs).
 
-        // Self check: make sure GPU resources are valid.
-        for (const auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
-            if (pUploadBuffer == nullptr) [[unlikely]] {
-                return Error(std::format(
-                    "shader light array \"{}\" has {} active slot(s) but array's GPU resources are not "
-                    "created",
-                    sShaderLightResourceName,
-                    mtxResources.second.activeSlots.size()));
-            }
-        }
-
-        // Get light array GPU resources.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vLightArrayBuffers;
-        for (size_t i = 0; i < vLightArrayBuffers.size(); i++) {
-            // Convert to Vulkan resource.
-            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
-                mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource());
-            if (pVulkanResource == nullptr) [[unlikely]] {
-                return Error("expected a Vulkan resource");
-            }
-
-            // Save buffer resource.
-            vLightArrayBuffers[i] = pVulkanResource->getInternalBufferResource();
-        }
-
-        // Get logical device to be used later.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("logical device is `nullptr`");
-        }
-
         // Get pipeline manager.
         const auto pPipelineManager = pVulkanRenderer->getPipelineManager();
         if (pPipelineManager == nullptr) [[unlikely]] {
@@ -558,47 +527,11 @@ namespace ne {
 
                 // Iterate over all active unique material macros combinations.
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
-
-                    // Convert to a Vulkan pipeline.
-                    const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline.get());
-                    if (pVulkanPipeline == nullptr) [[unlikely]] {
-                        return Error("expected a Vulkan pipeline");
-                    }
-
-                    // Get pipeline's internal resources.
-                    const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-                    std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
-
-                    // See if this pipeline uses the light array we are handling.
-                    auto it =
-                        pMtxPipelineInternalResources->second.resourceBindings.find(sShaderLightResourceName);
-                    if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-                        continue;
-                    }
-
-                    // Update one descriptor in set per frame resource.
-                    for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-                        // Prepare info to bind storage buffer slot to descriptor.
-                        VkDescriptorBufferInfo bufferInfo{};
-                        bufferInfo.buffer = vLightArrayBuffers[i];
-                        bufferInfo.offset = 0;
-                        bufferInfo.range =
-                            mtxResources.second.vGpuArrayLightDataResources[i]->getElementCount() *
-                            mtxResources.second.vGpuArrayLightDataResources[i]->getElementSizeInBytes();
-
-                        // Bind reserved space to descriptor.
-                        VkWriteDescriptorSet descriptorUpdateInfo{};
-                        descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-                        descriptorUpdateInfo.dstSet = pMtxPipelineInternalResources->second
-                                                          .vDescriptorSets[i]; // descriptor set to update
-                        descriptorUpdateInfo.dstBinding = it->second;          // descriptor binding index
-                        descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-                        descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                        descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
-                        descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
-
-                        // Update descriptor.
-                        vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+                    // Bind to pipeline.
+                    auto optionalError = updatePipelineBinding(pPipeline.get());
+                    if (optionalError.has_value()) [[unlikely]] {
+                        optionalError->addCurrentLocationToErrorStack();
+                        return optionalError;
                     }
                 }
             }
@@ -622,35 +555,20 @@ namespace ne {
         // Don't check if slots are empty because we need to provide a valid binding anyway
         // and even if there are no active slots a resource is guaranteed to exist (see field docs).
 
-        // Self check: make sure GPU resources are valid.
-        for (const auto& pUploadBuffer : mtxResources.second.vGpuArrayLightDataResources) {
-            if (pUploadBuffer == nullptr) [[unlikely]] {
+        // Get internal GPU resources.
+        std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vGpuResourcesToBind;
+        for (size_t i = 0; i < vGpuResourcesToBind.size(); i++) {
+            // Self check: make sure it's valid.
+            if (mtxResources.second.vGpuArrayLightDataResources[i] == nullptr) [[unlikely]] {
                 return Error(std::format(
                     "shader light array \"{}\" has {} active slot(s) but array's GPU resources are not "
                     "created",
                     sShaderLightResourceName,
                     mtxResources.second.activeSlots.size()));
             }
-        }
 
-        // Get internal GPU resources.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vLightsArrayBuffers;
-        for (size_t i = 0; i < vLightsArrayBuffers.size(); i++) {
-            // Convert to Vulkan resource.
-            const auto pVulkanResource = dynamic_cast<VulkanResource*>(
-                mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource());
-            if (pVulkanResource == nullptr) [[unlikely]] {
-                return Error("expected a Vulkan resource");
-            }
-
-            // Save buffer resource.
-            vLightsArrayBuffers[i] = pVulkanResource->getInternalBufferResource();
-        }
-
-        // Get logical device to be used later.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("logical device is `nullptr`");
+            vGpuResourcesToBind[i] =
+                mtxResources.second.vGpuArrayLightDataResources[i]->getInternalResource();
         }
 
         // Convert to a Vulkan pipeline.
@@ -659,38 +577,12 @@ namespace ne {
             return Error("expected a Vulkan pipeline");
         }
 
-        // Get pipeline's internal resources.
-        const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-        std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
-
-        // See if this pipeline uses the resource we are handling.
-        auto it = pMtxPipelineInternalResources->second.resourceBindings.find(sShaderLightResourceName);
-        if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-            return {};
-        }
-
-        // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            // Prepare info to bind storage buffer slot to descriptor.
-            VkDescriptorBufferInfo bufferInfo{};
-            bufferInfo.buffer = vLightsArrayBuffers[i];
-            bufferInfo.offset = 0;
-            bufferInfo.range = mtxResources.second.vGpuArrayLightDataResources[i]->getElementCount() *
-                               mtxResources.second.vGpuArrayLightDataResources[i]->getElementSizeInBytes();
-
-            // Bind reserved space to descriptor.
-            VkWriteDescriptorSet descriptorUpdateInfo{};
-            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorUpdateInfo.dstSet =
-                pMtxPipelineInternalResources->second.vDescriptorSets[i]; // descriptor set to update
-            descriptorUpdateInfo.dstBinding = it->second;                 // descriptor binding index
-            descriptorUpdateInfo.dstArrayElement = 0; // first descriptor in array to update
-            descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptorUpdateInfo.descriptorCount = 1;       // how much descriptors in array to update
-            descriptorUpdateInfo.pBufferInfo = &bufferInfo; // descriptor refers to buffer data
-
-            // Update descriptor.
-            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+        // Bind to pipeline.
+        auto optionalError = pVulkanPipeline->bindBuffersIfUsed(
+            vGpuResourcesToBind, sShaderLightResourceName, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
         return {};

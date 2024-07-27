@@ -12,6 +12,8 @@
 #include "vulkan/vulkan.h"
 
 namespace ne {
+    class VulkanPipeline;
+
     /** Manages indices of shadows maps into a descriptor array used by shaders. */
     class VulkanShadowMapArrayIndexManager : public ShadowMapArrayIndexManager {
     public:
@@ -121,25 +123,13 @@ namespace ne {
          * Binds the specified shadow map to the specified pipeline.
          *
          * @param pShadowMapHandle        Handle to shadow map to bind.
-         * @param pArrayIndex             Index of the shadow map in the array of descriptors.
          * @param pPipeline               Pipeline to bind the shadow map to.
-         * @param iBindingIndex           Binding index in the pipeline's descriptor set to bind the shadow
-         * map.
-         * @param pPipelineDescriptorSets Descriptor sets of the pipeline.
-         * @param pLogicalDevice          Renderer's logical device.
          * @param pSampler                Texture sampler to use.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] static std::optional<Error> bindShadowMapToPipeline(
-            ShadowMapHandle* pShadowMapHandle,
-            ShaderArrayIndex* pArrayIndex,
-            Pipeline* pPipeline,
-            unsigned int iBindingIndex,
-            std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()>*
-                pPipelineDescriptorSets,
-            VkDevice pLogicalDevice,
-            VkSampler pSampler);
+        [[nodiscard]] std::optional<Error> bindShadowMapToPipelineIfUsed(
+            ShadowMapHandle* pShadowMapHandle, VulkanPipeline* pPipeline, VkSampler pSampler);
 
         /** Mutex guarded internal data. */
         std::pair<std::recursive_mutex, InternalData> mtxInternalData;

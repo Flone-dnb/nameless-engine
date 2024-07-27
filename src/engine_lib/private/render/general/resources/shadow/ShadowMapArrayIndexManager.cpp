@@ -42,8 +42,8 @@ namespace ne {
         return Error("unsupported renderer");
     }
 
-    std::string const* ShadowMapArrayIndexManager::getShaderArrayResourceName() {
-        return &sShaderArrayResourceName;
+    std::string_view ShadowMapArrayIndexManager::getShaderArrayResourceName() {
+        return sShaderArrayResourceName;
     }
 
     Renderer* ShadowMapArrayIndexManager::getRenderer() const { return pRenderer; }

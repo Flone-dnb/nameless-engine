@@ -847,50 +847,6 @@ namespace ne {
         static std::unique_ptr<LightingShaderResourceManager> create(Renderer* pRenderer);
 
         /**
-         * Looks if the pipeline uses the specified shader resource and binds the specified
-         * buffers to pipeline's descriptors.
-         *
-         * @param pVulkanPipeline     Pipeline which descriptors to update.
-         * @param pLogicalDevice      Renderer's logical device.
-         * @param sShaderResourceName Name of the shader resource to look in the pipeline.
-         * @param iResourceSize       Size of one (buffer) shader resource.
-         * @param descriptorType      Type of descriptor to bind.
-         * @param vBuffersToBind      Buffers to bind (one per frame resource).
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] static std::optional<Error> rebindBufferResourceToPipeline(
-            VulkanPipeline* pVulkanPipeline,
-            VkDevice pLogicalDevice,
-            const std::string& sShaderResourceName,
-            VkDeviceSize iResourceSize,
-            VkDescriptorType descriptorType,
-            std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vBuffersToBind);
-
-        /**
-         * Looks if the pipeline uses the specified shader resource and binds the specified
-         * buffers to pipeline's descriptors.
-         *
-         * @param pVulkanPipeline     Pipeline which descriptors to update.
-         * @param pLogicalDevice      Renderer's logical device.
-         * @param sShaderResourceName Name of the shader resource to look in the pipeline.
-         * @param descriptorType      Type of descriptor to bind.
-         * @param imageLayout         Image layout.
-         * @param pSampler            Image sampler.
-         * @param vImagesToBind       Images to bind (one per frame resource).
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] static std::optional<Error> rebindImageResourceToPipeline(
-            VulkanPipeline* pVulkanPipeline,
-            VkDevice pLogicalDevice,
-            const std::string& sShaderResourceName,
-            VkDescriptorType descriptorType,
-            VkImageLayout imageLayout,
-            VkSampler pSampler,
-            std::array<VkImageView, FrameResourcesManager::getFrameResourcesCount()> vImagesToBind);
-
-        /**
          * Initializes a new manager.
          *
          * @param pRenderer Used renderer.
@@ -989,8 +945,8 @@ namespace ne {
         void copyDataToGpu(size_t iCurrentFrameResourceIndex);
 
         /**
-         * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
-         * buffers from @ref mtxGpuData.
+         * Updates descriptors in all graphics pipelines to make descriptors reference the
+         * underlying buffers from @ref mtxGpuData.
          *
          * @remark Does nothing if DirectX renderer is used.
          *
@@ -999,16 +955,16 @@ namespace ne {
         [[nodiscard]] std::optional<Error> rebindGpuDataToAllPipelines();
 
         /**
-         * Updates descriptors in the specified graphics pipeline to make descriptors reference the underlying
-         * buffers from @ref mtxGpuData.
+         * Updates descriptors in the specified graphics pipeline to make descriptors reference the
+         * underlying buffers from @ref mtxGpuData.
          *
          * @remark Does nothing if DirectX renderer is used.
          *
-         * @param pPipeline Pipeline to get descriptors from.
+         * @param pPipeline Pipeline to bind data to.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> rebindGpuDataToPipeline(Pipeline* pPipeline);
+        [[nodiscard]] std::optional<Error> rebindGpuDataToPipelineIfUsed(Pipeline* pPipeline);
 
         /** Groups GPU resources that store arrays of light sources. */
         LightArrays lightArrays;

@@ -16,6 +16,10 @@
 #include "render/general/pipeline/PipelineType.hpp"
 #include "render/general/pipeline/PipelineConfiguration.h"
 #include "render/general/pipeline/PipelineRegistry.hpp"
+#include "render/general/resources/frame/FrameResourcesManager.h"
+
+// External.
+#include "vulkan/vulkan_core.h"
 
 namespace ne {
     class Renderer;
@@ -26,6 +30,9 @@ namespace ne {
     /**
      * RAII class that once acquired waits for the GPU to finish work up to this point, pauses the rendering,
      * releases all internal resources from all graphics pipelines, then in destructor restores them.
+     *
+     * @remark This can be useful when some render resource (like MSAA render target) has changed or about to
+     * be changed so that we can make sure all pipelines are refreshed to use the new/changed resource.
      */
     class DelayedPipelineResourcesCreation {
     public:
@@ -111,6 +118,40 @@ namespace ne {
         PipelineManager() = delete;
         PipelineManager(const PipelineManager&) = delete;
         PipelineManager& operator=(const PipelineManager&) = delete;
+
+        /**
+         * Binds the specified GPU resources (buffers, not images) to all Vulkan pipelines that use the
+         * specified shader resource.
+         *
+         * @param vResources          Resources to bind.
+         * @param sShaderResourceName Name of the shader resource (name from shader code) to bind to.
+         * @param descriptorType      Type of the descriptor to bind.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindBuffersToAllVulkanPipelinesIfUsed(
+            const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+            const std::string& sShaderResourceName,
+            VkDescriptorType descriptorType);
+
+        /**
+         * Binds the specified GPU image (not buffer) to all Vulkan pipelines that use the specified shader
+         * resource.
+         *
+         * @param pImageResourceToBind Image to bind.
+         * @param sShaderResourceName  Name of the shader resource (name from shader code) to bind to.
+         * @param descriptorType       Type of the descriptor to bind.
+         * @param imageLayout          Layout of the image.
+         * @param pSampler             Sampler to use for the image.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] std::optional<Error> bindImageToAllVulkanPipelinesIfUsed(
+            GpuResource* pImageResourceToBind,
+            const std::string& sShaderResourceName,
+            VkDescriptorType descriptorType,
+            VkImageLayout imageLayout,
+            VkSampler pSampler);
 
         /**
          * Returns a RAII object that once acquired waits for the GPU to finish work up to this point,

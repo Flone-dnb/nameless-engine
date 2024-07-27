@@ -73,6 +73,7 @@ set(PROJECT_SOURCES
     public/misc/Error.h
     private/misc/UniqueValueGenerator.h
     private/misc/UniqueValueGenerator.cpp
+    private/misc/StdHashes.hpp
     private/window/Window.cpp
     public/game/Window.h
     private/game/GameInstance.cpp

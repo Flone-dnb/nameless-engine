@@ -18,7 +18,7 @@ namespace ne {
             Error error(std::format(
                 "\"{}\" index manager is being destroyed but there are still {} registered shadow map "
                 "handle(s) alive",
-                *getShaderArrayResourceName(),
+                getShaderArrayResourceName(),
                 mtxInternalData.second.registeredShadowMaps.size()));
             error.showError();
             return; // don't throw in destructor
@@ -46,7 +46,7 @@ namespace ne {
             return Error(std::format(
                 "\"{}\" was requested to register a shadow map handle \"{}\" but this shadow map was already "
                 "registered",
-                *getShaderArrayResourceName(),
+                getShaderArrayResourceName(),
                 pMtxResources->second.pDepthTexture->getResourceName()));
         }
 
@@ -82,7 +82,7 @@ namespace ne {
             return Error(std::format(
                 "\"{}\" index manager is unable to unregister the specified shadow map handle because it was "
                 "not registered previously",
-                *getShaderArrayResourceName()));
+                getShaderArrayResourceName()));
         }
 
         // Remove handle (also frees reserved index).
@@ -138,40 +138,16 @@ namespace ne {
         Pipeline* pPipeline, ShadowMapHandle* pOnlyBindThisShadowMap) {
         std::scoped_lock guard(mtxInternalData.first);
 
-        // Convert pipeline.
-        const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
-        if (pVulkanPipeline == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan pipeline");
-        }
-
-        // Get pipeline's internal resources.
-        const auto pMtxPipelineInternalResources = pVulkanPipeline->getInternalResources();
-        std::scoped_lock pipelineResourcesGuard(pMtxPipelineInternalResources->first);
-
-        // See if this pipeline uses the resource we are handling.
-        auto it = pMtxPipelineInternalResources->second.resourceBindings.find(*getShaderArrayResourceName());
-        if (it == pMtxPipelineInternalResources->second.resourceBindings.end()) {
-            // This pipeline does not use this resource.
-            return {};
-        }
-        const auto iBindingIndex = it->second;
-
-        // Get Vulkan renderer.
-        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pPipeline->getRenderer());
         if (pVulkanRenderer == nullptr) [[unlikely]] {
             return Error("expected a Vulkan renderer");
         }
 
-        // Get logical device to be used later.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
-        if (pLogicalDevice == nullptr) [[unlikely]] {
-            return Error("logical device is `nullptr`");
-        }
-
-        // Get pipeline manager.
-        const auto pPipelineManager = pVulkanRenderer->getPipelineManager();
-        if (pPipelineManager == nullptr) [[unlikely]] {
-            return Error("pipeline manager is `nullptr`");
+        // Convert pipeline.
+        const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
+        if (pVulkanPipeline == nullptr) [[unlikely]] {
+            return Error("expected a Vulkan pipeline");
         }
 
         // Get shadow sampler.
@@ -185,37 +161,17 @@ namespace ne {
             for (const auto& [pShadowMapHandle, pReservedIndex] :
                  mtxInternalData.second.registeredShadowMaps) {
                 // Bind shadow map to pipeline.
-                auto optionalError = bindShadowMapToPipeline(
-                    pShadowMapHandle,
-                    pReservedIndex.get(),
-                    pPipeline,
-                    iBindingIndex,
-                    &pMtxPipelineInternalResources->second.vDescriptorSets,
-                    pLogicalDevice,
-                    pShadowTextureSampler);
+                auto optionalError =
+                    bindShadowMapToPipelineIfUsed(pShadowMapHandle, pVulkanPipeline, pShadowTextureSampler);
                 if (optionalError.has_value()) [[unlikely]] {
                     optionalError->addCurrentLocationToErrorStack();
                     return optionalError;
                 }
             }
         } else {
-            // Make sure this shadow map was registered.
-            const auto shadowMapIt = mtxInternalData.second.registeredShadowMaps.find(pOnlyBindThisShadowMap);
-            if (shadowMapIt == mtxInternalData.second.registeredShadowMaps.end()) [[unlikely]] {
-                return Error(std::format(
-                    "\"{}\" index manager expected the specified shadow map handle to be already registered",
-                    *getShaderArrayResourceName()));
-            }
-
-            // Bind shadow map to pipeline.
-            auto optionalError = bindShadowMapToPipeline(
-                pOnlyBindThisShadowMap,
-                shadowMapIt->second.get(),
-                pPipeline,
-                iBindingIndex,
-                &pMtxPipelineInternalResources->second.vDescriptorSets,
-                pLogicalDevice,
-                pShadowTextureSampler);
+            // Bind one shadow map.
+            auto optionalError =
+                bindShadowMapToPipelineIfUsed(pOnlyBindThisShadowMap, pVulkanPipeline, pShadowTextureSampler);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -225,65 +181,49 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanShadowMapArrayIndexManager::bindShadowMapToPipeline(
-        ShadowMapHandle* pShadowMapHandle,
-        ShaderArrayIndex* pArrayIndex,
-        Pipeline* pPipeline,
-        unsigned int iBindingIndex,
-        std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()>* pPipelineDescriptorSets,
-        VkDevice pLogicalDevice,
-        VkSampler pSampler) {
-        // Prepare array of VkBuffers for light index lists.
-        std::array<VkImageView, FrameResourcesManager::getFrameResourcesCount()> vImagesToBind;
-
-        // Get resource.
-        const auto pMtxResources = pShadowMapHandle->getResources();
-        std::scoped_lock guard(pMtxResources->first);
-
-        // Convert to Vulkan resource.
-        auto pVulkanResource = dynamic_cast<VulkanResource*>(pMtxResources->second.pDepthTexture);
-        if (pVulkanResource == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan resource");
-        }
-        if (pMtxResources->second.pColorTexture != nullptr) {
-            // Bind point light's cubemap instead (because for point lights "color" cubemap is used and not
-            // depth image).
-            pVulkanResource = reinterpret_cast<VulkanResource*>(pMtxResources->second.pColorTexture);
+    std::optional<Error> VulkanShadowMapArrayIndexManager::bindShadowMapToPipelineIfUsed(
+        ShadowMapHandle* pShadowMapHandle, VulkanPipeline* pPipeline, VkSampler pSampler) {
+        // Make sure handle is not nullptr.
+        if (pShadowMapHandle == nullptr) [[unlikely]] {
+            return Error(std::format(
+                "\"{}\" index manager received a `nullptr` as a shadow map handle",
+                getShaderArrayResourceName()));
         }
 
-        // Fill array of images.
-        for (size_t i = 0; i < vImagesToBind.size(); i++) {
-            // Get resource image view.
-            const auto pImageView = pVulkanResource->getInternalImageView();
-            if (pImageView == nullptr) [[unlikely]] {
-                return Error(std::format(
-                    "expected resource \"{}\" to have an image view", pVulkanResource->getResourceName()));
+        std::scoped_lock guard(mtxInternalData.first);
+
+        // Make sure this handle is registered.
+        const auto shadowMapIt = mtxInternalData.second.registeredShadowMaps.find(pShadowMapHandle);
+        if (shadowMapIt == mtxInternalData.second.registeredShadowMaps.end()) [[unlikely]] {
+            return Error(std::format(
+                "\"{}\" index manager expected the specified shadow map handle to be already registered",
+                getShaderArrayResourceName()));
+        }
+
+        {
+            // Get resources.
+            const auto pMtxResources = pShadowMapHandle->getResources();
+            std::scoped_lock shadowHandleGuard(pMtxResources->first);
+
+            // Determine which texture to bind.
+            auto pImageToBind = pMtxResources->second.pDepthTexture;
+            if (pMtxResources->second.pColorTexture != nullptr) {
+                // Bind point light's cubemap instead (because for point lights "color" cubemap is used and
+                // not depth image).
+                pImageToBind = pMtxResources->second.pColorTexture;
             }
 
-            vImagesToBind[i] = pImageView;
-        }
-
-        // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
-            // Prepare info to bind an image view to descriptor.
-            VkDescriptorImageInfo imageInfo{};
-            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = vImagesToBind[i];
-            imageInfo.sampler = pSampler;
-
-            // Bind reserved space to descriptor.
-            VkWriteDescriptorSet descriptorUpdateInfo{};
-            descriptorUpdateInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptorUpdateInfo.dstSet = pPipelineDescriptorSets->operator[](i); // descriptor set to update
-            descriptorUpdateInfo.dstBinding = iBindingIndex;                      // descriptor binding index
-            descriptorUpdateInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            descriptorUpdateInfo.descriptorCount = 1; // how much descriptors in array to update
-            descriptorUpdateInfo.dstArrayElement =
-                pArrayIndex->getActualIndex();            // first descriptor in array to update
-            descriptorUpdateInfo.pImageInfo = &imageInfo; // descriptor refers to image data
-
-            // Update descriptor.
-            vkUpdateDescriptorSets(pLogicalDevice, 1, &descriptorUpdateInfo, 0, nullptr);
+            // Bind.
+            auto optionalError = pPipeline->bindImageIfUsed(
+                pImageToBind,
+                getShaderArrayResourceName(),
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                pSampler);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
         }
 
         return {};

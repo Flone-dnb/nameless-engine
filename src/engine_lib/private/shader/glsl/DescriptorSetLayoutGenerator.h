@@ -11,6 +11,7 @@
 #include "misc/Error.h"
 #include "render/general/resources/frame/FrameResourcesManager.h"
 #include "shader/VulkanAlignmentConstants.hpp"
+#include "misc/StdHashes.hpp"
 
 // External.
 #include "vulkan/vulkan.h"
@@ -78,7 +79,7 @@ namespace ne {
              * @remark Generally used to bind/update data of some GLSL resource to a specific
              * descriptor in a descriptor set.
              */
-            std::unordered_map<std::string, uint32_t> resourceBindings;
+            std::unordered_map<std::string, uint32_t, StdStringHash, std::equal_to<>> resourceBindings;
 
             /**
              * Stores pairs of "name of field defined in GLSL push constants" (all with `uint` type)

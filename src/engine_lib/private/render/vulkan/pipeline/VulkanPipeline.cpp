@@ -97,7 +97,7 @@ namespace ne {
     }
 
     std::optional<Error> VulkanPipeline::bindBuffersIfUsed(
-        const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+        const std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()>& vResources,
         const std::string& sShaderResourceName,
         VkDescriptorType descriptorType) {
         std::scoped_lock guard(mtxInternalResources.first);
@@ -111,7 +111,7 @@ namespace ne {
         const auto iBindingIndex = resourceIt->second;
 
         // Gather VkBuffers to bind.
-        std::array<VkBuffer, FrameResourcesManager::getFrameResourcesCount()> vVkBuffersToBind;
+        std::array<VkBuffer, FrameResourceManager::getFrameResourceCount()> vVkBuffersToBind;
         for (size_t i = 0; i < vVkBuffersToBind.size(); i++) {
             // Convert to Vulkan resource.
             const auto pVulkanResource = dynamic_cast<VulkanResource*>(vResources[i]);
@@ -136,7 +136,7 @@ namespace ne {
         }
 
         // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+        for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             // Prepare info to bind storage buffer slot to descriptor.
             VkDescriptorBufferInfo bufferInfo{};
             bufferInfo.buffer = vVkBuffersToBind[i];
@@ -196,7 +196,7 @@ namespace ne {
         }
 
         // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+        for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             // Prepare info to bind an image view to descriptor.
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = imageLayout;
@@ -1091,7 +1091,7 @@ namespace ne {
         }
 
         // Get frame resource manager.
-        const auto pFrameResourceManager = getRenderer()->getFrameResourcesManager();
+        const auto pFrameResourceManager = getRenderer()->getFrameResourceManager();
         if (pFrameResourceManager == nullptr) [[unlikely]] {
             return Error("frame resource manager is `nullptr`");
         }

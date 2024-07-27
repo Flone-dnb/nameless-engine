@@ -14,7 +14,7 @@ namespace ne {
     PipelineManager::PipelineManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
     std::optional<Error> PipelineManager::bindBuffersToAllVulkanPipelinesIfUsed(
-        const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+        const std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()>& vResources,
         const std::string& sShaderResourceName,
         VkDescriptorType descriptorType) {
         std::scoped_lock pipelinesGuard(mtxGraphicsPipelines.first);

@@ -16,7 +16,7 @@
 #include "render/general/pipeline/PipelineType.hpp"
 #include "render/general/pipeline/PipelineConfiguration.h"
 #include "render/general/pipeline/PipelineRegistry.hpp"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 // External.
 #include "vulkan/vulkan_core.h"
@@ -130,7 +130,7 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> bindBuffersToAllVulkanPipelinesIfUsed(
-            const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+            const std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()>& vResources,
             const std::string& sShaderResourceName,
             VkDescriptorType descriptorType);
 

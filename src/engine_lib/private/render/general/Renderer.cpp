@@ -50,7 +50,7 @@ namespace ne {
         // Frame resources expect that the number of swap chain images is equal to the number
         // of frame resources because frame resources store synchronization objects such as
         // fences and semaphores that expect one swap chain image per frame resource.
-        static_assert(iRecommendedSwapChainBufferCount == FrameResourcesManager::getFrameResourcesCount());
+        static_assert(iRecommendedSwapChainBufferCount == FrameResourceManager::getFrameResourceCount());
 
         // Save game manager.
         this->pGameManager = pGameManager;
@@ -267,14 +267,14 @@ namespace ne {
         pPipelineManager = nullptr;
     }
 
-    void Renderer::resetFrameResourcesManager() {
-        if (pFrameResourcesManager == nullptr) {
+    void Renderer::resetFrameResourceManager() {
+        if (pFrameResourceManager == nullptr) {
             return;
         }
 
         Logger::get().info("explicitly resetting frame resources manager");
         Logger::get().flushToDisk();
-        pFrameResourcesManager = nullptr;
+        pFrameResourceManager = nullptr;
     }
 
     void Renderer::resetLightingShaderResourceManager() {
@@ -316,7 +316,7 @@ namespace ne {
         const auto pMtxActiveCamera = getGameManager()->getCameraManager()->getActiveCamera();
 
         // Get current frame resource.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        auto pMtxCurrentFrameResource = getFrameResourceManager()->getCurrentFrameResource();
 
         // Lock mutexes together to minimize deadlocks.
         std::scoped_lock renderGuard(
@@ -352,12 +352,12 @@ namespace ne {
 
         // Cull lights.
         cullLightsOutsideCameraFrustum(
-            pActiveCameraProperties, pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+            pActiveCameraProperties, pMtxCurrentFrameResource->second.iIndex);
 
         // Capture shadow maps.
         drawShadowMappingPass(
             pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            pMtxCurrentFrameResource->second.iIndex,
             &pMtxGraphicsPipelines->second);
 
         // Cull meshes.
@@ -367,32 +367,32 @@ namespace ne {
         // Draw depth prepass on non-culled meshes.
         drawMeshesDepthPrepass(
             pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            pMtxCurrentFrameResource->second.iIndex,
             pMeshPipelinesInFrustum->vOpaquePipelines);
 
         // Run compute shaders after depth prepass.
         executeComputeShadersOnGraphicsQueue(
             pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            pMtxCurrentFrameResource->second.iIndex,
             ComputeExecutionStage::AFTER_DEPTH_PREPASS);
 
         // Draw main pass on non-culled meshes.
         drawMeshesMainPass(
             pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex,
+            pMtxCurrentFrameResource->second.iIndex,
             pMeshPipelinesInFrustum->vOpaquePipelines,
             pMeshPipelinesInFrustum->vTransparentPipelines);
 
         // Present the frame on the screen, flip swapchain images, etc.
         present(
             pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+            pMtxCurrentFrameResource->second.iIndex);
 
         // Update frame stats.
         calculateFrameStatistics();
 
         // Switch to the next frame resource.
-        getFrameResourcesManager()->switchToNextFrameResource();
+        getFrameResourceManager()->switchToNextFrameResource();
     }
 
     std::optional<Error> Renderer::onRenderSettingsChanged(bool bShadowMapSizeChanged) {
@@ -712,7 +712,7 @@ namespace ne {
 
     GpuResourceManager* Renderer::getResourceManager() const { return pResourceManager.get(); }
 
-    FrameResourcesManager* Renderer::getFrameResourcesManager() const { return pFrameResourcesManager.get(); }
+    FrameResourceManager* Renderer::getFrameResourceManager() const { return pFrameResourceManager.get(); }
 
     ShaderCpuWriteResourceManager* Renderer::getShaderCpuWriteResourceManager() const {
         return pShaderCpuWriteResourceManager.get();
@@ -859,14 +859,14 @@ namespace ne {
         pResourceManager = std::get<std::unique_ptr<GpuResourceManager>>(std::move(gpuResourceManagerResult));
 
         // Create frame resources manager.
-        auto frameResourceManagerResult = FrameResourcesManager::create(this);
+        auto frameResourceManagerResult = FrameResourceManager::create(this);
         if (std::holds_alternative<Error>(gpuResourceManagerResult)) {
             auto error = std::get<Error>(std::move(gpuResourceManagerResult));
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        pFrameResourcesManager =
-            std::get<std::unique_ptr<FrameResourcesManager>>(std::move(frameResourceManagerResult));
+        pFrameResourceManager =
+            std::get<std::unique_ptr<FrameResourceManager>>(std::move(frameResourceManagerResult));
 
         // Create shader CPU write resource manager.
         pShaderCpuWriteResourceManager =
@@ -904,7 +904,7 @@ namespace ne {
         std::scoped_lock frameGuard(*getRenderResourcesMutex());
 
         // Get current frame resource.
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        auto pMtxCurrentFrameResource = getFrameResourceManager()->getCurrentFrameResource();
         std::scoped_lock frameResource(pMtxCurrentFrameResource->first);
 
         {
@@ -948,7 +948,7 @@ namespace ne {
 
         // Update shader CPU write resources marked as "needs update".
         getShaderCpuWriteResourceManager()->updateResources(
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+            pMtxCurrentFrameResource->second.iIndex);
 
         // Before updating lighting shader resources update general lighting parameters.
         {
@@ -965,7 +965,7 @@ namespace ne {
         // Update lighting shader resources marked as "needs update".
         pLightingShaderResourceManager->updateResources(
             pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex);
+            pMtxCurrentFrameResource->second.iIndex);
     }
 
     Renderer::MeshesInFrustum* Renderer::getMeshesInCameraFrustum(

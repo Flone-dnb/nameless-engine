@@ -10,7 +10,7 @@
 #include "shader/general/resources/ShaderResource.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "render/general/resources/UploadBuffer.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
     class Pipeline;
@@ -141,7 +141,7 @@ namespace ne {
         HlslShaderCpuWriteResource(
             const std::string& sResourceName,
             size_t iOriginalResourceSizeInBytes,
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
                 vResourceData,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource,
@@ -206,7 +206,7 @@ namespace ne {
         }
 
         /** Data binded to shader resource. */
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+        std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
             vResourceData;
 
         /** Indices of this resource in root signature to bind this resource during the draw operation. */

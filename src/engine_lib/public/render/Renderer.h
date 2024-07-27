@@ -9,7 +9,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
 #include "render/RenderStatistics.h"
@@ -251,13 +251,13 @@ namespace ne {
         GpuResourceManager* getResourceManager() const;
 
         /**
-         * Returns frame resources manager.
+         * Returns frame resource manager.
          *
          * @warning Do not delete (free) returned pointer.
          *
          * @return Frame resources manager.
          */
-        FrameResourcesManager* getFrameResourcesManager() const;
+        FrameResourceManager* getFrameResourceManager() const;
 
         /**
          * Returns manager of shader resources with CPU write access.
@@ -478,12 +478,12 @@ namespace ne {
         void resetPipelineManager();
 
         /**
-         * Sets `nullptr` to frame resources manager's unique ptr to force destroy it (if exists).
+         * Sets `nullptr` to frame resource manager's unique ptr to force destroy it (if exists).
          *
          * @warning Avoid using this function. Only use it if you need a special destruction order
          * in your renderer.
          */
-        void resetFrameResourcesManager();
+        void resetFrameResourceManager();
 
         /**
          * Sets `nullptr` to lighting shader resource manager's unique ptr to force destroy it (if exists).
@@ -844,7 +844,7 @@ namespace ne {
         std::unique_ptr<PipelineManager> pPipelineManager;
 
         /** Stores frame-specific GPU resources. */
-        std::unique_ptr<FrameResourcesManager> pFrameResourcesManager;
+        std::unique_ptr<FrameResourceManager> pFrameResourceManager;
 
         /** Stores all shader resources with CPU write access. */
         std::unique_ptr<ShaderCpuWriteResourceManager> pShaderCpuWriteResourceManager;

@@ -52,9 +52,9 @@ namespace ne {
         }
 
         // Create upload buffer per frame resource.
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+        std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
             vResourceData;
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+        for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             // Create upload buffer.
             auto result = pResourceManager->createResourceWithCpuWriteAccess(
                 std::format(
@@ -103,7 +103,7 @@ namespace ne {
     HlslShaderCpuWriteResource::HlslShaderCpuWriteResource(
         const std::string& sResourceName,
         size_t iOriginalResourceSizeInBytes,
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+        std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
             vResourceData,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,

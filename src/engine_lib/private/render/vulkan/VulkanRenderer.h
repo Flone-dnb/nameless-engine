@@ -5,7 +5,7 @@
 
 // Custom.
 #include "render/Renderer.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "render/vulkan/resources/VulkanResource.h"
 #include "material/Material.h"
 

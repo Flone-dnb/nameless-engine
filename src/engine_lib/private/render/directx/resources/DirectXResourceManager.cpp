@@ -3,7 +3,7 @@
 // Custom.
 #include "render/directx/resources/DirectXResource.h"
 #include "render/directx/DirectXRenderer.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "render/general/resources/UploadBuffer.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 
@@ -620,8 +620,8 @@ namespace ne {
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Get command allocator from the current frame resource.
-        const auto pFrameResourcesManager = pRenderer->getFrameResourcesManager();
-        const auto pMtxCurrentFrameResource = pFrameResourcesManager->getCurrentFrameResource();
+        const auto pFrameResourceManager = pRenderer->getFrameResourceManager();
+        const auto pMtxCurrentFrameResource = pFrameResourceManager->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
         // Convert frame resource.

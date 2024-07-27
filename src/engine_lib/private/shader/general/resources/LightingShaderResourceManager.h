@@ -9,7 +9,7 @@
 
 // Custom.
 #include "render/general/resources/UploadBuffer.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/general/resources/ShaderLightArray.h"
 #if defined(WIN32)
 #include "render/directx/resources/DirectXResource.h"
@@ -72,7 +72,7 @@ namespace ne {
             GpuData() = default;
 
             /** Stores data from @ref generalData in the GPU memory. */
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
                 vGeneralDataGpuResources;
 
             /**

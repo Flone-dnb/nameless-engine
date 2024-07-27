@@ -385,7 +385,7 @@ namespace ne {
 
         // Rebind general lighting info resource.
         {
-            std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vResourcesToBind;
+            std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vResourcesToBind;
             for (size_t i = 0; i < mtxGpuData.second.vGeneralDataGpuResources.size(); i++) {
                 vResourcesToBind[i] = mtxGpuData.second.vGeneralDataGpuResources[i]->getInternalResource();
             }
@@ -407,7 +407,7 @@ namespace ne {
         // Prepare a lambda to bind resource.
         const auto bindLightIndexListResource = [&](const std::string& sShaderResourceName,
                                                     GpuResource* pResourceToBind) -> std::optional<Error> {
-            std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vResourcesToBind;
+            std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vResourcesToBind;
             for (size_t i = 0; i < vResourcesToBind.size(); i++) {
                 vResourcesToBind[i] = pResourceToBind;
             }

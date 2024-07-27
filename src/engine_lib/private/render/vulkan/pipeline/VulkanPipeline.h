@@ -6,7 +6,7 @@
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
 #include "misc/StdHashes.hpp"
 
@@ -52,7 +52,7 @@ namespace ne {
              * to update some shader resource with CPU write access, thus we have 1 descriptor set per
              * frame resource.
              */
-            std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()> vDescriptorSets;
+            std::array<VkDescriptorSet, FrameResourceManager::getFrameResourceCount()> vDescriptorSets;
 
             /**
              * Map of pairs "resource name" (from GLSL code) - "layout binding index".
@@ -137,7 +137,7 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] std::optional<Error> bindBuffersIfUsed(
-            const std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()>& vResources,
+            const std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()>& vResources,
             const std::string& sShaderResourceName,
             VkDescriptorType descriptorType);
 

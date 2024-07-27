@@ -6,7 +6,7 @@
 #include <string>
 
 // Custom.
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
     class Node;
@@ -43,7 +43,7 @@ namespace ne {
          * branching when binding resources (when there are no active lights these resources will not be
          * used since counter for light sources will be zero but we will have a valid binding).
          */
-        std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+        std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
             vGpuResources;
 
         /**

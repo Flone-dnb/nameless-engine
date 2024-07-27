@@ -11,7 +11,7 @@
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
     class Renderer;
@@ -39,7 +39,7 @@ namespace ne {
             /** Shader CPU write resources that needs to be updated. */
             std::array<
                 std::unordered_set<ShaderCpuWriteResource*>,
-                FrameResourcesManager::getFrameResourcesCount()>
+                FrameResourceManager::getFrameResourceCount()>
                 vToBeUpdated;
         };
 

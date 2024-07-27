@@ -16,7 +16,7 @@
 #include "material/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "game/camera/CameraProperties.h"
 #include "game/camera/CameraManager.h"
 #include "shader/hlsl/resources/HlslShaderCpuWriteResource.h"
@@ -107,7 +107,7 @@ namespace ne {
 
         // Explicitly destroy some GPU resources.
         resetLightingShaderResourceManager();
-        resetFrameResourcesManager();
+        resetFrameResourceManager();
 
         pMsaaRenderBuffer = nullptr;
         pDepthBufferNoMultisampling = nullptr;
@@ -783,8 +783,8 @@ namespace ne {
         // Get pipelines to iterate over.
         const auto& shadowMappingDirectionalSpotPipelines = pGraphicsPipelines->vPipelineTypes.at(
             static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT));
-        const auto& shadowMappingPointPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_POINT));
+        const auto& shadowMappingPointPipelines = pGraphicsPipelines->vPipelineTypes.at(
+            static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_POINT));
 
         // Prepare lambda to set viewport size according to shadow map size.
         const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {
@@ -1732,11 +1732,11 @@ namespace ne {
         }
 
         // Get command allocator from the current frame resource.
-        const auto pFrameResourcesManager = getFrameResourcesManager();
-        if (pFrameResourcesManager == nullptr) {
-            return Error("frame resources manager needs to be created at this point");
+        const auto pFrameResourceManager = getFrameResourceManager();
+        if (pFrameResourceManager == nullptr) {
+            return Error("frame resource manager needs to be created at this point");
         }
-        auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        auto pMtxCurrentFrameResource = getFrameResourceManager()->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
         // Convert frame resource.
@@ -1941,7 +1941,7 @@ namespace ne {
         // Self check: make sure allocated frame resource is of expected type
         // so we may just `reinterpret_cast` later because they won't change.
         {
-            auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
+            auto mtxAllFrameResource = getFrameResourceManager()->getAllFrameResources();
             std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
 
             for (const auto& pFrameResource : mtxAllFrameResource.second) {

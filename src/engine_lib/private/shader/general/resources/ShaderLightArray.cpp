@@ -556,7 +556,7 @@ namespace ne {
         // and even if there are no active slots a resource is guaranteed to exist (see field docs).
 
         // Get internal GPU resources.
-        std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vGpuResourcesToBind;
+        std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vGpuResourcesToBind;
         for (size_t i = 0; i < vGpuResourcesToBind.size(); i++) {
             // Self check: make sure it's valid.
             if (mtxResources.second.vGpuArrayLightDataResources[i] == nullptr) [[unlikely]] {

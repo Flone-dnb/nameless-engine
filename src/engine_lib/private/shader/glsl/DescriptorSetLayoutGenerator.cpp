@@ -461,7 +461,7 @@ namespace ne {
 
             // Specify how much descriptors of this type can be allocated using the pool.
             descriptorPoolSize.descriptorCount =
-                vLayoutBindings[i].descriptorCount * FrameResourcesManager::getFrameResourcesCount();
+                vLayoutBindings[i].descriptorCount * FrameResourceManager::getFrameResourceCount();
         }
 
         // Describe descriptor pool.
@@ -476,7 +476,7 @@ namespace ne {
         }
 
         // Specify the total amount of descriptor sets that can be allocated from the pool.
-        poolInfo.maxSets = FrameResourcesManager::getFrameResourcesCount();
+        poolInfo.maxSets = FrameResourceManager::getFrameResourceCount();
 
         // Specify if `vkFreeDescriptorSets` is allowed to free individual descriptors.
         // (we are not going to free individual descriptors so we don't need it)
@@ -499,7 +499,7 @@ namespace ne {
         // Allocate descriptor sets.
 
         // Prepare layout for each descriptor set to create.
-        std::array<VkDescriptorSetLayout, FrameResourcesManager::getFrameResourcesCount()>
+        std::array<VkDescriptorSetLayout, FrameResourceManager::getFrameResourceCount()>
             vDescriptorLayouts = {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
 
         // Allocate descriptor sets.
@@ -730,7 +730,7 @@ namespace ne {
             // Specify how much descriptors of this type can be allocated using the pool.
             descriptorPoolSize.descriptorCount =
                 vLayoutBindings[i].descriptorCount *
-                FrameResourcesManager::getFrameResourcesCount(); // also use frame resources just like in
+                FrameResourceManager::getFrameResourceCount(); // also use frame resources just like in
                                                                  // graphics pipelines to be consistent
                                                                  // although we don't need that much
                                                                  // descriptors
@@ -749,7 +749,7 @@ namespace ne {
 
         // Specify the total amount of descriptor sets that can be allocated from the pool.
         poolInfo.maxSets =
-            FrameResourcesManager::getFrameResourcesCount(); // same as in graphics to be consistent
+            FrameResourceManager::getFrameResourceCount(); // same as in graphics to be consistent
 
         // Create descriptor pool.
         result = vkCreateDescriptorPool(pLogicalDevice, &poolInfo, nullptr, &generatedData.pDescriptorPool);
@@ -761,7 +761,7 @@ namespace ne {
         // Allocate descriptor sets.
 
         // Prepare layout for each descriptor set to create.
-        std::array<VkDescriptorSetLayout, FrameResourcesManager::getFrameResourcesCount()>
+        std::array<VkDescriptorSetLayout, FrameResourceManager::getFrameResourceCount()>
             vDescriptorLayouts = {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
 
         // Allocate descriptor sets.

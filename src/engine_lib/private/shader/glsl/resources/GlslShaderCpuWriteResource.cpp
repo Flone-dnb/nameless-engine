@@ -80,7 +80,7 @@ namespace ne {
             pushConstantIndices));
 
         // Reserve a space for this shader resource's data in a storage buffer per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+        for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             auto result = pStorageResourceArrayManager->reserveSlotsInArray(pShaderResource.get());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));

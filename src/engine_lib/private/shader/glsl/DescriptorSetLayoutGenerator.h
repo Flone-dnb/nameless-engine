@@ -9,7 +9,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/StdHashes.hpp"
 
@@ -69,7 +69,7 @@ namespace ne {
             VkDescriptorPool pDescriptorPool = nullptr;
 
             /** Created descriptor set per each frame resource. */
-            std::array<VkDescriptorSet, FrameResourcesManager::getFrameResourcesCount()> vDescriptorSets;
+            std::array<VkDescriptorSet, FrameResourceManager::getFrameResourceCount()> vDescriptorSets;
 
             /**
              * Map of pairs "resource name" (from GLSL code) - "layout binding index".

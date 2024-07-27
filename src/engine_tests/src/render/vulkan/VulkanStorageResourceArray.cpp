@@ -7,7 +7,7 @@
 #include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "game/nodes/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
@@ -57,7 +57,7 @@ TEST_CASE("make array expand / shrink") {
                 const auto pMeshDataArray =
                     pArrayManager->getArrayForShaderResource(pTargetShaderResourceName);
                 REQUIRE(pMeshDataArray != nullptr);
-                REQUIRE(pMeshDataArray->getSize() == FrameResourcesManager::getFrameResourcesCount());
+                REQUIRE(pMeshDataArray->getSize() == FrameResourceManager::getFrameResourceCount());
 
                 // Save initial capacity.
                 const auto iInitialCapacity = pMeshDataArray->getCapacity();
@@ -80,7 +80,7 @@ TEST_CASE("make array expand / shrink") {
                     std::scoped_lock guard(pMtxMeshArrayResources->first);
                     REQUIRE(
                         pMtxMeshArrayResources->second.iNextFreeArrayIndex ==
-                        (iTempNodeCount + 1) * FrameResourcesManager::getFrameResourcesCount());
+                        (iTempNodeCount + 1) * FrameResourceManager::getFrameResourceCount());
                     REQUIRE(pMtxMeshArrayResources->second.noLongerUsedArrayIndices.empty());
                 }
 
@@ -95,17 +95,17 @@ TEST_CASE("make array expand / shrink") {
                     std::scoped_lock guard(pMtxMeshArrayResources->first);
                     REQUIRE(
                         pMtxMeshArrayResources->second.iNextFreeArrayIndex ==
-                        (iTempNodeCount + 1) * FrameResourcesManager::getFrameResourcesCount());
+                        (iTempNodeCount + 1) * FrameResourceManager::getFrameResourceCount());
                     REQUIRE(
                         pMtxMeshArrayResources->second.noLongerUsedArrayIndices.size() ==
-                        iTempNodeCount * FrameResourcesManager::getFrameResourcesCount());
+                        iTempNodeCount * FrameResourceManager::getFrameResourceCount());
                 }
 
                 // Add more mesh nodes to make the array expand.
                 const auto iExpectedCapacitySizeMult = 3;
                 const auto iMeshToSpawnCount = pMeshDataArray->getCapacityStepSize() *
                                                iExpectedCapacitySizeMult /
-                                               FrameResourcesManager::getFrameResourcesCount();
+                                               FrameResourceManager::getFrameResourceCount();
                 for (size_t i = 0; i < iMeshToSpawnCount; i++) {
                     // Spawn sample mesh.
                     const auto pMeshNode = sgc::makeGc<MeshNode>();
@@ -117,7 +117,7 @@ TEST_CASE("make array expand / shrink") {
                 // Now array has expanded.
                 REQUIRE(
                     pMeshDataArray->getSize() ==
-                    (iMeshToSpawnCount + 1) * FrameResourcesManager::getFrameResourcesCount());
+                    (iMeshToSpawnCount + 1) * FrameResourceManager::getFrameResourceCount());
                 REQUIRE(pMeshDataArray->getCapacity() > iInitialCapacity);
                 REQUIRE(
                     pMeshDataArray->getCapacity() ==
@@ -132,7 +132,7 @@ TEST_CASE("make array expand / shrink") {
 
                 // Now make the array shrink.
                 const auto iMeshCountToDespawn =
-                    pMeshDataArray->getCapacityStepSize() / FrameResourcesManager::getFrameResourcesCount();
+                    pMeshDataArray->getCapacityStepSize() / FrameResourceManager::getFrameResourceCount();
                 REQUIRE(vMeshNodes.size() > iMeshCountToDespawn);
                 auto iMeshNodeCount = vMeshNodes.size() + 1;
                 for (size_t i = 0; i < iMeshCountToDespawn; i++) {
@@ -144,13 +144,13 @@ TEST_CASE("make array expand / shrink") {
                 // Now array has shrinked.
                 REQUIRE(
                     pMeshDataArray->getSize() ==
-                    (vMeshNodes.size() + 1) * FrameResourcesManager::getFrameResourcesCount());
+                    (vMeshNodes.size() + 1) * FrameResourceManager::getFrameResourceCount());
                 REQUIRE(pMeshDataArray->getCapacity() > iInitialCapacity);
                 REQUIRE(
                     pMeshDataArray->getCapacity() ==
                     pMeshDataArray->getCapacityStepSize() * iExpectedCapacitySizeMult);
                 REQUIRE(
-                    iMeshNodeCount * FrameResourcesManager::getFrameResourcesCount() ==
+                    iMeshNodeCount * FrameResourceManager::getFrameResourceCount() ==
                     pMeshDataArray->getSize());
 
                 // Make sure there are unused slots.
@@ -185,8 +185,7 @@ TEST_CASE("make array expand / shrink") {
                 // Despawn all left mesh nodes.
                 const auto iNodesLeft = vMeshNodes.size() + 1;
                 REQUIRE(
-                    iNodesLeft * FrameResourcesManager::getFrameResourcesCount() ==
-                    pMeshDataArray->getSize());
+                    iNodesLeft * FrameResourceManager::getFrameResourceCount() == pMeshDataArray->getSize());
 
                 // Despawn nodes.
                 const auto iNodesToDespawnCount = vMeshNodes.size();

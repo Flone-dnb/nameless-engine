@@ -103,8 +103,8 @@ set(PROJECT_SOURCES
     private/render/general/resources/GpuResource.cpp
     private/render/general/resources/MeshData.h
     private/render/general/resources/MeshData.cpp
-    private/render/general/resources/frame/FrameResourcesManager.h
-    private/render/general/resources/frame/FrameResourcesManager.cpp
+    private/render/general/resources/frame/FrameResourceManager.h
+    private/render/general/resources/frame/FrameResourceManager.cpp
     private/render/general/resources/frame/FrameResource.h
     private/render/general/resources/frame/FrameResource.cpp
     private/render/general/resources/shadow/ShadowMapManager.cpp

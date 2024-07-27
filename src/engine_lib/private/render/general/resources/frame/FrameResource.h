@@ -14,7 +14,7 @@ namespace ne {
     /** Stores objects used by one frame. */
     struct FrameResource {
         // Only frame resource manager can initialize us.
-        friend class FrameResourcesManager;
+        friend class FrameResourceManager;
 
         virtual ~FrameResource() = default;
 

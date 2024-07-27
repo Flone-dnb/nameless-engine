@@ -11,7 +11,7 @@
 #include "shader/general/resources/ShaderResource.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "render/vulkan/resources/VulkanStorageResourceArray.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
     class Pipeline;
@@ -199,7 +199,7 @@ namespace ne {
         /** Reserved space in the storage buffer that the resource uses to copy its data to. */
         std::array<
             std::unique_ptr<VulkanStorageResourceArraySlot>,
-            FrameResourcesManager::getFrameResourcesCount()>
+            FrameResourceManager::getFrameResourceCount()>
             vResourceData;
 
         /**

@@ -6,7 +6,7 @@
 // Custom.
 #include "render/general/resources/shadow/ShadowMapArrayIndexManager.h"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 
 // External.
 #include "vulkan/vulkan.h"

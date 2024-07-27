@@ -43,7 +43,7 @@ namespace ne {
      * and instead continue drawing another frame (on the CPU side) without touching resources
      * that can be in use by the GPU because it's drawing the previous frame.
      */
-    class FrameResourcesManager {
+    class FrameResourceManager {
         // Only renderer is allowed to switch to the next frame resource.
         friend class Renderer;
 
@@ -56,22 +56,22 @@ namespace ne {
             CurrentFrameResource() = default;
 
             /** Current index in frame resources array. */
-            size_t iCurrentFrameResourceIndex = 0;
+            size_t iIndex = 0;
 
-            /** Pointer to item in the index @ref iCurrentFrameResourceIndex. */
+            /** Pointer to item at the @ref iIndex. */
             FrameResource* pResource = nullptr;
         };
 
-        FrameResourcesManager() = delete;
-        FrameResourcesManager(const FrameResourcesManager&) = delete;
-        FrameResourcesManager& operator=(const FrameResourcesManager&) = delete;
+        FrameResourceManager() = delete;
+        FrameResourceManager(const FrameResourceManager&) = delete;
+        FrameResourceManager& operator=(const FrameResourceManager&) = delete;
 
         /**
          * Returns the number of used frame resources.
          *
          * @return Number of frame resources being used.
          */
-        static constexpr unsigned int getFrameResourcesCount() { return iFrameResourcesCount; }
+        static constexpr unsigned int getFrameResourceCount() { return iFrameResourceCount; }
 
         /**
          * Creates a new frame resources manager.
@@ -80,7 +80,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created manager.
          */
-        static std::variant<std::unique_ptr<FrameResourcesManager>, Error> create(Renderer* pRenderer);
+        static std::variant<std::unique_ptr<FrameResourceManager>, Error> create(Renderer* pRenderer);
 
         /**
          * Returns currently used frame resource.
@@ -103,7 +103,7 @@ namespace ne {
 
     private:
         /** Number of frames "in-flight" that the CPU can submit to the GPU without waiting. */
-        static constexpr unsigned int iFrameResourcesCount = 2; // small to avoid input latency
+        static constexpr unsigned int iFrameResourceCount = 2; // small to avoid input latency
 
         /**
          * Creates a render-specific frame resources depending on the renderer used.
@@ -112,7 +112,7 @@ namespace ne {
          *
          * @return Render-specific frame resources
          */
-        static std::array<std::unique_ptr<FrameResource>, iFrameResourcesCount>
+        static std::array<std::unique_ptr<FrameResource>, iFrameResourceCount>
         createRenderDependentFrameResources(Renderer* pRenderer);
 
         /**
@@ -120,7 +120,7 @@ namespace ne {
          *
          * @param pRenderer Renderer that owns this manager.
          */
-        FrameResourcesManager(Renderer* pRenderer);
+        FrameResourceManager(Renderer* pRenderer);
 
         /**
          * Uses mutex from @ref getCurrentFrameResource to switch to the next available frame resource.
@@ -140,6 +140,6 @@ namespace ne {
         std::pair<std::recursive_mutex, CurrentFrameResource> mtxCurrentFrameResource;
 
         /** Array of frame-specific resources, all contain the same data. */
-        std::array<std::unique_ptr<FrameResource>, iFrameResourcesCount> vFrameResources;
+        std::array<std::unique_ptr<FrameResource>, iFrameResourceCount> vFrameResources;
     };
 } // namespace ne

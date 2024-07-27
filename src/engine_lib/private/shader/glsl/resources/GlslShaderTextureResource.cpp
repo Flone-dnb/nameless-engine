@@ -145,7 +145,7 @@ namespace ne {
         }
 
         // Update one descriptor in set per frame resource.
-        for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+        for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             // Prepare info to bind an image view to descriptor.
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

@@ -469,7 +469,7 @@ namespace ne {
 
         // Gather buffers to bind.
         const auto pInternalResource = mtxInternalResources.second.pStorageBuffer->getInternalResource();
-        std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vBuffers;
+        std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vBuffers;
         for (size_t i = 0; i < vBuffers.size(); i++) {
             vBuffers[i] = pInternalResource;
         }
@@ -496,7 +496,7 @@ namespace ne {
 
         // Gather buffers to bind.
         const auto pInternalResource = mtxInternalResources.second.pStorageBuffer->getInternalResource();
-        std::array<GpuResource*, FrameResourcesManager::getFrameResourcesCount()> vBuffers;
+        std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vBuffers;
         for (size_t i = 0; i < vBuffers.size(); i++) {
             vBuffers[i] = pInternalResource;
         }

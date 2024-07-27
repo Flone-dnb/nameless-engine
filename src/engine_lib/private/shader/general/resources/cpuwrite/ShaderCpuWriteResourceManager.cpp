@@ -93,7 +93,7 @@ namespace ne {
                 decltype(mtxShaderCpuWriteResources.second.vToBeUpdated),
                 std::array<
                     std::unordered_set<ShaderCpuWriteResource*>,
-                    FrameResourcesManager::getFrameResourcesCount()>>,
+                    FrameResourceManager::getFrameResourceCount()>>,
             "update reinterpret_casts");
 
         // We now need to call `updateResource` function that has the same signature

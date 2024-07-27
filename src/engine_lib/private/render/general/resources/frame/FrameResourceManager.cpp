@@ -1,4 +1,4 @@
-#include "FrameResourcesManager.h"
+#include "FrameResourceManager.h"
 
 // Standard.
 #include <format>
@@ -15,14 +15,14 @@
 
 namespace ne {
 
-    std::array<std::unique_ptr<FrameResource>, FrameResourcesManager::getFrameResourcesCount()>
-    FrameResourcesManager::createRenderDependentFrameResources(Renderer* pRenderer) {
-        std::array<std::unique_ptr<FrameResource>, FrameResourcesManager::getFrameResourcesCount()>
+    std::array<std::unique_ptr<FrameResource>, FrameResourceManager::getFrameResourceCount()>
+    FrameResourceManager::createRenderDependentFrameResources(Renderer* pRenderer) {
+        std::array<std::unique_ptr<FrameResource>, FrameResourceManager::getFrameResourceCount()>
             vResources;
 
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-            for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
+            for (unsigned int i = 0; i < getFrameResourceCount(); i++) {
                 vResources[i] = std::make_unique<DirectXFrameResource>();
             }
             return vResources;
@@ -30,7 +30,7 @@ namespace ne {
 #endif
 
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
+            for (unsigned int i = 0; i < getFrameResourceCount(); i++) {
                 vResources[i] = std::make_unique<VulkanFrameResource>();
             }
             return vResources;
@@ -41,23 +41,23 @@ namespace ne {
         throw std::runtime_error(error.getFullErrorMessage());
     }
 
-    FrameResourcesManager::FrameResourcesManager(Renderer* pRenderer) {
-        static_assert(iFrameResourcesCount == 2, "too much frames in-flight will introduce input latency");
+    FrameResourceManager::FrameResourceManager(Renderer* pRenderer) {
+        static_assert(iFrameResourceCount == 2, "too much frames in-flight will introduce input latency");
 
         this->pRenderer = pRenderer;
 
         vFrameResources = createRenderDependentFrameResources(pRenderer);
 
-        mtxCurrentFrameResource.second.iCurrentFrameResourceIndex = 0;
+        mtxCurrentFrameResource.second.iIndex = 0;
         mtxCurrentFrameResource.second.pResource =
-            vFrameResources[mtxCurrentFrameResource.second.iCurrentFrameResourceIndex].get();
+            vFrameResources[mtxCurrentFrameResource.second.iIndex].get();
     }
 
-    std::variant<std::unique_ptr<FrameResourcesManager>, Error>
-    FrameResourcesManager::create(Renderer* pRenderer) {
-        auto pManager = std::unique_ptr<FrameResourcesManager>(new FrameResourcesManager(pRenderer));
+    std::variant<std::unique_ptr<FrameResourceManager>, Error>
+    FrameResourceManager::create(Renderer* pRenderer) {
+        auto pManager = std::unique_ptr<FrameResourceManager>(new FrameResourceManager(pRenderer));
 
-        for (unsigned int i = 0; i < getFrameResourcesCount(); i++) {
+        for (unsigned int i = 0; i < getFrameResourceCount(); i++) {
             // Create a constant buffer with frame-global data per frame.
             auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
                 std::format("frame constants #{}", i), sizeof(FrameConstants), 1, false);
@@ -80,27 +80,27 @@ namespace ne {
         return pManager;
     }
 
-    std::pair<std::recursive_mutex, FrameResourcesManager::CurrentFrameResource>*
-    FrameResourcesManager::getCurrentFrameResource() {
+    std::pair<std::recursive_mutex, FrameResourceManager::CurrentFrameResource>*
+    FrameResourceManager::getCurrentFrameResource() {
         return &mtxCurrentFrameResource;
     }
 
-    void FrameResourcesManager::switchToNextFrameResource() {
+    void FrameResourceManager::switchToNextFrameResource() {
         std::scoped_lock resourceGuard(mtxCurrentFrameResource.first);
 
         // Switch to the next frame resource index.
-        mtxCurrentFrameResource.second.iCurrentFrameResourceIndex =
-            (mtxCurrentFrameResource.second.iCurrentFrameResourceIndex + 1) % getFrameResourcesCount();
+        mtxCurrentFrameResource.second.iIndex =
+            (mtxCurrentFrameResource.second.iIndex + 1) % getFrameResourceCount();
 
         // Update current frame resource pointer.
         mtxCurrentFrameResource.second.pResource =
-            vFrameResources[mtxCurrentFrameResource.second.iCurrentFrameResourceIndex].get();
+            vFrameResources[mtxCurrentFrameResource.second.iIndex].get();
     }
 
     std::pair<std::recursive_mutex*, std::vector<FrameResource*>>
-    FrameResourcesManager::getAllFrameResources() {
+    FrameResourceManager::getAllFrameResources() {
         // Collect all resources to vector.
-        std::vector<FrameResource*> vOutFrameResources(iFrameResourcesCount);
+        std::vector<FrameResource*> vOutFrameResources(iFrameResourceCount);
         for (size_t i = 0; i < vFrameResources.size(); i++) {
             vOutFrameResources[i] = vFrameResources[i].get();
         }

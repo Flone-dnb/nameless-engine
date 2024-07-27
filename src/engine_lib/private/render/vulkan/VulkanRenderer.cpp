@@ -10,7 +10,7 @@
 #include "game/Window.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
 #include "render/vulkan/resources/VulkanFrameResource.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"
@@ -158,7 +158,7 @@ namespace ne {
             // in frame resources use command pool to be freed.
             // Also delete frame resources before GPU resource manager because they use memory allocator
             // for destruction.
-            resetFrameResourcesManager();
+            resetFrameResourceManager();
 
             // Explicitly delete memory allocator before all essential Vulkan objects.
             resetGpuResourceManager();
@@ -288,7 +288,7 @@ namespace ne {
         }
 
         {
-            auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
+            auto mtxAllFrameResource = getFrameResourceManager()->getAllFrameResources();
             std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
 
             for (size_t i = 0; i < mtxAllFrameResource.second.size(); i++) {
@@ -1379,7 +1379,7 @@ namespace ne {
             vImageSemaphores[i].iUsedFrameResourceIndex = iFrameResourceIndex;
 
             // Switch to the next fence index.
-            iFrameResourceIndex = (iFrameResourceIndex + 1) % FrameResourcesManager::getFrameResourcesCount();
+            iFrameResourceIndex = (iFrameResourceIndex + 1) % FrameResourceManager::getFrameResourceCount();
         }
 
         // Update light culling resources.
@@ -2310,12 +2310,12 @@ namespace ne {
 
         // Since the next acquired swap chain image index will be 0,
         // make sure the current frame resource index is also 0.
-        const auto pMtxCurrentFrameResource = getFrameResourcesManager()->getCurrentFrameResource();
+        const auto pMtxCurrentFrameResource = getFrameResourceManager()->getCurrentFrameResource();
         std::scoped_lock guardFrameResources(pMtxCurrentFrameResource->first);
-        if (pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex != 0) {
+        if (pMtxCurrentFrameResource->second.iIndex != 0) {
             do {
-                getFrameResourcesManager()->switchToNextFrameResource();
-            } while (pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex != 0);
+                getFrameResourceManager()->switchToNextFrameResource();
+            } while (pMtxCurrentFrameResource->second.iIndex != 0);
         }
 
         return {};
@@ -2367,7 +2367,7 @@ namespace ne {
         }
 
         {
-            auto mtxAllFrameResource = getFrameResourcesManager()->getAllFrameResources();
+            auto mtxAllFrameResource = getFrameResourceManager()->getAllFrameResources();
             std::scoped_lock frameResourceGuard(*mtxAllFrameResource.first);
 
             // Make swap chain images reference frame resource fences.
@@ -2383,7 +2383,7 @@ namespace ne {
 
                 // Pick next frame resource.
                 iFrameResourceIndex =
-                    (iFrameResourceIndex + 1) % FrameResourcesManager::getFrameResourcesCount();
+                    (iFrameResourceIndex + 1) % FrameResourceManager::getFrameResourceCount();
             }
         }
 
@@ -2506,7 +2506,7 @@ namespace ne {
         PROFILE_SCOPE_START(WaitForFrameResourceFence);
 
         // Get all frame resources.
-        auto mtxAllFrameResources = getFrameResourcesManager()->getAllFrameResources();
+        auto mtxAllFrameResources = getFrameResourceManager()->getAllFrameResources();
         std::scoped_lock allFrameResourcesGuard(*mtxAllFrameResources.first);
 
         // Get frame resource that was used with current semaphores.
@@ -2728,15 +2728,15 @@ namespace ne {
         }
 
         // Get frame resources.
-        const auto pFrameResourcesManager = getFrameResourcesManager();
-        if (pFrameResourcesManager == nullptr) [[unlikely]] {
+        const auto pFrameResourceManager = getFrameResourceManager();
+        if (pFrameResourceManager == nullptr) [[unlikely]] {
             Error error("expected frame resource manager to be valid at this point");
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
         // Get all frame resources.
-        const auto mtxAllFrameResources = pFrameResourcesManager->getAllFrameResources();
+        const auto mtxAllFrameResources = pFrameResourceManager->getAllFrameResources();
 
         // Make sure no new frames are queued (if we are calling this function from a non-main thread)
         // to avoid fences change their state to unsignaled due to a new frame being submitted.
@@ -3028,8 +3028,8 @@ namespace ne {
         // Get pipelines to iterate over.
         const auto& shadowMappingDirectionalSpotPipelines = pGraphicsPipelines->vPipelineTypes.at(
             static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_DIRECTIONAL_SPOT));
-        const auto& shadowMappingPointPipelines =
-            pGraphicsPipelines->vPipelineTypes.at(static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_POINT));
+        const auto& shadowMappingPointPipelines = pGraphicsPipelines->vPipelineTypes.at(
+            static_cast<size_t>(GraphicsPipelineType::PT_SHADOW_MAPPING_POINT));
 
         // Prepare lambda to set viewport size according to shadow map size.
         const auto setViewportSizeToShadowMap = [&](ShadowMapHandle* pShadowMapHandle) {

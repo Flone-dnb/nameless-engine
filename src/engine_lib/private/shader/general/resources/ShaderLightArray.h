@@ -12,7 +12,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/general/resources/UploadBuffer.h"
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/general/resources/ShaderLightsInFrustumSingleType.hpp"
 
 namespace ne {
@@ -124,7 +124,7 @@ namespace ne {
              * that is currently being used by the GPU but we also don't want to stop the rendering when
              * we need an update.
              */
-            std::array<std::unique_ptr<UploadBuffer>, FrameResourcesManager::getFrameResourcesCount()>
+            std::array<std::unique_ptr<UploadBuffer>, FrameResourceManager::getFrameResourceCount()>
                 vGpuArrayLightDataResources;
 
             /** Stores information about light sources in active camera's frustum. */
@@ -133,7 +133,7 @@ namespace ne {
             /** Slots (elements) in arrays from @ref vGpuArrayLightDataResources that needs to be updated. */
             std::array<
                 std::unordered_set<ShaderLightArraySlot*>,
-                FrameResourcesManager::getFrameResourcesCount()>
+                FrameResourceManager::getFrameResourceCount()>
                 vSlotsToBeUpdated;
 
             /** All currently active (existing) slots. */

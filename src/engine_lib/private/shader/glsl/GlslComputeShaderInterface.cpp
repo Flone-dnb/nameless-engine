@@ -120,19 +120,19 @@ namespace ne {
 
         // Prepare indices of frame resources to update.
         std::vector<unsigned int> vFrameResourcesToUpdate;
-        vFrameResourcesToUpdate.reserve(FrameResourcesManager::getFrameResourcesCount());
+        vFrameResourcesToUpdate.reserve(FrameResourceManager::getFrameResourceCount());
 
         // Get current frame resource.
         const auto pMtxCurrentFrameResource =
-            pVulkanRenderer->getFrameResourcesManager()->getCurrentFrameResource();
+            pVulkanRenderer->getFrameResourceManager()->getCurrentFrameResource();
         std::scoped_lock frameResourceGuard(pMtxCurrentFrameResource->first);
 
         // Prepare frame resources to update.
         if (bUpdateOnlyCurrentFrameResourceDescriptors) {
             vFrameResourcesToUpdate.push_back(
-                static_cast<unsigned int>(pMtxCurrentFrameResource->second.iCurrentFrameResourceIndex));
+                static_cast<unsigned int>(pMtxCurrentFrameResource->second.iIndex));
         } else {
-            for (unsigned int i = 0; i < FrameResourcesManager::getFrameResourcesCount(); i++) {
+            for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
                 vFrameResourcesToUpdate.push_back(i);
             }
         }

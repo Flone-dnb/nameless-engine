@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 // Custom.
-#include "render/general/resources/frame/FrameResourcesManager.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "misc/Error.h"
 
 namespace ne {

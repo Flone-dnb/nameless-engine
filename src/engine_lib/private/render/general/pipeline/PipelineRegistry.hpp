@@ -30,7 +30,9 @@ namespace ne {
     /** Stores pipelines of different types. */
     struct GraphicsPipelineRegistry {
         /** Map key is vertex (and pixel if specified) shader name(s). */
-        std::array<std::unordered_map<std::string, ShaderPipelines>, static_cast<size_t>(GraphicsPipelineType::SIZE)>
+        std::array<
+            std::unordered_map<std::string, ShaderPipelines>,
+            static_cast<size_t>(GraphicsPipelineType::SIZE)>
             vPipelineTypes;
     };
 }

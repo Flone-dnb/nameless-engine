@@ -17,8 +17,7 @@ namespace ne {
 
     std::array<std::unique_ptr<FrameResource>, FrameResourceManager::getFrameResourceCount()>
     FrameResourceManager::createRenderDependentFrameResources(Renderer* pRenderer) {
-        std::array<std::unique_ptr<FrameResource>, FrameResourceManager::getFrameResourceCount()>
-            vResources;
+        std::array<std::unique_ptr<FrameResource>, FrameResourceManager::getFrameResourceCount()> vResources;
 
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {

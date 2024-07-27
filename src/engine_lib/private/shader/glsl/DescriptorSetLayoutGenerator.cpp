@@ -499,8 +499,8 @@ namespace ne {
         // Allocate descriptor sets.
 
         // Prepare layout for each descriptor set to create.
-        std::array<VkDescriptorSetLayout, FrameResourceManager::getFrameResourceCount()>
-            vDescriptorLayouts = {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
+        std::array<VkDescriptorSetLayout, FrameResourceManager::getFrameResourceCount()> vDescriptorLayouts =
+            {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
 
         // Allocate descriptor sets.
         VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};
@@ -731,9 +731,9 @@ namespace ne {
             descriptorPoolSize.descriptorCount =
                 vLayoutBindings[i].descriptorCount *
                 FrameResourceManager::getFrameResourceCount(); // also use frame resources just like in
-                                                                 // graphics pipelines to be consistent
-                                                                 // although we don't need that much
-                                                                 // descriptors
+                                                               // graphics pipelines to be consistent
+                                                               // although we don't need that much
+                                                               // descriptors
         }
 
         // Describe descriptor pool.
@@ -761,8 +761,8 @@ namespace ne {
         // Allocate descriptor sets.
 
         // Prepare layout for each descriptor set to create.
-        std::array<VkDescriptorSetLayout, FrameResourceManager::getFrameResourceCount()>
-            vDescriptorLayouts = {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
+        std::array<VkDescriptorSetLayout, FrameResourceManager::getFrameResourceCount()> vDescriptorLayouts =
+            {generatedData.pDescriptorSetLayout, generatedData.pDescriptorSetLayout};
 
         // Allocate descriptor sets.
         VkDescriptorSetAllocateInfo descriptorSetAllocInfo{};

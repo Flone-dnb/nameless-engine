@@ -351,8 +351,7 @@ namespace ne {
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
         // Cull lights.
-        cullLightsOutsideCameraFrustum(
-            pActiveCameraProperties, pMtxCurrentFrameResource->second.iIndex);
+        cullLightsOutsideCameraFrustum(pActiveCameraProperties, pMtxCurrentFrameResource->second.iIndex);
 
         // Capture shadow maps.
         drawShadowMappingPass(
@@ -384,9 +383,7 @@ namespace ne {
             pMeshPipelinesInFrustum->vTransparentPipelines);
 
         // Present the frame on the screen, flip swapchain images, etc.
-        present(
-            pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iIndex);
+        present(pMtxCurrentFrameResource->second.pResource, pMtxCurrentFrameResource->second.iIndex);
 
         // Update frame stats.
         calculateFrameStatistics();
@@ -947,8 +944,7 @@ namespace ne {
         updateFrameConstantsBuffer(pMtxCurrentFrameResource->second.pResource, pCameraProperties);
 
         // Update shader CPU write resources marked as "needs update".
-        getShaderCpuWriteResourceManager()->updateResources(
-            pMtxCurrentFrameResource->second.iIndex);
+        getShaderCpuWriteResourceManager()->updateResources(pMtxCurrentFrameResource->second.iIndex);
 
         // Before updating lighting shader resources update general lighting parameters.
         {
@@ -964,8 +960,7 @@ namespace ne {
 
         // Update lighting shader resources marked as "needs update".
         pLightingShaderResourceManager->updateResources(
-            pMtxCurrentFrameResource->second.pResource,
-            pMtxCurrentFrameResource->second.iIndex);
+            pMtxCurrentFrameResource->second.pResource, pMtxCurrentFrameResource->second.iIndex);
     }
 
     Renderer::MeshesInFrustum* Renderer::getMeshesInCameraFrustum(

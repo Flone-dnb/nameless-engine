@@ -52,8 +52,8 @@ namespace ne {
          *
          * @param descriptorType Type of descriptor to bind.
          * @param pRange         Specify in order to allocate a descriptor from this range.
-         * @param bDontBindDescriptorToCubemapFaces If this resource is a cubemap, specify `false`
-         * to also bind descriptors that reference cubemap faces, specify `true` to only bind 1
+         * @param bBindDescriptorsToCubemapFaces If this resource is a cubemap, specify `true`
+         * to also bind descriptors that reference specific cubemap faces, specify `false` to only bind 1
          * descriptor that references the entire resource.
          *
          * @return Error if something went wrong.
@@ -61,7 +61,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> bindDescriptor(
             DirectXDescriptorType descriptorType,
             ContinuousDirectXDescriptorRange* pRange = nullptr,
-            bool bDontBindDescriptorToCubemapFaces = false);
+            bool bBindDescriptorsToCubemapFaces = true);
 
         /**
          * Returns descriptor handle to the descriptor that was previously binded using @ref bindDescriptor.

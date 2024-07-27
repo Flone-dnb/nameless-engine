@@ -63,10 +63,8 @@ namespace ne {
 
     std::optional<Error>
     DirectXShadowMapArrayIndexManager::registerShadowMapResource(ShadowMapHandle* pShadowMapHandle) {
-        // Get resource.
+        // Lock resources.
         const auto pMtxResources = pShadowMapHandle->getResources();
-
-        // Lock shadow map and internal resources.
         std::scoped_lock guard(pMtxResources->first, mtxRegisteredShadowMaps.first);
 
         // Convert resources.
@@ -76,14 +74,6 @@ namespace ne {
         }
         const auto pColorTexture = reinterpret_cast<DirectXResource*>(pMtxResources->second.pColorTexture);
 
-        // Determine which resource to use to bind SRV.
-        DirectXResource* pSrvResource = pDepthTexture;
-        if (pColorTexture != nullptr) {
-            // This is a shadow map handle for point light and we will later sample from the color texture
-            // (not from the depth texture).
-            pSrvResource = pColorTexture;
-        }
-
         // Bind a single DSV from descriptor heap (not a range).
         auto optionalError = pDepthTexture->bindDescriptor(DirectXDescriptorType::DSV);
         if (optionalError.has_value()) [[unlikely]] {
@@ -92,6 +82,7 @@ namespace ne {
         }
 
         if (pColorTexture != nullptr) {
+            // This is a shadow map handle for point light.
             // We also need a RTV to color texture during shadow pass for point lights.
             optionalError = pColorTexture->bindDescriptor(DirectXDescriptorType::RTV);
             if (optionalError.has_value()) [[unlikely]] {
@@ -110,6 +101,14 @@ namespace ne {
                 pDepthTexture->getResourceName()));
         }
 
+        // Determine which resource to use to bind SRV.
+        auto pSrvResource = pDepthTexture;
+        if (pColorTexture != nullptr) {
+            // This is a shadow map handle for point light.
+            // Pixel shaders will sample from the color texture (not from the depth texture).
+            pSrvResource = pColorTexture;
+        }
+
         // Self check: make sure the resource does not have SRV yet.
         if (pSrvResource->getDescriptor(DirectXDescriptorType::SRV) != nullptr) [[unlikely]] {
             return Error(std::format(
@@ -120,7 +119,7 @@ namespace ne {
         }
 
         // Bind SRV from the range.
-        optionalError = pSrvResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange.get(), true);
+        optionalError = pSrvResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange.get(), false);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

@@ -48,7 +48,7 @@ namespace ne {
         DirectXResource* pResource,
         DirectXDescriptorType descriptorType,
         ContinuousDirectXDescriptorRange* pRange,
-        bool bDontBindDescriptorToCubemapFaces) {
+        bool bBindDescriptorsToCubemapFaces) {
         // Check if this heap handles the specified descriptor type.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
         const auto descriptorIt = std::ranges::find_if(
@@ -195,7 +195,7 @@ namespace ne {
             return optionalError;
         }
 
-        if (bIsCubeMap && !bDontBindDescriptorToCubemapFaces) {
+        if (bIsCubeMap && bBindDescriptorsToCubemapFaces) {
             // Bind a descriptor to each cubemap face.
             for (size_t iDescriptorIndex = 0; iDescriptorIndex < desc.DepthOrArraySize; iDescriptorIndex++) {
                 auto optionalError = allocateDescriptor(iDescriptorIndex);

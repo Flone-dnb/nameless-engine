@@ -42,7 +42,7 @@ namespace ne {
             const std::string& sShaderArrayResourceName);
 
         /**
-         * Returns internal SRV descriptor range.
+         * Returns internal SRV descriptor range to the array of shadow maps.
          *
          * @return SRV descriptor range.
          */
@@ -115,13 +115,13 @@ namespace ne {
         void onSrvRangeIndicesChanged();
 
         /**
-         * Continuous SRV descriptor range for registered shadow maps.
+         * Continuous SRV descriptor range of registered shadow maps for shaders.
          *
          * @remark Always valid, never changing pointer.
          */
         std::unique_ptr<ContinuousDirectXDescriptorRange> pSrvRange;
 
-        /** Shadows maps that take place in this array. */
+        /** Info about shadows maps that take place in this array. */
         std::pair<std::recursive_mutex, std::unordered_set<ShadowMapHandle*>> mtxRegisteredShadowMaps;
     };
 }

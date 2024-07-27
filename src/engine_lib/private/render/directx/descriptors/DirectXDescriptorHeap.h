@@ -473,8 +473,8 @@ namespace ne {
          * @param pResource      Resource to point new descriptor to.
          * @param descriptorType Type of the new descriptor.
          * @param pRange         Specify in order to allocate a descriptor from this range.
-         * @param bDontBindDescriptorToCubemapFaces If this resource is a cubemap, specify `false`
-         * to also bind descriptors that reference cubemap faces, specify `true` to only bind 1
+         * @param bBindDescriptorsToCubemapFaces If this resource is a cubemap, specify `true`
+         * to also bind descriptors that reference specific cubemap faces, specify `false` to only bind 1
          * descriptor that references the entire resource.
          *
          * @return Error if something went wrong.
@@ -483,7 +483,7 @@ namespace ne {
             DirectXResource* pResource,
             DirectXDescriptorType descriptorType,
             ContinuousDirectXDescriptorRange* pRange = nullptr,
-            bool bDontBindDescriptorToCubemapFaces = false);
+            bool bBindDescriptorsToCubemapFaces = true);
 
         /**
          * Checks shrink condition: if capacity can be decremented by grow size with the current size.

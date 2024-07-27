@@ -7,7 +7,14 @@
 namespace ne {
 
     ShaderArrayIndexManager::ShaderArrayIndexManager(const std::string& sName, unsigned int iArraySize)
-        : iArraySize(iArraySize), sName(sName) {}
+        : iArraySize(iArraySize), sName(sName) {
+        // Make sure size is not zero.
+        if (iArraySize == 0) [[unlikely]] {
+            Error error(std::format("index manager \"{}\" received zero as size", sName));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+    }
 
     ShaderArrayIndexManager::~ShaderArrayIndexManager() {
         std::scoped_lock guard(mtxData.first);
@@ -51,7 +58,7 @@ namespace ne {
             }
 
             // Make sure we don't reach array size limit.
-            if (iArraySize != 0 && mtxData.second.iNextFreeIndex == iArraySize) [[unlikely]] {
+            if (mtxData.second.iNextFreeIndex == iArraySize) [[unlikely]] {
                 Logger::get().warn(std::format(
                     "index manager \"{}\" just reached array's size limit of {}, the next requested index "
                     "(if no unused indices exist) will reference out of array bounds",

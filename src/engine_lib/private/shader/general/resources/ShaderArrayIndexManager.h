@@ -71,9 +71,8 @@ namespace ne {
          * @param sName Name of the manager (used for logging). It's recommended to not only specify
          * the shader resource name (that this manager is handling) but also some additional information
          * if possible.
-         * @param iArraySize Optional parameter that could be specified to mark the
-         * maximum possible number of elements in the array, if reached a warning will be logged.
-         * Specify zero to disable logging and these checks.
+         * @param iArraySize Specified to mark the maximum possible number of elements in the array, if
+         * reached a warning will be logged.
          */
         ShaderArrayIndexManager(const std::string& sName, unsigned int iArraySize);
 

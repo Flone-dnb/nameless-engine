@@ -210,7 +210,7 @@ namespace ne {
     std::optional<Error> DirectXResource::bindDescriptor(
         DirectXDescriptorType descriptorType,
         ContinuousDirectXDescriptorRange* pRange,
-        bool bDontBindDescriptorToCubemapFaces) {
+        bool bBindDescriptorsToCubemapFaces) {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 
         if (getDescriptor(descriptorType) != nullptr) {
@@ -255,7 +255,7 @@ namespace ne {
 
         // Assign descriptor.
         auto optionalError =
-            pHeap->assignDescriptor(this, descriptorType, pRange, bDontBindDescriptorToCubemapFaces);
+            pHeap->assignDescriptor(this, descriptorType, pRange, bBindDescriptorsToCubemapFaces);
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

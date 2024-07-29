@@ -124,10 +124,6 @@ set(PROJECT_SOURCES
     private/render/vulkan/resources/KtxLoadingCallbackManager.h
     private/render/vulkan/resources/VulkanResource.cpp
     private/render/vulkan/resources/VulkanResource.h
-    private/render/vulkan/resources/VulkanStorageResourceArrayManager.h
-    private/render/vulkan/resources/VulkanStorageResourceArrayManager.cpp
-    private/render/vulkan/resources/VulkanStorageResourceArray.h
-    private/render/vulkan/resources/VulkanStorageResourceArray.cpp
     private/render/vulkan/VulkanRenderer.cpp
     private/render/vulkan/VulkanRenderer.h
     private/render/vulkan/resources/VulkanFrameResource.h
@@ -157,6 +153,10 @@ set(PROJECT_SOURCES
     private/shader/general/formats/VertexFormat.cpp
     private/shader/general/cache/ShaderCacheManager.cpp
     private/shader/general/cache/ShaderCacheManager.h
+    private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.cpp
+    private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h
+    private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.cpp
+    private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h
     private/shader/glsl/formats/GlslVertexFormatDescription.h
     private/shader/glsl/formats/GlslVertexFormatDescription.cpp
     private/shader/glsl/formats/MeshNodeGlslVertexFormatDescription.cpp

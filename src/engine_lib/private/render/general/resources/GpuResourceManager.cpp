@@ -6,6 +6,7 @@
 #endif
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 
 namespace ne {
 
@@ -14,6 +15,11 @@ namespace ne {
     TextureManager* GpuResourceManager::getTextureManager() const { return pTextureManager.get(); }
 
     ShadowMapManager* GpuResourceManager::getShadowMapManager() const { return pShadowMapManager.get(); }
+
+    DynamicCpuWriteShaderResourceArrayManager*
+    GpuResourceManager::getDynamicCpuWriteShaderResourceArrayManager() const {
+        return pDynamicCpuWriteShaderResourceArrayManager.get();
+    }
 
     size_t GpuResourceManager::getTotalAliveResourceCount() { return iAliveResourceCount.load(); }
 
@@ -62,26 +68,35 @@ namespace ne {
         // Create texture manager.
         pResourceManager->pTextureManager = std::make_unique<TextureManager>(pResourceManager.get());
 
-        // Create shadow map manager.
-        auto shadowMapManagerResult = ShadowMapManager::create(pResourceManager.get());
-        if (std::holds_alternative<Error>(shadowMapManagerResult)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(shadowMapManagerResult));
-            error.addCurrentLocationToErrorStack();
-            return error;
+        {
+            // Create shadow map manager.
+            auto result = ShadowMapManager::create(pResourceManager.get());
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            pResourceManager->pShadowMapManager =
+                std::get<std::unique_ptr<ShadowMapManager>>(std::move(result));
         }
-        pResourceManager->pShadowMapManager =
-            std::get<std::unique_ptr<ShadowMapManager>>(std::move(shadowMapManagerResult));
+
+        // Create dynamic CPU-write shader array manager.
 
         return pResourceManager;
     }
 
-    GpuResourceManager::GpuResourceManager(Renderer* pRenderer) {
-        // Save renderer.
-        this->pRenderer = pRenderer;
+    GpuResourceManager::GpuResourceManager(Renderer* pRenderer) : pRenderer(pRenderer) {
+        // Create CPU-write shader array manager.
+        pDynamicCpuWriteShaderResourceArrayManager =
+            std::unique_ptr<DynamicCpuWriteShaderResourceArrayManager>(
+                new DynamicCpuWriteShaderResourceArrayManager(this));
     }
 
-    void GpuResourceManager::resetTextureManager() { pTextureManager = nullptr; }
+    void GpuResourceManager::resetManagers() {
+        pDynamicCpuWriteShaderResourceArrayManager = nullptr;
+        pShadowMapManager = nullptr;
 
-    void GpuResourceManager::resetShadowMapManager() { pShadowMapManager = nullptr; }
-
+        // Lastly destroy texture manager.
+        pTextureManager = nullptr;
+    }
 } // namespace ne

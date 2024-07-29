@@ -9,8 +9,8 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/GlslShader.h"
 #include "shader/general/EngineShaderNames.hpp"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
-#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "shader/glsl/DescriptorSetLayoutGenerator.h"
 #include "shader/glsl/formats/GlslVertexFormatDescription.h"
 
@@ -401,16 +401,15 @@ namespace ne {
                 ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
         }
 
-        // Get Vulkan resource manager.
-        const auto pVulkanResourceManager =
-            dynamic_cast<VulkanResourceManager*>(pVulkanRenderer->getResourceManager());
-        const auto pStorageArrayManager = pVulkanResourceManager->getStorageResourceArrayManager();
+        // Get shader resource array manager.
+        const auto pShaderResourceArrayManager =
+            pVulkanRenderer->getResourceManager()->getDynamicCpuWriteShaderResourceArrayManager();
 
-        // Bind descriptors that use storage arrays.
+        // (Re)bind descriptors that reference arrays.
         for (const auto& [sShaderResourceName, iBindingIndex] :
              mtxInternalResources.second.resourceBindings) {
             // Update descriptors.
-            optionalError = pStorageArrayManager->updateDescriptorsForPipelineResource(
+            optionalError = pShaderResourceArrayManager->updateDescriptorsForPipelineResource(
                 pVulkanRenderer, this, sShaderResourceName, iBindingIndex);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());

@@ -18,7 +18,7 @@
 #include "game/nodes/MeshNode.h"
 #include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "shader/glsl/resources/GlslShaderTextureResource.h"
-#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "render/general/resources/shadow/ShadowMapHandle.h"
 #include "shader/glsl/GlslComputeShaderInterface.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
@@ -2275,12 +2275,9 @@ namespace ne {
         // Now all pipeline resources were re-created.
         // Descriptor sets were also re-created and were notified but not everything is re-binded.
 
-        // Notify storage array manager to update descriptors that should point to storage arrays.
-        const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(getResourceManager());
-        if (pVulkanResourceManager == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan resource manager");
-        }
-        auto optionalError = pVulkanResourceManager->getStorageResourceArrayManager()
+        // Notify shader resource array manager to update descriptors that should point to arrays.
+        auto optionalError = getResourceManager()
+                                 ->getDynamicCpuWriteShaderResourceArrayManager()
                                  ->bindDescriptorsToRecreatedPipelineResources(this);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();

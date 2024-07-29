@@ -16,6 +16,7 @@
 namespace ne {
     class Renderer;
     class GpuResource;
+    class DynamicCpuWriteShaderResourceArrayManager;
 
     /** Describes how a resource will be used. */
     enum class ResourceUsageType {
@@ -219,6 +220,15 @@ namespace ne {
         ShadowMapManager* getShadowMapManager() const;
 
         /**
+         * Returns CPU-write shader resource array manager.
+         *
+         * @remark Do not delete (free) returned pointer.
+         *
+         * @return CPU-write array manager.
+         */
+        DynamicCpuWriteShaderResourceArrayManager* getDynamicCpuWriteShaderResourceArrayManager() const;
+
+        /**
          * Returns the total number of GPU resources currently alive.
          *
          * @return GPU resource count.
@@ -270,21 +280,8 @@ namespace ne {
          */
         GpuResourceManager(Renderer* pRenderer);
 
-        /**
-         * Sets `nullptr` to texture manager's unique ptr to force destroy it (if exists).
-         *
-         * @warning Avoid using this function. Only use it if you need a special destruction order
-         * in your object.
-         */
-        void resetTextureManager();
-
-        /**
-         * Sets `nullptr` to shadow map manager's unique ptr to force destroy it (if exists).
-         *
-         * @warning Avoid using this function. Only use it if you need a special destruction order
-         * in your object.
-         */
-        void resetShadowMapManager();
+        /** Sets `nullptr` to all texture/shadow/etc managers' unique ptr to force destroy them (if exist). */
+        void resetManagers();
 
     private:
         /** Stores all texture GPU resources. */
@@ -293,10 +290,13 @@ namespace ne {
         /** Stores all shadow maps. */
         std::unique_ptr<ShadowMapManager> pShadowMapManager;
 
+        /** Manages dynamic CPU-write shader arrays. */
+        std::unique_ptr<DynamicCpuWriteShaderResourceArrayManager> pDynamicCpuWriteShaderResourceArrayManager;
+
         /** Total number of created resources that were not destroyed yet. */
         std::atomic<size_t> iAliveResourceCount{0};
 
         /** Do not delete (free) this pointer. Renderer that owns this manager. */
-        Renderer* pRenderer = nullptr;
+        Renderer* const pRenderer = nullptr;
     };
 } // namespace ne

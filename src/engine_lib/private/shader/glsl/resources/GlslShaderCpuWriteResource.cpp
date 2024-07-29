@@ -6,10 +6,9 @@
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
-#include "render/vulkan/resources/VulkanResourceManager.h"
-#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/resources/GlslShaderResourceHelpers.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 
 namespace ne {
 
@@ -37,16 +36,11 @@ namespace ne {
             return Error("resource manager is `nullptr`");
         }
 
-        // Convert manager.
-        const auto pVulkanResourceManager = dynamic_cast<VulkanResourceManager*>(pResourceManager);
-        if (pVulkanResourceManager == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan resource manager");
-        }
-
-        // Get storage resource array manager.
-        const auto pStorageResourceArrayManager = pVulkanResourceManager->getStorageResourceArrayManager();
-        if (pStorageResourceArrayManager == nullptr) [[unlikely]] {
-            return Error("storage resource array manager is `nullptr`");
+        // Get shader resource array manager.
+        const auto pShaderResourceArrayManager =
+            pResourceManager->getDynamicCpuWriteShaderResourceArrayManager();
+        if (pShaderResourceArrayManager == nullptr) [[unlikely]] {
+            return Error("shader resource array manager is `nullptr`");
         }
 
         // Find push constant indices to use.
@@ -79,16 +73,16 @@ namespace ne {
             onFinishedUpdatingResource,
             pushConstantIndices));
 
-        // Reserve a space for this shader resource's data in a storage buffer per frame resource.
+        // Reserve a space for this shader resource's data per frame resource.
         for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
-            auto result = pStorageResourceArrayManager->reserveSlotsInArray(pShaderResource.get());
+            auto result = pShaderResourceArrayManager->reserveSlotsInArray(pShaderResource.get());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
             pShaderResource->vResourceData[i] =
-                std::get<std::unique_ptr<VulkanStorageResourceArraySlot>>(std::move(result));
+                std::get<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>>(std::move(result));
         }
 
         return pShaderResource;

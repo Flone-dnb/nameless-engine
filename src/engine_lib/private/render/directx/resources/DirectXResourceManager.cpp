@@ -6,6 +6,7 @@
 #include "render/general/resources/frame/FrameResourceManager.h"
 #include "render/general/resources/UploadBuffer.h"
 #include "render/directx/resources/DirectXFrameResource.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 
 // External.
 #include "DirectXTex/DDSTextureLoader/DDSTextureLoader12.h"
@@ -503,12 +504,8 @@ namespace ne {
     }
 
     DirectXResourceManager::~DirectXResourceManager() {
-        // Explicitly destroy shadow map manager before descriptor heaps
-        // to destroy descriptor ranges that it has.
-        resetShadowMapManager();
-
-        // Explicitly destroy texture manager so that it will no longer reference any GPU resources.
-        resetTextureManager();
+        // Explicitly destroy managers before descriptor heaps, plus to check that no resource is alive.
+        resetManagers();
 
         // Make sure no resource exist
         // (because on destruction resources generally free descriptors and notify descriptor heaps which
@@ -526,6 +523,9 @@ namespace ne {
             error.showError();
             return; // don't throw in destructor, just quit
         }
+
+        Logger::get().info("GPU resource manager is destroyed");
+        Logger::get().flushToDisk();
     }
 
     DXGI_FORMAT DirectXResourceManager::convertTextureResourceFormatToDxFormat(

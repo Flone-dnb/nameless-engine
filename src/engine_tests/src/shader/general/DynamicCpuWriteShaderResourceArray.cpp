@@ -1,10 +1,10 @@
 ﻿// Custom.
-#include "render/vulkan/resources/VulkanStorageResourceArray.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resources/VulkanResourceManager.h"
-#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "game/nodes/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
@@ -39,13 +39,11 @@ TEST_CASE("make array expand / shrink") {
                     REQUIRE(false);
                 }
 
-                // Get resource manager.
-                const auto pVulkanResourceManager =
-                    dynamic_cast<VulkanResourceManager*>(getWindow()->getRenderer()->getResourceManager());
-                REQUIRE(pVulkanResourceManager != nullptr);
-
-                // Get storage array manager.
-                const auto pArrayManager = pVulkanResourceManager->getStorageResourceArrayManager();
+                // Get array manager.
+                const auto pArrayManager = getWindow()
+                                               ->getRenderer()
+                                               ->getResourceManager()
+                                               ->getDynamicCpuWriteShaderResourceArrayManager();
                 REQUIRE(pArrayManager != nullptr);
 
                 // Spawn sample mesh.
@@ -170,13 +168,11 @@ TEST_CASE("make array expand / shrink") {
             iFramesPassed += 1;
 
             if (iFramesPassed > iFramesToWait) {
-                // Get resource manager.
-                const auto pVulkanResourceManager =
-                    dynamic_cast<VulkanResourceManager*>(getWindow()->getRenderer()->getResourceManager());
-                REQUIRE(pVulkanResourceManager != nullptr);
-
-                // Get storage array manager.
-                const auto pArrayManager = pVulkanResourceManager->getStorageResourceArrayManager();
+                // Get  array manager.
+                const auto pArrayManager = getWindow()
+                                               ->getRenderer()
+                                               ->getResourceManager()
+                                               ->getDynamicCpuWriteShaderResourceArrayManager();
                 REQUIRE(pArrayManager != nullptr);
 
                 const auto pMeshDataArray =

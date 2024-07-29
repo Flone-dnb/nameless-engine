@@ -9,14 +9,13 @@
 
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
-#include "render/vulkan/resources/VulkanStorageResourceArray.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
     class Pipeline;
     class VulkanPipeline;
-    class VulkanStorageResourceArraySlot;
     class VulkanRenderer;
 
     /**
@@ -196,9 +195,9 @@ namespace ne {
             onFinishedUpdatingResource();
         }
 
-        /** Reserved space in the storage buffer that the resource uses to copy its data to. */
+        /** Reserved space in an array that the resource uses to copy its data to. */
         std::array<
-            std::unique_ptr<VulkanStorageResourceArraySlot>,
+            std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>,
             FrameResourceManager::getFrameResourceCount()>
             vResourceData;
 

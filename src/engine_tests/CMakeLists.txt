@@ -27,10 +27,10 @@ set(PROJECT_WIN32_SOURCES
 set(PROJECT_SOURCES
     src/main.cpp
     src/TestHelpers.hpp
-    src/game/Window.cpp
-    src/io/ConfigManager.cpp
     src/io/ReflectionTest.h
     src/io/ReflectionTest.cpp
+    src/game/Window.cpp
+    src/io/ConfigManager.cpp
     src/input/InputManager.cpp
     src/misc/Timer.cpp
     src/shader/general/ShaderPack.cpp
@@ -41,7 +41,7 @@ set(PROJECT_SOURCES
     src/shader/general/LightingShaderResourceManager.cpp
     src/io/Serializable.cpp
     src/render/RenderSettings.cpp
-    src/render/vulkan/VulkanStorageResourceArray.cpp
+    src/shader/general/DynamicCpuWriteShaderResourceArray.cpp
     src/render/Pipeline.cpp
     src/render/PipelineManager.cpp
     src/math/GLMath.cpp

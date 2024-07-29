@@ -8,8 +8,8 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/Logger.h"
 #include "render/vulkan/resources/VulkanResource.h"
-#include "render/vulkan/resources/VulkanStorageResourceArrayManager.h"
 #include "render/vulkan/resources/KtxLoadingCallbackManager.h"
+#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 
 // External.
 #define VMA_IMPLEMENTATION // define in only one .cpp file
@@ -21,9 +21,6 @@ namespace ne {
     VulkanResourceManager::VulkanResourceManager(VulkanRenderer* pRenderer, VmaAllocator pMemoryAllocator)
         : GpuResourceManager(pRenderer) {
         this->pMemoryAllocator = pMemoryAllocator;
-
-        pStorageResourceArrayManager =
-            std::unique_ptr<VulkanStorageResourceArrayManager>(new VulkanStorageResourceArrayManager(this));
     }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResourceManager::createBuffer(
@@ -89,14 +86,8 @@ namespace ne {
     }
 
     VulkanResourceManager::~VulkanResourceManager() {
-        // Explicitly destroy storage array manager so that it will free its GPU resources.
-        pStorageResourceArrayManager = nullptr;
-
-        // Explicitly destroy shadow map manager so that it will no longer reference any GPU resources.
-        resetShadowMapManager();
-
-        // Explicitly destroy texture manager so that it will no longer reference any GPU resources.
-        resetTextureManager();
+        // Explicitly destroy managers so that they will no longer reference any GPU resources.
+        resetManagers();
 
         // Make sure no resource exist
         // (because in Vulkan resources need memory allocator to be destroyed).
@@ -118,6 +109,9 @@ namespace ne {
 
         vmaDestroyAllocator(pMemoryAllocator);
         pMemoryAllocator = nullptr;
+
+        Logger::get().info("GPU resource manager is destroyed");
+        Logger::get().flushToDisk();
     }
 
     VkFormat VulkanResourceManager::convertTextureResourceFormatToVkFormat(
@@ -825,10 +819,6 @@ namespace ne {
         }
 
         return pTargetTextureResource;
-    }
-
-    VulkanStorageResourceArrayManager* VulkanResourceManager::getStorageResourceArrayManager() const {
-        return pStorageResourceArrayManager.get();
     }
 
     std::string VulkanResourceManager::getCurrentStateInfo() {

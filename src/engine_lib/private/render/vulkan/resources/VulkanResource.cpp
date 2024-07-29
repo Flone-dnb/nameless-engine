@@ -293,7 +293,7 @@ namespace ne {
         VulkanRenderer::setObjectDebugOnlyName(
             pResourceManager->getRenderer(),
             pCreatedResource->getInternalImage(),
-            VK_OBJECT_TYPE_IMAGE_VIEW,
+            VK_OBJECT_TYPE_IMAGE,
             sResourceName);
 
         // Convert renderer.

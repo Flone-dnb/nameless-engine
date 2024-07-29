@@ -13,7 +13,6 @@
 namespace ne {
     class VulkanRenderer;
     class VulkanResource;
-    class VulkanStorageResourceArrayManager;
 
     /** Controls resource creation. */
     class VulkanResourceManager : public GpuResourceManager {
@@ -230,16 +229,6 @@ namespace ne {
             ShaderReadWriteTextureResourceFormat format) override;
 
         /**
-         * Returns manager that controls storage buffers that act as arrays for
-         * shader CPU read/write resources.
-         *
-         * @remark Do not delete (free) returned pointer.
-         *
-         * @return Manager.
-         */
-        VulkanStorageResourceArrayManager* getStorageResourceArrayManager() const;
-
-        /**
          * Dumps internal state of the resource manager in JSON format.
          *
          * @return JSON string.
@@ -304,9 +293,6 @@ namespace ne {
             bool bAllowCpuWrite,
             unsigned int iElementSizeInBytes,
             unsigned int iElementCount);
-
-        /** Controls storage buffers that act as arrays for shader CPU write resources. */
-        std::unique_ptr<VulkanStorageResourceArrayManager> pStorageResourceArrayManager;
 
         /** Vulkan memory allocator. */
         VmaAllocator pMemoryAllocator = nullptr;

@@ -1,45 +1,46 @@
 #pragma once
 
-// Standard.
-#include <variant>
-#include <memory>
-#include <array>
+// Standrad.
 #include <mutex>
-#include <string>
-#include <optional>
 #include <unordered_map>
+#include <string>
+#include <memory>
+#include <variant>
+#include <optional>
 
 // Custom.
-#include "render/general/resources/frame/FrameResourceManager.h"
 #include "misc/Error.h"
 
 namespace ne {
-    class VulkanRenderer;
-    class VulkanStorageResourceArray;
-    class VulkanStorageResourceArraySlot;
-    class GlslShaderCpuWriteResource;
+    class DynamicCpuWriteShaderResourceArray;
+    class DynamicCpuWriteShaderResourceArraySlot;
+    class ShaderCpuWriteResource;
     class VulkanRenderer;
     class VulkanPipeline;
-    class VulkanResourceManager;
 
-    /** Manages arrays of resources of various CPU write shader resources. */
-    class VulkanStorageResourceArrayManager {
+    /**
+     * Manages CPU-write arrays to shader resource arrays.
+     *
+     * Its main purpose is to avoid possible duplication of shader resource arrays (when 2 or more arrays
+     * handle the same shader resource).
+     */
+    class DynamicCpuWriteShaderResourceArrayManager {
         // Only resource manager is supposed to own this manager.
-        friend class VulkanResourceManager;
+        friend class GpuResourceManager;
 
     public:
-        VulkanStorageResourceArrayManager(const VulkanStorageResourceArrayManager&) = delete;
-        VulkanStorageResourceArrayManager& operator=(const VulkanStorageResourceArrayManager&) = delete;
+        DynamicCpuWriteShaderResourceArrayManager() = delete;
 
-        VulkanStorageResourceArrayManager() = delete;
+        ~DynamicCpuWriteShaderResourceArrayManager();
 
-        ~VulkanStorageResourceArrayManager();
+        DynamicCpuWriteShaderResourceArrayManager(const DynamicCpuWriteShaderResourceArrayManager&) = delete;
+        DynamicCpuWriteShaderResourceArrayManager&
+        operator=(const DynamicCpuWriteShaderResourceArrayManager&) = delete;
 
         /**
-         * Requests a new slot in the storage buffer array to be reserved for use by the specified
-         * shader resource.
+         * Requests a new slot in the array to be reserved for use by the specified shader resource.
          *
-         * @remark There is no public `erase` function because slot destruction automatically
+         * @remark There is no `erase` function because slot destruction automatically
          * uses internal `erase`, see documentation on the returned slot object.
          *
          * @param pShaderResource Shader resource that requires a slot in the array.
@@ -49,8 +50,17 @@ namespace ne {
          * @return Error if something went wrong, otherwise slot of the newly added element in
          * the array.
          */
-        std::variant<std::unique_ptr<VulkanStorageResourceArraySlot>, Error>
-        reserveSlotsInArray(GlslShaderCpuWriteResource* pShaderResource);
+        std::variant<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>, Error>
+        reserveSlotsInArray(ShaderCpuWriteResource* pShaderResource);
+
+        /**
+         * Attempts to find an array that handles shader resource of the specified name.
+         *
+         * @param sShaderResourceName Name of the shader resource (from shader code).
+         *
+         * @return `nullptr` if not found, otherwise a valid pointer.
+         */
+        DynamicCpuWriteShaderResourceArray* getArrayForShaderResource(const std::string& sShaderResourceName);
 
         /**
          * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
@@ -69,7 +79,7 @@ namespace ne {
         bindDescriptorsToRecreatedPipelineResources(VulkanRenderer* pVulkanRenderer);
 
         /**
-         * Looks if the specified shader resource is handled using storage arrays and binds storage
+         * Looks if the specified shader resource is handled using arrays and binds
          * array to descriptors of the shader resource.
          *
          * @param pRenderer           Vulkan renderer.
@@ -78,23 +88,14 @@ namespace ne {
          * @param iBindingIndex       Shader resource binding index (from GLSL code).
          *
          * @return Error if something went wrong. Even if there was no error it does not mean
-         * that descriptors were using storage arrays and were updated. Descriptors may use
-         * storage arrays but required storage array may not be created yet.
+         * that descriptors were using arrays and were updated. Descriptors may use
+         * arrays but required array may not be created yet.
          */
         [[nodiscard]] std::optional<Error> updateDescriptorsForPipelineResource(
             VulkanRenderer* pRenderer,
             VulkanPipeline* pPipeline,
             const std::string& sShaderResourceName,
             unsigned int iBindingIndex);
-
-        /**
-         * Attempts to find an array that handles shader resources of the specified name.
-         *
-         * @param sShaderResourceName Name of the shader resource (from GLSL code).
-         *
-         * @return `nullptr` if not found, otherwise valid pointer.
-         */
-        VulkanStorageResourceArray* getArrayForShaderResource(const std::string& sShaderResourceName);
 
     private:
         /**
@@ -112,21 +113,21 @@ namespace ne {
          *
          * @param pResourceManager Owner manager.
          */
-        VulkanStorageResourceArrayManager(VulkanResourceManager* pResourceManager);
+        DynamicCpuWriteShaderResourceArrayManager(GpuResourceManager* pResourceManager);
 
-        /** Goes through all arrays in @ref mtxGlslShaderCpuWriteResources and removed empty ones. */
+        /** Goes through all arrays in @ref mtxCpuWriteShaderResourceArrays and removed empty ones. */
         void removeEmptyArrays();
 
-        /** Do not delete (free) this pointer. Resource manager that owns this manager. */
-        VulkanResourceManager* pResourceManager = nullptr;
+        /** Owner of this manager. */
+        GpuResourceManager* const pResourceManager = nullptr;
 
         /**
-         * Stores pairs of "shader resource name" - "data of shader resources",
-         * where "shader resource name" is the name of the resource written in the GLSL file.
+         * Stores pairs of "shader resource name" - "array that handles the shader resource",
+         * where "shader resource name" is the name of the resource written in the shader file.
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<std::string, std::unique_ptr<VulkanStorageResourceArray>>>
-            mtxGlslShaderCpuWriteResources;
+            std::unordered_map<std::string, std::unique_ptr<DynamicCpuWriteShaderResourceArray>>>
+            mtxCpuWriteShaderResourceArrays;
     };
-} // namespace ne
+}

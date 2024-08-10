@@ -101,9 +101,11 @@ namespace ne {
         //                getUniquePsoIdentifier()));
         //        }
 
+        mtxInternalResources.second.globalShaderResourceSrvs.clear();
+
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 160, // NOLINT: current struct size
+            sizeof(InternalResources) == 240, // NOLINT: current struct size
             "release new resources here");
 #endif
 

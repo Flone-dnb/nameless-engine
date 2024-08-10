@@ -51,7 +51,7 @@ namespace ne {
             void findOffsetAndCopySpecialValueToConstant(
                 Pipeline* pPipeline, const char* pConstantName, unsigned int iValueToCopy);
 
-            /** Stores push constants. `nullptr` if push/root constants are not used. */
+            /** Stores root/push constants. `nullptr` if root/push constants are not used. */
             std::unique_ptr<PipelineShaderConstantsManager> pConstantsManager;
 
             /**
@@ -88,6 +88,16 @@ namespace ne {
          * configuration.
          */
         std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
+
+        /**
+         * Looks for an offset of a `uint` field in root/push constants of the specified name.
+         *
+         * @param sConstantName Name of the push/root constant.
+         *
+         * @return Error if something went wrong, otherwise offset (in `uint`s) of the field from the start of
+         * the root/push constants struct.
+         */
+        std::variant<size_t, Error> getUintConstantOffset(const std::string& sConstantName);
 
         /**
          * Returns an array of materials that currently reference this Pipeline.

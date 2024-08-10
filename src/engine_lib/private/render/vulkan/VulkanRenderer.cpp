@@ -16,7 +16,7 @@
 #include "game/camera/CameraProperties.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "game/nodes/MeshNode.h"
-#include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
 #include "shader/glsl/resources/GlslShaderTextureResource.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "render/general/resources/shadow/ShadowMapHandle.h"
@@ -2275,17 +2275,8 @@ namespace ne {
         // Now all pipeline resources were re-created.
         // Descriptor sets were also re-created and were notified but not everything is re-binded.
 
-        // Notify shader resource array manager to update descriptors that should point to arrays.
-        auto optionalError = getResourceManager()
-                                 ->getDynamicCpuWriteShaderResourceArrayManager()
-                                 ->bindDescriptorsToRecreatedPipelineResources(this);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
         // Create render target for MSAA because it depends on the swap chain image sizes.
-        optionalError = createMsaaImage();
+        auto optionalError = createMsaaImage();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
@@ -3165,9 +3156,8 @@ namespace ne {
                                 throw std::runtime_error(error.getFullErrorMessage());
                             }
 #endif
-                            reinterpret_cast<GlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
-                                ->copyResourceIndexOfPipelineToPushConstants(
-                                    pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+                            meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                                pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
 
                             // Bind vertex buffer.
                             vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
@@ -3453,9 +3443,8 @@ namespace ne {
                         throw std::runtime_error(error.getFullErrorMessage());
                     }
 #endif
-                    reinterpret_cast<GlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
-                        ->copyResourceIndexOfPipelineToPushConstants(
-                            pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+                    meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                        pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
 
                     // Bind vertex buffer.
                     vVertexBuffers[0] = {reinterpret_cast<VulkanResource*>(
@@ -3784,9 +3773,8 @@ namespace ne {
                 // Set material's CPU write shader resources.
                 for (const auto& [sResourceName, pShaderCpuWriteResource] :
                      materialShaderResources.shaderCpuWriteResources) {
-                    reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                        ->copyResourceIndexOfOnlyPipelineToPushConstants(
-                            pPushConstantsManager, iCurrentFrameResourceIndex);
+                    pShaderCpuWriteResource.getResource()->copyResourceIndexOfOnlyPipelineToPushConstants(
+                        pPushConstantsManager, iCurrentFrameResourceIndex);
                 }
 
                 // Set material's texture resources.
@@ -3807,9 +3795,8 @@ namespace ne {
                     // Set mesh's shader CPU write resources.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                        reinterpret_cast<GlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                            ->copyResourceIndexOfPipelineToPushConstants(
-                                pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
+                        pShaderCpuWriteResource.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                            pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
                     }
 
                     // Set mesh's texture resources.

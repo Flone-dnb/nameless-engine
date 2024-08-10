@@ -1,33 +1,33 @@
 #pragma once
 
 // Standard.
-#include <string>
-#include <memory>
-#include <variant>
-#include <mutex>
 #include <unordered_map>
+#include <optional>
+#include <variant>
+#include <string>
+#include <functional>
 
 // Custom.
-#include "shader/general/resources/ShaderResource.h"
+#include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
-#include "render/general/resources/frame/FrameResourceManager.h"
+#include "shader/general/resources/ShaderResource.h"
+#include "misc/Error.h"
 
 namespace ne {
+    class Renderer;
     class Pipeline;
-    class VulkanPipeline;
-    class VulkanRenderer;
 
     /**
      * References a single (non-array) shader resource (that is written in a shader file)
      * that has CPU write access available (can be updated from the CPU side).
      */
-    class GlslShaderCpuWriteResource : public ShaderCpuWriteResource {
-        // Only shader resource manager should be able to create such resources and call `updateResource`.
+    class ShaderCpuWriteResource : public ShaderResourceBase {
+        // Only manager should be able to create this resource and update data of this resource.
         friend class ShaderCpuWriteResourceManager;
 
     public:
-        virtual ~GlslShaderCpuWriteResource() override = default;
+        virtual ~ShaderCpuWriteResource() override = default;
 
         /**
          * Copies resource index (into shader arrays) to a push constant.
@@ -36,7 +36,7 @@ namespace ne {
          * material's resources because material can only reference 1 pipeline unlike mesh nodes.
          *
          * @param pPushConstantsManager      Push constants manager.
-         * @param iCurrentFrameResourceIndex Index of the current frame resource.
+         * @param iCurrentFrameResourceIndex Index of current frame resource.
          */
         inline void copyResourceIndexOfOnlyPipelineToPushConstants(
             PipelineShaderConstantsManager* pPushConstantsManager, size_t iCurrentFrameResourceIndex) {
@@ -45,13 +45,13 @@ namespace ne {
 
 #if defined(DEBUG)
             // Self check: make sure there is indeed just 1 pipeline.
-            if (mtxPushConstantIndices.second.size() != 1) [[unlikely]] {
+            if (mtxUintShaderConstantOffsets.second.size() != 1) [[unlikely]] {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its push constant "
                     "index of the only used pipeline but this shader resource references "
                     "{} pipeline(s)",
                     getResourceName(),
-                    mtxPushConstantIndices.second.size()));
+                    mtxUintShaderConstantOffsets.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
@@ -59,7 +59,7 @@ namespace ne {
 
             // Copy value to push constants.
             pPushConstantsManager->copyValueToShaderConstant(
-                mtxPushConstantIndices.second.begin()->second,
+                mtxUintShaderConstantOffsets.second.begin()->second,
                 vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
         }
 
@@ -72,27 +72,37 @@ namespace ne {
          */
         inline void copyResourceIndexOfPipelineToPushConstants(
             PipelineShaderConstantsManager* pPushConstantsManager,
-            VulkanPipeline* pUsedPipeline,
+            Pipeline* pUsedPipeline,
             size_t iCurrentFrameResourceIndex) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
             // we don't need to lock the mutex here.
 
             // Find push constant index of this pipeline.
-            const auto it = mtxPushConstantIndices.second.find(pUsedPipeline);
-            if (it == mtxPushConstantIndices.second.end()) [[unlikely]] {
+            const auto offsetIt = mtxUintShaderConstantOffsets.second.find(pUsedPipeline);
+
+#if defined(DEBUG)
+            if (offsetIt == mtxUintShaderConstantOffsets.second.end()) [[unlikely]] {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its push constant "
                     "index but this shader resource does not reference the specified pipeline",
                     getResourceName(),
-                    mtxPushConstantIndices.second.size()));
+                    mtxUintShaderConstantOffsets.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
+#endif
 
             // Copy value to push constants.
             pPushConstantsManager->copyValueToShaderConstant(
-                it->second, vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
+                offsetIt->second, vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
         }
+
+        /**
+         * Returns size of the resource data.
+         *
+         * @return Size in bytes.
+         */
+        inline size_t getResourceDataSizeInBytes() const { return iResourceDataSizeInBytes; }
 
         /**
          * Called to make the resource to discard currently used pipelines and bind/reference
@@ -115,51 +125,13 @@ namespace ne {
 
     protected:
         /**
-         * Initializes everything except for @ref vResourceData which is expected to be initialized
-         * afterwards.
-         *
-         * @remark Used internally, for outside usage prefer to use @ref create.
-         *
-         * @param sResourceName                Name of the resource we are referencing (should be exactly
-         * the same as the resource name written in the shader file we are referencing).
-         * @param iOriginalResourceSizeInBytes Size of the resource passed to @ref create (not padded).
-         * @param onStartedUpdatingResource    Function that will be called when started updating resource
-         * data. Function returns pointer to data of the specified resource data size that needs to be
-         * copied into the resource.
-         * @param onFinishedUpdatingResource   Function that will be called when finished updating
-         * (usually used for unlocking resource data mutex).
-         * @param pushConstantIndices          Indices of push constants (per-pipeline) to copy
-         * index into @ref vResourceData.
-         */
-        GlslShaderCpuWriteResource(
-            const std::string& sResourceName,
-            size_t iOriginalResourceSizeInBytes,
-            const std::function<void*()>& onStartedUpdatingResource,
-            const std::function<void()>& onFinishedUpdatingResource,
-            const std::unordered_map<VulkanPipeline*, size_t>& pushConstantIndices);
-
-        /**
-         * Called from pipeline manager to notify that all pipelines released their internal resources
-         * and now restored them so their internal resources (for example push constants) might
-         * be different now and shader resource now needs to check that everything that it needs
-         * is still there and possibly re-bind to pipeline's descriptors since these might have
-         * been also re-created.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> onAfterAllPipelinesRefreshedResources() override;
-
-    private:
-        /**
-         * Creates a GLSL shader resource with CPU write access.
+         * Creates a new shader CPU-write resource.
          *
          * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param sResourceAdditionalInfo    Additional text that we will append to created resource name
+         * @param sResourceAdditionalInfo Additional text that we will append to created resource name
          * (used for logging).
-         * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
-         * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
-         * for shader constant buffers.
+         * @param iResourceSizeInBytes       Size of the data that this resource will contain.
          * @param pipelinesToUse             Pipelines that use shader/parameters we are referencing.
          * @param onStartedUpdatingResource  Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
@@ -178,12 +150,72 @@ namespace ne {
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
+         * Looks for root/push constants (field) named after the shader resource in the specified pipelines
+         * and returns offsets of such fields.
+         *
+         * @param pipelines  Pipelines to scan.
+         * @param sFieldName Name of the root/push constant field to look for.
+         *
+         * @return Error if something went wrong, otherwise pairs of "pipeline" - "offset of field".
+         */
+        static std::variant<std::unordered_map<Pipeline*, size_t>, Error>
+        getUintShaderConstantOffsetsFromPipelines(
+            const std::unordered_set<Pipeline*>& pipelines, const std::string& sFieldName);
+
+        /**
+         * Constructs a partially initialized object.
+         *
+         * @remark Only used internally, instead use @ref create.
+         *
+         * @param sResourceName                Name of the resource we are referencing (should be exactly the
+         * same as the resource name written in the shader file we are referencing).
+         * @param iResourceDataSizeInBytes     Size (in bytes) of the data that this resource will contain.
+         * @param onStartedUpdatingResource    Function that will be called when started updating resource
+         * data. Function returns pointer to data of the specified resource data size that needs to be copied
+         * into the resource.
+         * @param onFinishedUpdatingResource   Function that will be called when finished updating
+         * (usually used for unlocking resource data mutex).
+         * @param uintShaderConstantOffsets    Offsets of root/push constants (per-pipeline) to copy an index
+         * into array to.
+         */
+        ShaderCpuWriteResource(
+            const std::string& sResourceName,
+            size_t iResourceDataSizeInBytes,
+            const std::function<void*()>& onStartedUpdatingResource,
+            const std::function<void()>& onFinishedUpdatingResource,
+            const std::unordered_map<Pipeline*, size_t>& uintShaderConstantOffsets);
+
+        /**
+         * Called from pipeline manager to notify that all pipelines released their internal resources
+         * and now restored them so their internal resources (for example push constants) might
+         * be different now and shader resource now needs to check that everything that it needs
+         * is still there and possibly re-bind to pipeline's descriptors since these might have
+         * been also re-created.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] virtual std::optional<Error> onAfterAllPipelinesRefreshedResources() override;
+
+        /** Offsets of root/push constants (per-pipeline) to copy an index into array to. */
+        std::pair<std::recursive_mutex, std::unordered_map<Pipeline*, size_t>> mtxUintShaderConstantOffsets;
+
+        /**
+         * Stores data for shaders to use (per frame resource). Index (from array start)
+         * will be copied to push constant so that shaders can index into the array and access the data.
+         */
+        std::array<
+            std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>,
+            FrameResourceManager::getFrameResourceCount()>
+            vResourceData;
+
+    private:
+        /**
          * Copies up to date data to the GPU resource of the specified frame resource.
          *
          * @remark Called by shader resource manager.
          *
          * @remark Should only be called when resource actually needs an update, otherwise
-         * you would cause useless copy operations.
+         * you would cause a useless copy operations.
          *
          * @param iCurrentFrameResourceIndex Index of currently used frame resource.
          */
@@ -195,16 +227,17 @@ namespace ne {
             onFinishedUpdatingResource();
         }
 
-        /** Reserved space in an array that the resource uses to copy its data to. */
-        std::array<
-            std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>,
-            FrameResourceManager::getFrameResourceCount()>
-            vResourceData;
-
         /**
-         * Index of push constant (per-pipeline) to copy the current slot's index to (see @ref
-         * vResourceData).
+         * Function used to update resource data. Returns pointer to data of size
+         * @ref iResourceDataSizeInBytes that needs to be copied into resource data storage (GPU
+         * resource).
          */
-        std::pair<std::recursive_mutex, std::unordered_map<VulkanPipeline*, size_t>> mtxPushConstantIndices;
+        const std::function<void*()> onStartedUpdatingResource;
+
+        /** Function to call when finished updating (usually used for unlocking resource data mutex). */
+        const std::function<void()> onFinishedUpdatingResource;
+
+        /** Size (in bytes) of the data that the resource contains. */
+        const size_t iResourceDataSizeInBytes = 0;
     };
-} // namespace ne
+}

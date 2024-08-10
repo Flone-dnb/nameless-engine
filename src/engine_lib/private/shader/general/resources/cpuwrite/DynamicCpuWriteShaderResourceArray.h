@@ -334,37 +334,6 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error> shrinkArray();
 
-        /**
-         * Updates descriptors in all graphics pipelines to make descriptors reference the current
-         * underlying GPU buffer.
-         *
-         * @warning Expects that the GPU is not doing any work and that no new frames are being submitted now.
-         *
-         * @remark Generally called inside @ref createArray after the underlying buffer is changed.
-         *
-         * @param pVulkanRenderer Vulkan renderer.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> updateDescriptors(VulkanRenderer* pVulkanRenderer);
-
-        /**
-         * Binds internal GPU buffer to descriptors of the specified pipeline at the specified binding
-         * index.
-         *
-         * @param pRenderer           Vulkan renderer.
-         * @param pPipeline           Vulkan pipeline to get descriptors from.
-         * @param sShaderResourceName Name of the shader resource (from GLSL code).
-         * @param iBindingIndex       Shader resource binding index (from GLSL code).
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> updateDescriptorsForPipelineResource(
-            VulkanRenderer* pRenderer,
-            VulkanPipeline* pPipeline,
-            const std::string& sShaderResourceName,
-            unsigned int iBindingIndex);
-
         /** Internal resources of the array. */
         std::pair<std::recursive_mutex, InternalResources> mtxInternalResources;
 

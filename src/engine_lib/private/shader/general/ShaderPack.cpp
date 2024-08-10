@@ -199,7 +199,6 @@ namespace ne {
         // Combine renderer's shader configuration and the specified one.
         auto targetShaderConfiguration = additionalConfiguration;
         for (const auto& macro : mtxInternalResources.second.renderConfiguration) {
-#if defined(DEBUG)
             // Check if something is wrong and additional configuration has macros that renderer defines.
             auto it = additionalConfiguration.find(macro);
             if (it != additionalConfiguration.end()) [[unlikely]] {
@@ -211,7 +210,6 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-#endif
 
             // See if this macro should be considered (valid) in this configuration.
             if (!ShaderMacroConfigurations::isMacroShouldBeConsideredInConfiguration(

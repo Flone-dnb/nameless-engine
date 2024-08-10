@@ -7,12 +7,11 @@ struct MeshData {
     mat4 normalMatrix;
 };
 
-#hlsl ConstantBuffer<MeshData> meshData : register(b2, space5);
-
-/** Bindless binded mesh constants for all meshes. */
+/** Mesh constants for all meshes, use indices from root/push constants to index into this array. */
 #glsl {
     layout(std140, binding = 5) readonly buffer MeshDataBuffer {
-        /** Mesh constants for a mesh. */
+        /** Constants for a mesh. */
         MeshData array[];
     } meshData;
 }
+#hlsl StructuredBuffer<MeshData> meshData : register(t0, space5);

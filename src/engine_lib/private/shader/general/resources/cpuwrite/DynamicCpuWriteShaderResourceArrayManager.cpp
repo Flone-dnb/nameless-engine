@@ -3,7 +3,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
-#include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
 #include "misc/Profiler.hpp"
 
 namespace ne {
@@ -23,7 +23,7 @@ namespace ne {
             auto result = DynamicCpuWriteShaderResourceArray::create(
                 pResourceManager,
                 pShaderResource->getResourceName(),
-                pShaderResource->getOriginalResourceSizeInBytes());
+                pShaderResource->getResourceDataSizeInBytes());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
@@ -57,7 +57,7 @@ namespace ne {
         }
 
         // Make sure this array's element size is equal to the requested one.
-        if (it->second->getElementSize() != pShaderResource->getOriginalResourceSizeInBytes()) [[unlikely]] {
+        if (it->second->getElementSize() != pShaderResource->getResourceDataSizeInBytes()) [[unlikely]] {
             // This is probably a different resource with a non-unique name.
             // We operate only on resource names here because once an array is being resized it
             // updates all descriptors (of all pipelines) which are used for a specific resource
@@ -70,10 +70,10 @@ namespace ne {
                 "shaders have the same name which is an error, if this is the case, please rename one of "
                 "the resources",
                 pShaderResource->getResourceName(),
-                pShaderResource->getOriginalResourceSizeInBytes(),
+                pShaderResource->getResourceDataSizeInBytes(),
                 pShaderResource->getResourceName(),
                 it->second->getElementSize(),
-                pShaderResource->getOriginalResourceSizeInBytes()));
+                pShaderResource->getResourceDataSizeInBytes()));
         }
 
         // Insert a new slot to the new array.
@@ -101,51 +101,6 @@ namespace ne {
         }
 
         return it->second.get();
-    }
-
-    std::optional<Error>
-    DynamicCpuWriteShaderResourceArrayManager::bindDescriptorsToRecreatedPipelineResources(
-        VulkanRenderer* pVulkanRenderer) {
-        PROFILE_FUNC;
-
-        std::scoped_lock guard(mtxCpuWriteShaderResourceArrays.first);
-
-        // Update descriptors.
-        for (const auto& [sArrayName, pArray] : mtxCpuWriteShaderResourceArrays.second) {
-            auto optionalError = pArray->updateDescriptors(pVulkanRenderer);
-            if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addCurrentLocationToErrorStack();
-                return optionalError;
-            }
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DynamicCpuWriteShaderResourceArrayManager::updateDescriptorsForPipelineResource(
-        VulkanRenderer* pRenderer,
-        VulkanPipeline* pPipeline,
-        const std::string& sShaderResourceName,
-        unsigned int iBindingIndex) {
-        PROFILE_FUNC;
-
-        std::scoped_lock guard(mtxCpuWriteShaderResourceArrays.first);
-
-        // Find array that handles the specified shader resource.
-        const auto it = mtxCpuWriteShaderResourceArrays.second.find(sShaderResourceName);
-        if (it == mtxCpuWriteShaderResourceArrays.second.end()) {
-            return {};
-        }
-
-        // Update descriptors.
-        auto optionalError = it->second->updateDescriptorsForPipelineResource(
-            pRenderer, pPipeline, sShaderResourceName, iBindingIndex);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError.value();
-        }
-
-        return {};
     }
 
     void DynamicCpuWriteShaderResourceArrayManager::removeEmptyArrays() {

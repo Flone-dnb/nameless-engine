@@ -417,6 +417,6 @@ namespace ne {
         ComputePipelines computePipelines;
 
         /** Do not delete (free) this pointer. Renderer that owns this pipeline manager. */
-        Renderer* pRenderer = nullptr;
+        Renderer* const pRenderer = nullptr;
     };
 } // namespace ne

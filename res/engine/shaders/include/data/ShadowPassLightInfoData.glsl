@@ -9,7 +9,7 @@
         vec4 position;
     };
     
-    /** Bindless binded info for all light sources. */
+    /** Info for all light sources, use indices from root/push constants to index into this array. */
     #glsl {
         layout(std140, binding = 56) readonly buffer ShadowPassLightInfoBuffer {
             /** Shadow pass related info for a light source. */

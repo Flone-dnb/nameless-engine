@@ -110,6 +110,13 @@ namespace ne {
         inline VkImage getInternalImage() const { return pImageResource; }
 
         /**
+         * Tells if this resource is a storage buffer/image or not.
+         *
+         * @return Storage bit from resource usage.
+         */
+        bool isStorageResource() const;
+
+        /**
          * Returns memory allocation of the internal resource.
          *
          * @remark Do not delete (free) returned pointer.
@@ -142,6 +149,7 @@ namespace ne {
          * @param pResourceManager  Owner resource manager.
          * @param sResourceName     Name of the resource.
          * @param pInternalResource Created Vulkan resource.
+         * @param isStorageResource Defines if this resource is a storage buffer/image or not.
          * @param pResourceMemory   Allocated memory for the created Vulkan resource.
          * @param iElementSizeInBytes  Resource size information. Size of one array element (if array),
          * otherwise specify size of the whole resource.
@@ -152,6 +160,7 @@ namespace ne {
             VulkanResourceManager* pResourceManager,
             const std::string& sResourceName,
             std::variant<VkBuffer, VkImage> pInternalResource,
+            bool isStorageResource,
             VmaAllocation pResourceMemory,
             unsigned int iElementSizeInBytes,
             unsigned int iElementCount);
@@ -267,5 +276,8 @@ namespace ne {
          * @remark Using mutex because "access to a VmaAllocation object must be externally synchronized".
          */
         std::pair<std::recursive_mutex, VmaAllocation> mtxResourceMemory;
+
+        /** Defines if this resource is a storage buffer/image or not. */
+        const bool isUsedAsStorageResource = false;
     };
 } // namespace ne

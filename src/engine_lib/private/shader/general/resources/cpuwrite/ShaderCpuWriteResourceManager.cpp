@@ -2,12 +2,6 @@
 
 // Custom.
 #include "io/Logger.h"
-#if defined(WIN32)
-#include "render/directx/DirectXRenderer.h"
-#include "shader/hlsl/resources/HlslShaderCpuWriteResource.h"
-#endif
-#include "render/vulkan/VulkanRenderer.h"
-#include "shader/glsl/resources/GlslShaderCpuWriteResource.h"
 #include "misc/Profiler.hpp"
 #include "render/general/pipeline/Pipeline.h"
 
@@ -17,37 +11,18 @@ namespace ne {
     ShaderCpuWriteResourceManager::createShaderCpuWriteResource(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
-        size_t iResourceSizeInBytes,
+        size_t iResourceDataSizeInBytes,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
-        // Create new resource.
-#if defined(WIN32)
-        if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-            auto result = HlslShaderCpuWriteResource::create(
-                sShaderResourceName,
-                sResourceAdditionalInfo,
-                iResourceSizeInBytes,
-                pipelinesToUse,
-                onStartedUpdatingResource,
-                onFinishedUpdatingResource);
-            return handleResourceCreation(std::move(result));
-        }
-#endif
-        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            auto result = GlslShaderCpuWriteResource::create(
-                sShaderResourceName,
-                sResourceAdditionalInfo,
-                iResourceSizeInBytes,
-                pipelinesToUse,
-                onStartedUpdatingResource,
-                onFinishedUpdatingResource);
-            return handleResourceCreation(std::move(result));
-        }
-
-        Error error("unexpected renderer");
-        error.showError();
-        throw std::runtime_error(error.getFullErrorMessage());
+        auto result = ShaderCpuWriteResource::create(
+            sShaderResourceName,
+            sResourceAdditionalInfo,
+            iResourceDataSizeInBytes,
+            pipelinesToUse,
+            onStartedUpdatingResource,
+            onFinishedUpdatingResource);
+        return handleResourceCreation(std::move(result));
     }
 
     std::variant<ShaderCpuWriteResourceUniquePtr, Error>
@@ -81,52 +56,20 @@ namespace ne {
 
         std::scoped_lock shaderRwResourceGuard(mtxShaderCpuWriteResources.first);
 
-        if (mtxShaderCpuWriteResources.second.vToBeUpdated[iCurrentFrameResourceIndex].empty()) {
+        auto& resourcesToUpdate = mtxShaderCpuWriteResources.second.vToBeUpdated[iCurrentFrameResourceIndex];
+
+        if (resourcesToUpdate.empty()) {
             // Nothing to update.
             return;
         }
 
-        // Copy new resource data to the GPU resources of the current frame resource.
-
-        static_assert(
-            std::is_same_v<
-                decltype(mtxShaderCpuWriteResources.second.vToBeUpdated),
-                std::array<
-                    std::unordered_set<ShaderCpuWriteResource*>,
-                    FrameResourceManager::getFrameResourceCount()>>,
-            "update reinterpret_casts");
-
-        // We now need to call `updateResource` function that has the same signature
-        // over all HLSL/GLSL shader resources types but I want to avoid using virtual
-        // functions here:
-        // TODO: ugly but helps to avoid usage of virtual functions in this loop as it's executed
-        // every frame with potentially lots of resources to be updated.
-        // Prepare lambda to update resources.
-        auto updateGlslResources = [&]() {
-            const auto pGlslResources = reinterpret_cast<std::unordered_set<GlslShaderCpuWriteResource*>*>(
-                &mtxShaderCpuWriteResources.second.vToBeUpdated[iCurrentFrameResourceIndex]);
-            for (const auto& pResource : *pGlslResources) {
-                pResource->updateResource(iCurrentFrameResourceIndex);
-            }
-        };
-
-#if !defined(WIN32)
-        updateGlslResources();
-#else
-        if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            updateGlslResources();
-        } else {
-            const auto pHlslResources = reinterpret_cast<std::unordered_set<HlslShaderCpuWriteResource*>*>(
-                &mtxShaderCpuWriteResources.second.vToBeUpdated[iCurrentFrameResourceIndex]);
-            for (const auto& pResource : *pHlslResources) {
-                pResource->updateResource(iCurrentFrameResourceIndex);
-            }
+        // Copy new resource data to the GPU resources of the current frame.
+        for (const auto& pResource : resourcesToUpdate) {
+            pResource->updateResource(iCurrentFrameResourceIndex);
         }
-#endif
 
-        // Clear array of resources to be updated for the current frame resource since
-        // we updated all resources for the current frame resource.
-        mtxShaderCpuWriteResources.second.vToBeUpdated[iCurrentFrameResourceIndex].clear();
+        // Clear array since we updated all resources for the current frame.
+        resourcesToUpdate.clear();
     }
 
     void ShaderCpuWriteResourceManager::markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResource) {

@@ -3,7 +3,6 @@
 // Standard.
 #include <string>
 #include <memory>
-#include <functional>
 #include <unordered_set>
 #include <optional>
 
@@ -110,56 +109,5 @@ namespace ne {
          * the resource name written in the shader file we are referencing).
          */
         ShaderTextureResource(const std::string& sResourceName);
-    };
-
-    /**
-     * References a single (non-array) shader resource (that is written in a shader file)
-     * that has CPU write access available (can be updated from the CPU side).
-     */
-    class ShaderCpuWriteResource : public ShaderResourceBase {
-        // Only manager should be able to create and update resources of this type.
-        friend class ShaderCpuWriteResourceManager;
-
-    public:
-        virtual ~ShaderCpuWriteResource() override = default;
-
-        /**
-         * Returns original size of the resource (not padded).
-         *
-         * @return Size in bytes.
-         */
-        inline size_t getOriginalResourceSizeInBytes() const { return iOriginalResourceSizeInBytes; }
-
-    protected:
-        /**
-         * Constructs not fully initialized resource.
-         *
-         * @param sResourceName                Name of the resource we are referencing (should be exactly the
-         * same as the resource name written in the shader file we are referencing).
-         * @param iOriginalResourceSizeInBytes Original size of the resource (not padded).
-         * @param onStartedUpdatingResource    Function that will be called when started updating resource
-         * data. Function returns pointer to data of the specified resource data size that needs to be copied
-         * into the resource.
-         * @param onFinishedUpdatingResource   Function that will be called when finished updating
-         * (usually used for unlocking resource data mutex).
-         */
-        ShaderCpuWriteResource(
-            const std::string& sResourceName,
-            size_t iOriginalResourceSizeInBytes,
-            const std::function<void*()>& onStartedUpdatingResource,
-            const std::function<void()>& onFinishedUpdatingResource);
-
-        /**
-         * Function used to update resource data. Returns pointer to data of size
-         * @ref iOriginalResourceSizeInBytes that needs to be copied into resource data storage (GPU
-         * resource).
-         */
-        std::function<void*()> onStartedUpdatingResource;
-
-        /** Function to call when finished updating (usually used for unlocking resource data mutex). */
-        std::function<void()> onFinishedUpdatingResource;
-
-        /** Original size of the resource (not padded). */
-        size_t iOriginalResourceSizeInBytes = 0;
     };
 } // namespace ne

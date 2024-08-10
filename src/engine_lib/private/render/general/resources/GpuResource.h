@@ -3,15 +3,20 @@
 // Standard.
 #include <optional>
 #include <string>
+#include <memory>
 
 // Custom.
 #include "misc/Error.h"
 
 namespace ne {
     class GpuResourceManager;
+    class GlobalShaderResourceBinding;
 
     /** Resource stored in the GPU memory. */
     class GpuResource {
+        // Bindings will assign their pointers to resources.
+        friend class GlobalShaderResourceBinding;
+
     public:
         GpuResource() = delete;
 
@@ -71,6 +76,14 @@ namespace ne {
         GpuResourceManager* getResourceManager() const;
 
     private:
+        /**
+         * Not `nullptr` if this resource was binded as a global shader resource.
+         *
+         * @remark Only used to control the lifetime of a binding, once the GPU resource
+         * is destroyed the binding should also be destroyed.
+         */
+        std::shared_ptr<GlobalShaderResourceBinding> pGlobalShaderResourceBinding;
+
         /** Manager that created this resource. */
         GpuResourceManager* const pManager = nullptr;
 

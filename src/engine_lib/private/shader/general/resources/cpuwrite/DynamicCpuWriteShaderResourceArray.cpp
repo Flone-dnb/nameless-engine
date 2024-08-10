@@ -4,8 +4,8 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "render/general/pipeline/PipelineManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
+#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
 
 namespace ne {
 
@@ -235,14 +235,15 @@ namespace ne {
             pShaderResourceManager->markResourceAsNeedsUpdate(pSlot->pShaderResource);
         }
 
-        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
-        if (pVulkanRenderer != nullptr) {
-            // Make Vulkan descriptors reference new GPU buffer.
-            auto optionalError = updateDescriptors(pVulkanRenderer);
-            if (optionalError.has_value()) [[unlikely]] {
-                optionalError->addCurrentLocationToErrorStack();
-                return optionalError;
-            }
+        // Get global shader resource binding manager.
+        const auto pGlobalBindingManager = pRenderer->getGlobalShaderResourceBindingManager();
+
+        // Bind as global shader resource.
+        auto optionalError = pGlobalBindingManager->createGlobalShaderResourceBindingSingleResource(
+            sHandledShaderResourceName, mtxInternalResources.second.pUploadBuffer->getInternalResource());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
         }
 
         return {};
@@ -344,67 +345,6 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
-    DynamicCpuWriteShaderResourceArray::updateDescriptors(VulkanRenderer* pVulkanRenderer) {
-        std::scoped_lock guard(mtxInternalResources.first);
-
-        // Get pipeline manager.
-        const auto pPipelineManager = pVulkanRenderer->getPipelineManager();
-        if (pPipelineManager == nullptr) [[unlikely]] {
-            return Error("pipeline manager is `nullptr`");
-        }
-
-        // Gather buffers to bind.
-        const auto pInternalResource = mtxInternalResources.second.pUploadBuffer->getInternalResource();
-        std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vBuffers;
-        for (size_t i = 0; i < vBuffers.size(); i++) {
-            vBuffers[i] = pInternalResource;
-        }
-
-        // Bind to all pipelines.
-        auto optionalError = pPipelineManager->bindBuffersToAllVulkanPipelinesIfUsed(
-            vBuffers, sHandledShaderResourceName, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        return {};
-    }
-
-    std::optional<Error> DynamicCpuWriteShaderResourceArray::updateDescriptorsForPipelineResource(
-        VulkanRenderer* pRenderer,
-        VulkanPipeline* pPipeline,
-        const std::string& sShaderResourceName,
-        unsigned int iBindingIndex) {
-        // Make sure array's handled resource name is equal to shader resource.
-        if (sShaderResourceName != sHandledShaderResourceName) [[unlikely]] {
-            return Error(std::format(
-                "the array \"{}\" does not handle shader resources with name \"{}\"",
-                sHandledShaderResourceName,
-                sShaderResourceName));
-        }
-
-        std::scoped_lock guard(mtxInternalResources.first);
-
-        // Gather buffers to bind.
-        const auto pInternalResource = mtxInternalResources.second.pUploadBuffer->getInternalResource();
-        std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vBuffers;
-        for (size_t i = 0; i < vBuffers.size(); i++) {
-            vBuffers[i] = pInternalResource;
-        }
-
-        // Bind.
-        auto optionalError = pPipeline->bindBuffersIfUsed(
-            vBuffers, sHandledShaderResourceName, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        return {};
-    }
-
     DynamicCpuWriteShaderResourceArray::DynamicCpuWriteShaderResourceArray(
         GpuResourceManager* pResourceManager,
         const std::string& sHandledShaderResourceName,
@@ -425,12 +365,12 @@ namespace ne {
         }
 
         // Make sure array's element size is equal to the requested one.
-        if (iElementSizeInBytes != pShaderResource->getOriginalResourceSizeInBytes()) [[unlikely]] {
+        if (iElementSizeInBytes != pShaderResource->getResourceDataSizeInBytes()) [[unlikely]] {
             return Error(std::format(
                 "shader resource \"{}\" requested to reserve a memory slot with size {} bytes in an array "
                 "but array's element size is {} bytes",
                 pShaderResource->getResourceName(),
-                pShaderResource->getOriginalResourceSizeInBytes(),
+                pShaderResource->getResourceDataSizeInBytes(),
                 iElementSizeInBytes));
         }
 

@@ -17,10 +17,12 @@ namespace ne {
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
         std::variant<VkBuffer, VkImage> pInternalResource,
+        bool isStorageResource,
         VmaAllocation pResourceMemory,
         unsigned int iElementSizeInBytes,
         unsigned int iElementCount)
-        : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount) {
+        : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount),
+          isUsedAsStorageResource(isStorageResource) {
         mtxResourceMemory.second = pResourceMemory;
 
         // Save resource.
@@ -35,7 +37,7 @@ namespace ne {
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
         ktxVulkanTexture ktxTexture)
-        : GpuResource(pResourceManager, sResourceName, 0, 0) {
+        : GpuResource(pResourceManager, sResourceName, 0, 0), isUsedAsStorageResource(false) {
         mtxResourceMemory.second = nullptr;
 
         // Save resource.
@@ -109,6 +111,8 @@ namespace ne {
         }
     }
 
+    bool VulkanResource::isStorageResource() const { return isUsedAsStorageResource; }
+
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
@@ -134,10 +138,12 @@ namespace ne {
         VulkanRenderer::setObjectDebugOnlyName(
             pResourceManager->getRenderer(), pCreatedBuffer, VK_OBJECT_TYPE_BUFFER, sResourceName);
 
+        const auto isStorageResource = (bufferInfo.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) != 0;
         return std::unique_ptr<VulkanResource>(new VulkanResource(
             pResourceManager,
             sResourceName,
             pCreatedBuffer,
+            isStorageResource,
             pCreatedMemory,
             iElementSizeInBytes,
             iElementCount));
@@ -168,9 +174,11 @@ namespace ne {
         VulkanRenderer::setObjectDebugOnlyName(
             pResourceManager->getRenderer(), pCreatedImage, VK_OBJECT_TYPE_IMAGE, sResourceName);
 
+        const auto isStorageResource = (imageInfo.usage & VK_IMAGE_USAGE_STORAGE_BIT) != 0;
+
         // Create resource object.
-        auto pCreatedImageResource = std::unique_ptr<VulkanResource>(
-            new VulkanResource(pResourceManager, sResourceName, pCreatedImage, pCreatedMemory, 0, 0));
+        auto pCreatedImageResource = std::unique_ptr<VulkanResource>(new VulkanResource(
+            pResourceManager, sResourceName, pCreatedImage, isStorageResource, pCreatedMemory, 0, 0));
 
         // Optionally create views.
         if (viewDescription.has_value()) {

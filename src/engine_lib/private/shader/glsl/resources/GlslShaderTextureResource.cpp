@@ -6,7 +6,6 @@
 // Custom.
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
-#include "shader/glsl/resources/GlslShaderResourceHelpers.h"
 #include "shader/general/DescriptorConstants.hpp"
 
 namespace ne {
@@ -33,21 +32,20 @@ namespace ne {
         // Find push constant indices to use.
         std::unordered_map<VulkanPipeline*, PushConstantIndices> pushConstantIndices;
         for (const auto& pPipeline : pipelinesToUse) {
-            // Convert pipeline.
-            const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
-            if (pVulkanPipeline == nullptr) [[unlikely]] {
-                return Error("expected a Vulkan pipeline");
-            }
-
-            // Find a resource with the specified name in the descriptor set layout and update our index.
-            auto pushConstantResult =
-                GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, sShaderResourceName);
+            // Find push constant.
+            auto pushConstantResult = pPipeline->getUintConstantOffset(sShaderResourceName);
             if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantResult));
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
             const auto iPushConstantIndex = std::get<size_t>(pushConstantResult);
+
+            // Convert pipeline.
+            const auto pVulkanPipeline = dynamic_cast<VulkanPipeline*>(pPipeline);
+            if (pVulkanPipeline == nullptr) [[unlikely]] {
+                return Error("expected a Vulkan pipeline");
+            }
 
             // Get an index into the shader array.
             auto shaderArrayIndexResult = getTextureIndexInShaderArray(sShaderResourceName, pVulkanPipeline);
@@ -193,8 +191,7 @@ namespace ne {
             }
 
             // Find a resource with our name in the descriptor set layout and update our index.
-            auto pushConstantResult =
-                GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
+            auto pushConstantResult = pPipeline->getUintConstantOffset(getResourceName());
             if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantResult));
                 error.addCurrentLocationToErrorStack();
@@ -281,8 +278,7 @@ namespace ne {
             }
 
             // Find a resource with our name in the descriptor set layout.
-            auto pushConstantResult =
-                GlslShaderResourceHelpers::getPushConstantIndex(pVulkanPipeline, getResourceName());
+            auto pushConstantResult = pPipeline->getUintConstantOffset(getResourceName());
             if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantResult));
                 error.addCurrentLocationToErrorStack();

@@ -62,41 +62,6 @@ namespace ne {
          */
         DynamicCpuWriteShaderResourceArray* getArrayForShaderResource(const std::string& sShaderResourceName);
 
-        /**
-         * Updates descriptors in all graphics pipelines to make descriptors reference the underlying
-         * VkBuffer of used arrays.
-         *
-         * @warning Expects that the GPU is not doing any work and that no new frames are being submitted now.
-         *
-         * @remark Generally called after all pipeline resources were re-created to update re-created
-         * descriptors.
-         *
-         * @param pVulkanRenderer Vulkan renderer.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error>
-        bindDescriptorsToRecreatedPipelineResources(VulkanRenderer* pVulkanRenderer);
-
-        /**
-         * Looks if the specified shader resource is handled using arrays and binds
-         * array to descriptors of the shader resource.
-         *
-         * @param pRenderer           Vulkan renderer.
-         * @param pPipeline           Vulkan pipeline to get descriptors from.
-         * @param sShaderResourceName Name of the shader resource (from GLSL code).
-         * @param iBindingIndex       Shader resource binding index (from GLSL code).
-         *
-         * @return Error if something went wrong. Even if there was no error it does not mean
-         * that descriptors were using arrays and were updated. Descriptors may use
-         * arrays but required array may not be created yet.
-         */
-        [[nodiscard]] std::optional<Error> updateDescriptorsForPipelineResource(
-            VulkanRenderer* pRenderer,
-            VulkanPipeline* pPipeline,
-            const std::string& sShaderResourceName,
-            unsigned int iBindingIndex);
-
     private:
         /**
          * Formats the specified size in bytes to the following format: "<number> MB",

@@ -3,6 +3,8 @@
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
 #include "shader/hlsl/SpecialRootParameterSlot.hpp"
+#include "render/general/resources/frame/FrameResourceManager.h"
+#include "render/directx/resources/DirectXResource.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -13,10 +15,14 @@
 namespace ne {
     using namespace Microsoft::WRL;
 
+    class DirectXResource;
     class DirectXRenderer;
 
     /** DirectX pipeline state object (PSO) wrapper. */
     class DirectXPso : public Pipeline {
+        // Renderer will ask us to bind global shader resource views.
+        friend class DirectXRenderer;
+
     public:
         /** Stores internal resources. */
         struct InternalResources {
@@ -27,7 +33,7 @@ namespace ne {
              * Root parameter indices that was used in creation of @ref pRootSignature.
              *
              * Stores pairs of `shader resource name` - `root parameter index`,
-             * allows determining what resource is binded to what root parameter index
+             * allows determining which resource is binded to which root parameter index
              * (by using resource name taken from shader file).
              */
             std::unordered_map<std::string, UINT> rootParameterIndices;
@@ -44,6 +50,19 @@ namespace ne {
              */
             std::array<UINT, static_cast<unsigned int>(SpecialRootParameterSlot::SIZE)>
                 vSpecialRootParameterIndices;
+
+            /**
+             * Global bindings that should be binded as SRVs. Stores pairs of "root parameter index" -
+             * "resource to bind".
+             *
+             * @remark It's safe to store raw pointers here because the SRVs should be valid
+             * while the pipeline exists and has not re-created its internal resources (when internal
+             * resources are re-created these SRVs is cleared).
+             */
+            std::unordered_map<
+                UINT,
+                std::array<DirectXResource*, FrameResourceManager::getFrameResourceCount()>>
+                globalShaderResourceSrvs;
 
             /** Created PSO. */
             ComPtr<ID3D12PipelineState> pPso;
@@ -131,6 +150,32 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
+
+        /**
+         * Sets views of global shader resource bindings.
+         *
+         * @warning Expects that the pipeline's internal resources mutex is already locked by the caller.
+         *
+         * @param pCommandList               Command list to set views to.
+         * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
+         * submit a new frame.
+         */
+        inline void bindGlobalShaderResourceViews(
+            const ComPtr<ID3D12GraphicsCommandList>& pCommandList, size_t iCurrentFrameResourceIndex) const {
+            // No need to lock internal resources mutex since the caller is expected to lock that mutex
+            // because this function is expected to be called inside of the `draw` function.
+
+            // Bind global SRVs.
+            for (const auto& [iRootParameterIndex, vResourcesToBind] :
+                 mtxInternalResources.second.globalShaderResourceSrvs) {
+                // Set view.
+                pCommandList->SetGraphicsRootShaderResourceView(
+                    iRootParameterIndex,
+                    vResourcesToBind[iCurrentFrameResourceIndex]
+                        ->getInternalResource()
+                        ->GetGPUVirtualAddress());
+            }
+        }
 
         /**
          * (Re)generates DirectX graphics pipeline state object.

@@ -8,10 +8,11 @@
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 
 namespace ne {
-    PipelineManager::PipelineManager(Renderer* pRenderer) { this->pRenderer = pRenderer; }
+    PipelineManager::PipelineManager(Renderer* pRenderer) : pRenderer(pRenderer) {}
 
     std::optional<Error> PipelineManager::bindBuffersToAllVulkanPipelinesIfUsed(
         const std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()>& vResources,
@@ -128,13 +129,13 @@ namespace ne {
             const auto vVertexMacros = convertShaderMacrosToText(additionalVertexShaderMacros);
             const auto vPixelMacros = convertShaderMacrosToText(additionalPixelShaderMacros);
             for (const auto& sVertexMacro : vVertexMacros) {
-                if (!sVertexMacro.starts_with("VS_")) {
+                if (!sVertexMacro.starts_with("VS_")) [[unlikely]] {
                     return Error(std::format(
                         "vertex shader macro \"{}\" that should start with \"VS_\" prefix", sVertexMacro));
                 }
             }
             for (const auto& sPixelMacro : vPixelMacros) {
-                if (!sPixelMacro.starts_with("PS_")) {
+                if (!sPixelMacro.starts_with("PS_")) [[unlikely]] {
                     return Error(std::format(
                         "pixel/fragment shader macro \"{}\" that should start with \"PS_\" prefix",
                         sPixelMacro));
@@ -262,8 +263,17 @@ namespace ne {
             pipelinesIt->second.shaderPipelines[macrosToUse] = pPipeline;
         }
 
-        // Bind GPU lighting resources to pipeline descriptors (if this pipeline uses them).
+        // Notify global shader resource binding manager so that global resources can be binded.
         auto optionalError =
+            getRenderer()->getGlobalShaderResourceBindingManager()->onNewGraphicsPipelineCreated(
+                pPipeline.get());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
+        }
+
+        // Bind GPU lighting resources to pipeline descriptors (if this pipeline uses them).
+        optionalError =
             getRenderer()->getLightingShaderResourceManager()->updateDescriptorsForPipelineResource(
                 pPipeline.get());
         if (optionalError.has_value()) [[unlikely]] {
@@ -350,14 +360,26 @@ namespace ne {
         Logger::get().info("notifying renderer's subsystems about refreshed pipeline resources...");
         Logger::get().flushToDisk(); // flush to disk to see if we crashed while notifying
 
+        // Rebind global shader resources.
+        {
+            auto optionalError = getRenderer()
+                                     ->getGlobalShaderResourceBindingManager()
+                                     ->onAllGraphicsPipelinesRecreatedInternalResources();
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+
         // Re-bind shader CPU write resources.
         {
             const auto pMtxResources = getRenderer()->getShaderCpuWriteResourceManager()->getResources();
             std::scoped_lock shaderResourceGuard(pMtxResources->first);
 
             for (const auto& [pRawResource, pResource] : pMtxResources->second.all) {
-                // Notify.
-                auto optionalError = pResource->onAfterAllPipelinesRefreshedResources();
+                // Notify (cast to parent for `friend class` to work).
+                auto optionalError = static_cast<ShaderResourceBase*>(pResource.get())
+                                         ->onAfterAllPipelinesRefreshedResources();
                 if (optionalError.has_value()) [[unlikely]] {
                     optionalError->addCurrentLocationToErrorStack();
                     return optionalError;

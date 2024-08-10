@@ -36,6 +36,7 @@ namespace ne {
     class ShaderTextureResourceManager;
     class ShaderLightArray;
     class ShaderManager;
+    class GlobalShaderResourceBindingManager;
     struct ShaderLightsInFrustumSingleType;
     struct GraphicsPipelineRegistry;
 
@@ -285,6 +286,15 @@ namespace ne {
          * @return Manager.
          */
         LightingShaderResourceManager* getLightingShaderResourceManager() const;
+
+        /**
+         * Returns manager responsible for creating global shader resource bindings.
+         *
+         * @warning Do not delete (free) returned pointer.
+         *
+         * @return Manager.
+         */
+        GlobalShaderResourceBindingManager* getGlobalShaderResourceBindingManager() const;
 
         /**
          * Returns mutex that is used when reading or writing to GPU resources that may be used
@@ -854,6 +864,9 @@ namespace ne {
 
         /** Stores data of all spawned light sources that is used in shaders. */
         std::unique_ptr<LightingShaderResourceManager> pLightingShaderResourceManager;
+
+        /** Manages all global bindings. */
+        std::unique_ptr<GlobalShaderResourceBindingManager> pGlobalShaderResourceBindingManager;
 
         /**
          * A bunch of shader macros that match renderer's configuration (render settings).

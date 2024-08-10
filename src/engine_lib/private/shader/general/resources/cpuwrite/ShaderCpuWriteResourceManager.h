@@ -9,7 +9,7 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 
@@ -58,9 +58,7 @@ namespace ne {
          * same as the resource name written in the shader file we are referencing).
          * @param sResourceAdditionalInfo    Additional text that we will append to created resource name
          * (used for logging).
-         * @param iResourceSizeInBytes       Size of the data that this resource will contain. Note that
-         * this size will most likely be padded to be a multiple of 256 because of the hardware requirement
-         * for shader constant buffers.
+         * @param iResourceDataSizeInBytes   Size of the data that this resource will contain.
          * @param pipelinesToUse             Pipelines that use shader/parameters we are referencing.
          * @param onStartedUpdatingResource  Function that will be called when started updating resource
          * data. Function returns pointer to data of the specified resource data size that needs to be copied
@@ -73,7 +71,7 @@ namespace ne {
         std::variant<ShaderCpuWriteResourceUniquePtr, Error> createShaderCpuWriteResource(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
-            size_t iResourceSizeInBytes,
+            size_t iResourceDataSizeInBytes,
             const std::unordered_set<Pipeline*>& pipelinesToUse,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);

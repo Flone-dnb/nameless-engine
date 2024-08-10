@@ -401,23 +401,6 @@ namespace ne {
                 ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
         }
 
-        // Get shader resource array manager.
-        const auto pShaderResourceArrayManager =
-            pVulkanRenderer->getResourceManager()->getDynamicCpuWriteShaderResourceArrayManager();
-
-        // (Re)bind descriptors that reference arrays.
-        for (const auto& [sShaderResourceName, iBindingIndex] :
-             mtxInternalResources.second.resourceBindings) {
-            // Update descriptors.
-            optionalError = pShaderResourceArrayManager->updateDescriptorsForPipelineResource(
-                pVulkanRenderer, this, sShaderResourceName, iBindingIndex);
-            if (optionalError.has_value()) [[unlikely]] {
-                auto error = std::move(optionalError.value());
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-        }
-
         // Bind "frameData" descriptors to frame uniform buffer.
         optionalError = bindFrameDataDescriptors();
         if (optionalError.has_value()) [[unlikely]] {

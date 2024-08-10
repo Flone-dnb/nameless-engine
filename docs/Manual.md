@@ -2712,7 +2712,11 @@ As you can see we use `alignas` to satisfy Vulkan aligning requirements and at t
 
 Note that if you don't find a `iVk...Alignment` variable matching your type's name this means that you should avoid using this type, this includes types such as `vec3` and `mat3`, instead use `vec4` and `mat4` so you will avoid a bunch of alignment/packing issues.
 
-Generally if you specify `alignas` to all fields (of a type that will be directly copied to the GPU) you should be pretty safe in terms of both Vulkan alignment requirements and HLSL packing rules. The only thing that you might want to keep track of is the padding that `alignas` might introduce, for example:
+Generally if you specify `alignas` to all fields (of a type that will be directly copied to the GPU) you should be pretty safe in terms of both Vulkan alignment requirements and HLSL packing rules.
+
+In most cases there are only 2 things that you need to keep track of:
+
+1. Order matters, that is the padding that `alignas` might introduce, for example:
 
 ```Cpp
 struct CustomMeshShaderConstants {
@@ -2726,6 +2730,34 @@ Note
 > If you are using Qt Creator IDE you can see field alignment (plus padding if there is one) by hovering your mouse cursor over a field's name, which is very useful for such cases.
 
 In order to avoid this you might want to prefer to put "big types" (types with bigger alignment such as `mat`s and `vec`s) first and only then "small types" (such as `float`s and etc). Otherwise you might have lots of unused padding bytes that might bloat your data.
+
+2. Extra padding on the last field might cause alignment problems in HLSL `StructuredBuffer`s:
+
+```Cpp
+struct ShaderConstants {
+    alignas(iVkVec4Alignment) glm::vec4 color = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
+
+    alignas(iVkScalarAlignment) float somevar = 0.0F;
+
+    // 12 bytes of padding here
+};
+```
+
+HLSL structured buffer will look like this:
+
+```HLSL
+struct MyData {
+    vec4 color;
+    
+    float somevar;
+};
+
+StructuredBuffer<MyData> myData : register(t0);
+```
+
+If you store more than 1 element in this structured buffer your second element will be aligned incorrectly because in C++ you have that 12 bytes of padding at the end but HLSL `StructuredBuffer`s are tightly-packed and there's no 12 bytes of padding in the end so your second element in the structured buffer will reference padding bytes in its `color` field.
+
+In order to avoid such issues just add explicit padding like `float pad[3]` and `vec3 pad` in C++ and HLSL.
 
 Now let's tell the engine how to pass your buffer to shaders:
 

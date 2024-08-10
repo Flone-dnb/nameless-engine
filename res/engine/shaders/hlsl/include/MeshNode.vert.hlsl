@@ -1,5 +1,6 @@
 #include "../../include/Base.glsl"
 #include "../../include/data/MeshData.glsl"
+#include "../../include/constants/MeshNodeConstants.glsl"
 #ifdef VS_SHADOW_MAPPING_PASS
     #include "../../include/data/ShadowPassLightInfoData.glsl"
     #include "../../include/constants/ShadowPassConstants.glsl"
@@ -15,13 +16,16 @@
  * @return Processed vertex.
  */
 VertexOut vsMeshNode(VertexIn vertexIn) {
+    // Prepare a short macro to access mesh data.
+    #define MESH_DATA meshData[constants.meshData]
+    
     // Prepare output variable.
     VertexOut vertexOut;
     
     // Calculate world coordinates.
-    vertexOut.worldPosition = mul(meshData.worldMatrix, float4(vertexIn.localPosition, 1.0F));
+    vertexOut.worldPosition = mul(MESH_DATA.worldMatrix, float4(vertexIn.localPosition, 1.0F));
     #ifndef VS_SHADOW_MAPPING_PASS
-        vertexOut.worldNormal = normalize(mul((float3x3)meshData.normalMatrix, vertexIn.localNormal));
+        vertexOut.worldNormal = normalize(mul((float3x3)MESH_DATA.normalMatrix, vertexIn.localNormal));
     #endif
     
     // Transform position to homogeneous clip space.

@@ -70,6 +70,34 @@ namespace ne {
         return it->second;
     }
 
+    std::variant<size_t, Error> Pipeline::getUintConstantOffset(const std::string& sConstantName) {
+        // Lock both.
+        std::scoped_lock guard(mtxShaderConstantsData.first);
+
+        // Make sure root/push constants are used.
+        if (!mtxShaderConstantsData.second.has_value()) [[unlikely]] {
+            return Error(std::format(
+                "expected root/push constants to be used on the pipeline \"{}\" because tried to find a "
+                "constant named \"{}\"",
+                getPipelineIdentifier(),
+                sConstantName));
+        }
+
+        const auto& uintConstantsOffsets = mtxShaderConstantsData.second->uintConstantsOffsets;
+
+        // Make sure that name of this field exists in shader code.
+        const auto fieldNameIt = uintConstantsOffsets.find(sConstantName);
+        if (fieldNameIt == uintConstantsOffsets.end()) [[unlikely]] {
+            return Error(std::format(
+                "expected to find the field named \"{}\" in root/push constants (in shader code), pipeline: "
+                "{}",
+                sConstantName,
+                getPipelineIdentifier()));
+        }
+
+        return fieldNameIt->second;
+    }
+
     std::pair<std::mutex, std::unordered_set<Material*>>* Pipeline::getMaterialsThatUseThisPipeline() {
         return &mtxMaterialsThatUseThisPipeline;
     }
@@ -265,7 +293,7 @@ namespace ne {
 
     void Pipeline::ShaderConstantsData::findOffsetAndCopySpecialValueToConstant(
         Pipeline* pPipeline, const char* pConstantName, unsigned int iValueToCopy) {
-        // Get offset of root constant.
+        // Get offset of the constant.
         const auto indexIt = uintConstantsOffsets.find(pConstantName);
 
 #if defined(DEBUG)

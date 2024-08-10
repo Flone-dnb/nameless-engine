@@ -12,21 +12,20 @@
 #include "render/directx/pipeline/DirectXPso.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "render/general/pipeline/PipelineManager.h"
+#include "render/general/resources/shadow/ShadowMapHandle.h"
 #include "render/directx/resources/DirectXResource.h"
 #include "material/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 #include "game/camera/CameraProperties.h"
 #include "game/camera/CameraManager.h"
-#include "shader/hlsl/resources/HlslShaderCpuWriteResource.h"
 #include "shader/hlsl/resources/HlslShaderTextureResource.h"
 #include "render/directx/resources/DirectXFrameResource.h"
-#include "game/nodes/light/DirectionalLightNode.h"
-#include "game/nodes/light/SpotlightNode.h"
-#include "game/nodes/light/PointLightNode.h"
 #include "render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
+#include "shader/general/resources/LightingShaderResourceManager.h"
 #include "misc/Profiler.hpp"
 
 // OS.
@@ -615,15 +614,24 @@ namespace ne {
             const auto pDirectXPso =
                 reinterpret_cast<DirectXPso*>(pipelineInfo.vMaterials[0].pMaterial->getDepthOnlyPipeline());
 
-            // Get pipeline's resources.
+            // Get pipeline resources and root constants.
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
-            std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+            const auto pMtxRootConstantsManager = pDirectXPso->getShaderConstants();
+
+            // Lock both.
+            std::scoped_lock guardPsoResources(pMtxPsoResources->first, pMtxRootConstantsManager->first);
+
+            // Get root constants manager.
+            const auto pRootConstantsManager = pMtxRootConstantsManager->second->pConstantsManager.get();
 
             // Set PSO and root signature.
             pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
             pCommandList->SetGraphicsRootSignature(pMtxPsoResources->second.pRootSignature.Get());
 
             // After setting root signature we can set root parameters.
+
+            // Bind global shader resources.
+            pDirectXPso->bindGlobalShaderResourceViews(pCommandList, iCurrentFrameResourceIndex);
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(
@@ -662,10 +670,16 @@ namespace ne {
                         throw std::runtime_error(error.getFullErrorMessage());
                     }
 #endif
-                    // Set resource.
-                    reinterpret_cast<HlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
-                        ->setConstantBufferViewOfPipeline(
-                            pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+                    meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                        pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
+
+                    // Bind root constants.
+                    pCommandList->SetGraphicsRoot32BitConstants(
+                        pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                            SpecialRootParameterSlot::ROOT_CONSTANTS)],
+                        pRootConstantsManager->getVariableCount(),
+                        pRootConstantsManager->getData(),
+                        0);
 
                     // Prepare vertex buffer view.
                     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
@@ -916,13 +930,17 @@ namespace ne {
                     // Convert pipeline type.
                     const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pPipeline.get());
 
-                    // Get root constants manager.
+                    // Get pipeline resources and root constants.
+                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
                     const auto pMtxRootConstantsManager = pPipeline->getShaderConstants();
 
-                    // Get pipeline's resources.
-                    auto pMtxPsoResources = pDirectXPso->getInternalResources();
+                    // Lock both.
                     std::scoped_lock guardPsoResources(
                         pMtxPsoResources->first, pMtxRootConstantsManager->first);
+
+                    // Get root constants manager.
+                    const auto pRootConstantsManager =
+                        pMtxRootConstantsManager->second->pConstantsManager.get();
 
                     // Set PSO and root signature.
                     pCommandList->SetPipelineState(pMtxPsoResources->second.pPso.Get());
@@ -931,6 +949,9 @@ namespace ne {
                     // After setting root signature we can set root parameters.
 
                     // Don't set frame data buffer because it's not used in shadow mapping.
+
+                    // Bind global shader resources.
+                    pDirectXPso->bindGlobalShaderResourceViews(pCommandList, iCurrentFrameResourceIndex);
 
                     // Bind array of viewProjection matrix array for lights.
                     getLightingShaderResourceManager()->setShadowPassLightInfoViewToCommandList(
@@ -952,18 +973,6 @@ namespace ne {
                         pPipeline.get(),
                         PipelineShaderConstantsManager::SpecialConstantsNames::pShadowPassLightInfoIndex,
                         iIndexIntoShadowPassLightInfoArray);
-
-                    // Get root constants manager.
-                    const auto pRootConstantsManager =
-                        pMtxRootConstantsManager->second->pConstantsManager.get();
-
-                    // Bind root constants.
-                    pCommandList->SetGraphicsRoot32BitConstants(
-                        pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
-                            SpecialRootParameterSlot::ROOT_CONSTANTS)],
-                        pRootConstantsManager->getVariableCount(),
-                        pRootConstantsManager->getData(),
-                        0);
 
                     // Get materials.
                     const auto pMtxMaterials = pPipeline->getMaterialsThatUseThisPipeline();
@@ -1004,10 +1013,16 @@ namespace ne {
                                 throw std::runtime_error(error.getFullErrorMessage());
                             }
 #endif
-                            // Set resource.
-                            reinterpret_cast<HlslShaderCpuWriteResource*>(meshDataIt->second.getResource())
-                                ->setConstantBufferViewOfPipeline(
-                                    pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+                            meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                                pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
+
+                            // Bind root constants.
+                            pCommandList->SetGraphicsRoot32BitConstants(
+                                pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                                    SpecialRootParameterSlot::ROOT_CONSTANTS)],
+                                pRootConstantsManager->getVariableCount(),
+                                pRootConstantsManager->getData(),
+                                0);
 
                             // Prepare vertex buffer view.
                             D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
@@ -1360,10 +1375,17 @@ namespace ne {
             // Convert pipeline.
             const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pipelineInfo.pPipeline);
 
-            // Get pipeline's resources.
+            // Get pipeline resources and root constants.
             auto pMtxPsoResources = pDirectXPso->getInternalResources();
-            std::scoped_lock guardPsoResources(pMtxPsoResources->first);
+            const auto pMtxRootConstantsManager = pDirectXPso->getShaderConstants();
+
+            // Lock both.
+            std::scoped_lock guardPsoResources(pMtxPsoResources->first, pMtxRootConstantsManager->first);
+
             auto& pipelineData = pMtxPsoResources->second;
+
+            // Get root constants manager.
+            const auto pRootConstantsManager = pMtxRootConstantsManager->second->pConstantsManager.get();
 
             // Set PSO and root signature.
             pCommandList->SetPipelineState(pipelineData.pPso.Get());
@@ -1427,8 +1449,8 @@ namespace ne {
                 // Set material's CPU write shader resources (`cbuffer`s for example).
                 for (const auto& [sResourceName, pShaderCpuWriteResource] :
                      materialResources.shaderCpuWriteResources) {
-                    reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                        ->setConstantBufferViewOfOnlyPipeline(pCommandList, iCurrentFrameResourceIndex);
+                    pShaderCpuWriteResource.getResource()->copyResourceIndexOfOnlyPipelineToPushConstants(
+                        pRootConstantsManager, iCurrentFrameResourceIndex);
                 }
 
                 // Set material's texture shader resources (`Texture2D`s for example).
@@ -1450,9 +1472,8 @@ namespace ne {
                     // Set mesh's shader CPU write resources.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                        reinterpret_cast<HlslShaderCpuWriteResource*>(pShaderCpuWriteResource.getResource())
-                            ->setConstantBufferViewOfPipeline(
-                                pCommandList, pDirectXPso, iCurrentFrameResourceIndex);
+                        pShaderCpuWriteResource.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                            pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
                     }
 
                     // Set mesh's texture shader resources.
@@ -1461,6 +1482,14 @@ namespace ne {
                         reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
                             ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
                     }
+
+                    // Bind root constants.
+                    pCommandList->SetGraphicsRoot32BitConstants(
+                        pMtxPsoResources->second.vSpecialRootParameterIndices[static_cast<size_t>(
+                            SpecialRootParameterSlot::ROOT_CONSTANTS)],
+                        pRootConstantsManager->getVariableCount(),
+                        pRootConstantsManager->getData(),
+                        0);
 
                     // Prepare vertex buffer view.
                     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;

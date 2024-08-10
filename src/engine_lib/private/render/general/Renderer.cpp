@@ -21,6 +21,7 @@
 #include "shader/general/resources/ShaderLightsInFrustumSingleType.hpp"
 #include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
 #include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
 #include "shader/general/ShaderMacro.h"
 #include "shader/ShaderManager.h"
 #include "game/nodes/MeshNode.h"
@@ -61,6 +62,8 @@ namespace ne {
         // Create some objects.
         pPipelineManager = std::make_unique<PipelineManager>(this);
         mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
+        pGlobalShaderResourceBindingManager = std::unique_ptr<GlobalShaderResourceBindingManager>(
+            new GlobalShaderResourceBindingManager(pPipelineManager.get()));
     }
 
     Renderer::~Renderer() {
@@ -721,6 +724,10 @@ namespace ne {
 
     LightingShaderResourceManager* Renderer::getLightingShaderResourceManager() const {
         return pLightingShaderResourceManager.get();
+    }
+
+    GlobalShaderResourceBindingManager* Renderer::getGlobalShaderResourceBindingManager() const {
+        return pGlobalShaderResourceBindingManager.get();
     }
 
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }

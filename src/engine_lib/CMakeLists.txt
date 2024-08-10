@@ -33,12 +33,12 @@ set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/HlslShader.cpp
     private/shader/hlsl/RootSignatureGenerator.h
     private/shader/hlsl/RootSignatureGenerator.cpp
-    private/shader/hlsl/resources/HlslShaderCpuWriteResource.h
-    private/shader/hlsl/resources/HlslShaderCpuWriteResource.cpp
     private/shader/hlsl/resources/HlslShaderTextureResource.h
     private/shader/hlsl/resources/HlslShaderTextureResource.cpp
     private/shader/hlsl/resources/HlslShaderResourceHelpers.h
     private/shader/hlsl/resources/HlslShaderResourceHelpers.cpp
+    private/shader/hlsl/resources/HlslGlobalShaderResourceBinding.cpp
+    private/shader/hlsl/resources/HlslGlobalShaderResourceBinding.h
     private/shader/hlsl/HlslComputeShaderInterface.cpp
     private/shader/hlsl/HlslComputeShaderInterface.h
     private/shader/hlsl/formats/HlslVertexFormatDescription.h
@@ -157,6 +157,12 @@ set(PROJECT_SOURCES
     private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h
     private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.cpp
     private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResource.cpp
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResource.h
+    private/shader/general/resources/GlobalShaderResourceBinding.cpp
+    private/shader/general/resources/GlobalShaderResourceBinding.h
+    private/shader/general/resources/GlobalShaderResourceBindingManager.cpp
+    private/shader/general/resources/GlobalShaderResourceBindingManager.h
     private/shader/glsl/formats/GlslVertexFormatDescription.h
     private/shader/glsl/formats/GlslVertexFormatDescription.cpp
     private/shader/glsl/formats/MeshNodeGlslVertexFormatDescription.cpp
@@ -182,12 +188,10 @@ set(PROJECT_SOURCES
     private/shader/general/resources/ShaderLightsInFrustumSingleType.hpp
     private/shader/glsl/GlslShader.h
     private/shader/glsl/GlslShader.cpp
-    private/shader/glsl/resources/GlslShaderCpuWriteResource.h
-    private/shader/glsl/resources/GlslShaderCpuWriteResource.cpp
     private/shader/glsl/resources/GlslShaderTextureResource.h
     private/shader/glsl/resources/GlslShaderTextureResource.cpp
-    private/shader/glsl/resources/GlslShaderResourceHelpers.h
-    private/shader/glsl/resources/GlslShaderResourceHelpers.cpp
+    private/shader/glsl/resources/GlslGlobalShaderResourceBinding.cpp
+    private/shader/glsl/resources/GlslGlobalShaderResourceBinding.h
     private/shader/glsl/DescriptorSetLayoutGenerator.h
     private/shader/glsl/DescriptorSetLayoutGenerator.cpp
     private/shader/glsl/GlslComputeShaderInterface.cpp

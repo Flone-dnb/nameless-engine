@@ -367,6 +367,9 @@ namespace ne RNAMESPACE() {
 
             /** Defines how much specular light will be reflected. */
             alignas(iVkScalarAlignment) float roughness = 0.0F;
+
+            /** Padding for alignment simplicity. */
+            float pad[3];
         };
 
         /**

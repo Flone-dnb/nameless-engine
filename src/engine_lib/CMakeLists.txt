@@ -404,12 +404,8 @@ set_target_properties(CombinedShaderLanguageParserLib PROPERTIES FOLDER ${EXTERN
 # Add "shaderc".
 message(STATUS "${PROJECT_NAME}: adding external dependency \"shaderc\"...")
 # Execute `shaderc` setup repo script
-find_package (Python COMPONENTS Interpreter Development)
-if (NOT EXISTS ${Python_EXECUTABLE})
-    message(FATAL_ERROR "${PROJECT_NAME}: failed to find Python")
-endif()
 message(STATUS "${PROJECT_NAME}: running `git-sync-deps` of `shaderc`, please wait it may take a while...")
-execute_process(COMMAND "${Python_EXECUTABLE}" "${ABSOLUTE_EXT_PATH}/shaderc/utils/git-sync-deps")
+execute_process(COMMAND "python" "${ABSOLUTE_EXT_PATH}/shaderc/utils/git-sync-deps")
 set(SHADERC_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 set(SHADERC_ENABLE_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SHADERC_SKIP_COPYRIGHT_CHECK ON CACHE BOOL "" FORCE)
@@ -467,13 +463,9 @@ endif()
 # External: Compressonator
 message(STATUS "${PROJECT_NAME}: adding external dependency \"Compressonator\"...")
 # Execute `Compressonator` setup repo script
-find_package (Python COMPONENTS Interpreter Development)
-if (NOT EXISTS ${Python_EXECUTABLE})
-    message(FATAL_ERROR "${PROJECT_NAME}: failed to find Python")
-endif()
 message(STATUS "${PROJECT_NAME}: fetching \"Compressonator\" dependencies, please wait it may take a while...")
 execute_process(
-    COMMAND "${Python_EXECUTABLE}" "${ABSOLUTE_EXT_PATH}/compressonator/build/fetch_dependencies.py"
+    COMMAND "python" "${ABSOLUTE_EXT_PATH}/compressonator/build/fetch_dependencies.py"
     WORKING_DIRECTORY "${ABSOLUTE_EXT_PATH}/compressonator/build"
 )
 add_subdirectory(${RELATIVE_EXT_PATH}/compressonator/cmp_compressonatorlib ${DEPENDENCY_BUILD_DIR_NAME}/cmp_compressonatorlib SYSTEM)

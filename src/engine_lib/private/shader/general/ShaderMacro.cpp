@@ -8,6 +8,8 @@
 
 namespace ne {
     std::vector<std::string> convertShaderMacrosToText(const std::set<ShaderMacro>& macros) {
+        static_assert(sizeof(size_t) == sizeof(unsigned long long), "we don't support 32 bit systems");
+
         std::vector<std::string> vMacroNames;
 
         for (const auto& macro : macros) {

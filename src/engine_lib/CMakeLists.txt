@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.20)
 
 project(engine_lib)
 
+# Make sure we are running a 64-bit system.
+if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "We don't support 32 bit systems.")
+endif()
+
 # Make sure Go is installed.
 execute_process(
     COMMAND go version

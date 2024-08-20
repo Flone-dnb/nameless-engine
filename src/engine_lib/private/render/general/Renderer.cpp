@@ -53,6 +53,9 @@ namespace ne {
         // fences and semaphores that expect one swap chain image per frame resource.
         static_assert(iRecommendedSwapChainBufferCount == FrameResourceManager::getFrameResourceCount());
 
+        // A friendly reminder if we will implement reverse depth buffer.
+        static_assert(getMaxDepth() >= 0.99, "check light culling compute shader code");
+
         // Save game manager.
         this->pGameManager = pGameManager;
 

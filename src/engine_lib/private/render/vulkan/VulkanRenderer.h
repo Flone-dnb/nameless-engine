@@ -1140,7 +1140,7 @@ namespace ne {
         static constexpr auto indexTypeFormat = VK_INDEX_TYPE_UINT32;
 
         /** Used mode for resolving multisampled depth image. */
-        static constexpr auto depthResolveMode = VK_RESOLVE_MODE_AVERAGE_BIT;
+        static constexpr auto depthResolveMode = VK_RESOLVE_MODE_MAX_BIT;
 
         /** Used mode for resolving multisampled depth image. */
         static constexpr auto stencilResolveMode = VK_RESOLVE_MODE_SAMPLE_ZERO_BIT;

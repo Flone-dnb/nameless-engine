@@ -81,12 +81,17 @@ namespace ne {
             shadowMappingPointLightColorTargetFormat == VK_FORMAT_R32_SFLOAT,
             "also change format in DirectX renderer for (visual) consistency");
 
-        // Self check for light culling compute shader:
+        // Check light culling compute shader:
         static_assert(
             depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
             "light culling compute shader expects the depth values to be in range [0..1] for atomic "
             "operations, please review the light culling compute shader and make sure atomics will work "
             "correctly");
+
+        // Check depth resolve mode.
+        static_assert(
+            getMaxDepth() >= 0.99F && depthResolveMode == VK_RESOLVE_MODE_MAX_BIT,
+            "if you are implementing a reversed depth buffer you need to change depth resolve mode to min");
     }
 
     std::variant<AntialiasingQuality, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {

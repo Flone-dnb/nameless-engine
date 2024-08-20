@@ -81,12 +81,12 @@ namespace ne {
             backBufferFormat == DXGI_FORMAT_R8G8B8A8_UNORM,
             "also change format in Vulkan renderer for (visual) consistency");
         static_assert(
-            depthStencilBufferFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
+            depthStencilBufferFormat == DXGI_FORMAT_D32_FLOAT,
             "also change format in Vulkan renderer for (visual) consistency");
 
         // Check shadow map format.
         static_assert(
-            shadowMapFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
+            shadowMapFormat == DXGI_FORMAT_D32_FLOAT,
             "also change format in Vulkan renderer for (visual) consistency");
         static_assert(
             shadowMappingPointLightColorTargetFormat == DXGI_FORMAT_R32_FLOAT,
@@ -94,7 +94,7 @@ namespace ne {
 
         // Self check for light culling compute shader:
         static_assert(
-            depthStencilBufferFormat == DXGI_FORMAT_D24_UNORM_S8_UINT,
+            depthStencilBufferFormat == DXGI_FORMAT_D32_FLOAT,
             "light culling compute shader expects the depth values to be in range [0..1] for atomic "
             "operations, please review the light culling compute shader and make sure atomics will work "
             "correctly");

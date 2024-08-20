@@ -70,12 +70,12 @@ namespace ne {
             swapChainImageColorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
             "also change format in DirectX renderer for (visual) consistency");
         static_assert(
-            depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            depthImageFormat == VK_FORMAT_D32_SFLOAT,
             "also change format in DirectX renderer for (visual) consistency");
 
         // Check shadow map format.
         static_assert(
-            shadowMapFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            shadowMapFormat == VK_FORMAT_D32_SFLOAT,
             "also change format in DirectX renderer for (visual) consistency");
         static_assert(
             shadowMappingPointLightColorTargetFormat == VK_FORMAT_R32_SFLOAT,
@@ -83,7 +83,7 @@ namespace ne {
 
         // Check light culling compute shader:
         static_assert(
-            depthImageFormat == VK_FORMAT_D24_UNORM_S8_UINT,
+            depthImageFormat == VK_FORMAT_D32_SFLOAT,
             "light culling compute shader expects the depth values to be in range [0..1] for atomic "
             "operations, please review the light culling compute shader and make sure atomics will work "
             "correctly");
@@ -2089,10 +2089,9 @@ namespace ne {
         samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
         samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
+        samplerInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK; // used when `clamp` address mode
         static_assert(
-            shadowMapFormat == VK_FORMAT_D24_UNORM_S8_UINT,
-            "consider changing border color type (INT/FLOAT)");
+            shadowMapFormat == VK_FORMAT_D32_SFLOAT, "consider changing border color type (INT/FLOAT)");
 
         // Disable anisotropic filtering.
         samplerInfo.anisotropyEnable = VK_FALSE;
@@ -2165,7 +2164,7 @@ namespace ne {
             depthImageTiling,
             VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+            VK_IMAGE_ASPECT_DEPTH_BIT);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -2184,7 +2183,7 @@ namespace ne {
             depthImageTiling,
             VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
                 VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-            VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+            VK_IMAGE_ASPECT_DEPTH_BIT);
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

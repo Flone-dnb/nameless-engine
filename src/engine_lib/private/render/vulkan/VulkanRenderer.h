@@ -1123,10 +1123,10 @@ namespace ne {
         static constexpr auto swapChainImageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
         /** Format of @ref pDepthImage. */
-        static constexpr auto depthImageFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+        static constexpr auto depthImageFormat = VK_FORMAT_D32_SFLOAT;
 
         /** Format used for shadow maps. */
-        static constexpr auto shadowMapFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+        static constexpr auto shadowMapFormat = VK_FORMAT_D32_SFLOAT;
 
         /**
          * Format used for point lights as "color" target (does not actually store color) during shadow pass.

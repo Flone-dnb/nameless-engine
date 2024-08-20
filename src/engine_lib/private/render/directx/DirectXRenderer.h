@@ -608,10 +608,10 @@ namespace ne {
         static constexpr DXGI_FORMAT backBufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
         /** Depth/stencil buffer format. */
-        static constexpr DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        static constexpr DXGI_FORMAT depthStencilBufferFormat = DXGI_FORMAT_D32_FLOAT;
 
         /** Format used for shadow maps. */
-        static constexpr DXGI_FORMAT shadowMapFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        static constexpr DXGI_FORMAT shadowMapFormat = DXGI_FORMAT_D32_FLOAT;
 
         /**
          * Format used for point lights as "color" target (does not actually store color) during shadow pass.
@@ -623,7 +623,7 @@ namespace ne {
          *
          * @remark Resolve is only supported for non-integer and non-stencil types.
          */
-        static constexpr DXGI_FORMAT depthBufferNoMultisamplingFormat = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+        static constexpr DXGI_FORMAT depthBufferNoMultisamplingFormat = DXGI_FORMAT_D32_FLOAT;
 
         /** Use only display modes that use this scaling. */
         static constexpr DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;

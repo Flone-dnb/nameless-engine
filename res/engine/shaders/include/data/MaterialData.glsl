@@ -9,8 +9,13 @@ struct MaterialData {
     /** Defines how much specular light will be reflected (value in range [0.0F; 1.0F]). */
     float roughness;
     
-    /** Padding for alignment simplicity. */
-    vec3 pad;
+    /** Explicit padding for clarity. */
+    /** `vec3` does not work here because GLSL requires 16 bytes of alignment of `vec3`s but we have 4 byte alignment here. */
+    float pad1;
+    // silence doc checker
+    float pad2;
+    // silence doc checker
+    float pad3;
 };
 
 /** Material data for all meshes, use indices from root/push constants to index into this array. */

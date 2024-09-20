@@ -368,7 +368,7 @@ namespace ne RNAMESPACE() {
             /** Defines how much specular light will be reflected. */
             alignas(iVkScalarAlignment) float roughness = 0.0F;
 
-            /** Padding for alignment simplicity. */
+            /** Explicit padding for clarity. */
             float pad[3];
         };
 
@@ -665,8 +665,8 @@ namespace ne RNAMESPACE() {
         /** Whether @ref allocateShaderResources was called or not. */
         bool bIsShaderResourcesAllocated = false;
 
-        /** Name of the constant buffer used to store material data in shaders. */
-        static inline const auto sMaterialShaderConstantBufferName = "materialData";
+        /** Name of the buffer used to store material data in shaders. */
+        static inline const auto sMaterialShaderBufferName = "materialData";
 
         /** Name of the resource used to store diffuse texture in shaders. */
         static inline const auto sMaterialShaderDiffuseTextureName = "diffuseTexture";

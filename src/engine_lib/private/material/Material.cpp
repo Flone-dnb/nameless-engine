@@ -421,14 +421,14 @@ namespace ne {
         // Set flag before adding binding data.
         bIsShaderResourcesAllocated = true;
 
-        // Set material constant buffer.
+        // Set material data binding.
         setShaderCpuWriteResourceBindingData(
-            sMaterialShaderConstantBufferName,
+            sMaterialShaderBufferName,
             sizeof(MaterialShaderConstants),
             [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
             [this]() { onFinishedUpdatingShaderMeshConstants(); });
 
-        // Set diffuse texture (if path is set).
+        // Set diffuse texture binding (if path is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
             setShaderTextureResourceBindingData(
                 sMaterialShaderDiffuseTextureName, sDiffuseTexturePathRelativeRes);
@@ -641,7 +641,7 @@ namespace ne {
         mtxShaderMaterialDataConstants.second.diffuseColor.y = diffuseColor.y;
         mtxShaderMaterialDataConstants.second.diffuseColor.z = diffuseColor.z;
 
-        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderBufferName);
     }
 
     void Material::setSpecularColor(const glm::vec3& specularColor) {
@@ -655,7 +655,7 @@ namespace ne {
         mtxShaderMaterialDataConstants.second.specularColor.y = specularColor.y;
         mtxShaderMaterialDataConstants.second.specularColor.z = specularColor.z;
 
-        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderBufferName);
     }
 
     void Material::setRoughness(float roughness) {
@@ -667,7 +667,7 @@ namespace ne {
         // Save new opacity for shaders.
         mtxShaderMaterialDataConstants.second.roughness = this->roughness;
 
-        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderBufferName);
     }
 
     void Material::setOpacity(float opacity) {
@@ -679,7 +679,7 @@ namespace ne {
         // Save new opacity for shaders.
         mtxShaderMaterialDataConstants.second.diffuseColor.w = this->opacity;
 
-        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderConstantBufferName);
+        markShaderCpuWriteResourceAsNeedsUpdate(sMaterialShaderBufferName);
     }
 
     std::string Material::getVertexShaderName() const { return sVertexShaderName; }

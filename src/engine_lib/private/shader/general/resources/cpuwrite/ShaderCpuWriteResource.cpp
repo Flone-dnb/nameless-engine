@@ -52,7 +52,9 @@ namespace ne {
             return Error("shader resource array manager is `nullptr`");
         }
 
-        // Reserve a space for this shader resource's data per frame resource.
+        // Reserve a space for this shader resource's data per frame resource
+        // (one slot per frame in-flight because we operate on CPU-write resources
+        // so we have to keep N copies of the data in case it's changing to avoid stopping the GPU).
         for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             auto result = pShaderResourceArrayManager->reserveSlotsInArray(pShaderResource.get());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {

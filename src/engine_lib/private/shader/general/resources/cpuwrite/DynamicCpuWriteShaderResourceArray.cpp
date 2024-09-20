@@ -203,7 +203,7 @@ namespace ne {
 
         // Create a new buffer.
         auto result = pResourceManager->createResourceWithCpuWriteAccess(
-            std::format("\"{}\" GPU array", sHandledShaderResourceName),
+            std::format("\"{}\" CPU-write dynamic array", sHandledShaderResourceName),
             iElementSizeInBytes,
             iCapacity,
             true);

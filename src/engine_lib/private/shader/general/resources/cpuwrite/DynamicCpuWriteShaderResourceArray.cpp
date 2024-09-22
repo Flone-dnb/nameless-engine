@@ -6,6 +6,9 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "shader/general/resources/GlobalShaderResourceBindingManager.h"
+#if defined(WIN32)
+#include "render/directx/DirectXRenderer.h"
+#endif
 
 namespace ne {
 
@@ -214,6 +217,24 @@ namespace ne {
         }
         mtxInternalResources.second.pUploadBuffer =
             std::get<std::unique_ptr<UploadBuffer>>(std::move(result));
+
+#if defined(WIN32)
+        if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
+            // Cast to DirectX resource.
+            const auto pDirectXResource = dynamic_cast<DirectXResource*>(
+                mtxInternalResources.second.pUploadBuffer->getInternalResource());
+            if (pDirectXResource == nullptr) [[unlikely]] {
+                return Error("expected a DirectX resource");
+            }
+
+            // Bind SRV for read access as StructuredBuffer in shaders.
+            auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::SRV);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+        }
+#endif
 
         // Save the new capacity.
         mtxInternalResources.second.iCapacity = iCapacity;

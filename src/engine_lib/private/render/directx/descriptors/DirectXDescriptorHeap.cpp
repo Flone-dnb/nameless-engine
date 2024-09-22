@@ -729,9 +729,9 @@ namespace ne {
                 srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
                 srvDesc.Texture2D.MostDetailedMip = 0;
                 srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-                if (resourceDesc.Format == DirectXRenderer::getDepthStencilBufferFormat()) {
-                    // SRV cannon be used with this format so use another format.
-                    srvDesc.Format = DirectXRenderer::getDepthBufferFormatNoMultisampling();
+                if (resourceDesc.Format == DXGI_FORMAT_D32_FLOAT) {
+                    // SRV cannon be created with the depth component so use the red component instead.
+                    srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
                 } else {
                     srvDesc.Format = resourceDesc.Format;
                 }

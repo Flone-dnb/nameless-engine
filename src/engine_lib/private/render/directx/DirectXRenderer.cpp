@@ -58,6 +58,7 @@ namespace ne {
         ID3D12CommandQueue* pCommandQueue = nullptr;
     };
 
+// Creates a scoped GPU mark for RenderDoc.
 #define GPU_MARK_FUNC GpuDirectXDebugMarkScopeGuard gpuMarkFuncGuard(pCommandQueue, __FUNCTION__);
 #else
 #define GPU_MARK_FUNC
@@ -1392,6 +1393,9 @@ namespace ne {
             pCommandList->SetGraphicsRootSignature(pipelineData.pRootSignature.Get());
 
             // After setting root signature we can set root parameters.
+
+            // Bind global shader resources.
+            pDirectXPso->bindGlobalShaderResourceViews(pCommandList, iCurrentFrameResourceIndex);
 
             // Set CBV to frame constant buffer.
             pCommandList->SetGraphicsRootConstantBufferView(

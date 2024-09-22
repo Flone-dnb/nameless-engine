@@ -1,5 +1,6 @@
 #include "../../include/Base.glsl"
 #include "../../include/data/MaterialData.glsl"
+#include "../../include/constants/MeshNodeConstants.glsl"
 
 #define INCLUDE_LIGHTING_FUNCTIONS
 #define READ_ONLY_LIGHT_GRID

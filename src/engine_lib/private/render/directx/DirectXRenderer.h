@@ -621,9 +621,13 @@ namespace ne {
         /**
          * Depth buffer format for @ref pDepthBufferNoMultisampling.
          *
-         * @remark Resolve is only supported for non-integer and non-stencil types.
+         * @remark This format is based on @ref depthStencilBufferFormat but we need to consider
+         * some additional things such as:
+         * - MSAA resolve is only supported for non-integer and non-stencil types (use X8_TYPELESS or similar
+         * with stencil),
+         * - replace the depth component with the red component.
          */
-        static constexpr DXGI_FORMAT depthBufferNoMultisamplingFormat = DXGI_FORMAT_D32_FLOAT;
+        static constexpr DXGI_FORMAT depthBufferNoMultisamplingFormat = DXGI_FORMAT_R32_FLOAT;
 
         /** Use only display modes that use this scaling. */
         static constexpr DXGI_MODE_SCALING usedScaling = DXGI_MODE_SCALING_UNSPECIFIED;

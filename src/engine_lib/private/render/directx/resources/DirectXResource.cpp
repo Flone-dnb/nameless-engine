@@ -65,7 +65,10 @@ namespace ne {
         pCreatedResource->pInternalResource = pCreatedResource->pAllocatedResource->GetResource();
 
         // Assign resource name.
-        pCreatedResource->pAllocatedResource->SetName(Globals::stringToWstring(sResourceName).c_str());
+        pCreatedResource->pAllocatedResource->SetName(
+            Globals::stringToWstring(sResourceName).c_str()); // name for D3D12MA logging
+        pCreatedResource->pInternalResource->SetName(
+            pCreatedResource->pAllocatedResource->GetName()); // name for debug layer logging
 
         return pCreatedResource;
     }

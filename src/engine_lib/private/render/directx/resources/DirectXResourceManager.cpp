@@ -567,17 +567,21 @@ namespace ne {
         // 3. Copy our data from the CPU to the resulting resource by using the upload resource.
         // 4. Wait for GPU to finish copying data and delete the upload resource.
 
-        // 1. Create the resulting resource.
+        // 1. Create the resulting (final) resource.
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-        const auto initialFinalResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+        const auto initialStateForFinalResource = D3D12_RESOURCE_STATE_COPY_DEST;
         auto result = DirectXResource::create(
             this,
             sResourceName,
             pMemoryAllocator.Get(),
             allocationDesc,
             finalResourceDescription,
-            initialFinalResourceState,
+            finalResourceDescription.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER
+                ? D3D12_RESOURCE_STATE_COMMON // D3D debug layer warns about buffers with `COPY_DEST` state
+                                              // and it seems to want `STATE_COMMON`. We keep the intended
+                                              // state in the variable for the barrier (below) to work.
+                : initialStateForFinalResource,
             {},
             iElementSizeInBytes,
             iElementCount);
@@ -668,7 +672,7 @@ namespace ne {
 
         // Queue resulting resource state change.
         CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(
-            pResultingResource->getInternalResource(), initialFinalResourceState, finalResourceState);
+            pResultingResource->getInternalResource(), initialStateForFinalResource, finalResourceState);
         pCommandList->ResourceBarrier(1, &transition);
 
         // Close command list.

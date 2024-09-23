@@ -2533,6 +2533,7 @@ void MyGameInstance::onGameStarted(){
         "game.meshnode.fs",                               // global unique shader name
         "res/game/shaders/hlsl/CustomMeshNode.frag.hlsl", // path to shader file, using custom pixel shader
         ShaderType::FRAGMENT_SHADER,                      // shader type
+        VertexFormat::MESH_NODE,                          // vertex structure layout
         "fsCustomMeshNode",                               // shader entry function name
         EngineShaders::MeshNode::getFragmentShader(false) // macros: since we are "deriving" from MeshNode shader we use
             .definedShaderMacros);                        // engine shader's macros (but we can also add our macros)

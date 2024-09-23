@@ -56,6 +56,8 @@ namespace ne {
         /**
          * Attempts to find an array that handles shader resource of the specified name.
          *
+         * @remark Mostly used for automated testing.
+         *
          * @param sShaderResourceName Name of the shader resource (from shader code).
          *
          * @return `nullptr` if not found, otherwise a valid pointer.

@@ -6,9 +6,26 @@
 #include "render/directx/pipeline/DirectXPso.h"
 #include "render/directx/DirectXRenderer.h"
 #include "shader/general/EngineShaderNames.hpp"
+#include "shader/hlsl/RootSignatureGenerator.h"
+#include "shader/ShaderManager.h"
+#include "shader/hlsl/HlslShader.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"
+
+// Template magic to access a private function for testing purposes.
+template <typename Tag, typename Tag::pfn_t pfn> struct tag_bind_pfn {
+    friend typename Tag::pfn_t pfn_of(Tag) { return pfn; }
+};
+struct tag_ShaderPack_setRendererConfiguration {
+    using pfn_t = void (ne::ShaderPack::*)(const std::set<ne::ShaderMacro>&);
+    friend typename pfn_t pfn_of(tag_ShaderPack_setRendererConfiguration);
+};
+template struct tag_bind_pfn<
+    tag_ShaderPack_setRendererConfiguration,
+    &ne::ShaderPack::setRendererConfiguration>;
+inline static const auto c_pfn_ShaderPack_setRendererConfiguration =
+    pfn_of(tag_ShaderPack_setRendererConfiguration{});
 
 TEST_CASE("root signature merge is correct") {
     using namespace ne;
@@ -68,6 +85,137 @@ TEST_CASE("root signature merge is correct") {
                     it = params.find("materialData");
                     REQUIRE(it != params.end());
                 }
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
+}
+
+TEST_CASE("root signature merge fails if vertex/pixel shaders have conflicting root constants") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            // Make sure we are using DirectX renderer.
+            if (dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-DirectX renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto vertexShader = ShaderDescription(
+                    "test.meshnode.vs",
+                    "res/test/shaders/hlsl/conflicting_root_constants/vert.hlsl",
+                    ShaderType::VERTEX_SHADER,
+                    VertexFormat::MESH_NODE,
+                    "main",
+                    {});
+                const auto correctFragmentShader = ShaderDescription(
+                    "test.meshnode.correct.fs",
+                    "res/test/shaders/hlsl/conflicting_root_constants/correct.frag.hlsl",
+                    ShaderType::FRAGMENT_SHADER,
+                    VertexFormat::MESH_NODE,
+                    "main",
+                    {});
+                const auto conflictingFragmentShader = ShaderDescription(
+                    "test.meshnode.conflict.fs",
+                    "res/test/shaders/hlsl/conflicting_root_constants/conflict.frag.hlsl",
+                    ShaderType::FRAGMENT_SHADER,
+                    VertexFormat::MESH_NODE,
+                    "main",
+                    {});
+
+                // Cast renderer.
+                const auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getWindow()->getRenderer());
+                REQUIRE(pDirectXRenderer != nullptr);
+
+                // Compile vertex shader.
+                auto result = ShaderPack::compileShaderPack(pDirectXRenderer, vertexShader);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                const auto pVertexShaderPack = std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+
+                // Compile correct fragment shader.
+                result = ShaderPack::compileShaderPack(pDirectXRenderer, correctFragmentShader);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                const auto pCorrectFragmentShaderPack =
+                    std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+
+                // Compile conflicting fragment shader.
+                result = ShaderPack::compileShaderPack(pDirectXRenderer, conflictingFragmentShader);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                auto pConflictingFragmentShaderPack =
+                    std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+
+                // Set configuration (only for this test, in reality it will be set by the renderer).
+                ((*pVertexShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
+                ((*pCorrectFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
+                ((*pConflictingFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
+                // pVertexShaderPack->setRendererConfiguration({});
+                // pCorrectFragmentShaderPack->setRendererConfiguration({});
+                // pConflictingFragmentShaderPack->setRendererConfiguration({});
+
+                // Get shaders.
+                std::set<ShaderMacro> fullShaderConfiguration;
+                const auto pVertexShader = pVertexShaderPack->getShader({}, fullShaderConfiguration);
+                const auto pCorrectFragmentShader =
+                    pCorrectFragmentShaderPack->getShader({}, fullShaderConfiguration);
+                const auto pConflictingFragmentShader =
+                    pConflictingFragmentShaderPack->getShader({}, fullShaderConfiguration);
+
+                // Load reflection.
+                dynamic_cast<HlslShader*>(pVertexShader.get())->getCompiledBlob();
+                dynamic_cast<HlslShader*>(pCorrectFragmentShader.get())->getCompiledBlob();
+                dynamic_cast<HlslShader*>(pConflictingFragmentShader.get())->getCompiledBlob();
+
+                // Successfully generate a root signature with the same root parameters.
+                auto rootSignatureResult = RootSignatureGenerator::generateGraphics(
+                    pDirectXRenderer,
+                    pDirectXRenderer->getD3dDevice(),
+                    dynamic_cast<HlslShader*>(pVertexShader.get()),
+                    dynamic_cast<HlslShader*>(pCorrectFragmentShader.get()));
+                REQUIRE(!std::holds_alternative<Error>(rootSignatureResult));
+
+                // Fail to generate a root signature with conflicting root parameters.
+                rootSignatureResult = RootSignatureGenerator::generateGraphics(
+                    pDirectXRenderer,
+                    pDirectXRenderer->getD3dDevice(),
+                    dynamic_cast<HlslShader*>(pVertexShader.get()),
+                    dynamic_cast<HlslShader*>(pConflictingFragmentShader.get()));
+                REQUIRE(std::holds_alternative<Error>(rootSignatureResult));
+
+                // Release shader data.
+                dynamic_cast<HlslShader*>(pVertexShader.get())->releaseShaderDataFromMemoryIfLoaded();
+                dynamic_cast<HlslShader*>(pCorrectFragmentShader.get())
+                    ->releaseShaderDataFromMemoryIfLoaded();
+                dynamic_cast<HlslShader*>(pConflictingFragmentShader.get())
+                    ->releaseShaderDataFromMemoryIfLoaded();
+
                 getWindow()->close();
             });
         }

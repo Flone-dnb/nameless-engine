@@ -2673,7 +2673,7 @@ layout(std140, binding = 9) readonly buffer CustomDataBuffer{ // binding index c
     CustomData array[];  // stores data for all objects (meshes) that use this shader
 } customData;
 
-#additional_push_constants
+#additional_shader_constants
 {
 	uint customData; // named as your `readonly buffer`, case sensitive,
                      // used to access element specific to the current object (mesh)
@@ -2816,7 +2816,7 @@ Similar approach is used for custom textures. First, define a shader:
 #glsl layout(binding = 8) uniform sampler2D customTexture[];
 
 #additional_shader_constants{
-    uint customTexture;
+    uint customTexture; // access it using `constants.customTexture`
 }
 
 void main(){

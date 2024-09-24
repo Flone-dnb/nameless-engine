@@ -210,11 +210,9 @@ TEST_CASE("root signature merge fails if vertex/pixel shaders have conflicting r
                 REQUIRE(std::holds_alternative<Error>(rootSignatureResult));
 
                 // Release shader data.
-                dynamic_cast<HlslShader*>(pVertexShader.get())->releaseShaderDataFromMemoryIfLoaded();
-                dynamic_cast<HlslShader*>(pCorrectFragmentShader.get())
-                    ->releaseShaderDataFromMemoryIfLoaded();
-                dynamic_cast<HlslShader*>(pConflictingFragmentShader.get())
-                    ->releaseShaderDataFromMemoryIfLoaded();
+                pVertexShader->releaseShaderDataFromMemoryIfLoaded();
+                pCorrectFragmentShader->releaseShaderDataFromMemoryIfLoaded();
+                pConflictingFragmentShader->releaseShaderDataFromMemoryIfLoaded();
 
                 getWindow()->close();
             });

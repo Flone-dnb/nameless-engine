@@ -550,6 +550,8 @@ namespace ne {
             // Make sure this offset was not used before.
             const auto it = fieldOffsets.find(iOffsetInUints);
             if (it != fieldOffsets.end()) [[unlikely]] {
+                vkDestroyDescriptorPool(pLogicalDevice, generatedData.pDescriptorPool, nullptr);
+                vkDestroyDescriptorSetLayout(pLogicalDevice, generatedData.pDescriptorSetLayout, nullptr);
                 return Error(std::format(
                     "found 2 fields in push constants with different names but the same "
                     "offsets from struct start, conflicting offset {} was already used on field \"{}\" but "

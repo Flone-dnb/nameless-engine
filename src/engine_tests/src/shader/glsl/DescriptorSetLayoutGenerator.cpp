@@ -15,6 +15,20 @@ const inline std::filesystem::path shaderPath = shaderPathDir / "test_shader.gls
 const inline auto pTestVertexShaderName = "test vertex shader";
 const inline auto pTestPixelShaderName = "test pixel shader";
 
+// Template magic to access a private function for testing purposes.
+template <typename Tag, typename Tag::pfn_t pfn> struct tag_bind_pfn {
+    friend typename Tag::pfn_t pfn_of(Tag) { return pfn; }
+};
+struct tag_ShaderPack_setRendererConfiguration {
+    using pfn_t = void (ne::ShaderPack::*)(const std::set<ne::ShaderMacro>&);
+    friend typename pfn_t pfn_of(tag_ShaderPack_setRendererConfiguration);
+};
+template struct tag_bind_pfn<
+    tag_ShaderPack_setRendererConfiguration,
+    &ne::ShaderPack::setRendererConfiguration>;
+inline static const auto c_pfn_ShaderPack_setRendererConfiguration =
+    pfn_of(tag_ShaderPack_setRendererConfiguration{});
+
 TEST_CASE("2 resources with the same name but different bindings cause error") {
     using namespace ne;
 
@@ -511,4 +525,138 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
 
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
+}
+
+TEST_CASE("descriptor layout merge fails if vertex/fragment shaders have conflicting push constants") {
+    using namespace ne;
+
+    class TestGameInstance : public GameInstance {
+    public:
+        TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
+            : GameInstance(pGameWindow, pGame, pInputManager) {}
+        virtual void onGameStarted() override {
+            // Make sure we are using Vulkan renderer.
+            if (dynamic_cast<VulkanRenderer*>(getWindow()->getRenderer()) == nullptr) {
+                // Don't run this test on non-Vulkan renderer.
+                getWindow()->close();
+                SKIP();
+            }
+
+            createWorld([&](const std::optional<Error>& optionalWorldError) {
+                if (optionalWorldError.has_value()) {
+                    auto error = optionalWorldError.value();
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+
+                const auto vertexShader = ShaderDescription(
+                    "test.meshnode.vs",
+                    "res/test/shaders/glsl/conflicting_root_constants/vert.glsl",
+                    ShaderType::VERTEX_SHADER,
+                    VertexFormat::MESH_NODE,
+                    "main",
+                    {});
+                const auto correctFragmentShader = ShaderDescription(
+                    "test.meshnode.correct.fs",
+                    "res/test/shaders/glsl/conflicting_root_constants/correct.frag.glsl",
+                    ShaderType::FRAGMENT_SHADER,
+                    VertexFormat::MESH_NODE,
+                    "main",
+                    {});
+                const auto conflictingFragmentShader = ShaderDescription(
+                    "test.meshnode.conflict.fs",
+                    "res/test/shaders/glsl/conflicting_root_constants/conflict.frag.glsl",
+                    ShaderType::FRAGMENT_SHADER,
+                    VertexFormat::MESH_NODE,
+                    "main",
+                    {});
+
+                // Cast renderer.
+                const auto pRenderer = dynamic_cast<VulkanRenderer*>(getWindow()->getRenderer());
+                REQUIRE(pRenderer != nullptr);
+
+                // Compile vertex shader.
+                auto result = ShaderPack::compileShaderPack(pRenderer, vertexShader);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                const auto pVertexShaderPack = std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+
+                // Compile correct fragment shader.
+                result = ShaderPack::compileShaderPack(pRenderer, correctFragmentShader);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                const auto pCorrectFragmentShaderPack =
+                    std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+
+                // Compile conflicting fragment shader.
+                result = ShaderPack::compileShaderPack(pRenderer, conflictingFragmentShader);
+                REQUIRE(std::holds_alternative<std::shared_ptr<ShaderPack>>(result));
+                auto pConflictingFragmentShaderPack =
+                    std::get<std::shared_ptr<ShaderPack>>(std::move(result));
+
+                // Set configuration (only for this test, in reality it will be set by the renderer).
+                ((*pVertexShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
+                ((*pCorrectFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
+                ((*pConflictingFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
+                // pVertexShaderPack->setRendererConfiguration({});
+                // pCorrectFragmentShaderPack->setRendererConfiguration({});
+                // pConflictingFragmentShaderPack->setRendererConfiguration({});
+
+                // Get shaders.
+                std::set<ShaderMacro> fullShaderConfiguration;
+                const auto pVertexShader = pVertexShaderPack->getShader({}, fullShaderConfiguration);
+                const auto pCorrectFragmentShader =
+                    pCorrectFragmentShaderPack->getShader({}, fullShaderConfiguration);
+                const auto pConflictingFragmentShader =
+                    pConflictingFragmentShaderPack->getShader({}, fullShaderConfiguration);
+
+                // Load reflection.
+                dynamic_cast<GlslShader*>(pVertexShader.get())->getCompiledBytecode();
+                dynamic_cast<GlslShader*>(pCorrectFragmentShader.get())->getCompiledBytecode();
+                dynamic_cast<GlslShader*>(pConflictingFragmentShader.get())->getCompiledBytecode();
+
+                // Successfully generate a root signature with the same root parameters.
+                auto layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
+                    pRenderer,
+                    dynamic_cast<GlslShader*>(pVertexShader.get()),
+                    dynamic_cast<GlslShader*>(pCorrectFragmentShader.get()));
+                REQUIRE(!std::holds_alternative<Error>(layoutResult));
+                auto generated = std::get<DescriptorSetLayoutGenerator::Generated>(std::move(layoutResult));
+
+                // Cleanup.
+                vkDestroyDescriptorPool(pRenderer->getLogicalDevice(), generated.pDescriptorPool, nullptr);
+                vkDestroyDescriptorSetLayout(
+                    pRenderer->getLogicalDevice(), generated.pDescriptorSetLayout, nullptr);
+
+                // Fail to generate a root signature with conflicting root parameters.
+                layoutResult = DescriptorSetLayoutGenerator::generateGraphics(
+                    pRenderer,
+                    dynamic_cast<GlslShader*>(pVertexShader.get()),
+                    dynamic_cast<GlslShader*>(pConflictingFragmentShader.get()));
+                REQUIRE(std::holds_alternative<Error>(layoutResult));
+                // error here, no need for a cleanup
+
+                // Release shader data.
+                pVertexShader->releaseShaderDataFromMemoryIfLoaded();
+                pCorrectFragmentShader->releaseShaderDataFromMemoryIfLoaded();
+                pConflictingFragmentShader->releaseShaderDataFromMemoryIfLoaded();
+
+                getWindow()->close();
+            });
+        }
+        virtual ~TestGameInstance() override {}
+    };
+
+    auto result = Window::getBuilder().withVisibility(false).build();
+    if (std::holds_alternative<Error>(result)) {
+        Error error = std::get<Error>(std::move(result));
+        error.addCurrentLocationToErrorStack();
+        INFO(error.getFullErrorMessage());
+        REQUIRE(false);
+    }
+
+    const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
+    pMainWindow->processEvents<TestGameInstance>();
+
+    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
+    REQUIRE(Material::getCurrentAliveMaterialCount() == 0);
 }

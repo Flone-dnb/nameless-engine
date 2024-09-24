@@ -196,7 +196,6 @@ TEST_CASE("root signature merge fails if vertex/pixel shaders have conflicting r
                 // Successfully generate a root signature with the same root parameters.
                 auto rootSignatureResult = RootSignatureGenerator::generateGraphics(
                     pDirectXRenderer,
-                    pDirectXRenderer->getD3dDevice(),
                     dynamic_cast<HlslShader*>(pVertexShader.get()),
                     dynamic_cast<HlslShader*>(pCorrectFragmentShader.get()));
                 REQUIRE(!std::holds_alternative<Error>(rootSignatureResult));
@@ -204,7 +203,6 @@ TEST_CASE("root signature merge fails if vertex/pixel shaders have conflicting r
                 // Fail to generate a root signature with conflicting root parameters.
                 rootSignatureResult = RootSignatureGenerator::generateGraphics(
                     pDirectXRenderer,
-                    pDirectXRenderer->getD3dDevice(),
                     dynamic_cast<HlslShader*>(pVertexShader.get()),
                     dynamic_cast<HlslShader*>(pConflictingFragmentShader.get()));
                 REQUIRE(std::holds_alternative<Error>(rootSignatureResult));

@@ -18,7 +18,7 @@
 
 namespace ne {
     class GlslShader;
-    class Renderer;
+    class VulkanRenderer;
 
     /** Describes type of a resource that was written in the GLSL code. */
     enum class GlslResourceType {
@@ -115,7 +115,7 @@ namespace ne {
          * @remark Expects that descriptor layout information is already collected for both
          * shaders (see @ref collectInfoFromBytecode), otherwise returns error.
          *
-         * @param pRenderer       Current renderer.
+         * @param pRenderer       Vulkan renderer.
          * @param pVertexShader   Vertex shader.
          * @param pFragmentShader Fragment shader. Specify `nullptr` to generate descriptor layout only for
          * vertex shader.
@@ -123,7 +123,7 @@ namespace ne {
          * @return Error if something went wrong, otherwise generated descriptor layout data.
          */
         static std::variant<Generated, Error>
-        generateGraphics(Renderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader);
+        generateGraphics(VulkanRenderer* pRenderer, GlslShader* pVertexShader, GlslShader* pFragmentShader);
 
         /**
          * Generates a new descriptor layout, pool and descriptor sets using the specified compute shader.
@@ -131,13 +131,13 @@ namespace ne {
          * @remark Expects that descriptor layout information is already collected for both
          * shaders (see @ref collectInfoFromBytecode), otherwise returns error.
          *
-         * @param pRenderer       Current renderer.
+         * @param pRenderer       Vulkan renderer.
          * @param pComputeShader  Compute shader.
          *
          * @return Error if something went wrong, otherwise generated descriptor layout data.
          */
         static std::variant<Generated, Error>
-        generateCompute(Renderer* pRenderer, GlslShader* pComputeShader);
+        generateCompute(VulkanRenderer* pRenderer, GlslShader* pComputeShader);
 
     private:
         /**

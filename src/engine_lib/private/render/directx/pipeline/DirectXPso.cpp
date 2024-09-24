@@ -214,7 +214,7 @@ namespace ne {
 
         // Generate root signature from shaders.
         auto result = RootSignatureGenerator::generateGraphics(
-            pDirectXRenderer, pDirectXRenderer->getD3dDevice(), pVertexShader.get(), pPixelShader.get());
+            pDirectXRenderer, pVertexShader.get(), pPixelShader.get());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();
@@ -395,8 +395,7 @@ namespace ne {
         const ComPtr<IDxcBlob> pComputeShaderBytecode = std::get<ComPtr<IDxcBlob>>(std::move(shaderBytecode));
 
         // Generate one root signature from both shaders.
-        auto result = RootSignatureGenerator::generateCompute(
-            pDirectXRenderer, pDirectXRenderer->getD3dDevice(), pComputeShader.get());
+        auto result = RootSignatureGenerator::generateCompute(pDirectXRenderer, pComputeShader.get());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();

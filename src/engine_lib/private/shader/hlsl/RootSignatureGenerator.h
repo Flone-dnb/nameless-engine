@@ -21,7 +21,7 @@
 
 namespace ne {
     class HlslShader;
-    class Renderer;
+    class DirectXRenderer;
 
     using namespace Microsoft::WRL;
 
@@ -205,16 +205,15 @@ namespace ne {
          * once the current texture filtering setting is changed you need to re-run this function
          * to set a new filter into the root signature's static sampler.
          *
-         * @param pRenderer     Current renderer.
-         * @param pDevice       DirectX device.
+         * @param pRenderer     DirectX renderer.
          * @param pVertexShader Vertex shader.
          * @param pPixelShader  Pixel shader. Specify `nullptr` to generate root signature only for vertex
          * shader.
          *
          * @return Error if something went wrong, otherwise generated root signature.
          */
-        static std::variant<Generated, Error> generateGraphics(
-            Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader);
+        static std::variant<Generated, Error>
+        generateGraphics(DirectXRenderer* pRenderer, HlslShader* pVertexShader, HlslShader* pPixelShader);
 
         /**
          * Generates a new root signature using the compute shader info.
@@ -222,14 +221,13 @@ namespace ne {
          * @remark Expects that root signature information is already collected for
          * shader (see @ref collectInfoFromReflection), otherwise returns error.
          *
-         * @param pRenderer      Current renderer.
-         * @param pDevice        DirectX device.
+         * @param pRenderer      DirectX renderer.
          * @param pComputeShader Compute shader.
          *
          * @return Error if something went wrong, otherwise generated root signature.
          */
         static std::variant<Generated, Error>
-        generateCompute(Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader);
+        generateCompute(DirectXRenderer* pRenderer, HlslShader* pComputeShader);
 
     private:
         /**

@@ -177,16 +177,10 @@ namespace ne {
 
     std::variant<DescriptorSetLayoutGenerator::Generated, Error>
     DescriptorSetLayoutGenerator::generateGraphics( // NOLINT: TODO: make it simpler
-        Renderer* pRenderer,
+        VulkanRenderer* pRenderer,
         GlslShader* pVertexShader,
         GlslShader* pFragmentShader) {
         PROFILE_FUNC;
-
-        // Make sure we use Vulkan renderer.
-        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
-        if (pVulkanRenderer == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan renderer");
-        }
 
         // Make sure that the vertex shader is indeed a vertex shader.
         if (pVertexShader->getShaderType() != ShaderType::VERTEX_SHADER) [[unlikely]] {
@@ -429,7 +423,7 @@ namespace ne {
         Generated generatedData;
 
         // Get logical device.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        const auto pLogicalDevice = pRenderer->getLogicalDevice();
         if (pLogicalDevice == nullptr) [[unlikely]] {
             return Error("expected logical device to be valid");
         }
@@ -573,14 +567,8 @@ namespace ne {
     }
 
     std::variant<DescriptorSetLayoutGenerator::Generated, Error>
-    DescriptorSetLayoutGenerator::generateCompute(Renderer* pRenderer, GlslShader* pComputeShader) {
+    DescriptorSetLayoutGenerator::generateCompute(VulkanRenderer* pRenderer, GlslShader* pComputeShader) {
         PROFILE_FUNC;
-
-        // Make sure we use Vulkan renderer.
-        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(pRenderer);
-        if (pVulkanRenderer == nullptr) [[unlikely]] {
-            return Error("expected a Vulkan renderer");
-        }
 
         // Make sure that the compute shader is indeed a compute shader.
         if (pComputeShader->getShaderType() != ShaderType::COMPUTE_SHADER) [[unlikely]] {
@@ -706,7 +694,7 @@ namespace ne {
         Generated generatedData;
 
         // Get logical device.
-        const auto pLogicalDevice = pVulkanRenderer->getLogicalDevice();
+        const auto pLogicalDevice = pRenderer->getLogicalDevice();
         if (pLogicalDevice == nullptr) [[unlikely]] {
             return Error("expected logical device to be valid");
         }

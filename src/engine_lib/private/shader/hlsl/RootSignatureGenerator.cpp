@@ -9,7 +9,7 @@
 #include "misc/Profiler.hpp"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "render/general/resources/shadow/ShadowMapManager.h"
-#include "render/Renderer.h"
+#include "render/directx/DirectXRenderer.h"
 
 namespace ne {
     std::variant<RootSignatureGenerator::CollectedInfo, Error>
@@ -191,7 +191,7 @@ namespace ne {
     }
 
     std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generateGraphics(
-        Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pVertexShader, HlslShader* pPixelShader) {
+        DirectXRenderer* pRenderer, HlslShader* pVertexShader, HlslShader* pPixelShader) {
         PROFILE_FUNC;
 
         // Make sure that the vertex shader is indeed a vertex shader.
@@ -477,6 +477,12 @@ namespace ne {
                 pSerializerErrorMessage->GetBufferSize()));
         }
 
+        // Get device.
+        const auto pDevice = pRenderer->getD3dDevice();
+        if (pDevice == nullptr) [[unlikely]] {
+            return Error("expected the D3D device to be valid");
+        }
+
         // Create root signature.
         ComPtr<ID3D12RootSignature> pRootSignature;
         hResult = pDevice->CreateRootSignature(
@@ -496,8 +502,8 @@ namespace ne {
         return merged;
     }
 
-    std::variant<RootSignatureGenerator::Generated, Error> RootSignatureGenerator::generateCompute(
-        Renderer* pRenderer, ID3D12Device* pDevice, HlslShader* pComputeShader) {
+    std::variant<RootSignatureGenerator::Generated, Error>
+    RootSignatureGenerator::generateCompute(DirectXRenderer* pRenderer, HlslShader* pComputeShader) {
         PROFILE_FUNC;
 
         // Make sure that the compute shader is indeed a vertex shader.
@@ -581,6 +587,12 @@ namespace ne {
             return Error(std::string(
                 static_cast<char*>(pSerializerErrorMessage->GetBufferPointer()),
                 pSerializerErrorMessage->GetBufferSize()));
+        }
+
+        // Get device.
+        const auto pDevice = pRenderer->getD3dDevice();
+        if (pDevice == nullptr) [[unlikely]] {
+            return Error("expected the D3D device to be valid");
         }
 
         // Create root signature.

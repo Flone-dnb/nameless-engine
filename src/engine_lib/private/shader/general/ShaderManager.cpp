@@ -21,13 +21,13 @@ namespace ne {
         pShaderCacheManager = ShaderCacheManager::create(pRenderer);
     }
 
-    std::optional<std::shared_ptr<ShaderPack>> ShaderManager::getShader(const std::string& sShaderName) {
+    std::shared_ptr<ShaderPack> ShaderManager::findShader(const std::string& sShaderName) {
         std::scoped_lock guard(mtxShaderData.first);
 
         // Find the specified shader name in the global array of shaders.
         const auto it = mtxShaderData.second.compiledShaders.find(sShaderName);
         if (it == mtxShaderData.second.compiledShaders.end()) {
-            return {};
+            return nullptr;
         }
 
         return it->second;

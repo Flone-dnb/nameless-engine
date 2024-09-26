@@ -16,12 +16,12 @@ namespace ne {
             }
         }
 
-        // Get requested shader.
-        const auto optional = pShaderManager->getShader(sShaderName);
-        if (!optional.has_value()) {
+        // Get the requested shader.
+        auto pShader = pShaderManager->findShader(sShaderName);
+        if (pShader == nullptr) {
+            // Not found.
             return true;
         }
-        auto pShader = optional.value();
         const auto shaderType = pShader->getShaderType();
 
         // See if we already assigned a shader of this type.
@@ -40,12 +40,12 @@ namespace ne {
         return false;
     }
 
-    std::optional<ShaderPack*> ShaderUser::getShader(ShaderType shaderType) {
+    ShaderPack* ShaderUser::findShader(ShaderType shaderType) {
         std::scoped_lock guard(mtxAssignedShaders.first);
 
         const auto it = mtxAssignedShaders.second.find(shaderType);
         if (it == mtxAssignedShaders.second.end()) {
-            return {};
+            return nullptr;
         }
 
         return it->second.get();

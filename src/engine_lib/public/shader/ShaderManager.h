@@ -185,10 +185,10 @@ namespace ne {
          *
          * @param sShaderName Name of this shader.
          *
-         * @return Empty if the shader with the specified name was not found,
+         * @return `nullptr` if the shader with the specified name was not found,
          * valid pointer otherwise.
          */
-        std::optional<std::shared_ptr<ShaderPack>> getShader(const std::string& sShaderName);
+        std::shared_ptr<ShaderPack> findShader(const std::string& sShaderName);
 
         /**
          * Looks if the specified shader is not used by anyone and releases shader bytecode

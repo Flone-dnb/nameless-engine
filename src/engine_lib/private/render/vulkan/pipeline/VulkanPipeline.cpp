@@ -365,13 +365,13 @@ namespace ne {
         std::set<ShaderMacro> fullFragmentShaderConfiguration;
 
         // Get vertex shader.
-        const auto pVertexShaderPack = getShader(ShaderType::VERTEX_SHADER).value();
+        const auto pVertexShaderPack = findShader(ShaderType::VERTEX_SHADER);
         auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader(
             getConfiguration()->getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
 
         std::shared_ptr<GlslShader> pFragmentShader;
         if (!bDepthOnlyPipeline) {
-            const auto pFragmentShaderPack = getShader(ShaderType::FRAGMENT_SHADER).value();
+            const auto pFragmentShaderPack = findShader(ShaderType::FRAGMENT_SHADER);
             pFragmentShader = std::dynamic_pointer_cast<GlslShader>(pFragmentShaderPack->getShader(
                 getConfiguration()->getAdditionalPixelShaderMacros(), fullFragmentShaderConfiguration));
         }
@@ -433,7 +433,7 @@ namespace ne {
         }
 
         // Get assigned shader packs.
-        const auto pComputeShaderPack = getShader(ShaderType::COMPUTE_SHADER).value();
+        const auto pComputeShaderPack = findShader(ShaderType::COMPUTE_SHADER);
 
         // Get shader.
         std::set<ShaderMacro> fullComputeShaderConfiguration;

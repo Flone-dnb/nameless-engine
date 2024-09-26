@@ -45,10 +45,10 @@ namespace ne {
          *
          * @return `false` if shader was added successfully, `true` if it was not found in ShaderManager.
          */
-        bool addShader(const std::string& sShaderName);
+        [[nodiscard]] bool addShader(const std::string& sShaderName);
 
         /**
-         * Returns previously added shader (see @ref addShader) for the specified type.
+         * Looks for a previously added shader (see @ref addShader) for the specified type.
          *
          * @warning Do not delete returned pointer. Returned shader will not be destroyed
          * until this ShaderUser object is not destroyed. Once this ShaderUser object is destroyed
@@ -56,9 +56,9 @@ namespace ne {
          *
          * @param shaderType Type of the shader to query.
          *
-         * @return Empty if a shader of this type was not added before, valid pointer otherwise.
+         * @return `nullptr` if a shader of this type was not added before, valid pointer otherwise.
          */
-        std::optional<ShaderPack*> getShader(ShaderType shaderType);
+        ShaderPack* findShader(ShaderType shaderType);
 
     private:
         /**

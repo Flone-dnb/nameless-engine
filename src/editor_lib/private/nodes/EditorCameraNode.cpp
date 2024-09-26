@@ -8,8 +8,9 @@ namespace ne {
     EditorCameraNode::EditorCameraNode() : EditorCameraNode("Editor Camera Node") {}
 
     EditorCameraNode::EditorCameraNode(const std::string& sNodeName) : CameraNode(sNodeName) {
-        // Enable tick.
+        // Enable tick and input.
         setIsCalledEveryFrame(true);
+        setIsReceivingInput(true);
 
         // Initialize current speed.
         currentMovementSpeed = movementSpeed;
@@ -66,7 +67,17 @@ namespace ne {
     void EditorCameraNode::setIgnoreInput(bool bIgnore) {
         bIgnoreInput = bIgnore;
 
-        setIsReceivingInput(!bIgnore);
+        // Intentionally not using parent's function `Node::setIsReceivingInput` here and using a boolean
+        // instead because of 2 reasons currently:
+        // 1. Each enable/disable input call causes a message to be logged which is not important because we
+        // are in the editor (but the messages may be important to the game nodes) so I'm avoiding spamming
+        // useless messages in log.
+        // 2. Since the input will be enabled/disabled only after 1 tick (due to deferred task) we want to
+        // avoid that due to the fact that we have a special mouse to capture + keyboard controls
+        // which might cause unwanted movements when having a 1 tick delay in some cases, so
+        // thus we want to update the input receiving logic instantly (not after 1 tick).
+        // - And since this function is called from the game instance when the mouse cursor is captured
+        // our input enable/disable logic will work.
 
         if (bIgnore) {
             // Reset any previous input (for ex. if the user was holding some button).
@@ -102,9 +113,6 @@ namespace ne {
     }
 
     void EditorCameraNode::onMouseMove(double xOffset, double yOffset) {
-        // Although we disable node's "receiving input" when we are told to,
-        // that event just queues a deferred task and until that task is not processed
-        // we still receive input but the mouse cursor is shows which may cause unwanted rotations.
         if (bIgnoreInput) {
             return;
         }

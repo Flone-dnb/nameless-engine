@@ -212,6 +212,14 @@ namespace ne {
         void onSpawnedNodeChangedIsReceivingInput(Node* pNode);
 
         /**
+         * Adds the specified node to the array of "receiving input" nodes
+         * (see @ref getReceivingInputNodes).
+         *
+         * @param pNode Node to add.
+         */
+        void addNodeToReceivingInputArray(Node* pNode);
+
+        /**
          * Adds the specified node to the arrays of "called every frame" nodes
          * (see @ref calledEveryFrameNodes).
          *
@@ -224,20 +232,16 @@ namespace ne {
          * and removes the node from the arrays (see @ref calledEveryFrameNodes).
          *
          * @param pNode Node to remove.
-         *
-         * @return `true` if the specified node was found and removed, `false` otherwise.
          */
-        bool removeNodeFromCalledEveryFrameArrays(Node* pNode);
+        void removeNodeFromCalledEveryFrameArrays(Node* pNode);
 
         /**
          * Looks if the specified node exists in the array of "receiving input" nodes
          * and removes the node from the array (see @ref mtxReceivingInputNodes).
          *
          * @param pNode Node to remove.
-         *
-         * @return `true` if the specified node was found and removed, `false` otherwise.
          */
-        bool removeNodeFromReceivingInputArray(Node* pNode);
+        void removeNodeFromReceivingInputArray(Node* pNode);
 
         /** Do not delete. Owner GameManager object. */
         GameManager* pGameManager = nullptr;

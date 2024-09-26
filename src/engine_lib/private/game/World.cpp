@@ -187,14 +187,11 @@ namespace ne {
         // bad things.
         pGameManager->addDeferredTask([this, pNode]() {
             if (pNode->isCalledEveryFrame()) {
-                // Add node to array of nodes that should be called every frame.
                 addNodeToCalledEveryFrameArrays(pNode);
             }
 
             if (pNode->isReceivingInput()) {
-                // Add node to array of nodes that receive input.
-                std::scoped_lock guard(mtxReceivingInputNodes.first);
-                mtxReceivingInputNodes.second.insert(pNode);
+                addNodeToReceivingInputArray(pNode);
             }
 
             iTotalSpawnedNodeCount.fetch_add(1);
@@ -292,28 +289,10 @@ namespace ne {
 
             if (!bPreviousIsCalledEveryFrame && bIsCalledEveryFrame) {
                 // Was disabled but now enabled.
-                // Add node to array of nodes that should be called every frame.
                 addNodeToCalledEveryFrameArrays(pNode);
-
-                // Log this event since the node is changing this while spawned (might be important to
-                // see/debug).
-                Logger::get().info(
-                    std::format("spawned node \"{}\" is now called every frame", pNode->getNodeName()));
-                return;
-            }
-
-            if (bPreviousIsCalledEveryFrame && !bIsCalledEveryFrame) {
+            } else if (bPreviousIsCalledEveryFrame && !bIsCalledEveryFrame) {
                 // Was enabled but now disabled.
-                bool bFound = removeNodeFromCalledEveryFrameArrays(pNode);
-
-                if (bFound) {
-                    // Log this event since the node is changing this while spawned (might be important to
-                    // see/debug).
-                    Logger::get().info(std::format(
-                        "spawned node \"{}\" is no longer called every frame", pNode->getNodeName()));
-                }
-                // else: this might happen if the node had the setting disabled and then quickly
-                // enabled and disabled it back
+                removeNodeFromCalledEveryFrameArrays(pNode);
             }
         });
     }
@@ -356,79 +335,94 @@ namespace ne {
 
             if (!bPreviousIsReceivingInput && bIsReceivingInput) {
                 // Was disabled but now enabled.
-                // Add node to array of nodes that receive input.
-                std::scoped_lock guard(mtxReceivingInputNodes.first);
-                mtxReceivingInputNodes.second.insert(pNode);
-
-                // Log this event since the node is changing this while spawned (might be important to
-                // see/debug).
-                Logger::get().info(
-                    std::format("spawned node \"{}\" is now receiving input", pNode->getNodeName()));
-                return;
-            }
-
-            if (bPreviousIsReceivingInput && !bIsReceivingInput) {
+                addNodeToReceivingInputArray(pNode);
+            } else if (bPreviousIsReceivingInput && !bIsReceivingInput) {
                 // Was enabled but now disabled.
-                bool bFound = removeNodeFromReceivingInputArray(pNode);
-
-                if (bFound) {
-                    // Log this event since the node is changing this while spawned (might be important to
-                    // see/debug).
-                    Logger::get().info(std::format(
-                        "spawned node \"{}\" is no longer receiving input", pNode->getNodeName()));
-                }
-                // else: this might happen if the node had the setting disabled and then quickly
-                // enabled and disabled it back
+                removeNodeFromReceivingInputArray(pNode);
             }
         });
     }
 
-    void World::addNodeToCalledEveryFrameArrays(Node* pNode) {
-        if (pNode->getTickGroup() == TickGroup::FIRST) {
-            std::scoped_lock guard(calledEveryFrameNodes.mtxFirstTickGroup.first);
-            calledEveryFrameNodes.mtxFirstTickGroup.second.insert(pNode);
-        } else {
-            std::scoped_lock guard(calledEveryFrameNodes.mtxSecondTickGroup.first);
-            calledEveryFrameNodes.mtxSecondTickGroup.second.insert(pNode);
-        }
+    void World::addNodeToReceivingInputArray(Node* pNode) {
+        std::scoped_lock guard(mtxReceivingInputNodes.first);
+
+        mtxReceivingInputNodes.second.insert(pNode);
+
+        // Log this event since the node is changing this while spawned (might be important to see/debug).
+        Logger::get().info(std::format(
+            "spawned node \"{}\" is now receiving input (nodes receiving input now: {})",
+            pNode->getNodeName(),
+            mtxReceivingInputNodes.second.size()));
     }
 
-    bool World::removeNodeFromCalledEveryFrameArrays(Node* pNode) {
-        // Pick tick group that the node used.
-        std::pair<std::recursive_mutex, std::unordered_set<Node*>>* pPairToUse = nullptr;
+    void World::addNodeToCalledEveryFrameArrays(Node* pNode) {
+        // Pick the tick group that the node uses.
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>>* pMtxTickGroup = nullptr;
         if (pNode->getTickGroup() == TickGroup::FIRST) {
-            pPairToUse = &calledEveryFrameNodes.mtxFirstTickGroup;
+            pMtxTickGroup = &calledEveryFrameNodes.mtxFirstTickGroup;
         } else {
-            pPairToUse = &calledEveryFrameNodes.mtxSecondTickGroup;
+            pMtxTickGroup = &calledEveryFrameNodes.mtxSecondTickGroup;
+        }
+
+        std::scoped_lock guard(pMtxTickGroup->first);
+
+        pMtxTickGroup->second.insert(pNode);
+
+        // Log this event since the node is changing this while spawned (might be important to see/debug).
+        Logger::get().info(std::format(
+            "spawned node \"{}\" is now called every frame (nodes called every frame now: {})",
+            pNode->getNodeName(),
+            pMtxTickGroup->second.size()));
+    }
+
+    void World::removeNodeFromCalledEveryFrameArrays(Node* pNode) {
+        // Pick the tick group that the node uses.
+        std::pair<std::recursive_mutex, std::unordered_set<Node*>>* pMtxTickGroup = nullptr;
+        if (pNode->getTickGroup() == TickGroup::FIRST) {
+            pMtxTickGroup = &calledEveryFrameNodes.mtxFirstTickGroup;
+        } else {
+            pMtxTickGroup = &calledEveryFrameNodes.mtxSecondTickGroup;
         }
 
         // Find in array.
-        std::scoped_lock guard(pPairToUse->first);
-        const auto it = pPairToUse->second.find(pNode);
-        if (it == pPairToUse->second.end()) {
+        std::scoped_lock guard(pMtxTickGroup->first);
+        const auto it = pMtxTickGroup->second.find(pNode);
+        if (it == pMtxTickGroup->second.end()) {
             // Not found.
-            return false;
+            // This might happen if the node had the setting disabled and then quickly
+            // enabled and disabled it back.
+            return;
         }
 
         // Remove from array.
-        pPairToUse->second.erase(it);
+        pMtxTickGroup->second.erase(it);
 
-        return true;
+        // Log this event since the node is changing this while spawned (might be important to see/debug).
+        Logger::get().info(std::format(
+            "spawned node \"{}\" is no longer called every frame (nodes called every frame now: {})",
+            pNode->getNodeName(),
+            pMtxTickGroup->second.size()));
     }
 
-    bool World::removeNodeFromReceivingInputArray(Node* pNode) {
+    void World::removeNodeFromReceivingInputArray(Node* pNode) {
         std::scoped_lock guard(mtxReceivingInputNodes.first);
 
         // Find in array.
         const auto it = mtxReceivingInputNodes.second.find(pNode);
         if (it == mtxReceivingInputNodes.second.end()) {
             // Not found.
-            return false;
+            // This might happen if the node had the setting disabled and then quickly
+            // enabled and disabled it back
+            return;
         }
 
         // Remove from array.
         mtxReceivingInputNodes.second.erase(it);
 
-        return true;
+        // Log this event since the node is changing this while spawned (might be important to see/debug).
+        Logger::get().info(std::format(
+            "spawned node \"{}\" is no longer receiving input (nodes receiving input now: {})",
+            pNode->getNodeName(),
+            mtxReceivingInputNodes.second.size()));
     }
 } // namespace ne

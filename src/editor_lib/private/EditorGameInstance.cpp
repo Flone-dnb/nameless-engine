@@ -243,8 +243,10 @@ namespace ne {
 
         // Show window title.
         pWindow->setTitle(std::format(
-            "{} | FPS: {} | draw calls: {} | VRAM used: {} MB | {} | waiting GPU: {:.1F} ms",
+            "{} | {} {} | FPS: {} | draw calls: {} | VRAM used: {} MB | {} | waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
+            pRenderer->getType() == RendererType::VULKAN ? "Vulkan" : "DirectX",
+            pRenderer->getUsedApiVersion(),
             pRenderStats->getFramesPerSecond(),
             pRenderStats->getLastFrameDrawCallCount(),
             pRenderer->getResourceManager()->getUsedVideoMemoryInMb(),

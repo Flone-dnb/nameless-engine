@@ -1101,7 +1101,7 @@ namespace ne {
         auto& lightArrays = pLightingShaderResourceManager->lightArrays;
 
         {
-            // Get lights in frustum.
+            // Point lights.
             std::scoped_lock guardLights(lightArrays.pPointLightDataArray->mtxResources.first);
 
             // Create a short reference.
@@ -1150,7 +1150,7 @@ namespace ne {
         }
 
         {
-            // Get lights in frustum.
+            // Spot lights.
             std::scoped_lock guardLights(lightArrays.pSpotlightDataArray->mtxResources.first);
 
             // Create a short reference.

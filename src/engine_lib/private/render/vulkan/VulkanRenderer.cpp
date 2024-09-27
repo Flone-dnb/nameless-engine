@@ -1634,7 +1634,7 @@ namespace ne {
             VkAttachmentDescription2 depthResolveAttachment{};
             depthResolveAttachment.sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_2;
             depthResolveAttachment.format = depthImageFormat;
-            depthResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT; // 1 sample
+            depthResolveAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
             depthResolveAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             depthResolveAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // save depth for main pass
             depthResolveAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -2425,7 +2425,7 @@ namespace ne {
                 this,
                 vSwapChainFramebuffersMainRenderPass[i],
                 VK_OBJECT_TYPE_FRAMEBUFFER,
-                std::format("swapchain framebuffer #{} for main render pass", i));
+                std::format("main render pass swapchain framebuffer for swapchain image #{}", i));
 
             // Change render pass and attachments.
             vAttachments.clear();
@@ -2456,7 +2456,7 @@ namespace ne {
                 this,
                 vSwapChainFramebuffersDepthOnlyRenderPass[i],
                 VK_OBJECT_TYPE_FRAMEBUFFER,
-                std::format("swapchain framebuffer #{} for depth only render pass", i));
+                std::format("depth only render pass swapchain framebuffer for swapchain image #{}", i));
         }
 
         return {};

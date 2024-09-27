@@ -233,7 +233,7 @@ namespace ne {
 
         // Prepare frustum culling stats to display.
         const std::string sFrustumCullingStats = std::format(
-            "frustum culled: meshes: {} (took {:.1F} ms), lights: {} (took {:.1F} ms), (~{}% "
+            "frustum culled: meshes: {} (took {:.1F} ms), lights: {} (took {:.1F} ms) (~{}% "
             "of frame time)",
             pRenderStats->getLastFrameCulledMeshCount(),
             pRenderStats->getTimeSpentLastFrameOnFrustumCullingMeshes(),
@@ -243,10 +243,11 @@ namespace ne {
 
         // Show window title.
         pWindow->setTitle(std::format(
-            "{} | {} {} | FPS: {} | draw calls: {} | VRAM used: {} MB | {} | waiting GPU: {:.1F} ms",
+            "{} | {} {} | {} | FPS: {} | draw calls: {} | VRAM used: {} MB | {} | waiting GPU: {:.1F} ms",
             pEditorWindowTitle,
             pRenderer->getType() == RendererType::VULKAN ? "Vulkan" : "DirectX",
             pRenderer->getUsedApiVersion(),
+            pRenderer->getCurrentlyUsedGpuName(),
             pRenderStats->getFramesPerSecond(),
             pRenderStats->getLastFrameDrawCallCount(),
             pRenderer->getResourceManager()->getUsedVideoMemoryInMb(),

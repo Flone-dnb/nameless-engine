@@ -207,8 +207,8 @@ namespace ne {
         ShaderConfiguration(Renderer* pRenderer) { this->pRenderer = pRenderer; }
 
         /**
-         * Updates the current shader configuration (settings) for the current renderer based on the current
-         * values from this struct.
+         * Updates the current shader configuration (settings) for the render and all currently existing
+         * shaders based on the current values from this struct.
          *
          * @remark Flushes the command queue and recreates pipelines' internal resources so that they
          * will use new shader configuration.

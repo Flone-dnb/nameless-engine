@@ -12,7 +12,7 @@
 SamplerState textureSampler : register(s0, space5);
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    Texture2D diffuseTexture : register(t4, space5);
+    Texture2D diffuseTextures[] : register(t2, space5); // "bindless binding", stores all diffuse textures
 #endif
 
 [earlydepthstencil]
@@ -33,7 +33,7 @@ float4 psMeshNode(VertexOut pin) {
     // Prepare diffuse color.
     float3 pixelDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
     #ifdef PS_USE_DIFFUSE_TEXTURE
-        float4 diffuseTextureSample = diffuseTexture.Sample(textureSampler, pin.uv);
+        float4 diffuseTextureSample = diffuseTextures[constants.diffuseTextures].Sample(textureSampler, pin.uv);
         pixelDiffuseColor *= diffuseTextureSample.rgb;
     #endif
     

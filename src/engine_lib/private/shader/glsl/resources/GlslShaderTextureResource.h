@@ -24,7 +24,7 @@ namespace ne {
         // Only shader resource manager should be able to create such resources.
         friend class ShaderTextureResourceManager;
 
-        /** Groups information about specific push constant. */
+        /** Groups information about a specific push constant. */
         struct PushConstantIndices {
             /** Creates uninitialized object. */
             PushConstantIndices() = default;
@@ -71,45 +71,10 @@ namespace ne {
         /**
          * Copies resource index (into shader arrays) to a push constant.
          *
-         * @warning Expects that this shader resource uses only 1 pipeline. Generally used for
-         * material's resources because material can only reference 1 pipeline unlike mesh nodes.
-         *
-         * @param pPushConstantsManager Push constants manager.
-         */
-        inline void copyResourceIndexOfOnlyPipelineToPushConstants(
-            PipelineShaderConstantsManager* pPushConstantsManager) {
-            // Since pipelines won't change here (because we are inside of the `draw` function)
-            // we don't need to lock the mutex here.
-
-#if defined(DEBUG)
-            // Self check: make sure there is indeed just 1 pipeline.
-            if (mtxPushConstantIndices.second.size() != 1) [[unlikely]] {
-                Error error(std::format(
-                    "shader resource \"{}\" was requested to set its push constant "
-                    "index of the only used pipeline but this shader resource references "
-                    "{} pipeline(s)",
-                    getResourceName(),
-                    mtxPushConstantIndices.second.size()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-#endif
-
-            // Save iterator to the first item.
-            const auto it = mtxPushConstantIndices.second.begin();
-
-            // Copy value to push constants.
-            pPushConstantsManager->copyValueToShaderConstant(
-                it->second.iPushConstantIndex, it->second.pShaderArrayIndex->getActualIndex());
-        }
-
-        /**
-         * Copies resource index (into shader arrays) to a push constant.
-         *
          * @param pPushConstantsManager Push constants manager.
          * @param pUsedPipeline         Current pipeline.
          */
-        inline void copyResourceIndexOfPipelineToPushConstants(
+        inline void copyResourceIndexToPushConstants(
             PipelineShaderConstantsManager* pPushConstantsManager, VulkanPipeline* pUsedPipeline) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
             // we don't need to lock the mutex here.

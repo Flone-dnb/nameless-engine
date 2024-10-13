@@ -8,6 +8,7 @@
 #include "render/RenderSettings.h"
 #include "shader/hlsl/formats/HlslVertexFormatDescription.h"
 #include "render/general/resources/shadow/ShadowMapManager.h"
+#include "render/directx/descriptors/DirectXDescriptorHeap.h"
 
 namespace ne {
     DirectXPso::DirectXPso(
@@ -65,6 +66,22 @@ namespace ne {
         return pPso;
     }
 
+    std::variant<unsigned int, Error>
+    DirectXPso::getRootParameterIndex(const std::string& sShaderResourceName) {
+        std::scoped_lock psoGuard(mtxInternalResources.first);
+
+        auto it = mtxInternalResources.second.rootParameterIndices.find(sShaderResourceName);
+        if (it == mtxInternalResources.second.rootParameterIndices.end()) [[unlikely]] {
+            return Error(std::format(
+                "unable to find a shader resource by the specified name \"{}\", make sure the resource name "
+                "is correct and that this resource is actually being used inside of your shader (otherwise "
+                "the shader resource might be optimized out and the engine will not be able to see it)",
+                sShaderResourceName));
+        }
+
+        return it->second;
+    }
+
     std::optional<Error> DirectXPso::releaseInternalResources() {
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
@@ -102,10 +119,11 @@ namespace ne {
         //        }
 
         mtxInternalResources.second.globalShaderResourceSrvs.clear();
+        mtxInternalResources.second.descriptorTablesToBind.clear();
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 240, // NOLINT: current struct size
+            sizeof(InternalResources) == 320, // NOLINT: current struct size
             "release new resources here");
 #endif
 

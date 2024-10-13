@@ -101,16 +101,6 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> bindShadowMapsToAllPipelines() override;
 
     private:
-        /**
-         * Calculates offset of the SRV descriptor (of the specified resource) from the start of the
-         * continuous SRV descriptor range that this manager stores.
-         *
-         * @param pResource Resource with binded SRV descriptor.
-         *
-         * @return Error if something went wrong, otherwise offset of the SRV descriptor from range start.
-         */
-        std::variant<unsigned int, Error> getSrvDescriptorOffsetFromRangeStart(DirectXResource* pResource);
-
         /** Called after SRV range changed its location in the heap. */
         void onSrvRangeIndicesChanged();
 

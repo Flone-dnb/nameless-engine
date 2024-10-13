@@ -671,7 +671,7 @@ namespace ne {
                         throw std::runtime_error(error.getFullErrorMessage());
                     }
 #endif
-                    meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                    meshDataIt->second.getResource()->copyResourceIndexToShaderConstants(
                         pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
 
                     // Bind root constants.
@@ -949,7 +949,7 @@ namespace ne {
 
                     // After setting root signature we can set root parameters.
 
-                    // Don't set frame data buffer because it's not used in shadow mapping.
+                    // NOTE: don't set frame data buffer because it's not used in shadow mapping.
 
                     // Bind global shader resources.
                     pDirectXPso->bindGlobalShaderResourceViews(pCommandList, iCurrentFrameResourceIndex);
@@ -1014,7 +1014,7 @@ namespace ne {
                                 throw std::runtime_error(error.getFullErrorMessage());
                             }
 #endif
-                            meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                            meshDataIt->second.getResource()->copyResourceIndexToShaderConstants(
                                 pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
 
                             // Bind root constants.
@@ -1441,6 +1441,12 @@ namespace ne {
                     pDirectXPso, pCommandList);
             }
 
+            // Bind pipeline's descriptor tables.
+            for (const auto& [iRootParameterIndex, pDescriptorRange] : pipelineData.descriptorTablesToBind) {
+                pCommandList->SetGraphicsRootDescriptorTable(
+                    iRootParameterIndex, pDescriptorRange->getGpuDescriptorHandleToRangeStart());
+            }
+
             for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // Get material's GPU resources.
                 const auto pMtxMaterialGpuResources = materialInfo.pMaterial->getMaterialGpuResources();
@@ -1450,18 +1456,18 @@ namespace ne {
                 std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
                 auto& materialResources = pMtxMaterialGpuResources->second.shaderResources;
 
-                // Set material's CPU write shader resources (`cbuffer`s for example).
+                // Set material's CPU-write buffers.
                 for (const auto& [sResourceName, pShaderCpuWriteResource] :
                      materialResources.shaderCpuWriteResources) {
-                    pShaderCpuWriteResource.getResource()->copyResourceIndexOfOnlyPipelineToPushConstants(
-                        pRootConstantsManager, iCurrentFrameResourceIndex);
+                    pShaderCpuWriteResource.getResource()->copyResourceIndexToShaderConstants(
+                        pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
                 }
 
-                // Set material's texture shader resources (`Texture2D`s for example).
+                // Set material's textures.
                 for (const auto& [sResourceName, pShaderTextureResource] :
                      materialResources.shaderTextureResources) {
                     reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                        ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
+                        ->copyResourceIndexToRootConstants(pRootConstantsManager, pDirectXPso);
                 }
 
                 for (const auto& meshInfo : materialInfo.vMeshes) {
@@ -1473,18 +1479,18 @@ namespace ne {
                     // as it might cause a deadlock (see MeshNode::setMaterial for example).
                     std::scoped_lock geometryGuard(pMtxMeshGpuResources->first, *mtxMeshData.first);
 
-                    // Set mesh's shader CPU write resources.
+                    // Set mesh's CPU-write buffers.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                        pShaderCpuWriteResource.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                        pShaderCpuWriteResource.getResource()->copyResourceIndexToShaderConstants(
                             pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
                     }
 
-                    // Set mesh's texture shader resources.
+                    // Set mesh's textures.
                     for (const auto& [sResourceName, pShaderTextureResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderTextureResources) {
                         reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                            ->setGraphicsRootDescriptorTableOfOnlyPipeline(pCommandList);
+                            ->copyResourceIndexToRootConstants(pRootConstantsManager, pDirectXPso);
                     }
 
                     // Bind root constants.

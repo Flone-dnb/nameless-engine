@@ -29,6 +29,9 @@ namespace ne {
             /** Root signature, used in PSO. */
             ComPtr<ID3D12RootSignature> pRootSignature;
 
+            /** Created PSO. */
+            ComPtr<ID3D12PipelineState> pPso;
+
             /**
              * Root parameter indices that was used in creation of @ref pRootSignature.
              *
@@ -57,17 +60,22 @@ namespace ne {
              *
              * @remark It's safe to store raw pointers here because the SRVs should be valid
              * while the pipeline exists and has not re-created its internal resources (when internal
-             * resources are re-created these SRVs is cleared).
+             * resources are re-created these SRVs (resource pointers) are cleared).
              */
             std::unordered_map<
                 UINT,
                 std::array<DirectXResource*, FrameResourceManager::getFrameResourceCount()>>
                 globalShaderResourceSrvs;
 
-            /** Created PSO. */
-            ComPtr<ID3D12PipelineState> pPso;
+            /**
+             * Stores pairs of "root parameter index" - "descriptor table (range) to bind".
+             *
+             * @remark Shader resources modify this map.
+             */
+            std::unordered_map<UINT, std::unique_ptr<ContinuousDirectXDescriptorRange>>
+                descriptorTablesToBind;
 
-            /** Whether resources were created or not. */
+            /** Whether fields of this struct are initialized or not. */
             bool bIsReadyForUsage = false;
         };
 
@@ -106,23 +114,36 @@ namespace ne {
             Renderer* pRenderer, PipelineManager* pPipelineManager, const std::string& sComputeShaderName);
 
         /**
+         * Looks for a root parameter that is used for a shader resource with the specified name.
+         *
+         * @param sShaderResourceName Shader resource name (from the shader code) to look for.
+         *
+         * @return Error if something went wrong, otherwise root parameter index of the resource with
+         * the specified name.
+         */
+        std::variant<unsigned int, Error> getRootParameterIndex(const std::string& sShaderResourceName);
+
+        /**
          * Returns internal resources that this PSO uses.
          *
          * @return Internal resources.
          */
-        inline std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
+        std::pair<std::recursive_mutex, InternalResources>* getInternalResources() {
             return &mtxInternalResources;
         }
 
     protected:
         /**
-         * Releases internal resources such as root signature, internal PSO, etc.
+         * Releases internal resources such as root signature or descriptor layout, internal pipeline object
+         * and etc.
          *
-         * @warning Expects that the GPU is not referencing this PSO and
+         * @warning Expects that the GPU is not referencing this Pipeline (command queue is empty) and
          * that no drawing will occur until @ref restoreInternalResources is called.
          *
-         * @remark Typically used before changing something (for ex. shader configuration), so that no PSO
-         * will reference old resources, to later call @ref restoreInternalResources.
+         * @remark Typically used before (!) changing something in the pipeline. Often it's a shader
+         * configuration change due to a change in some settings, for example when a material that uses this
+         * pipeline requested to use a diffuse texture, thus we need to define a "use diffuse texture" shader
+         * macro and for that we change the shader variant.
          *
          * @return Error if something went wrong.
          */
@@ -160,7 +181,7 @@ namespace ne {
          * @param iCurrentFrameResourceIndex Index of the frame resource that is currently being used to
          * submit a new frame.
          */
-        inline void bindGlobalShaderResourceViews(
+        void bindGlobalShaderResourceViews(
             const ComPtr<ID3D12GraphicsCommandList>& pCommandList, size_t iCurrentFrameResourceIndex) const {
             // No need to lock internal resources mutex since the caller is expected to lock that mutex
             // because this function is expected to be called inside of the `draw` function.

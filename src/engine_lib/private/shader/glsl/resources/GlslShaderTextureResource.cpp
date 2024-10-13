@@ -7,6 +7,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "shader/general/DescriptorConstants.hpp"
+#include "render/general/pipeline/PipelineManager.h"
 
 namespace ne {
 
@@ -18,6 +19,7 @@ namespace ne {
         if (pipelinesToUse.empty()) [[unlikely]] {
             return Error("expected at least one pipeline to be specified");
         }
+        const auto pRenderer = (*pipelinesToUse.begin())->getRenderer();
 
         // Get texture image view.
         const auto pTextureResource = dynamic_cast<VulkanResource*>(pTextureToUse->getResource());
@@ -28,6 +30,13 @@ namespace ne {
         if (pImageView == nullptr) [[unlikely]] {
             return Error("expected the texture's image view to be valid");
         }
+
+        // Make sure no pipeline will re-create its internal resources because we will now reference
+        // pipeline's internal resources. After we create a new shader resource binding object we can release
+        // the mutex since shader resource bindings are notified after pipelines re-create their internal
+        // resources.
+        const auto pMtxGraphicsPipelines = pRenderer->getPipelineManager()->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
         // Find push constant indices to use.
         std::unordered_map<VulkanPipeline*, PushConstantIndices> pushConstantIndices;
@@ -71,8 +80,14 @@ namespace ne {
                 PushConstantIndices(iPushConstantIndex, std::move(pShaderArrayIndex));
         }
 
-        return std::unique_ptr<GlslShaderTextureResource>(new GlslShaderTextureResource(
-            sShaderResourceName, std::move(pTextureToUse), std::move(pushConstantIndices)));
+        // Pass data to the binding.
+        auto pTextureResourceBinding =
+            std::unique_ptr<GlslShaderTextureResource>(new GlslShaderTextureResource(
+                sShaderResourceName, std::move(pTextureToUse), std::move(pushConstantIndices)));
+
+        // At this point we can release the pipelines mutex.
+
+        return pTextureResourceBinding;
     }
 
     std::variant<std::unique_ptr<ShaderArrayIndex>, Error>

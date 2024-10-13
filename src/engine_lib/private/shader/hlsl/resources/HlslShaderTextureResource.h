@@ -5,10 +5,13 @@
 #include <memory>
 #include <unordered_set>
 #include <variant>
+#include <mutex>
 
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
+#include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
+#include "render/directx/resources/DirectXResource.h"
 
 namespace ne {
     class Pipeline;
@@ -23,82 +26,56 @@ namespace ne {
         virtual ~HlslShaderTextureResource() override = default;
 
         /**
-         * Adds a new command to the specified command list to use this shader resource.
+         * Copies resource index (into shader arrays) to a root constant.
          *
-         * @warning Expects that this shader resource uses only 1 pipeline. Generally used for
-         * material's resources because material can only reference 1 pipeline unlike mesh nodes.
-         *
-         * @param pCommandList Command list to add new command to.
+         * @param pShaderConstantsManager Shader constants manager.
+         * @param pUsedPipeline           Current pipeline.
          */
-        inline void setGraphicsRootDescriptorTableOfOnlyPipeline(
-            const ComPtr<ID3D12GraphicsCommandList>& pCommandList) const {
-            // we don't need to lock texture mutex here because when this function is called it's called
-            // inside of the `draw` function and shader resource mutex (outside) is locked which means:
-            // - if our old texture resource is being destroyed before the GPU resource is deleted
-            // the rendering will be stopped and thus we won't be in the `draw` function
-            // - although after the old texture is destroyed we can start the `draw` function
-            // the renderer will still need to lock shader resources mutex (in material for example)
-            // but when the texture is being changed (in material for example) the material locks
-            // shader resources mutex which means that when we get in this function the texture will
-            // always be valid and so its GPU virtual address too
+        inline void copyResourceIndexToRootConstants(
+            PipelineShaderConstantsManager* pShaderConstantsManager, DirectXPso* pUsedPipeline) {
+            // Since pipelines won't change here (because we are inside of the `draw` function)
+            // we don't need to lock the mutex here.
 
-            // only descriptor index (offset) may change due to heap re-creation (expand/shrink)
-            // but before a heap is destroyed (to be re-created) all rendering is stopped so
-            // that no new frames will be queued until all descriptor offsets are updated
-
-#if defined(DEBUG)
-            // Self check: make sure there is indeed just 1 pipeline.
-            if (mtxRootParameterIndices.second.size() != 1) [[unlikely]] {
+            // Find root constant index for this pipeline.
+            const auto it = mtxUsedPipelineDescriptorRanges.second.find(pUsedPipeline);
+            if (it == mtxUsedPipelineDescriptorRanges.second.end()) [[unlikely]] {
                 Error error(std::format(
-                    "shader resource \"{}\" was requested to set its graphics root descriptor "
-                    "table of the only used pipeline but this shader resource references "
-                    "{} pipeline(s)",
+                    "shader resource \"{}\" was requested to set its root constant "
+                    "index but this shader resource does not reference the specified pipeline",
                     getResourceName(),
-                    mtxRootParameterIndices.second.size()));
+                    mtxUsedPipelineDescriptorRanges.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-#endif
 
-            // Set table.
-            pCommandList->SetGraphicsRootDescriptorTable(
-                mtxRootParameterIndices.second.begin()->second,
-                D3D12_GPU_DESCRIPTOR_HANDLE{
-                    pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                    pTextureSrv->getDescriptorOffsetInDescriptors() * iSrvDescriptorSize});
-        }
+            const auto& [pSrvDescriptorRange, iShaderConstantIndex] =
+                mtxUsedPipelineDescriptorRanges.second.begin()->second;
 
-        /**
-         * Adds a new command to the specified command list to use this shader resource.
-         *
-         * @param pCommandList  Command list to add new command to.
-         * @param pUsedPipeline Current pipeline.
-         */
-        inline void setGraphicsRootDescriptorTableOfPipeline(
-            const ComPtr<ID3D12GraphicsCommandList>& pCommandList, DirectXPso* pUsedPipeline) const {
-            // same thing as above, we don't need to lock mutexes here
+            // Query texture's SRV descriptor offset in the descriptor range.
+            unsigned int iRootConstantValue = 0;
+            {
+                std::scoped_lock textureGuard(mtxUsedTexture.first);
 
-            // Find root parameter index of this pipeline.
-            const auto it = mtxRootParameterIndices.second.find(pUsedPipeline);
+                const auto pDirectXTexture =
+                    reinterpret_cast<DirectXResource*>(mtxUsedTexture.second->getResource());
 
-#if defined(DEBUG)
-            if (it == mtxRootParameterIndices.second.end()) [[unlikely]] {
-                Error error(std::format(
-                    "shader resource \"{}\" was requested to set its graphics root descriptor table "
-                    "but this shader resource does not reference the specified pipeline",
-                    getResourceName(),
-                    mtxRootParameterIndices.second.size()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
+                // Calculate descriptor offset. This may not be as fast as we want but this is the price we
+                // pay for having a simple approach. We could have cached the offset but we would need to keep
+                // the cached offset updated after the range resizes which seems like a complicated thing.
+                auto result = pSrvDescriptorRange->getResourceDescriptorOffsetFromRangeStart(
+                    pDirectXTexture, DirectXDescriptorType::SRV);
+                if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(result));
+                    error.addCurrentLocationToErrorStack();
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+
+                iRootConstantValue = std::get<unsigned int>(result);
             }
-#endif
 
-            // Set table.
-            pCommandList->SetGraphicsRootDescriptorTable(
-                it->second,
-                D3D12_GPU_DESCRIPTOR_HANDLE{
-                    pSrvHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                    pTextureSrv->getDescriptorOffsetInDescriptors() * iSrvDescriptorSize});
+            // Copy value to root constants.
+            pShaderConstantsManager->copyValueToShaderConstant(iShaderConstantIndex, iRootConstantValue);
         }
 
         /**
@@ -143,12 +120,14 @@ namespace ne {
          * @param sResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
          * @param pTextureToUse        Texture to which a descriptor should be binded.
-         * @param rootParameterIndices Indices of this resource in root signature.
+         * @param usedDescriptorRanges Descriptor ranges that have an SRV binded to the specified texture
+         * and a shader constant index for our shader resource.
          */
         HlslShaderTextureResource(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
-            const std::unordered_map<DirectXPso*, UINT>& rootParameterIndices);
+            std::unordered_map<DirectXPso*, std::pair<ContinuousDirectXDescriptorRange*, size_t>>&&
+                usedDescriptorRanges);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -177,19 +156,41 @@ namespace ne {
             const std::unordered_set<Pipeline*>& pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);
 
+        /**
+         * In the specified pipeline looks for a descriptor range that handles a shader resource
+         * with the specified name (creates a new descriptor range if not found and returns a pointer to it).
+         *
+         * @param pPipeline           Pipeline to look in.
+         * @param sShaderResourceName Shader resource to look for.
+         *
+         * @return Error if something went wrong, otherwise a pointer to descriptor range from the pipeline
+         * and an index of the root constant that is used to index into our shader resource.
+         */
+        static std::variant<std::pair<ContinuousDirectXDescriptorRange*, size_t>, Error>
+        getSrvDescriptorRangeAndRootConstantIndex(
+            DirectXPso* pPipeline, const std::string& sShaderResourceName);
+
         /** Texture to which a descriptor should be binded. */
         std::pair<std::mutex, std::unique_ptr<TextureHandle>> mtxUsedTexture;
 
-        /** Descriptor binded to @ref mtxUsedTexture. */
-        DirectXDescriptor* pTextureSrv = nullptr;
+        /**
+         * Stores a raw pointer (per-pipeline) to a descriptor range (from the pipeline) that was used
+         * to bind an SRV to @ref mtxUsedTexture and an offset of the shader constant for our shader resource.
+         *
+         * @remark Storing raw pointers to descriptor ranges here is safe because before a PSO releases
+         * its internal resources (and destroys descriptor ranges) it will pause the rendering then destroy
+         * its descriptor tables, then we will be notified through @ref onAfterAllPipelinesRefreshedResources
+         * to reference new descriptor ranges.
+         */
+        std::pair<
+            std::recursive_mutex,
+            std::unordered_map<DirectXPso*, std::pair<ContinuousDirectXDescriptorRange*, size_t>>>
+            mtxUsedPipelineDescriptorRanges;
 
-        /** SRV heap. */
-        DirectXDescriptorHeap* pSrvHeap = nullptr;
-
-        /** Size of one SRV descriptor. */
-        UINT iSrvDescriptorSize = 0;
-
-        /** Indices of this resource in root signature to bind this resource during the draw operation. */
-        std::pair<std::recursive_mutex, std::unordered_map<DirectXPso*, UINT>> mtxRootParameterIndices;
+        /**
+         * `false` to avoid binding descriptors to cubemap faces - I don't see any point
+         * in that here, we don't use individual cubemap faces in this case
+         */
+        static constexpr bool bBindSrvToCubemapFaces = false;
     };
 } // namespace ne

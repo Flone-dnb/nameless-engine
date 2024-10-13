@@ -2269,7 +2269,7 @@ namespace ne {
                 return optionalError;
             }
 
-            optionalError = createRenderPasses(false); // it depends on the format of the swap chain images
+            optionalError = createRenderPasses(false); // depend on the format of the swap chain images
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -3160,7 +3160,7 @@ namespace ne {
                                 throw std::runtime_error(error.getFullErrorMessage());
                             }
 #endif
-                            meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                            meshDataIt->second.getResource()->copyResourceIndexToShaderConstants(
                                 pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
 
                             // Bind vertex buffer.
@@ -3447,7 +3447,7 @@ namespace ne {
                         throw std::runtime_error(error.getFullErrorMessage());
                     }
 #endif
-                    meshDataIt->second.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                    meshDataIt->second.getResource()->copyResourceIndexToShaderConstants(
                         pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
 
                     // Bind vertex buffer.
@@ -3774,18 +3774,18 @@ namespace ne {
                 std::scoped_lock materialGpuResourcesGuard(pMtxMaterialGpuResources->first);
                 auto& materialShaderResources = pMtxMaterialGpuResources->second.shaderResources;
 
-                // Set material's CPU write shader resources.
+                // Set material's CPU-write buffers.
                 for (const auto& [sResourceName, pShaderCpuWriteResource] :
                      materialShaderResources.shaderCpuWriteResources) {
-                    pShaderCpuWriteResource.getResource()->copyResourceIndexOfOnlyPipelineToPushConstants(
-                        pPushConstantsManager, iCurrentFrameResourceIndex);
+                    pShaderCpuWriteResource.getResource()->copyResourceIndexToShaderConstants(
+                        pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
                 }
 
-                // Set material's texture resources.
+                // Set material's textures.
                 for (const auto& [sResourceName, pShaderTextureResource] :
                      materialShaderResources.shaderTextureResources) {
                     reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                        ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
+                        ->copyResourceIndexToPushConstants(pPushConstantsManager, pVulkanPipeline);
                 }
 
                 for (const auto& meshInfo : materialInfo.vMeshes) {
@@ -3796,18 +3796,18 @@ namespace ne {
                     // as it might cause a deadlock (see MeshNode::setMaterial for example).
                     std::scoped_lock geometryGuard(pMtxMeshGpuResources->first);
 
-                    // Set mesh's shader CPU write resources.
+                    // Set mesh's CPU-write buffers.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
-                        pShaderCpuWriteResource.getResource()->copyResourceIndexOfPipelineToPushConstants(
+                        pShaderCpuWriteResource.getResource()->copyResourceIndexToShaderConstants(
                             pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
                     }
 
-                    // Set mesh's texture resources.
+                    // Set mesh's textures.
                     for (const auto& [sResourceName, pShaderTextureResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderTextureResources) {
                         reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
-                            ->copyResourceIndexOfOnlyPipelineToPushConstants(pPushConstantsManager);
+                            ->copyResourceIndexToPushConstants(pPushConstantsManager, pVulkanPipeline);
                     }
 
                     // Bind vertex buffer.

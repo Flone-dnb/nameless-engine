@@ -126,7 +126,8 @@ namespace ne {
         }
 
         // Get descriptor offset from range start.
-        auto descriptorOffsetResult = getSrvDescriptorOffsetFromRangeStart(pSrvResource);
+        auto descriptorOffsetResult = pSrvRange->getResourceDescriptorOffsetFromRangeStart(
+            reinterpret_cast<DirectXResource*>(pSrvResource), DirectXDescriptorType::SRV);
         if (std::holds_alternative<Error>(descriptorOffsetResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(descriptorOffsetResult));
             error.addCurrentLocationToErrorStack();
@@ -175,42 +176,6 @@ namespace ne {
         return {};
     }
 
-    std::variant<unsigned int, Error>
-    DirectXShadowMapArrayIndexManager::getSrvDescriptorOffsetFromRangeStart(DirectXResource* pResource) {
-        // Get SRV descriptor.
-        const auto pSrvDescriptor = pResource->getDescriptor(DirectXDescriptorType::SRV);
-        if (pSrvDescriptor == nullptr) [[unlikely]] {
-            return Error(std::format(
-                "expected resource \"{}\" to have an SRV descriptor binded", pResource->getResourceName()));
-        }
-
-        std::scoped_lock guard(mtxRegisteredShadowMaps.first);
-
-        // Get descriptor offset from heap start.
-        const auto iDescriptorOffsetFromHeapStart = pSrvDescriptor->getDescriptorOffsetInDescriptors();
-
-        // Get range offset from heap start.
-        const auto iRangeStartFromHeapStart = pSrvRange->getRangeStartInHeap();
-
-        // Calculate offset from range start.
-        const auto iDescriptorOffsetFromRangeStart =
-            iDescriptorOffsetFromHeapStart - iRangeStartFromHeapStart;
-
-        // Self check: make sure resulting value is non-negative.
-        if (iDescriptorOffsetFromRangeStart < 0) [[unlikely]] {
-            return Error(std::format(
-                "\"{}\" index manager failed to calculate descriptor offset from range start (descriptor "
-                "offset from heap: {}, range offset from heap: {}) because resulting descriptor offset from "
-                "range start is negative: {})",
-                getShaderArrayResourceName(),
-                iDescriptorOffsetFromHeapStart,
-                iRangeStartFromHeapStart,
-                iDescriptorOffsetFromRangeStart));
-        }
-
-        return static_cast<unsigned int>(iDescriptorOffsetFromRangeStart);
-    }
-
     void DirectXShadowMapArrayIndexManager::onSrvRangeIndicesChanged() {
         std::scoped_lock guard(mtxRegisteredShadowMaps.first);
 
@@ -225,8 +190,8 @@ namespace ne {
             }
 
             // Get descriptor offset from range start.
-            auto descriptorOffsetResult =
-                getSrvDescriptorOffsetFromRangeStart(reinterpret_cast<DirectXResource*>(pSrvResource));
+            auto descriptorOffsetResult = pSrvRange->getResourceDescriptorOffsetFromRangeStart(
+                reinterpret_cast<DirectXResource*>(pSrvResource), DirectXDescriptorType::SRV);
             if (std::holds_alternative<Error>(descriptorOffsetResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(descriptorOffsetResult));
                 error.addCurrentLocationToErrorStack();

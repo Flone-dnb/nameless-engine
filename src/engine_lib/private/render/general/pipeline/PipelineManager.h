@@ -31,8 +31,9 @@ namespace ne {
      * RAII class that once acquired waits for the GPU to finish work up to this point, pauses the rendering,
      * releases all internal resources from all graphics pipelines, then in destructor restores them.
      *
-     * @remark This can be useful when some render resource (like MSAA render target) has changed or about to
-     * be changed so that we can make sure all pipelines are refreshed to use the new/changed resource.
+     * @remark This can be useful when some render resource (like MSAA state or sample count) has changed or
+     * about to be changed so that we can make sure all pipelines are refreshed to use the new/changed
+     * resource.
      */
     class DelayedPipelineResourcesCreation {
     public:
@@ -196,6 +197,8 @@ namespace ne {
          * Returns all vertex/pixel shaders and their graphics pipelines.
          *
          * @warning Do not delete (free) returned pointers.
+         *
+         * @remark While the mutex is locked no pipeline will re-create its internal resources.
          *
          * @return Shaders and pipelines.
          */

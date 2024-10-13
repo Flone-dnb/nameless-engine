@@ -107,7 +107,7 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> bindShadowMapsToPipeline(Pipeline* pPipeline) = 0;
 
         /**
-         * Goes through all graphics pipelines ad binds shadow maps to pipelines that use them.
+         * Goes through all graphics pipelines and binds shadow maps to pipelines that use them.
          *
          * @return Error if something went wrong.
          */

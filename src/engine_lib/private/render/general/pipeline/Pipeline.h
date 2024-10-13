@@ -163,15 +163,16 @@ namespace ne {
         void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
 
         /**
-         * Releases internal resources such as root signature, internal Pipeline, etc.
+         * Releases internal resources such as root signature or descriptor layout, internal pipeline object
+         * and etc.
          *
          * @warning Expects that the GPU is not referencing this Pipeline (command queue is empty) and
          * that no drawing will occur until @ref restoreInternalResources is called.
          *
-         * @remark Typically used before changing something (for ex. shader configuration, texture
-         * filtering), so that no Pipeline will reference old resources,
-         * to later call @ref restoreInternalResources that will recreate internal resources with new
-         * render settings.
+         * @remark Typically used before (!) changing something in the pipeline. Often it's a shader
+         * configuration change due to a change in some settings, for example when a material that uses this
+         * pipeline requested to use a diffuse texture, thus we need to define a "use diffuse texture" shader
+         * macro and for that we change the shader variant.
          *
          * @return Error if something went wrong.
          */

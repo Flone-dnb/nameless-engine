@@ -77,13 +77,10 @@ namespace ne {
              *
              * @remark Since pipeline does not care which resources are shader arrays and
              * which are not, shader resources that reference shader arrays must create new
-             * entries in this map when no index manager for requested shader resource is found.
+             * entries in this map when no index manager for a requested shader resource is found.
              * All descriptors for a shader array are allocated per pipeline so shader resources
              * that reference a shader array in some pipeline can have just one index manager per
              * shader array.
-             *
-             * @remark Shadow map arrays (defined in shaders) are special and these resources don't
-             * use array index managers from pipelines.
              */
             std::unordered_map<std::string, std::unique_ptr<ShaderArrayIndexManager>>
                 shaderArrayIndexManagers;
@@ -171,13 +168,16 @@ namespace ne {
 
     protected:
         /**
-         * Releases internal resources such as pipeline layout, internal pipeline, descriptor layout, etc.
+         * Releases internal resources such as root signature or descriptor layout, internal pipeline object
+         * and etc.
          *
-         * @warning Expects that the GPU is not referencing this pipeline and
+         * @warning Expects that the GPU is not referencing this Pipeline (command queue is empty) and
          * that no drawing will occur until @ref restoreInternalResources is called.
          *
-         * @remark Typically used before changing something (for ex. shader configuration), so that no
-         * pipeline will reference old resources, to later call @ref restoreInternalResources.
+         * @remark Typically used before (!) changing something in the pipeline. Often it's a shader
+         * configuration change due to a change in some settings, for example when a material that uses this
+         * pipeline requested to use a diffuse texture, thus we need to define a "use diffuse texture" shader
+         * macro and for that we change the shader variant.
          *
          * @return Error if something went wrong.
          */

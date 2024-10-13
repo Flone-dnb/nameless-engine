@@ -40,8 +40,6 @@ set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/RootSignatureGenerator.cpp
     private/shader/hlsl/resources/HlslShaderTextureResource.h
     private/shader/hlsl/resources/HlslShaderTextureResource.cpp
-    private/shader/hlsl/resources/HlslShaderResourceHelpers.h
-    private/shader/hlsl/resources/HlslShaderResourceHelpers.cpp
     private/shader/hlsl/resources/HlslGlobalShaderResourceBinding.cpp
     private/shader/hlsl/resources/HlslGlobalShaderResourceBinding.h
     private/shader/hlsl/HlslComputeShaderInterface.cpp

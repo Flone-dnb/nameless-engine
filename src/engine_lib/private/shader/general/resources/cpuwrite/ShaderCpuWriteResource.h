@@ -30,48 +30,14 @@ namespace ne {
         virtual ~ShaderCpuWriteResource() override = default;
 
         /**
-         * Copies resource index (into shader arrays) to a push constant.
+         * Copies resource index (into shader arrays) to a root/push constant.
          *
-         * @warning Expects that this shader resource uses only 1 pipeline. Generally used for
-         * material's resources because material can only reference 1 pipeline unlike mesh nodes.
-         *
-         * @param pPushConstantsManager      Push constants manager.
-         * @param iCurrentFrameResourceIndex Index of current frame resource.
-         */
-        inline void copyResourceIndexOfOnlyPipelineToPushConstants(
-            PipelineShaderConstantsManager* pPushConstantsManager, size_t iCurrentFrameResourceIndex) {
-            // Since pipelines won't change here (because we are inside of the `draw` function)
-            // we don't need to lock the mutex here.
-
-#if defined(DEBUG)
-            // Self check: make sure there is indeed just 1 pipeline.
-            if (mtxUintShaderConstantOffsets.second.size() != 1) [[unlikely]] {
-                Error error(std::format(
-                    "shader resource \"{}\" was requested to set its push constant "
-                    "index of the only used pipeline but this shader resource references "
-                    "{} pipeline(s)",
-                    getResourceName(),
-                    mtxUintShaderConstantOffsets.second.size()));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-#endif
-
-            // Copy value to push constants.
-            pPushConstantsManager->copyValueToShaderConstant(
-                mtxUintShaderConstantOffsets.second.begin()->second,
-                vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
-        }
-
-        /**
-         * Copies resource index (into shader arrays) to a push constant.
-         *
-         * @param pPushConstantsManager      Push constants manager.
+         * @param pShaderConstantsManager    Shader constants manager.
          * @param pUsedPipeline              Current pipeline.
          * @param iCurrentFrameResourceIndex Index of the current frame resource.
          */
-        inline void copyResourceIndexOfPipelineToPushConstants(
-            PipelineShaderConstantsManager* pPushConstantsManager,
+        inline void copyResourceIndexToShaderConstants(
+            PipelineShaderConstantsManager* pShaderConstantsManager,
             Pipeline* pUsedPipeline,
             size_t iCurrentFrameResourceIndex) {
             // Since pipelines won't change here (because we are inside of the `draw` function)
@@ -92,8 +58,8 @@ namespace ne {
             }
 #endif
 
-            // Copy value to push constants.
-            pPushConstantsManager->copyValueToShaderConstant(
+            // Copy value to root/push constants.
+            pShaderConstantsManager->copyValueToShaderConstant(
                 offsetIt->second, vResourceData[iCurrentFrameResourceIndex]->getIndexIntoArray());
         }
 

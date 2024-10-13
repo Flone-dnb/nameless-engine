@@ -3,7 +3,7 @@
     uint meshData;            
     uint materialData;
     #ifdef PS_USE_DIFFUSE_TEXTURE
-        uint diffuseTexture;
+        uint diffuseTextures;
     #endif
 }
 // NOLINTEND

@@ -13,7 +13,7 @@
 layout(location = 0) out vec4 outputColor;
 
 #ifdef PS_USE_DIFFUSE_TEXTURE
-    layout(binding = 7) uniform sampler2D diffuseTexture[]; // "bindless binding", stores all diffuse textures
+    layout(binding = 7) uniform sampler2D diffuseTextures[]; // "bindless binding", stores all diffuse textures
 #endif
 
 layout(early_fragment_tests) in;
@@ -29,7 +29,7 @@ void fsMeshNode() {
     // Prepare diffuse color.
     vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
     #ifdef PS_USE_DIFFUSE_TEXTURE
-        vec4 diffuseTextureSample = texture(diffuseTexture[constants.diffuseTexture], fragmentUv);
+        vec4 diffuseTextureSample = texture(diffuseTextures[constants.diffuseTextures], fragmentUv);
         fragmentDiffuseColor *= diffuseTextureSample.rgb;
     #endif
     

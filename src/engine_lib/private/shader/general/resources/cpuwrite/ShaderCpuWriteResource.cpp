@@ -5,6 +5,7 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "render/Renderer.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
+#include "render/general/pipeline/PipelineManager.h"
 
 namespace ne {
 
@@ -19,6 +20,14 @@ namespace ne {
         if (pipelinesToUse.empty()) [[unlikely]] {
             return Error("expected at least one pipeline to be specified");
         }
+        const auto pRenderer = (*pipelinesToUse.begin())->getRenderer();
+
+        // Make sure no pipeline will re-create its internal resources because we will now reference
+        // pipeline's internal resources.
+        // After we create a new shader resource binding object we can release the mutex
+        // since shader resource bindings are notified after pipelines re-create their internal resources.
+        const auto pMtxGraphicsPipelines = pRenderer->getPipelineManager()->getGraphicsPipelines();
+        std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
         // Find offsets of push constants to use.
         auto result = getUintShaderConstantOffsetsFromPipelines(pipelinesToUse, sShaderResourceName);
@@ -28,8 +37,6 @@ namespace ne {
             return error;
         }
         auto constantOffsets = std::get<std::unordered_map<Pipeline*, size_t>>(std::move(result));
-
-        const auto pRenderer = (*pipelinesToUse.begin())->getRenderer();
 
         // Create shader resource.
         auto pShaderResource = std::unique_ptr<ShaderCpuWriteResource>(new ShaderCpuWriteResource(
@@ -65,6 +72,8 @@ namespace ne {
             pShaderResource->vResourceData[i] =
                 std::get<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>>(std::move(result));
         }
+
+        // At this point we can release the pipelines mutex.
 
         return pShaderResource;
     }

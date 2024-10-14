@@ -14,6 +14,7 @@
 #include "render/directx/resources/DirectXResource.h"
 
 namespace ne {
+    class TextureHandle;
     class Pipeline;
     class DirectXPso;
 

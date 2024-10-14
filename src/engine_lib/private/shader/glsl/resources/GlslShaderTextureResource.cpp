@@ -8,6 +8,7 @@
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "shader/general/DescriptorConstants.hpp"
 #include "render/general/pipeline/PipelineManager.h"
+#include "material/TextureHandle.h"
 
 namespace ne {
 

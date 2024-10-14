@@ -199,22 +199,4 @@ namespace ne {
 
         return createNewTextureHandle(sPathToResourceRelativeRes);
     }
-
-    TextureHandle::TextureHandle(
-        TextureManager* pTextureManager,
-        const std::string& sPathToResourceRelativeRes,
-        GpuResource* pTexture) {
-        this->pTextureManager = pTextureManager;
-        this->sPathToResourceRelativeRes = sPathToResourceRelativeRes;
-        this->pTexture = pTexture;
-    }
-
-    GpuResource* TextureHandle::getResource() { return pTexture; }
-
-    std::string TextureHandle::getPathToResourceRelativeRes() { return sPathToResourceRelativeRes; }
-
-    TextureHandle::~TextureHandle() {
-        pTextureManager->releaseTextureResourceIfNotUsed(sPathToResourceRelativeRes);
-    }
-
 }

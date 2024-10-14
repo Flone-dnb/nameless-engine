@@ -8,7 +8,6 @@
 
 // Custom.
 #include "shader/general/resources/ShaderResource.h"
-#include "material/TextureManager.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
 
@@ -16,6 +15,7 @@
 #include "vulkan/vulkan.h"
 
 namespace ne {
+    class TextureHandle;
     class Pipeline;
     class VulkanPipeline;
 

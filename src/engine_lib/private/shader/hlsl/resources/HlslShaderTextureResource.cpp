@@ -9,6 +9,7 @@
 #include "render/directx/pipeline/DirectXPso.h"
 #include "render/directx/resources/DirectXResourceManager.h"
 #include "render/general/pipeline/PipelineManager.h"
+#include "material/TextureHandle.h"
 
 namespace ne {
 

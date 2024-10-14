@@ -1,0 +1,26 @@
+var structne_1_1ShaderDescription =
+[
+    [ "ShaderDescription", "structne_1_1ShaderDescription.html#a97a6839e98880d6e3f3644534de1d3f6", null ],
+    [ "ShaderDescription", "structne_1_1ShaderDescription.html#ab5bfedd7ce317fd80e304006ad5e4a67", null ],
+    [ "ShaderDescription", "structne_1_1ShaderDescription.html#a2c70945fe59e6a3284dd2aa7dd1defab", null ],
+    [ "calculateShaderIncludeTreeHashes", "structne_1_1ShaderDescription.html#a4a8d2d724407d111e95b481e7e325192", null ],
+    [ "deserializeShaderIncludeTreeHashes", "structne_1_1ShaderDescription.html#a0a93d7f6ab9d7c5351b3412c805438f0", null ],
+    [ "from_toml", "structne_1_1ShaderDescription.html#abde82750728f62e7ac5b51d406631139", null ],
+    [ "getConfigurationFileSectionName", "structne_1_1ShaderDescription.html#ab4507d18c32a93428852bd5ca24b3e3b", null ],
+    [ "getFileHash", "structne_1_1ShaderDescription.html#a433fa17772019933ab544502b309d19d", null ],
+    [ "into_toml", "structne_1_1ShaderDescription.html#a7aed6ce709ce5e2c55cc9c19c3367698", null ],
+    [ "isSerializableDataEqual", "structne_1_1ShaderDescription.html#a9fcf588499ec4ad6be72988185806320", null ],
+    [ "operator=", "structne_1_1ShaderDescription.html#a4c6b3dc0063e415cf7e87892dc3af060", null ],
+    [ "operator=", "structne_1_1ShaderDescription.html#a88c0dc416c3fc67b6d71d4885ac07b56", null ],
+    [ "serializeShaderIncludeTree", "structne_1_1ShaderDescription.html#a9e41b60f477834ce5e4d88223f8ee75b", null ],
+    [ "definedShaderMacros", "structne_1_1ShaderDescription.html#a8fc83f42bb8cb32fa56c9e08bb2d008e", null ],
+    [ "pathToShaderFile", "structne_1_1ShaderDescription.html#ad7a2d136379794834a600b577fe95e34", null ],
+    [ "sConfigurationFileSectionName", "structne_1_1ShaderDescription.html#ac55c02d9a99456781052c57dcc4629c7", null ],
+    [ "shaderIncludeTreeHashes", "structne_1_1ShaderDescription.html#abe7847a8b8a84e8f9b064a97f34569e7", null ],
+    [ "shaderType", "structne_1_1ShaderDescription.html#ab160a0865d201195b9532da859af493c", null ],
+    [ "sInitialIncludeChainText", "structne_1_1ShaderDescription.html#aad82581cf18695066d1c57b65a3376f2", null ],
+    [ "sShaderEntryFunctionName", "structne_1_1ShaderDescription.html#a6ea46c4fe661cfe52fb0c638e7894acd", null ],
+    [ "sShaderName", "structne_1_1ShaderDescription.html#aff6b5495bae40362c1fceed70296c5b5", null ],
+    [ "sSourceFileHash", "structne_1_1ShaderDescription.html#a3eef28fee52b03a265ddf45bdd1e4bb0", null ],
+    [ "vertexFormat", "structne_1_1ShaderDescription.html#ae99b83380da6f1d179191928e4f2fb32", null ]
+];

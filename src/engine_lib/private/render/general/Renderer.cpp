@@ -19,8 +19,8 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "shader/general/resources/ShaderLightsInFrustumSingleType.hpp"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
 #include "shader/general/resources/GlobalShaderResourceBindingManager.h"
 #include "shader/general/ShaderMacro.h"
 #include "shader/ShaderManager.h"
@@ -717,11 +717,11 @@ namespace ne {
 
     FrameResourceManager* Renderer::getFrameResourceManager() const { return pFrameResourceManager.get(); }
 
-    ShaderCpuWriteResourceManager* Renderer::getShaderCpuWriteResourceManager() const {
+    ShaderCpuWriteResourceBindingManager* Renderer::getShaderCpuWriteResourceManager() const {
         return pShaderCpuWriteResourceManager.get();
     }
 
-    ShaderTextureResourceManager* Renderer::getShaderTextureResourceManager() const {
+    ShaderTextureResourceBindingManager* Renderer::getShaderTextureResourceManager() const {
         return pShaderTextureResourceManager.get();
     }
 
@@ -876,12 +876,12 @@ namespace ne {
             std::get<std::unique_ptr<FrameResourceManager>>(std::move(frameResourceManagerResult));
 
         // Create shader CPU write resource manager.
-        pShaderCpuWriteResourceManager =
-            std::unique_ptr<ShaderCpuWriteResourceManager>(new ShaderCpuWriteResourceManager(this));
+        pShaderCpuWriteResourceManager = std::unique_ptr<ShaderCpuWriteResourceBindingManager>(
+            new ShaderCpuWriteResourceBindingManager(this));
 
         // Create shader texture resource manager.
         pShaderTextureResourceManager =
-            std::unique_ptr<ShaderTextureResourceManager>(new ShaderTextureResourceManager(this));
+            std::unique_ptr<ShaderTextureResourceBindingManager>(new ShaderTextureResourceBindingManager(this));
 
         // Create lighting shader resource manager.
         pLightingShaderResourceManager = LightingShaderResourceManager::create(this);

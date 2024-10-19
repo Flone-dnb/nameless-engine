@@ -6,8 +6,8 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/ComputeShaderInterface.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
 #include "shader/general/resources/GlobalShaderResourceBindingManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 
@@ -378,7 +378,7 @@ namespace ne {
 
             for (const auto& [pRawResource, pResource] : pMtxResources->second.all) {
                 // Notify (cast to parent for `friend class` to work).
-                auto optionalError = static_cast<ShaderResourceBase*>(pResource.get())
+                auto optionalError = static_cast<ShaderResourceBindingBase*>(pResource.get())
                                          ->onAfterAllPipelinesRefreshedResources();
                 if (optionalError.has_value()) [[unlikely]] {
                     optionalError->addCurrentLocationToErrorStack();

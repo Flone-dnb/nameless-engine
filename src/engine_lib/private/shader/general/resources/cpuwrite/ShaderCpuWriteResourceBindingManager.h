@@ -9,21 +9,21 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
     class Renderer;
     class Pipeline;
 
-    /** Stores all shader resources with CPU write access. */
-    class ShaderCpuWriteResourceManager {
+    /** Stores all shader resource bindings that have CPU write access. */
+    class ShaderCpuWriteResourceBindingManager {
         // Only renderer should be allowed to create this manager.
         friend class Renderer;
 
         // Unique pointers will notify the manager before destruction.
-        friend class ShaderCpuWriteResourceUniquePtr;
+        friend class ShaderCpuWriteResourceBindingUniquePtr;
 
     public:
         /** Groups shader CPU write resources. */
@@ -34,22 +34,22 @@ namespace ne {
              * @remark Storing pairs of "raw pointer" - "unique pointer" to quickly find needed resources
              * when need to destroy some resource given a raw pointer.
              */
-            std::unordered_map<ShaderCpuWriteResource*, std::unique_ptr<ShaderCpuWriteResource>> all;
+            std::unordered_map<ShaderCpuWriteResourceBinding*, std::unique_ptr<ShaderCpuWriteResourceBinding>> all;
 
             /** Shader CPU write resources that needs to be updated. */
             std::array<
-                std::unordered_set<ShaderCpuWriteResource*>,
+                std::unordered_set<ShaderCpuWriteResourceBinding*>,
                 FrameResourceManager::getFrameResourceCount()>
                 vToBeUpdated;
         };
 
-        ShaderCpuWriteResourceManager() = delete;
+        ShaderCpuWriteResourceBindingManager() = delete;
 
-        ShaderCpuWriteResourceManager(const ShaderCpuWriteResourceManager&) = delete;
-        ShaderCpuWriteResourceManager& operator=(const ShaderCpuWriteResourceManager&) = delete;
+        ShaderCpuWriteResourceBindingManager(const ShaderCpuWriteResourceBindingManager&) = delete;
+        ShaderCpuWriteResourceBindingManager& operator=(const ShaderCpuWriteResourceBindingManager&) = delete;
 
         /** Makes sure that no resource exists. */
-        ~ShaderCpuWriteResourceManager();
+        ~ShaderCpuWriteResourceBindingManager();
 
         /**
          * Creates a new render-specific shader resource.
@@ -68,7 +68,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        std::variant<ShaderCpuWriteResourceUniquePtr, Error> createShaderCpuWriteResource(
+        std::variant<ShaderCpuWriteResourceBindingUniquePtr, Error> createShaderCpuWriteResource(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceDataSizeInBytes,
@@ -91,7 +91,7 @@ namespace ne {
          *
          * @param pResourceToDestroy Resource to mark as "needs update".
          */
-        void markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResourceToDestroy);
+        void markResourceAsNeedsUpdate(ShaderCpuWriteResourceBinding* pResourceToDestroy);
 
         /**
          * Returns internal resources.
@@ -106,7 +106,7 @@ namespace ne {
          *
          * @param pRenderer
          */
-        ShaderCpuWriteResourceManager(Renderer* pRenderer);
+        ShaderCpuWriteResourceBindingManager(Renderer* pRenderer);
 
         /**
          * Processes resource creation.
@@ -115,8 +115,8 @@ namespace ne {
          *
          * @return Result of resource creation.
          */
-        std::variant<ShaderCpuWriteResourceUniquePtr, Error>
-        handleResourceCreation(std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> result);
+        std::variant<ShaderCpuWriteResourceBindingUniquePtr, Error>
+        handleResourceCreation(std::variant<std::unique_ptr<ShaderCpuWriteResourceBinding>, Error> result);
 
         /**
          * Called by shader CPU write resource unique pointers to destroy the specified resource because it
@@ -124,7 +124,7 @@ namespace ne {
          *
          * @param pResourceToDestroy Resource to destroy.
          */
-        void destroyResource(ShaderCpuWriteResource* pResourceToDestroy);
+        void destroyResource(ShaderCpuWriteResourceBinding* pResourceToDestroy);
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;

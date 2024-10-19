@@ -8,8 +8,8 @@
 #include "io/Serializable.h"
 #include "shader/general/ShaderMacro.h"
 #include "math/GLMath.hpp"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "render/general/resources/MeshData.h"
 #include "render/general/pipeline/PipelineSharedPtr.h"
@@ -74,10 +74,11 @@ namespace ne RNAMESPACE() {
                 ShaderResources() = default;
 
                 /** Shader single (non-array) resources with CPU write access. */
-                std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
+                std::unordered_map<std::string, ShaderCpuWriteResourceBindingUniquePtr>
+                    shaderCpuWriteResources;
 
                 /** Shader resources that reference textures. */
-                std::unordered_map<std::string, ShaderTextureResourceUniquePtr> shaderTextureResources;
+                std::unordered_map<std::string, ShaderTextureResourceBindingUniquePtr> shaderTextureResources;
             };
 
             /** Shader GPU resources. */
@@ -503,8 +504,8 @@ namespace ne RNAMESPACE() {
         void deallocateShaderResources();
 
         /**
-         * Setups callbacks for shader resource with CPU write access to copy data from CPU to
-         * the GPU to be used by shaders.
+         * Setups callbacks for a shader resource (buffer or a texture from the shader code) with CPU write
+         * access to copy the data from the CPU to the GPU to be used by the shaders.
          *
          * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
          * bindings will be automatically removed in @ref deallocateShaderResources.
@@ -528,14 +529,14 @@ namespace ne RNAMESPACE() {
          * @param onFinishedUpdatingResource Function that will be called when the engine has finished
          * copying resource data to the GPU (usually used for unlocking mutexes).
          */
-        void setShaderCpuWriteResourceBindingData(
+        void setShaderCpuWriteResourceBinding(
             const std::string& sShaderResourceName,
             size_t iResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Setups a shader resource that references a texture that will be used in shaders when
+         * Setups a shader resource binding that references a texture that will be used in shaders when
          * this material is rendered.
          *
          * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
@@ -545,11 +546,11 @@ namespace ne RNAMESPACE() {
          * the same as the resource name written in the shader file we are referencing).
          * @param sPathToTextureResourceRelativeRes Path to the directory with texture resource to use.
          */
-        void setShaderTextureResourceBindingData(
+        void setShaderTextureResourceBinding(
             const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes);
 
         /**
-         * Looks for binding created using @ref setShaderCpuWriteResourceBindingData and
+         * Looks for binding created using @ref setShaderCpuWriteResourceBinding and
          * notifies the engine that there is new (updated) data for shader CPU write resource to copy
          * to the GPU to be used by shaders.
          *
@@ -558,7 +559,7 @@ namespace ne RNAMESPACE() {
          * silently ignored without any errors.
          *
          * @remark Note that the callbacks that you have specified in
-         * @ref setShaderCpuWriteResourceBindingData will not be called inside of this function,
+         * @ref setShaderCpuWriteResourceBinding will not be called inside of this function,
          * moreover they are most likely to be called in the next frame(s) (most likely multiple times)
          * when the engine is ready to copy the data to the GPU, so if the resource's data is used by
          * multiple threads in your code, make sure to use mutex or other synchronization primitive

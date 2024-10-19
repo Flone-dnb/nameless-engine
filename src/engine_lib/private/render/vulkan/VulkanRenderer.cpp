@@ -16,8 +16,8 @@
 #include "game/camera/CameraProperties.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "game/nodes/MeshNode.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
-#include "shader/glsl/resources/GlslShaderTextureResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
+#include "shader/glsl/resources/GlslShaderTextureResourceBinding.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "render/general/resources/shadow/ShadowMapHandle.h"
 #include "shader/glsl/GlslComputeShaderInterface.h"
@@ -3147,11 +3147,11 @@ namespace ne {
 
                             // Find and bind mesh data resource since only it is used in vertex shader.
                             const auto& meshDataIt =
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.find(
                                     MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
                             if (meshDataIt ==
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.end())
                                 [[unlikely]] {
                                 Error error(std::format(
                                     "expected to find \"{}\" shader resource",
@@ -3434,11 +3434,11 @@ namespace ne {
 
                     // Find and bind mesh data resource since only it is used in vertex shader.
                     const auto& meshDataIt =
-                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.find(
                             MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
                     if (meshDataIt ==
-                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.end())
                         [[unlikely]] {
                         Error error(std::format(
                             "expected to find \"{}\" shader resource",
@@ -3784,7 +3784,7 @@ namespace ne {
                 // Set material's textures.
                 for (const auto& [sResourceName, pShaderTextureResource] :
                      materialShaderResources.shaderTextureResources) {
-                    reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                    reinterpret_cast<GlslShaderTextureResourceBinding*>(pShaderTextureResource.getResource())
                         ->copyResourceIndexToPushConstants(pPushConstantsManager, pVulkanPipeline);
                 }
 
@@ -3798,7 +3798,7 @@ namespace ne {
 
                     // Set mesh's CPU-write buffers.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                         pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                         pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings) {
                         pShaderCpuWriteResource.getResource()->copyResourceIndexToShaderConstants(
                             pPushConstantsManager, pVulkanPipeline, iCurrentFrameResourceIndex);
                     }
@@ -3806,7 +3806,8 @@ namespace ne {
                     // Set mesh's textures.
                     for (const auto& [sResourceName, pShaderTextureResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderTextureResources) {
-                        reinterpret_cast<GlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                        reinterpret_cast<GlslShaderTextureResourceBinding*>(
+                            pShaderTextureResource.getResource())
                             ->copyResourceIndexToPushConstants(pPushConstantsManager, pVulkanPipeline);
                     }
 

@@ -8,8 +8,8 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
 #include "shader/general/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 
@@ -28,13 +28,13 @@ namespace ne {
         // Self check: make sure reinterpret_casts in `draw` will work.
         static_assert(
             std::is_same_v<
-                decltype(mtxGpuResources.second.shaderResources.shaderCpuWriteResources),
-                std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr>>,
+                decltype(mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings),
+                std::unordered_map<std::string, ShaderCpuWriteResourceBindingUniquePtr>>,
             "update reinterpret_casts in both renderers (in draw function)");
         static_assert(
             std::is_same_v<
                 decltype(mtxGpuResources.second.shaderResources.shaderTextureResources),
-                std::unordered_map<std::string, ShaderTextureResourceUniquePtr>>,
+                std::unordered_map<std::string, ShaderTextureResourceBindingUniquePtr>>,
             "update reinterpret_casts in both renderers (in draw function)");
 
 #if defined(WIN32) && defined(DEBUG)
@@ -178,7 +178,7 @@ namespace ne {
         }
 
         // Set object constant buffer.
-        setShaderCpuWriteResourceBindingData(
+        setShaderCpuWriteResourceBinding(
             sMeshShaderConstantBufferName,
             sizeof(MeshShaderConstants),
             [this]() -> void* { return onStartedUpdatingShaderMeshConstants(); },
@@ -563,7 +563,7 @@ namespace ne {
 
     void MeshNode::onFinishedUpdatingShaderMeshConstants() { mtxShaderMeshDataConstants.first.unlock(); }
 
-    void MeshNode::setShaderCpuWriteResourceBindingData(
+    void MeshNode::setShaderCpuWriteResourceBinding(
         const std::string& sShaderResourceName,
         size_t iResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
@@ -580,8 +580,8 @@ namespace ne {
         // keep spawn locked
 
         // Make sure there is no resource with this name.
-        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
-        if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) [[unlikely]] {
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(sShaderResourceName);
+        if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.end()) [[unlikely]] {
             Error error(std::format(
                 "mesh node \"{}\" already has a shader CPU write resource with the name \"{}\"",
                 getNodeName(),
@@ -627,11 +627,11 @@ namespace ne {
         }
 
         // Add to be considered.
-        mtxGpuResources.second.shaderResources.shaderCpuWriteResources[sShaderResourceName] =
-            std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
+        mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings[sShaderResourceName] =
+            std::get<ShaderCpuWriteResourceBindingUniquePtr>(std::move(result));
     }
 
-    void MeshNode::setShaderTextureResourceBindingData(
+    void MeshNode::setShaderTextureResourceBinding(
         const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes) {
         std::scoped_lock spawnGuard(*getSpawnDespawnMutex(), mtxGpuResources.first);
 
@@ -718,7 +718,7 @@ namespace ne {
 
         // Add to be considered.
         mtxGpuResources.second.shaderResources.shaderTextureResources[sShaderResourceName] =
-            std::get<ShaderTextureResourceUniquePtr>(std::move(shaderResourceResult));
+            std::get<ShaderTextureResourceBindingUniquePtr>(std::move(shaderResourceResult));
     }
 
     void MeshNode::markShaderCpuWriteResourceToBeCopiedToGpu(const std::string& sShaderResourceName) {
@@ -735,8 +735,8 @@ namespace ne {
         // keep spawn locked
 
         // Make sure there is a resource with this name.
-        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(sShaderResourceName);
-        if (it == mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end()) {
+        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(sShaderResourceName);
+        if (it == mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.end()) {
             return; // silently exit, this is not an error
         }
 
@@ -822,7 +822,7 @@ namespace ne {
 
         // Update shader CPU write resources.
         for (const auto& [sResourceName, pShaderCpuWriteResource] :
-             mtxGpuResources.second.shaderResources.shaderCpuWriteResources) {
+             mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings) {
             // Update binding info.
             auto optionalError = pShaderCpuWriteResource.getResource()->changeUsedPipelines(colorPipelines);
             if (optionalError.has_value()) [[unlikely]] {
@@ -859,9 +859,9 @@ namespace ne {
             }
 
             // Find mesh data shader resource.
-            const auto meshDataIt = mtxGpuResources.second.shaderResources.shaderCpuWriteResources.find(
+            const auto meshDataIt = mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(
                 sMeshShaderConstantBufferName);
-            if (meshDataIt == mtxGpuResources.second.shaderResources.shaderCpuWriteResources.end())
+            if (meshDataIt == mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.end())
                 [[unlikely]] {
                 Error error(
                     std::format("expected to find \"{}\" shader resource", sMeshShaderConstantBufferName));

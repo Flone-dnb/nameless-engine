@@ -14,22 +14,22 @@ namespace ne {
     class Pipeline;
     class GpuResource;
     class UploadBuffer;
-    class ShaderCpuWriteResourceManager;
+    class ShaderCpuWriteResourceBindingManager;
 
     /**
-     * Base class for shader resources.
+     * Base class for shader resource bindings.
      *
-     * @remark A shader resource acts as a bridge between game/engine entities that want to set/bind
+     * @remark A shader resource binding acts as a bridge between game/engine entities that want to set/bind
      * some data (like buffer/texture) to some shader resource (defined in HLSL/GLSL) and the renderer
      * that is able to set/bind the specified data to a binding that corresponds to the specified
      * shader resources (defined in HLSL/GLSL) so that the specified data can be accessed in shaders.
      */
-    class ShaderResourceBase {
+    class ShaderResourceBindingBase {
         // Only pipeline manager is expected to call `onAfterAllPipelinesRefreshedResources`.
         friend class PipelineManager;
 
     public:
-        virtual ~ShaderResourceBase() = default;
+        virtual ~ShaderResourceBindingBase() = default;
 
         /**
          * Called to make the resource to discard currently used pipelines and bind/reference
@@ -51,23 +51,23 @@ namespace ne {
         changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) = 0;
 
         /**
-         * Returns name of this resource.
+         * Returns name of the resource (from the shader code) that this binding references.
          *
          * @return Resource name.
          */
-        std::string getResourceName() const;
+        std::string getShaderResourceName() const;
 
     protected:
         /**
-         * Initializes the resource.
+         * Initializes the binding.
          *
-         * @param sResourceName Name of the resource we are referencing (should be exactly the same as
+         * @param sShaderResourceName Name of the resource we are referencing (should be exactly the same as
          * the resource name written in the shader file we are referencing).
          */
-        ShaderResourceBase(const std::string& sResourceName);
+        ShaderResourceBindingBase(const std::string& sShaderResourceName);
 
         /**
-         * Called from pipeline manager to notify that all pipelines released their internal resources
+         * Called from the pipeline manager to notify that all pipelines released their internal resources
          * and now restored them so their internal resources (for example push constants) might
          * be different now and shader resource now needs to check that everything that it needs
          * is still there and possibly re-bind to pipeline's descriptors since these might have
@@ -78,19 +78,19 @@ namespace ne {
         [[nodiscard]] virtual std::optional<Error> onAfterAllPipelinesRefreshedResources() = 0;
 
     private:
-        /** Name of the resource we are referencing. */
-        std::string sResourceName;
+        /** Name of the resource we are referencing (name in the shader code). */
+        const std::string sShaderResourceName;
     };
 
-    /** References some texture (maybe array/table) from shader code. */
-    class ShaderTextureResource : public ShaderResourceBase {
+    /** References some texture from shader code (can also a single texture in the array of textures). */
+    class ShaderTextureResourceBinding : public ShaderResourceBindingBase {
     public:
-        virtual ~ShaderTextureResource() override = default;
+        virtual ~ShaderTextureResourceBinding() override = default;
 
         /**
-         * Makes the shader resource to reference the new (specified) texture.
+         * Makes the binding to reference the new (specified) texture.
          *
-         * @warning Expects that the caller is using some mutex to protect this shader resource
+         * @warning Expects that the caller is using some mutex to protect this binding
          * from being used in the `draw` function while this function is not finished
          * (i.e. make sure the CPU will not queue a new frame while this function is not finished).
          *
@@ -103,11 +103,11 @@ namespace ne {
 
     protected:
         /**
-         * Initializes the resource.
+         * Initializes the binding.
          *
-         * @param sResourceName Name of the resource we are referencing (should be exactly the same as
+         * @param sShaderResourceName Name of the resource we are referencing (should be exactly the same as
          * the resource name written in the shader file we are referencing).
          */
-        ShaderTextureResource(const std::string& sResourceName);
+        ShaderTextureResourceBinding(const std::string& sShaderResourceName);
     };
 } // namespace ne

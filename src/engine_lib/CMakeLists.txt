@@ -38,8 +38,8 @@ set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/HlslShader.cpp
     private/shader/hlsl/RootSignatureGenerator.h
     private/shader/hlsl/RootSignatureGenerator.cpp
-    private/shader/hlsl/resources/HlslShaderTextureResource.h
-    private/shader/hlsl/resources/HlslShaderTextureResource.cpp
+    private/shader/hlsl/resources/HlslShaderTextureResourceBinding.h
+    private/shader/hlsl/resources/HlslShaderTextureResourceBinding.cpp
     private/shader/hlsl/resources/HlslGlobalShaderResourceBinding.cpp
     private/shader/hlsl/resources/HlslGlobalShaderResourceBinding.h
     private/shader/hlsl/HlslComputeShaderInterface.cpp
@@ -160,8 +160,8 @@ set(PROJECT_SOURCES
     private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h
     private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.cpp
     private/shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h
-    private/shader/general/resources/cpuwrite/ShaderCpuWriteResource.cpp
-    private/shader/general/resources/cpuwrite/ShaderCpuWriteResource.h
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.cpp
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h
     private/shader/general/resources/GlobalShaderResourceBinding.cpp
     private/shader/general/resources/GlobalShaderResourceBinding.h
     private/shader/general/resources/GlobalShaderResourceBindingManager.cpp
@@ -184,15 +184,15 @@ set(PROJECT_SOURCES
     private/shader/general/EngineShaderNames.hpp
     private/shader/general/EngineShaders.hpp
     private/shader/general/EngineShaderConstantMacros.hpp
-    private/shader/general/resources/ShaderResource.h
-    private/shader/general/resources/ShaderResource.cpp
+    private/shader/general/resources/ShaderResourceBinding.h
+    private/shader/general/resources/ShaderResourceBinding.cpp
     private/shader/general/resources/ShaderArrayIndexManager.h
     private/shader/general/resources/ShaderArrayIndexManager.cpp
     private/shader/general/resources/ShaderLightsInFrustumSingleType.hpp
     private/shader/glsl/GlslShader.h
     private/shader/glsl/GlslShader.cpp
-    private/shader/glsl/resources/GlslShaderTextureResource.h
-    private/shader/glsl/resources/GlslShaderTextureResource.cpp
+    private/shader/glsl/resources/GlslShaderTextureResourceBinding.h
+    private/shader/glsl/resources/GlslShaderTextureResourceBinding.cpp
     private/shader/glsl/resources/GlslGlobalShaderResourceBinding.cpp
     private/shader/glsl/resources/GlslGlobalShaderResourceBinding.h
     private/shader/glsl/DescriptorSetLayoutGenerator.h
@@ -237,14 +237,14 @@ set(PROJECT_SOURCES
     private/shader/general/ShaderMacro.h
     private/shader/general/ShaderMacro.cpp
     private/shader/general/ShaderFilesystemPaths.hpp
-    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.cpp
-    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h
-    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.cpp
-    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h
-    private/shader/general/resources/texture/ShaderTextureResourceManager.cpp
-    private/shader/general/resources/texture/ShaderTextureResourceManager.h
-    private/shader/general/resources/texture/ShaderTextureResourceUniquePtr.cpp
-    private/shader/general/resources/texture/ShaderTextureResourceUniquePtr.h
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.cpp
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.cpp
+    private/shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h
+    private/shader/general/resources/texture/ShaderTextureResourceBindingManager.cpp
+    private/shader/general/resources/texture/ShaderTextureResourceBindingManager.h
+    private/shader/general/resources/texture/ShaderTextureResourceBindingUniquePtr.cpp
+    private/shader/general/resources/texture/ShaderTextureResourceBindingUniquePtr.h
     public/shader/VulkanAlignmentConstants.hpp
     public/misc/ProjectPaths.h
     private/misc/ProjectPaths.cpp

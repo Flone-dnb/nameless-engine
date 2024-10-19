@@ -32,8 +32,8 @@ namespace ne {
     class PointLightNode;
     class GpuResourceManager;
     class LightingShaderResourceManager;
-    class ShaderCpuWriteResourceManager;
-    class ShaderTextureResourceManager;
+    class ShaderCpuWriteResourceBindingManager;
+    class ShaderTextureResourceBindingManager;
     class ShaderLightArray;
     class ShaderManager;
     class GlobalShaderResourceBindingManager;
@@ -267,7 +267,7 @@ namespace ne {
          *
          * @return Manager.
          */
-        ShaderCpuWriteResourceManager* getShaderCpuWriteResourceManager() const;
+        ShaderCpuWriteResourceBindingManager* getShaderCpuWriteResourceManager() const;
 
         /**
          * Returns manager of shader resources that reference textures.
@@ -276,7 +276,7 @@ namespace ne {
          *
          * @return Manager.
          */
-        ShaderTextureResourceManager* getShaderTextureResourceManager() const;
+        ShaderTextureResourceBindingManager* getShaderTextureResourceManager() const;
 
         /**
          * Returns manager that controls GPU resources of lighting shader resources.
@@ -857,10 +857,10 @@ namespace ne {
         std::unique_ptr<FrameResourceManager> pFrameResourceManager;
 
         /** Stores all shader resources with CPU write access. */
-        std::unique_ptr<ShaderCpuWriteResourceManager> pShaderCpuWriteResourceManager;
+        std::unique_ptr<ShaderCpuWriteResourceBindingManager> pShaderCpuWriteResourceManager;
 
         /** Stores all shader resources that reference textures. */
-        std::unique_ptr<ShaderTextureResourceManager> pShaderTextureResourceManager;
+        std::unique_ptr<ShaderTextureResourceBindingManager> pShaderTextureResourceManager;
 
         /** Stores data of all spawned light sources that is used in shaders. */
         std::unique_ptr<LightingShaderResourceManager> pLightingShaderResourceManager;

@@ -14,7 +14,7 @@
 namespace ne {
     class DynamicCpuWriteShaderResourceArray;
     class DynamicCpuWriteShaderResourceArraySlot;
-    class ShaderCpuWriteResource;
+    class ShaderCpuWriteResourceBinding;
     class VulkanRenderer;
     class VulkanPipeline;
 
@@ -51,7 +51,7 @@ namespace ne {
          * the array.
          */
         std::variant<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>, Error>
-        reserveSlotsInArray(ShaderCpuWriteResource* pShaderResource);
+        reserveSlotsInArray(ShaderCpuWriteResourceBinding* pShaderResource);
 
         /**
          * Attempts to find an array that handles shader resource of the specified name.

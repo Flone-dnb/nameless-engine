@@ -7,9 +7,9 @@
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
 #include "render/general/resources/GpuResource.h"
-#include "shader/general/resources/ShaderResource.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceUniquePtr.h"
-#include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
+#include "shader/general/resources/ShaderResourceBinding.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/shapes/AABB.h"
 #include "material/Material.h"
@@ -68,15 +68,12 @@ namespace ne RNAMESPACE() {
             struct ShaderResources {
                 ShaderResources() = default;
 
-                /**
-                 * Shader single (non-array) resources with CPU write access.
-                 *
-                 * @remark Empty if the node is not spawned.
-                 */
-                std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr> shaderCpuWriteResources;
+                /** Single (non-array) shader resource bindings with CPU write access. */
+                std::unordered_map<std::string, ShaderCpuWriteResourceBindingUniquePtr>
+                    shaderCpuWriteResourceBindings;
 
-                /** Shader resources that reference textures. */
-                std::unordered_map<std::string, ShaderTextureResourceUniquePtr> shaderTextureResources;
+                /** Shader resource bindings that reference textures. */
+                std::unordered_map<std::string, ShaderTextureResourceBindingUniquePtr> shaderTextureResources;
             };
 
             /** Mesh GPU resources. */
@@ -262,20 +259,20 @@ namespace ne RNAMESPACE() {
         virtual void onWorldLocationRotationScaleChanged() override;
 
         /**
-         * Setups callbacks for shader resource with CPU write access to copy data from CPU to
-         * the GPU to be used by shaders.
+         * Setups callbacks for a shader resource (buffer or a texture from the shader code) with CPU write
+         * access to copy the data from the CPU to the GPU to be used by the shaders.
          *
-         * @remark Call this function in your onSpawning function to bind to shader resources, all bindings
-         * will be automatically removed in onDespawning. An error will be shown if this function
-         * is called when the node is not spawned.
+         * @remark Call this function in your @ref onSpawning function to bind to shader resources, all
+         * bindings will be automatically removed in @ref onDespawning. An error will be shown if this
+         * function is called when the node is not spawned.
          *
-         * @remark When data of a resource that you registered was updated on the CPU side you need
-         * to call @ref markShaderCpuWriteResourceToBeCopiedToGpu so that update callbacks will be
-         * called and updated data will be copied to the GPU to be used by shaders.
-         * Note that you don't need to call @ref markShaderCpuWriteResourceToBeCopiedToGpu for
-         * resources you have not registered yourself. Also note that all registered resources
-         * are marked as "need update" by default so you don't have to call
-         * @ref markShaderCpuWriteResourceToBeCopiedToGpu right after calling this function.
+         * @remark When the data of a resource that you registered was updated on the CPU side you need
+         * to call @ref markShaderCpuWriteResourceToBeCopiedToGpu so that the specified update callbacks will
+         * be called and the updated data will be copied to the GPU to be used by the shaders. Note that you
+         * don't need to call @ref markShaderCpuWriteResourceToBeCopiedToGpu for resources you have not
+         * registered yourself. Also note that all registered resources are marked as "needs an update" by
+         * default so you don't have to call @ref markShaderCpuWriteResourceToBeCopiedToGpu right after
+         * calling this function.
          *
          * @param sShaderResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
@@ -288,14 +285,14 @@ namespace ne RNAMESPACE() {
          * @param onFinishedUpdatingResource Function that will be called when the engine has finished
          * copying resource data to the GPU (usually used for unlocking mutexes).
          */
-        void setShaderCpuWriteResourceBindingData(
+        void setShaderCpuWriteResourceBinding(
             const std::string& sShaderResourceName,
             size_t iResourceSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource);
 
         /**
-         * Setups a shader resource that references a texture that will be used in shaders when
+         * Setups a shader resource binding that references a texture from the shader code that is used when
          * this mesh is rendered.
          *
          * @remark Call this function in @ref allocateShaderResources to bind to shader resources, all
@@ -305,11 +302,11 @@ namespace ne RNAMESPACE() {
          * the same as the resource name written in the shader file we are referencing).
          * @param sPathToTextureResourceRelativeRes Path to the directory with texture resource to use.
          */
-        void setShaderTextureResourceBindingData(
+        void setShaderTextureResourceBinding(
             const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes);
 
         /**
-         * Looks for binding created using @ref setShaderCpuWriteResourceBindingData and
+         * Looks for binding created using @ref setShaderCpuWriteResourceBinding and
          * notifies the engine that there is new (updated) data for shader CPU write resource to copy
          * to the GPU to be used by shaders.
          *
@@ -318,7 +315,7 @@ namespace ne RNAMESPACE() {
          * silently ignored without any errors.
          *
          * @remark Note that the callbacks that you have specified in
-         * @ref setShaderCpuWriteResourceBindingData will not be called inside of this function,
+         * @ref setShaderCpuWriteResourceBinding will not be called inside of this function,
          * moreover they are most likely to be called in the next frame(s) (most likely multiple times)
          * when the engine is ready to copy the data to the GPU, so if the resource's data is used by
          * multiple threads in your code, make sure to use mutex or other synchronization primitive

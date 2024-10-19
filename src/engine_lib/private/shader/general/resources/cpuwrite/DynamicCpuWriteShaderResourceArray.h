@@ -17,7 +17,7 @@
 
 namespace ne {
     class GpuResourceManager;
-    class ShaderCpuWriteResource;
+    class ShaderCpuWriteResourceBinding;
     class VulkanRenderer;
     class VulkanPipeline;
 
@@ -67,7 +67,7 @@ namespace ne {
         DynamicCpuWriteShaderResourceArraySlot(
             DynamicCpuWriteShaderResourceArray* pArray,
             size_t iIndexInArray,
-            ShaderCpuWriteResource* pShaderResource);
+            ShaderCpuWriteResourceBinding* pShaderResource);
 
         /**
          * Should be called by array to update the index.
@@ -94,7 +94,7 @@ namespace ne {
         DynamicCpuWriteShaderResourceArray* const pArray = nullptr;
 
         /** Shader resource that uses this slot. */
-        ShaderCpuWriteResource* const pShaderResource = nullptr;
+        ShaderCpuWriteResourceBinding* const pShaderResource = nullptr;
 
         /**
          * Index into @ref pArray to access the slot's data.
@@ -284,7 +284,7 @@ namespace ne {
          * the array.
          */
         std::variant<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>, Error>
-        insert(ShaderCpuWriteResource* pShaderResource);
+        insert(ShaderCpuWriteResourceBinding* pShaderResource);
 
         /**
          * Called by slots in their destructors to notify the array that the slot can be reused.

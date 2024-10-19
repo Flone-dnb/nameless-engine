@@ -8,7 +8,7 @@
 #include <mutex>
 
 // Custom.
-#include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/ShaderResourceBinding.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "render/directx/resources/DirectXResource.h"
@@ -19,12 +19,12 @@ namespace ne {
     class DirectXPso;
 
     /** References some texture from shader code. */
-    class HlslShaderTextureResource : public ShaderTextureResource {
-        // Only shader resource manager should be able to create such resources.
-        friend class ShaderTextureResourceManager;
+    class HlslShaderTextureResourceBinding : public ShaderTextureResourceBinding {
+        // Only the manager should be able to create such resources.
+        friend class ShaderTextureResourceBindingManager;
 
     public:
-        virtual ~HlslShaderTextureResource() override = default;
+        virtual ~HlslShaderTextureResourceBinding() override = default;
 
         /**
          * Copies resource index (into shader arrays) to a root constant.
@@ -43,7 +43,7 @@ namespace ne {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its root constant "
                     "index but this shader resource does not reference the specified pipeline",
-                    getResourceName(),
+                    getShaderResourceName(),
                     mtxUsedPipelineDescriptorRanges.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
@@ -124,7 +124,7 @@ namespace ne {
          * @param usedDescriptorRanges Descriptor ranges that have an SRV binded to the specified texture
          * and a shader constant index for our shader resource.
          */
-        HlslShaderTextureResource(
+        HlslShaderTextureResourceBinding(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
             std::unordered_map<DirectXPso*, std::pair<ContinuousDirectXDescriptorRange*, size_t>>&&
@@ -152,7 +152,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        static std::variant<std::unique_ptr<ShaderTextureResource>, Error> create(
+        static std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> create(
             const std::string& sShaderResourceName,
             const std::unordered_set<Pipeline*>& pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);

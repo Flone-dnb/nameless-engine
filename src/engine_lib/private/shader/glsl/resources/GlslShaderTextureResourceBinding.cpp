@@ -1,4 +1,4 @@
-#include "GlslShaderTextureResource.h"
+#include "GlslShaderTextureResourceBinding.h"
 
 // Standard.
 #include <format>
@@ -12,7 +12,7 @@
 
 namespace ne {
 
-    std::variant<std::unique_ptr<ShaderTextureResource>, Error> GlslShaderTextureResource::create(
+    std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> GlslShaderTextureResourceBinding::create(
         const std::string& sShaderResourceName,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
@@ -83,7 +83,7 @@ namespace ne {
 
         // Pass data to the binding.
         auto pTextureResourceBinding =
-            std::unique_ptr<GlslShaderTextureResource>(new GlslShaderTextureResource(
+            std::unique_ptr<GlslShaderTextureResourceBinding>(new GlslShaderTextureResourceBinding(
                 sShaderResourceName, std::move(pTextureToUse), std::move(pushConstantIndices)));
 
         // At this point we can release the pipelines mutex.
@@ -92,7 +92,7 @@ namespace ne {
     }
 
     std::variant<std::unique_ptr<ShaderArrayIndex>, Error>
-    GlslShaderTextureResource::getTextureIndexInShaderArray(
+    GlslShaderTextureResourceBinding::getTextureIndexInShaderArray(
         const std::string& sShaderResourceName, VulkanPipeline* pPipelineToLookIn) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineResources = pPipelineToLookIn->getInternalResources();
@@ -121,7 +121,7 @@ namespace ne {
         return it->second->reserveIndex();
     }
 
-    std::optional<Error> GlslShaderTextureResource::bindTextureToShaderDescriptorArray(
+    std::optional<Error> GlslShaderTextureResourceBinding::bindTextureToShaderDescriptorArray(
         const std::string& sShaderResourceName,
         VulkanPipeline* pPipelineWithDescriptors,
         VkImageView pTextureView,
@@ -185,7 +185,7 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> GlslShaderTextureResource::onAfterAllPipelinesRefreshedResources() {
+    std::optional<Error> GlslShaderTextureResourceBinding::onAfterAllPipelinesRefreshedResources() {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
 
         // Get texture image view.
@@ -207,7 +207,7 @@ namespace ne {
             }
 
             // Find a resource with our name in the descriptor set layout and update our index.
-            auto pushConstantResult = pPipeline->getUintConstantOffset(getResourceName());
+            auto pushConstantResult = pPipeline->getUintConstantOffset(getShaderResourceName());
             if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantResult));
                 error.addCurrentLocationToErrorStack();
@@ -217,7 +217,10 @@ namespace ne {
 
             // Bind image to descriptor.
             auto optionalError = bindTextureToShaderDescriptorArray(
-                getResourceName(), pVulkanPipeline, pImageView, indices.pShaderArrayIndex->getActualIndex());
+                getShaderResourceName(),
+                pVulkanPipeline,
+                pImageView,
+                indices.pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();
@@ -228,14 +231,14 @@ namespace ne {
         return {};
     }
 
-    std::string GlslShaderTextureResource::getPathToTextureResource() {
+    std::string GlslShaderTextureResourceBinding::getPathToTextureResource() {
         std::scoped_lock guard(mtxUsedTexture.first);
 
         return mtxUsedTexture.second->getPathToResourceRelativeRes();
     }
 
     std::optional<Error>
-    GlslShaderTextureResource::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
+    GlslShaderTextureResourceBinding::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
 
         // Replace used texture.
@@ -254,7 +257,10 @@ namespace ne {
         // Re-bind descriptors because they were re-created.
         for (const auto& [pVulkanPipeline, indices] : mtxPushConstantIndices.second) {
             auto optionalError = bindTextureToShaderDescriptorArray(
-                getResourceName(), pVulkanPipeline, pImageView, indices.pShaderArrayIndex->getActualIndex());
+                getShaderResourceName(),
+                pVulkanPipeline,
+                pImageView,
+                indices.pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;
@@ -265,7 +271,7 @@ namespace ne {
     }
 
     std::optional<Error>
-    GlslShaderTextureResource::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
+    GlslShaderTextureResourceBinding::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
 
         // Make sure at least one pipeline is specified.
@@ -294,7 +300,7 @@ namespace ne {
             }
 
             // Find a resource with our name in the descriptor set layout.
-            auto pushConstantResult = pPipeline->getUintConstantOffset(getResourceName());
+            auto pushConstantResult = pPipeline->getUintConstantOffset(getShaderResourceName());
             if (std::holds_alternative<Error>(pushConstantResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(pushConstantResult));
                 error.addCurrentLocationToErrorStack();
@@ -303,7 +309,8 @@ namespace ne {
             const auto iPushConstantIndex = std::get<size_t>(pushConstantResult);
 
             // Get an index into the shader array.
-            auto shaderArrayIndexResult = getTextureIndexInShaderArray(getResourceName(), pVulkanPipeline);
+            auto shaderArrayIndexResult =
+                getTextureIndexInShaderArray(getShaderResourceName(), pVulkanPipeline);
             if (std::holds_alternative<Error>(shaderArrayIndexResult)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(shaderArrayIndexResult));
                 error.addCurrentLocationToErrorStack();
@@ -314,7 +321,7 @@ namespace ne {
 
             // Bind image to descriptor.
             auto optionalError = bindTextureToShaderDescriptorArray(
-                getResourceName(), pVulkanPipeline, pImageView, pShaderArrayIndex->getActualIndex());
+                getShaderResourceName(), pVulkanPipeline, pImageView, pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();
@@ -329,11 +336,11 @@ namespace ne {
         return {};
     }
 
-    GlslShaderTextureResource::GlslShaderTextureResource(
+    GlslShaderTextureResourceBinding::GlslShaderTextureResourceBinding(
         const std::string& sResourceName,
         std::unique_ptr<TextureHandle> pTextureToUse,
         std::unordered_map<VulkanPipeline*, PushConstantIndices> pushConstantIndices)
-        : ShaderTextureResource(sResourceName) {
+        : ShaderTextureResourceBinding(sResourceName) {
         // Save texture to use.
         mtxUsedTexture.second = std::move(pTextureToUse);
 

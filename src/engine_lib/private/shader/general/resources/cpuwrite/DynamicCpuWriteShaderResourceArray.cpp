@@ -2,7 +2,7 @@
 
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 #include "shader/general/resources/GlobalShaderResourceBindingManager.h"
@@ -15,7 +15,7 @@ namespace ne {
     DynamicCpuWriteShaderResourceArraySlot::DynamicCpuWriteShaderResourceArraySlot(
         DynamicCpuWriteShaderResourceArray* pArray,
         size_t iIndexInArray,
-        ShaderCpuWriteResource* pShaderResource)
+        ShaderCpuWriteResourceBinding* pShaderResource)
         : pArray(pArray), pShaderResource(pShaderResource) {
         // Self check:
         static_assert(
@@ -375,13 +375,13 @@ namespace ne {
           sHandledShaderResourceName(sHandledShaderResourceName), iElementSizeInBytes(iElementSizeInBytes) {}
 
     std::variant<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>, Error>
-    DynamicCpuWriteShaderResourceArray::insert(ShaderCpuWriteResource* pShaderResource) {
+    DynamicCpuWriteShaderResourceArray::insert(ShaderCpuWriteResourceBinding* pShaderResource) {
         // Make sure array's handled resource name is equal to shader resource.
-        if (pShaderResource->getResourceName() != sHandledShaderResourceName) [[unlikely]] {
+        if (pShaderResource->getShaderResourceName() != sHandledShaderResourceName) [[unlikely]] {
             return Error(std::format(
                 "shader resource \"{}\" requested to reserve a memory slot in the array "
                 "but this array only handles shader resources with the name \"{}\"",
-                pShaderResource->getResourceName(),
+                pShaderResource->getShaderResourceName(),
                 sHandledShaderResourceName));
         }
 
@@ -390,7 +390,7 @@ namespace ne {
             return Error(std::format(
                 "shader resource \"{}\" requested to reserve a memory slot with size {} bytes in an array "
                 "but array's element size is {} bytes",
-                pShaderResource->getResourceName(),
+                pShaderResource->getShaderResourceName(),
                 pShaderResource->getResourceDataSizeInBytes(),
                 iElementSizeInBytes));
         }

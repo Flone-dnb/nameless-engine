@@ -9,8 +9,8 @@
 #include "io/Logger.h"
 #include "game/nodes/MeshNode.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceManager.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
 #include "shader/ShaderManager.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "material/TextureManager.h"
@@ -29,12 +29,12 @@ namespace ne {
         static_assert(
             std::is_same_v<
                 decltype(mtxGpuResources.second.shaderResources.shaderCpuWriteResources),
-                std::unordered_map<std::string, ShaderCpuWriteResourceUniquePtr>>,
+                std::unordered_map<std::string, ShaderCpuWriteResourceBindingUniquePtr>>,
             "update reinterpret_casts in both renderers (in draw function)");
         static_assert(
             std::is_same_v<
                 decltype(mtxGpuResources.second.shaderResources.shaderTextureResources),
-                std::unordered_map<std::string, ShaderTextureResourceUniquePtr>>,
+                std::unordered_map<std::string, ShaderTextureResourceBindingUniquePtr>>,
             "update reinterpret_casts in both renderers (in draw function)");
 
 #if defined(WIN32) && defined(DEBUG)
@@ -422,7 +422,7 @@ namespace ne {
         bIsShaderResourcesAllocated = true;
 
         // Set material data binding.
-        setShaderCpuWriteResourceBindingData(
+        setShaderCpuWriteResourceBinding(
             sMaterialShaderBufferName,
             sizeof(MaterialShaderConstants),
             [this]() -> void* { return onStartUpdatingShaderMeshConstants(); },
@@ -430,7 +430,7 @@ namespace ne {
 
         // Set diffuse texture binding (if path is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
-            setShaderTextureResourceBindingData(
+            setShaderTextureResourceBinding(
                 sMaterialShaderDiffuseTextureName, sDiffuseTexturePathRelativeRes);
         }
     }
@@ -470,7 +470,7 @@ namespace ne {
         mtxGpuResources.second.shaderResources = {};
     }
 
-    void Material::setShaderCpuWriteResourceBindingData(
+    void Material::setShaderCpuWriteResourceBinding(
         const std::string& sShaderResourceName,
         size_t iResourceSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
@@ -527,10 +527,10 @@ namespace ne {
 
         // Add to be considered.
         mtxGpuResources.second.shaderResources.shaderCpuWriteResources[sShaderResourceName] =
-            std::get<ShaderCpuWriteResourceUniquePtr>(std::move(result));
+            std::get<ShaderCpuWriteResourceBindingUniquePtr>(std::move(result));
     }
 
-    void Material::setShaderTextureResourceBindingData(
+    void Material::setShaderTextureResourceBinding(
         const std::string& sShaderResourceName, const std::string& sPathToTextureResourceRelativeRes) {
         std::scoped_lock guard(mtxInternalResources.first, mtxGpuResources.first);
 
@@ -597,7 +597,7 @@ namespace ne {
 
         // Add to be considered.
         mtxGpuResources.second.shaderResources.shaderTextureResources[sShaderResourceName] =
-            std::get<ShaderTextureResourceUniquePtr>(std::move(shaderResourceResult));
+            std::get<ShaderTextureResourceBindingUniquePtr>(std::move(shaderResourceResult));
     }
 
     void Material::markShaderCpuWriteResourceAsNeedsUpdate(const std::string& sShaderResourceName) {

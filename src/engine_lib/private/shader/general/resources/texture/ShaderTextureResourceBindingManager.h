@@ -7,8 +7,8 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/ShaderResource.h"
-#include "shader/general/resources/texture/ShaderTextureResourceUniquePtr.h"
+#include "shader/general/resources/ShaderResourceBinding.h"
+#include "shader/general/resources/texture/ShaderTextureResourceBindingUniquePtr.h"
 
 namespace ne {
     class Renderer;
@@ -24,21 +24,21 @@ namespace ne {
      * that are being destroyed because this could happen if instead of this manager we just had
      * some notifications on `ShaderResourceBase` constructor/destructor).
      */
-    class ShaderTextureResourceManager {
+    class ShaderTextureResourceBindingManager {
         // Only renderer should be allowed to create this manager.
         friend class Renderer;
 
         // Unique pointers will notify the manager before destruction.
-        friend class ShaderTextureResourceUniquePtr;
+        friend class ShaderTextureResourceBindingUniquePtr;
 
     public:
-        ShaderTextureResourceManager() = delete;
+        ShaderTextureResourceBindingManager() = delete;
 
-        ShaderTextureResourceManager(const ShaderTextureResourceManager&) = delete;
-        ShaderTextureResourceManager& operator=(const ShaderTextureResourceManager&) = delete;
+        ShaderTextureResourceBindingManager(const ShaderTextureResourceBindingManager&) = delete;
+        ShaderTextureResourceBindingManager& operator=(const ShaderTextureResourceBindingManager&) = delete;
 
         /** Makes sure that no resource exists. */
-        ~ShaderTextureResourceManager();
+        ~ShaderTextureResourceBindingManager();
 
         /**
          * Creates a new render-specific shader resource.
@@ -52,7 +52,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        std::variant<ShaderTextureResourceUniquePtr, Error> createShaderTextureResource(
+        std::variant<ShaderTextureResourceBindingUniquePtr, Error> createShaderTextureResource(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             const std::unordered_set<Pipeline*>& pipelinesToUse,
@@ -67,7 +67,7 @@ namespace ne {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<ShaderTextureResource*, std::unique_ptr<ShaderTextureResource>>>*
+            std::unordered_map<ShaderTextureResourceBinding*, std::unique_ptr<ShaderTextureResourceBinding>>>*
         getResources();
 
     private:
@@ -76,7 +76,7 @@ namespace ne {
          *
          * @param pRenderer
          */
-        ShaderTextureResourceManager(Renderer* pRenderer);
+        ShaderTextureResourceBindingManager(Renderer* pRenderer);
 
         /**
          * Processes resource creation.
@@ -85,8 +85,8 @@ namespace ne {
          *
          * @return Result of resource creation.
          */
-        std::variant<ShaderTextureResourceUniquePtr, Error>
-        handleResourceCreation(std::variant<std::unique_ptr<ShaderTextureResource>, Error> result);
+        std::variant<ShaderTextureResourceBindingUniquePtr, Error>
+        handleResourceCreation(std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> result);
 
         /**
          * Called by shader texture resource unique pointers to destroy the specified resource because it will
@@ -94,7 +94,7 @@ namespace ne {
          *
          * @param pResourceToDestroy Resource to destroy.
          */
-        void destroyResource(ShaderTextureResource* pResourceToDestroy);
+        void destroyResource(ShaderTextureResourceBinding* pResourceToDestroy);
 
         /** Renderer that owns this manager. */
         Renderer* pRenderer = nullptr;
@@ -107,7 +107,7 @@ namespace ne {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<ShaderTextureResource*, std::unique_ptr<ShaderTextureResource>>>
+            std::unordered_map<ShaderTextureResourceBinding*, std::unique_ptr<ShaderTextureResourceBinding>>>
             mtxShaderTextureResources;
     };
 } // namespace ne

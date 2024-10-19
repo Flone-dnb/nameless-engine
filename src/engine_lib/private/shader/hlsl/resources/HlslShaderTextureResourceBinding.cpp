@@ -1,4 +1,4 @@
-#include "HlslShaderTextureResource.h"
+#include "HlslShaderTextureResourceBinding.h"
 
 // Standard.
 #include <format>
@@ -14,7 +14,7 @@
 namespace ne {
 
     std::variant<std::pair<ContinuousDirectXDescriptorRange*, size_t>, Error>
-    HlslShaderTextureResource::getSrvDescriptorRangeAndRootConstantIndex(
+    HlslShaderTextureResourceBinding::getSrvDescriptorRangeAndRootConstantIndex(
         DirectXPso* pPipeline, const std::string& sShaderResourceName) {
         // Get resource manager.
         const auto pResourceManager =
@@ -97,7 +97,8 @@ namespace ne {
             pSrvDescriptorRange, iShaderConstantIndex};
     }
 
-    std::variant<std::unique_ptr<ShaderTextureResource>, Error> HlslShaderTextureResource::create(
+    std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error>
+    HlslShaderTextureResourceBinding::create(
         const std::string& sShaderResourceName,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
@@ -154,20 +155,21 @@ namespace ne {
         }
 
         // Pass data to the binding.
-        auto pResourceBinding = std::unique_ptr<HlslShaderTextureResource>(new HlslShaderTextureResource(
-            sShaderResourceName, std::move(pTextureToUse), std::move(usedDescriptorRanges)));
+        auto pResourceBinding =
+            std::unique_ptr<HlslShaderTextureResourceBinding>(new HlslShaderTextureResourceBinding(
+                sShaderResourceName, std::move(pTextureToUse), std::move(usedDescriptorRanges)));
 
         // At this point we can release the pipelines mutex.
 
         return pResourceBinding;
     }
 
-    HlslShaderTextureResource::HlslShaderTextureResource(
+    HlslShaderTextureResourceBinding::HlslShaderTextureResourceBinding(
         const std::string& sResourceName,
         std::unique_ptr<TextureHandle> pTextureToUse,
         std::unordered_map<DirectXPso*, std::pair<ContinuousDirectXDescriptorRange*, size_t>>&&
             usedDescriptorRanges)
-        : ShaderTextureResource(sResourceName) {
+        : ShaderTextureResourceBinding(sResourceName) {
         // Save parameters.
         mtxUsedTexture.second = std::move(pTextureToUse);
         mtxUsedPipelineDescriptorRanges.second = std::move(usedDescriptorRanges);
@@ -180,7 +182,7 @@ namespace ne {
         }
     }
 
-    std::optional<Error> HlslShaderTextureResource::onAfterAllPipelinesRefreshedResources() {
+    std::optional<Error> HlslShaderTextureResourceBinding::onAfterAllPipelinesRefreshedResources() {
         std::scoped_lock guard(mtxUsedPipelineDescriptorRanges.first);
 
         // Collect used pipelines into a set.
@@ -200,7 +202,7 @@ namespace ne {
     }
 
     std::optional<Error>
-    HlslShaderTextureResource::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
+    HlslShaderTextureResourceBinding::useNewTexture(std::unique_ptr<TextureHandle> pTextureToUse) {
         std::scoped_lock guard(mtxUsedTexture.first, mtxUsedPipelineDescriptorRanges.first);
 
         // Note: don't unbind SRV from the old texture because that texture can be used by someone else.
@@ -228,8 +230,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
-    HlslShaderTextureResource::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
+    std::optional<Error> HlslShaderTextureResourceBinding::changeUsedPipelines(
+        const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxUsedTexture.first, mtxUsedPipelineDescriptorRanges.first);
 
         // Make sure at least one pipeline is specified.
@@ -254,7 +256,7 @@ namespace ne {
             }
 
             // Get SRV descriptor range.
-            auto result = getSrvDescriptorRangeAndRootConstantIndex(pDirectXPso, getResourceName());
+            auto result = getSrvDescriptorRangeAndRootConstantIndex(pDirectXPso, getShaderResourceName());
             if (std::holds_alternative<Error>(result)) {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

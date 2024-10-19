@@ -17,11 +17,11 @@
 #include "material/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 #include "game/camera/CameraProperties.h"
 #include "game/camera/CameraManager.h"
-#include "shader/hlsl/resources/HlslShaderTextureResource.h"
+#include "shader/hlsl/resources/HlslShaderTextureResourceBinding.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
@@ -658,11 +658,11 @@ namespace ne {
 
                     // Find and bind mesh data resource since only it is used in vertex shader.
                     const auto& meshDataIt =
-                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.find(
                             MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
                     if (meshDataIt ==
-                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                        pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.end())
                         [[unlikely]] {
                         Error error(std::format(
                             "expected to find \"{}\" shader resource",
@@ -1001,11 +1001,11 @@ namespace ne {
 
                             // Find and bind mesh data resource since only it is used in vertex shader.
                             const auto& meshDataIt =
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.find(
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.find(
                                     MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
                             if (meshDataIt ==
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources.end())
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.end())
                                 [[unlikely]] {
                                 Error error(std::format(
                                     "expected to find \"{}\" shader resource",
@@ -1466,7 +1466,7 @@ namespace ne {
                 // Set material's textures.
                 for (const auto& [sResourceName, pShaderTextureResource] :
                      materialResources.shaderTextureResources) {
-                    reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                    reinterpret_cast<HlslShaderTextureResourceBinding*>(pShaderTextureResource.getResource())
                         ->copyResourceIndexToRootConstants(pRootConstantsManager, pDirectXPso);
                 }
 
@@ -1481,7 +1481,7 @@ namespace ne {
 
                     // Set mesh's CPU-write buffers.
                     for (const auto& [sResourceName, pShaderCpuWriteResource] :
-                         pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResources) {
+                         pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings) {
                         pShaderCpuWriteResource.getResource()->copyResourceIndexToShaderConstants(
                             pRootConstantsManager, pDirectXPso, iCurrentFrameResourceIndex);
                     }
@@ -1489,7 +1489,8 @@ namespace ne {
                     // Set mesh's textures.
                     for (const auto& [sResourceName, pShaderTextureResource] :
                          pMtxMeshGpuResources->second.shaderResources.shaderTextureResources) {
-                        reinterpret_cast<HlslShaderTextureResource*>(pShaderTextureResource.getResource())
+                        reinterpret_cast<HlslShaderTextureResourceBinding*>(
+                            pShaderTextureResource.getResource())
                             ->copyResourceIndexToRootConstants(pRootConstantsManager, pDirectXPso);
                     }
 

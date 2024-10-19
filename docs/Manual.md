@@ -2766,7 +2766,7 @@ Now let's tell the engine how to pass your buffer to shaders:
 void CustomMeshNode::onSpawning(){
     SpatialNode::onSpawning();
 
-    setShaderCpuWriteResourceBindingData(   // call this function only in `onSpawning`, see function docs
+    setShaderCpuWriteResourceBinding(       // call this function only in `onSpawning`, see function docs
         "customData",                       // name of the resource written in your shader file (HLSL/GLSL)
         sizeof(CustomMeshShaderConstants),  // size of your buffer
         [this]() -> void* { return onStartedUpdatingShaderConstants(); },
@@ -2849,9 +2849,9 @@ Once you have a texture in your `res` directory you need to bind the file to the
 void MyMeshNode::onSpawning(){
     MeshNode::onSpawning();
 
-    setShaderTextureResourceBindingData(    // call this function only in `onSpawning`, see function docs
-        "customTexture",                    // name of the resource
-        "game/stone"                        // path relative `res`
+    setShaderTextureResourceBinding(    // call this function only in `onSpawning`, see function docs
+        "customTexture",                // name of the resource
+        "game/stone"                    // path relative `res`
     );
 }
 ```

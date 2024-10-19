@@ -55,7 +55,7 @@ namespace ne {
             std::array<VkDescriptorSet, FrameResourceManager::getFrameResourceCount()> vDescriptorSets;
 
             /**
-             * Map of pairs "resource name" (from GLSL code) - "layout binding index".
+             * Map of pairs "shader resource name" (from GLSL code) - "layout binding index".
              *
              * @remark Binding index in the map reference descriptor sets from @ref vDescriptorSets.
              *

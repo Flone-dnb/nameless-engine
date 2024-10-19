@@ -1,4 +1,4 @@
-#include "ShaderCpuWriteResource.h"
+#include "ShaderCpuWriteResourceBinding.h"
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
@@ -9,7 +9,7 @@
 
 namespace ne {
 
-    std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> ShaderCpuWriteResource::create(
+    std::variant<std::unique_ptr<ShaderCpuWriteResourceBinding>, Error> ShaderCpuWriteResourceBinding::create(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceSizeInBytes,
@@ -39,7 +39,7 @@ namespace ne {
         auto constantOffsets = std::get<std::unordered_map<Pipeline*, size_t>>(std::move(result));
 
         // Create shader resource.
-        auto pShaderResource = std::unique_ptr<ShaderCpuWriteResource>(new ShaderCpuWriteResource(
+        auto pShaderResource = std::unique_ptr<ShaderCpuWriteResourceBinding>(new ShaderCpuWriteResourceBinding(
             sShaderResourceName,
             iResourceSizeInBytes,
             onStartedUpdatingResource,
@@ -79,10 +79,10 @@ namespace ne {
     }
 
     std::optional<Error>
-    ShaderCpuWriteResource::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
+    ShaderCpuWriteResourceBinding::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxUintShaderConstantOffsets.first);
 
-        auto result = getUintShaderConstantOffsetsFromPipelines(pipelinesToUse, getResourceName());
+        auto result = getUintShaderConstantOffsetsFromPipelines(pipelinesToUse, getShaderResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -96,7 +96,7 @@ namespace ne {
     }
 
     std::variant<std::unordered_map<Pipeline*, size_t>, Error>
-    ShaderCpuWriteResource::getUintShaderConstantOffsetsFromPipelines(
+    ShaderCpuWriteResourceBinding::getUintShaderConstantOffsetsFromPipelines(
         const std::unordered_set<Pipeline*>& pipelines, const std::string& sFieldName) {
         // Make sure at least one pipeline is specified.
         if (pipelines.empty()) [[unlikely]] {
@@ -121,19 +121,20 @@ namespace ne {
         return offsets;
     }
 
-    ShaderCpuWriteResource::ShaderCpuWriteResource(
-        const std::string& sResourceName,
+    ShaderCpuWriteResourceBinding::ShaderCpuWriteResourceBinding(
+        const std::string& sShaderResourceName,
         size_t iResourceDataSizeInBytes,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource,
         const std::unordered_map<Pipeline*, size_t>& uintShaderConstantOffsets)
-        : ShaderResourceBase(sResourceName), onStartedUpdatingResource(onStartedUpdatingResource),
+        : ShaderResourceBindingBase(sShaderResourceName),
+          onStartedUpdatingResource(onStartedUpdatingResource),
           onFinishedUpdatingResource(onFinishedUpdatingResource),
           iResourceDataSizeInBytes(iResourceDataSizeInBytes) {
         mtxUintShaderConstantOffsets.second = uintShaderConstantOffsets;
     }
 
-    std::optional<Error> ShaderCpuWriteResource::onAfterAllPipelinesRefreshedResources() {
+    std::optional<Error> ShaderCpuWriteResourceBinding::onAfterAllPipelinesRefreshedResources() {
         std::scoped_lock guard(mtxUintShaderConstantOffsets.first);
 
         // Collect used pipelines.
@@ -143,7 +144,7 @@ namespace ne {
         }
 
         // Find possibly new field offsets.
-        auto result = getUintShaderConstantOffsetsFromPipelines(pipelines, getResourceName());
+        auto result = getUintShaderConstantOffsetsFromPipelines(pipelines, getShaderResourceName());
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();

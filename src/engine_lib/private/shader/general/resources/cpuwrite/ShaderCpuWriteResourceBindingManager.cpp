@@ -1,4 +1,4 @@
-#include "ShaderCpuWriteResourceManager.h"
+#include "ShaderCpuWriteResourceBindingManager.h"
 
 // Custom.
 #include "io/Logger.h"
@@ -7,15 +7,15 @@
 
 namespace ne {
 
-    std::variant<ShaderCpuWriteResourceUniquePtr, Error>
-    ShaderCpuWriteResourceManager::createShaderCpuWriteResource(
+    std::variant<ShaderCpuWriteResourceBindingUniquePtr, Error>
+    ShaderCpuWriteResourceBindingManager::createShaderCpuWriteResource(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         size_t iResourceDataSizeInBytes,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
         const std::function<void*()>& onStartedUpdatingResource,
         const std::function<void()>& onFinishedUpdatingResource) {
-        auto result = ShaderCpuWriteResource::create(
+        auto result = ShaderCpuWriteResourceBinding::create(
             sShaderResourceName,
             sResourceAdditionalInfo,
             iResourceDataSizeInBytes,
@@ -25,9 +25,9 @@ namespace ne {
         return handleResourceCreation(std::move(result));
     }
 
-    std::variant<ShaderCpuWriteResourceUniquePtr, Error>
-    ShaderCpuWriteResourceManager::handleResourceCreation(
-        std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> result) {
+    std::variant<ShaderCpuWriteResourceBindingUniquePtr, Error>
+    ShaderCpuWriteResourceBindingManager::handleResourceCreation(
+        std::variant<std::unique_ptr<ShaderCpuWriteResourceBinding>, Error> result) {
         // Check if there was an error.
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
@@ -36,7 +36,7 @@ namespace ne {
         }
 
         // Get results.
-        auto pResource = std::get<std::unique_ptr<ShaderCpuWriteResource>>(std::move(result));
+        auto pResource = std::get<std::unique_ptr<ShaderCpuWriteResourceBinding>>(std::move(result));
         auto pRawResource = pResource.get();
 
         // Add to be considered.
@@ -48,10 +48,10 @@ namespace ne {
             set.insert(pRawResource);
         }
 
-        return ShaderCpuWriteResourceUniquePtr(this, pRawResource);
+        return ShaderCpuWriteResourceBindingUniquePtr(this, pRawResource);
     }
 
-    void ShaderCpuWriteResourceManager::updateResources(size_t iCurrentFrameResourceIndex) {
+    void ShaderCpuWriteResourceBindingManager::updateResources(size_t iCurrentFrameResourceIndex) {
         PROFILE_FUNC;
 
         std::scoped_lock shaderRwResourceGuard(mtxShaderCpuWriteResources.first);
@@ -72,7 +72,7 @@ namespace ne {
         resourcesToUpdate.clear();
     }
 
-    void ShaderCpuWriteResourceManager::markResourceAsNeedsUpdate(ShaderCpuWriteResource* pResource) {
+    void ShaderCpuWriteResourceBindingManager::markResourceAsNeedsUpdate(ShaderCpuWriteResourceBinding* pResource) {
         PROFILE_FUNC;
 
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
@@ -94,7 +94,7 @@ namespace ne {
         }
     }
 
-    void ShaderCpuWriteResourceManager::destroyResource(ShaderCpuWriteResource* pResourceToDestroy) {
+    void ShaderCpuWriteResourceBindingManager::destroyResource(ShaderCpuWriteResourceBinding* pResourceToDestroy) {
         PROFILE_FUNC;
 
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
@@ -114,16 +114,16 @@ namespace ne {
         mtxShaderCpuWriteResources.second.all.erase(it);
     }
 
-    std::pair<std::recursive_mutex, ShaderCpuWriteResourceManager::Resources>*
-    ShaderCpuWriteResourceManager::getResources() {
+    std::pair<std::recursive_mutex, ShaderCpuWriteResourceBindingManager::Resources>*
+    ShaderCpuWriteResourceBindingManager::getResources() {
         return &mtxShaderCpuWriteResources;
     }
 
-    ShaderCpuWriteResourceManager::ShaderCpuWriteResourceManager(Renderer* pRenderer) {
+    ShaderCpuWriteResourceBindingManager::ShaderCpuWriteResourceBindingManager(Renderer* pRenderer) {
         this->pRenderer = pRenderer;
     }
 
-    ShaderCpuWriteResourceManager::~ShaderCpuWriteResourceManager() {
+    ShaderCpuWriteResourceBindingManager::~ShaderCpuWriteResourceBindingManager() {
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
 
         // Make sure there are no CPU write resources.
@@ -131,9 +131,9 @@ namespace ne {
             // Prepare their names and count.
             std::unordered_map<std::string, size_t> leftResources;
             for (const auto& [pRawResource, pResource] : mtxShaderCpuWriteResources.second.all) {
-                const auto it = leftResources.find(pResource->getResourceName());
+                const auto it = leftResources.find(pResource->getShaderResourceName());
                 if (it == leftResources.end()) {
-                    leftResources[pResource->getResourceName()] = 1;
+                    leftResources[pResource->getShaderResourceName()] = 1;
                 } else {
                     it->second += 1;
                 }

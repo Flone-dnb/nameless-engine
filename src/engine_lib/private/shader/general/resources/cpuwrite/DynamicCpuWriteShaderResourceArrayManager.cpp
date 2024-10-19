@@ -3,7 +3,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResource.h"
+#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
 #include "misc/Profiler.hpp"
 
 namespace ne {
@@ -13,16 +13,16 @@ namespace ne {
         : pResourceManager(pResourceManager) {}
 
     std::variant<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>, Error>
-    DynamicCpuWriteShaderResourceArrayManager::reserveSlotsInArray(ShaderCpuWriteResource* pShaderResource) {
+    DynamicCpuWriteShaderResourceArrayManager::reserveSlotsInArray(ShaderCpuWriteResourceBinding* pShaderResource) {
         std::scoped_lock guard(mtxCpuWriteShaderResourceArrays.first);
 
         // Check if we already have an array for resources with this name.
-        auto it = mtxCpuWriteShaderResourceArrays.second.find(pShaderResource->getResourceName());
+        auto it = mtxCpuWriteShaderResourceArrays.second.find(pShaderResource->getShaderResourceName());
         if (it == mtxCpuWriteShaderResourceArrays.second.end()) {
             // Create a new array for this resource.
             auto result = DynamicCpuWriteShaderResourceArray::create(
                 pResourceManager,
-                pShaderResource->getResourceName(),
+                pShaderResource->getShaderResourceName(),
                 pShaderResource->getResourceDataSizeInBytes());
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
@@ -34,7 +34,7 @@ namespace ne {
             auto pCreatedArrayRaw = pCreatedArray.get();
 
             // Save.
-            mtxCpuWriteShaderResourceArrays.second[pShaderResource->getResourceName()] =
+            mtxCpuWriteShaderResourceArrays.second[pShaderResource->getShaderResourceName()] =
                 std::move(pCreatedArray);
 
             // Calculate еру total size of all arrays now.
@@ -48,12 +48,12 @@ namespace ne {
                 "created a new CPU-write array (with capacity step size {}) to handle the data of the shader "
                 "CPU write resource \"{}\" (CPU-write arrays now in total: {} and their total size: {})",
                 pCreatedArrayRaw->getCapacityStepSize(),
-                pShaderResource->getResourceName(),
+                pShaderResource->getShaderResourceName(),
                 mtxCpuWriteShaderResourceArrays.second.size(),
                 formatBytesToMegabytes(iTotalSizeInBytes)));
 
             // Update iterator.
-            it = mtxCpuWriteShaderResourceArrays.second.find(pShaderResource->getResourceName());
+            it = mtxCpuWriteShaderResourceArrays.second.find(pShaderResource->getShaderResourceName());
         }
 
         // Make sure this array's element size is equal to the requested one.
@@ -69,9 +69,9 @@ namespace ne {
                 "have 2 different shaders with 2 different resources (in size) but both resources in both "
                 "shaders have the same name which is an error, if this is the case, please rename one of "
                 "the resources",
-                pShaderResource->getResourceName(),
+                pShaderResource->getShaderResourceName(),
                 pShaderResource->getResourceDataSizeInBytes(),
-                pShaderResource->getResourceName(),
+                pShaderResource->getShaderResourceName(),
                 it->second->getElementSize(),
                 pShaderResource->getResourceDataSizeInBytes()));
         }

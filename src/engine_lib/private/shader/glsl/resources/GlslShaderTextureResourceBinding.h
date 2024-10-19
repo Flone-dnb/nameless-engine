@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/ShaderResourceBinding.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
 
@@ -20,9 +20,9 @@ namespace ne {
     class VulkanPipeline;
 
     /** References some texture from shader code. */
-    class GlslShaderTextureResource : public ShaderTextureResource {
-        // Only shader resource manager should be able to create such resources.
-        friend class ShaderTextureResourceManager;
+    class GlslShaderTextureResourceBinding : public ShaderTextureResourceBinding {
+        // Only the manager should be able to create such resources.
+        friend class ShaderTextureResourceBindingManager;
 
         /** Groups information about a specific push constant. */
         struct PushConstantIndices {
@@ -59,7 +59,7 @@ namespace ne {
         };
 
     public:
-        virtual ~GlslShaderTextureResource() override = default;
+        virtual ~GlslShaderTextureResourceBinding() override = default;
 
         /**
          * Returns path to a file/directory that stores used texture resource.
@@ -85,7 +85,7 @@ namespace ne {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its push constant "
                     "index but this shader resource does not reference the specified pipeline",
-                    getResourceName(),
+                    getShaderResourceName(),
                     mtxPushConstantIndices.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
@@ -141,7 +141,7 @@ namespace ne {
          * array.
          * @param pushConstantIndices Indices of push constants (per-pipeline) to copy texture index to.
          */
-        GlslShaderTextureResource(
+        GlslShaderTextureResourceBinding(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
             std::unordered_map<VulkanPipeline*, PushConstantIndices> pushConstantIndices);
@@ -168,7 +168,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        static std::variant<std::unique_ptr<ShaderTextureResource>, Error> create(
+        static std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> create(
             const std::string& sShaderResourceName,
             const std::unordered_set<Pipeline*>& pipelinesToUse,
             std::unique_ptr<TextureHandle> pTextureToUse);

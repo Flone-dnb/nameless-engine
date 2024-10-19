@@ -11,7 +11,7 @@
 #include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
-#include "shader/general/resources/ShaderResource.h"
+#include "shader/general/resources/ShaderResourceBinding.h"
 #include "misc/Error.h"
 
 namespace ne {
@@ -22,12 +22,12 @@ namespace ne {
      * References a single (non-array) shader resource (that is written in a shader file)
      * that has CPU write access available (can be updated from the CPU side).
      */
-    class ShaderCpuWriteResource : public ShaderResourceBase {
+    class ShaderCpuWriteResourceBinding : public ShaderResourceBindingBase {
         // Only manager should be able to create this resource and update data of this resource.
-        friend class ShaderCpuWriteResourceManager;
+        friend class ShaderCpuWriteResourceBindingManager;
 
     public:
-        virtual ~ShaderCpuWriteResource() override = default;
+        virtual ~ShaderCpuWriteResourceBinding() override = default;
 
         /**
          * Copies resource index (into shader arrays) to a root/push constant.
@@ -51,7 +51,7 @@ namespace ne {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its push constant "
                     "index but this shader resource does not reference the specified pipeline",
-                    getResourceName(),
+                    getShaderResourceName(),
                     mtxUintShaderConstantOffsets.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
@@ -107,7 +107,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
-        static std::variant<std::unique_ptr<ShaderCpuWriteResource>, Error> create(
+        static std::variant<std::unique_ptr<ShaderCpuWriteResourceBinding>, Error> create(
             const std::string& sShaderResourceName,
             const std::string& sResourceAdditionalInfo,
             size_t iResourceSizeInBytes,
@@ -133,7 +133,7 @@ namespace ne {
          *
          * @remark Only used internally, instead use @ref create.
          *
-         * @param sResourceName                Name of the resource we are referencing (should be exactly the
+         * @param sShaderResourceName          Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
          * @param iResourceDataSizeInBytes     Size (in bytes) of the data that this resource will contain.
          * @param onStartedUpdatingResource    Function that will be called when started updating resource
@@ -144,8 +144,8 @@ namespace ne {
          * @param uintShaderConstantOffsets    Offsets of root/push constants (per-pipeline) to copy an index
          * into array to.
          */
-        ShaderCpuWriteResource(
-            const std::string& sResourceName,
+        ShaderCpuWriteResourceBinding(
+            const std::string& sShaderResourceName,
             size_t iResourceDataSizeInBytes,
             const std::function<void*()>& onStartedUpdatingResource,
             const std::function<void()>& onFinishedUpdatingResource,

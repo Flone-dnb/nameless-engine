@@ -1,18 +1,18 @@
-#include "ShaderTextureResourceManager.h"
+#include "ShaderTextureResourceBindingManager.h"
 
 // Custom.
 #include "io/Logger.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "shader/hlsl/resources/HlslShaderTextureResource.h"
+#include "shader/hlsl/resources/HlslShaderTextureResourceBinding.h"
 #endif
 #include "render/vulkan/VulkanRenderer.h"
-#include "shader/glsl/resources/GlslShaderTextureResource.h"
+#include "shader/glsl/resources/GlslShaderTextureResourceBinding.h"
 
 namespace ne {
 
-    std::variant<ShaderTextureResourceUniquePtr, Error>
-    ShaderTextureResourceManager::createShaderTextureResource(
+    std::variant<ShaderTextureResourceBindingUniquePtr, Error>
+    ShaderTextureResourceBindingManager::createShaderTextureResource(
         const std::string& sShaderResourceName,
         const std::string& sResourceAdditionalInfo,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
@@ -20,13 +20,13 @@ namespace ne {
         // Create new resource.
 #if defined(WIN32)
         if (dynamic_cast<DirectXRenderer*>(pRenderer) != nullptr) {
-            auto result = HlslShaderTextureResource::create(
+            auto result = HlslShaderTextureResourceBinding::create(
                 sShaderResourceName, pipelinesToUse, std::move(pTextureToUse));
             return handleResourceCreation(std::move(result));
         }
 #endif
         if (dynamic_cast<VulkanRenderer*>(pRenderer) != nullptr) {
-            auto result = GlslShaderTextureResource::create(
+            auto result = GlslShaderTextureResourceBinding::create(
                 sShaderResourceName, pipelinesToUse, std::move(pTextureToUse));
             return handleResourceCreation(std::move(result));
         }
@@ -36,8 +36,9 @@ namespace ne {
         throw std::runtime_error(error.getFullErrorMessage());
     }
 
-    std::variant<ShaderTextureResourceUniquePtr, Error> ShaderTextureResourceManager::handleResourceCreation(
-        std::variant<std::unique_ptr<ShaderTextureResource>, Error> result) {
+    std::variant<ShaderTextureResourceBindingUniquePtr, Error>
+    ShaderTextureResourceBindingManager::handleResourceCreation(
+        std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> result) {
         // Check if there was an error.
         if (std::holds_alternative<Error>(result)) {
             auto error = std::get<Error>(std::move(result));
@@ -46,17 +47,17 @@ namespace ne {
         }
 
         // Get results.
-        auto pResource = std::get<std::unique_ptr<ShaderTextureResource>>(std::move(result));
+        auto pResource = std::get<std::unique_ptr<ShaderTextureResourceBinding>>(std::move(result));
         auto pRawResource = pResource.get();
 
         // Add to be considered.
         std::scoped_lock guard(mtxShaderTextureResources.first);
         mtxShaderTextureResources.second[pRawResource] = std::move(pResource);
 
-        return ShaderTextureResourceUniquePtr(this, pRawResource);
+        return ShaderTextureResourceBindingUniquePtr(this, pRawResource);
     }
 
-    void ShaderTextureResourceManager::destroyResource(ShaderTextureResource* pResourceToDestroy) {
+    void ShaderTextureResourceBindingManager::destroyResource(ShaderTextureResourceBinding* pResourceToDestroy) {
         std::scoped_lock guard(mtxShaderTextureResources.first);
 
         // Find this resource.
@@ -73,16 +74,16 @@ namespace ne {
 
     std::pair<
         std::recursive_mutex,
-        std::unordered_map<ShaderTextureResource*, std::unique_ptr<ShaderTextureResource>>>*
-    ShaderTextureResourceManager::getResources() {
+        std::unordered_map<ShaderTextureResourceBinding*, std::unique_ptr<ShaderTextureResourceBinding>>>*
+    ShaderTextureResourceBindingManager::getResources() {
         return &mtxShaderTextureResources;
     }
 
-    ShaderTextureResourceManager::ShaderTextureResourceManager(Renderer* pRenderer) {
+    ShaderTextureResourceBindingManager::ShaderTextureResourceBindingManager(Renderer* pRenderer) {
         this->pRenderer = pRenderer;
     }
 
-    ShaderTextureResourceManager::~ShaderTextureResourceManager() {
+    ShaderTextureResourceBindingManager::~ShaderTextureResourceBindingManager() {
         std::scoped_lock guard(mtxShaderTextureResources.first);
 
         // Make sure there are no CPU write resources.
@@ -90,9 +91,9 @@ namespace ne {
             // Prepare their names and count.
             std::unordered_map<std::string, size_t> leftResources;
             for (const auto& [pRawResource, pResource] : mtxShaderTextureResources.second) {
-                const auto it = leftResources.find(pResource->getResourceName());
+                const auto it = leftResources.find(pResource->getShaderResourceName());
                 if (it == leftResources.end()) {
-                    leftResources[pResource->getResourceName()] = 1;
+                    leftResources[pResource->getShaderResourceName()] = 1;
                 } else {
                     it->second += 1;
                 }

@@ -26,7 +26,7 @@ jobs:
       - name: Run shader-formatter
         run: |
           cd .github/scripts/run_shader_formatter_on_source/
-          go run . ../../../res
+          go run . ../../../res/engine/shaders
   build-tests-windows:
     name: Build and run tests on Windows
     runs-on: windows-latest

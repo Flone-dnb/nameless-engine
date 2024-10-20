@@ -23,8 +23,17 @@ func main() {
 
 	// Save arguments.
 	var path_to_shaders = os.Args[1]
+	fi, err := os.Stat(path_to_shaders)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if !fi.Mode().IsDir() {
+		fmt.Println("expected the specified path", path_to_shaders, "to be a directory")
+		os.Exit(1)
+	}
 
-	var path_to_shader_formatter = filepath.Dir(path_to_shaders);
+	var path_to_shader_formatter = filepath.Dir(path_to_shaders)
 	setup_shader_formatter(path_to_shader_formatter)
 
 	// Create a new shell session.
@@ -34,9 +43,8 @@ func main() {
 	session.SetDir(path_to_shaders)
 
 	// Run formatter on each source file.
-	fmt.Println()
-	fmt.Println("Running shader-formatter...")
-	var err = session.Command("./../shader-formatter", path_to_shaders, "--only-scan").Run()
+	fmt.Println("Running shader-formatter in path", path_to_shaders)
+	err = session.Command("./../shader-formatter", path_to_shaders, "--only-scan").Run()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

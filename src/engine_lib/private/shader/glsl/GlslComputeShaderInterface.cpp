@@ -2,7 +2,7 @@
 
 // Custom.
 #include "render/vulkan/pipeline/VulkanPipeline.h"
-#include "render/vulkan/resources/VulkanResource.h"
+#include "render/vulkan/resource/VulkanResource.h"
 #include "render/vulkan/VulkanRenderer.h"
 
 namespace ne {

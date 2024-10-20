@@ -5,8 +5,8 @@
 
 // Custom.
 #include "render/Renderer.h"
-#include "render/general/resources/frame/FrameResourceManager.h"
-#include "render/vulkan/resources/VulkanResource.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
+#include "render/vulkan/resource/VulkanResource.h"
 #include "material/Material.h"
 
 // External.

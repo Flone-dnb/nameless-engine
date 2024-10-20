@@ -9,7 +9,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/resources/GpuResource.h"
+#include "render/general/resource/GpuResource.h"
 #include "material/TextureHandle.h"
 
 namespace ne {

@@ -8,10 +8,10 @@
 #include "io/Serializable.h"
 #include "shader/general/ShaderMacro.h"
 #include "math/GLMath.hpp"
-#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
-#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingUniquePtr.h"
+#include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
+#include "shader/general/resource/binding/texture/ShaderTextureResourceBindingUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
-#include "render/general/resources/MeshData.h"
+#include "render/general/resource/MeshData.h"
 #include "render/general/pipeline/PipelineSharedPtr.h"
 
 #include "Material.generated.h"

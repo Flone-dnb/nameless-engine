@@ -9,11 +9,11 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/resources/frame/FrameResourceManager.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
 #include "render/RenderSettings.h"
 #include "game/camera/CameraProperties.h"
 #include "render/RenderStatistics.h"
-#include "render/general/resources/MeshData.h"
+#include "render/general/resource/MeshData.h"
 #include "shader/ComputeShaderInterface.h"
 
 namespace ne {

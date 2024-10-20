@@ -1,7 +1,7 @@
 // Custom.
 #include "game/GameInstance.h"
 #include "game/Window.h"
-#include "shader/general/resources/LightingShaderResourceManager.h"
+#include "shader/general/resource/LightingShaderResourceManager.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

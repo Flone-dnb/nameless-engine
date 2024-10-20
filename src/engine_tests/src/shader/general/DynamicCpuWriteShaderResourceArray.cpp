@@ -1,13 +1,13 @@
 ﻿// Custom.
-#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
+#include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "render/vulkan/resources/VulkanResourceManager.h"
-#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
+#include "render/vulkan/resource/VulkanResourceManager.h"
+#include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "game/nodes/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
-#include "render/general/resources/frame/FrameResourceManager.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

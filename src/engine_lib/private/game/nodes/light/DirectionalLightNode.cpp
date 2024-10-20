@@ -3,8 +3,8 @@
 // Custom.
 #include "game/Window.h"
 #include "render/Renderer.h"
-#include "render/general/resources/shadow/ShadowMapManager.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resource/shadow/ShadowMapManager.h"
+#include "render/general/resource/GpuResourceManager.h"
 
 #include "DirectionalLightNode.generated_impl.h"
 

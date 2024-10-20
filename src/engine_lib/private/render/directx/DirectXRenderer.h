@@ -11,7 +11,7 @@
 // Custom.
 #include "render/Renderer.h"
 #include "misc/Error.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resource/DirectXResource.h"
 
 // External.
 #include "directx/d3dx12.h"

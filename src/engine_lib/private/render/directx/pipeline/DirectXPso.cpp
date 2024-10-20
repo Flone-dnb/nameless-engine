@@ -7,7 +7,7 @@
 #include "io/Logger.h"
 #include "render/RenderSettings.h"
 #include "shader/hlsl/formats/HlslVertexFormatDescription.h"
-#include "render/general/resources/shadow/ShadowMapManager.h"
+#include "render/general/resource/shadow/ShadowMapManager.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 
 namespace ne {

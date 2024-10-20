@@ -12,7 +12,7 @@
 #include "shader/general/Shader.h"
 #include "shader/general/EngineShaders.hpp"
 #include "io/TextureImporter.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resource/GpuResourceManager.h"
 #include "shader/ShaderManager.h"
 #include "render/general/pipeline/PipelineManager.h"
 #if defined(WIN32)

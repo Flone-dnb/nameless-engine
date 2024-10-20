@@ -7,8 +7,8 @@
 #include "shader/hlsl/HlslShader.h"
 #include "misc/Error.h"
 #include "misc/Profiler.hpp"
-#include "shader/general/resources/LightingShaderResourceManager.h"
-#include "render/general/resources/shadow/ShadowMapManager.h"
+#include "shader/general/resource/LightingShaderResourceManager.h"
+#include "render/general/resource/shadow/ShadowMapManager.h"
 #include "render/directx/DirectXRenderer.h"
 
 namespace ne {

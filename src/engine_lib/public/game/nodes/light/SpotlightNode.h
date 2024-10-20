@@ -4,9 +4,9 @@
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
-#include "shader/general/resources/LightingShaderResourceManager.h"
+#include "shader/general/resource/LightingShaderResourceManager.h"
 #include "misc/shapes/Cone.h"
-#include "render/general/resources/shadow/ShadowMapHandle.h"
+#include "render/general/resource/shadow/ShadowMapHandle.h"
 
 #include "SpotlightNode.generated.h"
 

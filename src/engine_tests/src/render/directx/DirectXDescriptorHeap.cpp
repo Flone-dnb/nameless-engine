@@ -2,12 +2,12 @@
 #include <random>
 
 // Custom.
-#include "render/directx/resources/DirectXResourceManager.h"
+#include "render/directx/resource/DirectXResourceManager.h"
 #include "game/GameInstance.h"
 #include "render/directx/DirectXRenderer.h"
 #include "game/Window.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resource/DirectXResource.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

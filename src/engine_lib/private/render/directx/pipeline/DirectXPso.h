@@ -3,8 +3,8 @@
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
 #include "shader/hlsl/SpecialRootParameterSlot.hpp"
-#include "render/general/resources/frame/FrameResourceManager.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
+#include "render/directx/resource/DirectXResource.h"
 
 // External.
 #include "directx/d3dx12.h"

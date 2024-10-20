@@ -6,7 +6,7 @@
 
 // Custom.
 #include "shader/ComputeShaderInterface.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resource/DirectXResource.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 
 // External.

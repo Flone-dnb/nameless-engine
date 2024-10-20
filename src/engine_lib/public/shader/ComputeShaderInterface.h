@@ -10,7 +10,7 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/general/pipeline/PipelineSharedPtr.h"
-#include "render/general/resources/GpuResource.h"
+#include "render/general/resource/GpuResource.h"
 
 namespace ne {
     class Renderer;

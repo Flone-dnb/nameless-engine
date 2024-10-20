@@ -12,7 +12,7 @@ namespace ne {
         EDITOR  ///< Directory for editor resources.
     };
 
-    /** Provides static functions for acquiring paths to project log/save/resources/etc. directories. */
+    /** Provides static functions for acquiring paths to project log/save/resource/etc. directories. */
     class ProjectPaths {
     public:
         ProjectPaths() = delete;

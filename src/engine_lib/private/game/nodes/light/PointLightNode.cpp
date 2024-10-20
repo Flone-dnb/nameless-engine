@@ -3,7 +3,7 @@
 // Custom.
 #include "game/Window.h"
 #include "render/Renderer.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resource/GpuResourceManager.h"
 
 #include "PointLightNode.generated_impl.h"
 

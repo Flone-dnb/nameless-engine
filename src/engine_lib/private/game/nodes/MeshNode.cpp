@@ -7,9 +7,9 @@
 #include "material/Material.h"
 #include "game/Window.h"
 #include "render/Renderer.h"
-#include "render/general/resources/GpuResourceManager.h"
-#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
-#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingManager.h"
+#include "render/general/resource/GpuResourceManager.h"
+#include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resource/binding/texture/ShaderTextureResourceBindingManager.h"
 #include "shader/general/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 

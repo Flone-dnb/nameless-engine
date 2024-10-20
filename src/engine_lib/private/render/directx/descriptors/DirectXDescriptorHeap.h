@@ -11,7 +11,7 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptor.h"
-#include "render/general/resources/GpuResource.h"
+#include "render/general/resource/GpuResource.h"
 #include "DirectXDescriptorType.hpp"
 
 // External.

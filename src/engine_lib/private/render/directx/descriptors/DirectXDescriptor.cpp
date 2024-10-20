@@ -2,7 +2,7 @@
 
 // Custom.
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resource/DirectXResource.h"
 
 namespace ne {
     DirectXDescriptor::~DirectXDescriptor() {

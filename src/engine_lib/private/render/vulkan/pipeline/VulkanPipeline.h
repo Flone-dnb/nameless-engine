@@ -6,8 +6,8 @@
 
 // Custom.
 #include "render/general/pipeline/Pipeline.h"
-#include "render/general/resources/frame/FrameResourceManager.h"
-#include "shader/general/resources/ShaderArrayIndexManager.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
+#include "shader/general/resource/ShaderArrayIndexManager.h"
 #include "misc/StdHashes.hpp"
 
 // External.

@@ -3,7 +3,7 @@
 // Custom.
 #include "render/directx/DirectXRenderer.h"
 #include "io/Logger.h"
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resource/DirectXResource.h"
 #include "render/RenderSettings.h"
 
 namespace ne {

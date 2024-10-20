@@ -6,14 +6,14 @@
 // Custom.
 #include "game/nodes/SpatialNode.h"
 #include "math/GLMath.hpp"
-#include "render/general/resources/GpuResource.h"
-#include "shader/general/resources/binding/ShaderResourceBinding.h"
-#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
-#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingUniquePtr.h"
+#include "render/general/resource/GpuResource.h"
+#include "shader/general/resource/binding/ShaderResourceBinding.h"
+#include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
+#include "shader/general/resource/binding/texture/ShaderTextureResourceBindingUniquePtr.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/shapes/AABB.h"
 #include "material/Material.h"
-#include "render/general/resources/MeshData.h"
+#include "render/general/resource/MeshData.h"
 
 #include "MeshNode.generated.h"
 

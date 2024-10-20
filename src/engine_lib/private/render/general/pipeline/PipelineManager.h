@@ -16,7 +16,7 @@
 #include "render/general/pipeline/PipelineType.hpp"
 #include "render/general/pipeline/PipelineConfiguration.h"
 #include "render/general/pipeline/PipelineRegistry.hpp"
-#include "render/general/resources/frame/FrameResourceManager.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
 
 // External.
 #include "vulkan/vulkan_core.h"

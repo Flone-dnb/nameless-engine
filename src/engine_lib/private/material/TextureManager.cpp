@@ -7,7 +7,7 @@
 // Custom.
 #include "misc/ProjectPaths.h"
 #include "io/Logger.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resource/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/TextureImporter.h"
 

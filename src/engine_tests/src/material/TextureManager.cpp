@@ -3,9 +3,9 @@
 #include "game/Window.h"
 #include "misc/ProjectPaths.h"
 #include "io/TextureImporter.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resource/GpuResourceManager.h"
 #if defined(WIN32)
-#include "render/directx/resources/DirectXResource.h"
+#include "render/directx/resource/DirectXResource.h"
 #endif
 
 // External.

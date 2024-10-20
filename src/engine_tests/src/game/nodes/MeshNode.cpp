@@ -8,7 +8,7 @@
 #include "shader/general/EngineShaderNames.hpp"
 #include "io/ReflectionTest.h"
 #include "misc/PrimitiveMeshGenerator.h"
-#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
 #include "TestHelpers.hpp"
 #include "render/general/pipeline/PipelineManager.h"
 

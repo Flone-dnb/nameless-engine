@@ -3,12 +3,12 @@
 // Custom.
 #include "io/Logger.h"
 #include "render/Renderer.h"
-#include "render/general/resources/GpuResourceManager.h"
+#include "render/general/resource/GpuResourceManager.h"
 #include "shader/ComputeShaderInterface.h"
-#include "shader/general/resources/LightingShaderResourceManager.h"
-#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
-#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingManager.h"
-#include "shader/general/resources/binding/global/GlobalShaderResourceBindingManager.h"
+#include "shader/general/resource/LightingShaderResourceManager.h"
+#include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resource/binding/texture/ShaderTextureResourceBindingManager.h"
+#include "shader/general/resource/binding/global/GlobalShaderResourceBindingManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 
 namespace ne {

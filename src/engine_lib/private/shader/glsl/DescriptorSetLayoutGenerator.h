@@ -9,7 +9,7 @@
 
 // Custom.
 #include "misc/Error.h"
-#include "render/general/resources/frame/FrameResourceManager.h"
+#include "render/general/resource/frame/FrameResourceManager.h"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "misc/StdHashes.hpp"
 

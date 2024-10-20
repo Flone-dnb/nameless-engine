@@ -2,7 +2,7 @@
 
 // Custom.
 #include "render/Renderer.h"
-#include "render/directx/resources/DirectXResourceManager.h"
+#include "render/directx/resource/DirectXResourceManager.h"
 #include "render/directx/pipeline/DirectXPso.h"
 
 namespace ne {

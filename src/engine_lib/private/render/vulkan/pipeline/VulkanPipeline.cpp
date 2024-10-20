@@ -9,8 +9,8 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/GlslShader.h"
 #include "shader/general/EngineShaderNames.hpp"
-#include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
-#include "render/vulkan/resources/VulkanResourceManager.h"
+#include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
+#include "render/vulkan/resource/VulkanResourceManager.h"
 #include "shader/glsl/DescriptorSetLayoutGenerator.h"
 #include "shader/glsl/formats/GlslVertexFormatDescription.h"
 

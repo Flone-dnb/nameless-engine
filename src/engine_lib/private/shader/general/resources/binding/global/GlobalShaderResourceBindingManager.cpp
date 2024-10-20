@@ -2,7 +2,7 @@
 
 // Custom.
 #include "render/general/pipeline/PipelineManager.h"
-#include "shader/general/resources/GlobalShaderResourceBinding.h"
+#include "shader/general/resources/binding/global/GlobalShaderResourceBinding.h"
 #include "misc/Profiler.hpp"
 
 namespace ne {

@@ -7,8 +7,8 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/ShaderResourceBinding.h"
-#include "shader/general/resources/texture/ShaderTextureResourceBindingUniquePtr.h"
+#include "shader/general/resources/binding/ShaderResourceBinding.h"
+#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingUniquePtr.h"
 
 namespace ne {
     class Renderer;

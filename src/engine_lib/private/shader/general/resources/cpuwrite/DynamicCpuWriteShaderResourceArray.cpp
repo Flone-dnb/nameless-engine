@@ -2,10 +2,10 @@
 
 // Custom.
 #include "render/general/resources/GpuResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
-#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
+#include "shader/general/resources/binding/global/GlobalShaderResourceBindingManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
 #endif

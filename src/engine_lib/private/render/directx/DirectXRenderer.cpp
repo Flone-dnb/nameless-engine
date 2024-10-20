@@ -17,11 +17,11 @@
 #include "material/Material.h"
 #include "game/nodes/MeshNode.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBinding.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 #include "game/camera/CameraProperties.h"
 #include "game/camera/CameraManager.h"
-#include "shader/hlsl/resources/HlslShaderTextureResourceBinding.h"
+#include "shader/hlsl/resources/binding/texture/HlslShaderTextureResourceBinding.h"
 #include "render/directx/resources/DirectXFrameResource.h"
 #include "render/directx/resources/shadow/DirectXShadowMapArrayIndexManager.h"
 #include "shader/hlsl/HlslComputeShaderInterface.h"
@@ -1001,12 +1001,11 @@ namespace ne {
 
                             // Find and bind mesh data resource since only it is used in vertex shader.
                             const auto& meshDataIt =
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.find(
-                                    MeshNode::getMeshShaderConstantBufferName());
+                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings
+                                    .find(MeshNode::getMeshShaderConstantBufferName());
 #if defined(DEBUG)
-                            if (meshDataIt ==
-                                pMtxMeshGpuResources->second.shaderResources.shaderCpuWriteResourceBindings.end())
-                                [[unlikely]] {
+                            if (meshDataIt == pMtxMeshGpuResources->second.shaderResources
+                                                  .shaderCpuWriteResourceBindings.end()) [[unlikely]] {
                                 Error error(std::format(
                                     "expected to find \"{}\" shader resource",
                                     MeshNode::getMeshShaderConstantBufferName()));

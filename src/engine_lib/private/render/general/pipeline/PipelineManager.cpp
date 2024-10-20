@@ -6,9 +6,9 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/ComputeShaderInterface.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
-#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingManager.h"
+#include "shader/general/resources/binding/global/GlobalShaderResourceBindingManager.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
 
 namespace ne {

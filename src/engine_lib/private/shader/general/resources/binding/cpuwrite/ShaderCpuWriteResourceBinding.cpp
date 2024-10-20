@@ -39,12 +39,13 @@ namespace ne {
         auto constantOffsets = std::get<std::unordered_map<Pipeline*, size_t>>(std::move(result));
 
         // Create shader resource.
-        auto pShaderResource = std::unique_ptr<ShaderCpuWriteResourceBinding>(new ShaderCpuWriteResourceBinding(
-            sShaderResourceName,
-            iResourceSizeInBytes,
-            onStartedUpdatingResource,
-            onFinishedUpdatingResource,
-            constantOffsets));
+        auto pShaderResource =
+            std::unique_ptr<ShaderCpuWriteResourceBinding>(new ShaderCpuWriteResourceBinding(
+                sShaderResourceName,
+                iResourceSizeInBytes,
+                onStartedUpdatingResource,
+                onFinishedUpdatingResource,
+                constantOffsets));
 
         // Get resource manager.
         const auto pResourceManager = pRenderer->getResourceManager();

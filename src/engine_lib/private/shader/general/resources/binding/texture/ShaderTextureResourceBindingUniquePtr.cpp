@@ -1,7 +1,7 @@
 #include "ShaderTextureResourceBindingUniquePtr.h"
 
 // Custom.
-#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
+#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingManager.h"
 
 namespace ne {
     ShaderTextureResourceBindingUniquePtr::ShaderTextureResourceBindingUniquePtr(

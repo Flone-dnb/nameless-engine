@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/ShaderResourceBinding.h"
+#include "shader/general/resources/binding/ShaderResourceBinding.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "shader/general/resources/ShaderArrayIndexManager.h"
 

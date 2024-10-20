@@ -72,7 +72,8 @@ namespace ne {
         resourcesToUpdate.clear();
     }
 
-    void ShaderCpuWriteResourceBindingManager::markResourceAsNeedsUpdate(ShaderCpuWriteResourceBinding* pResource) {
+    void ShaderCpuWriteResourceBindingManager::markResourceAsNeedsUpdate(
+        ShaderCpuWriteResourceBinding* pResource) {
         PROFILE_FUNC;
 
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);
@@ -94,7 +95,8 @@ namespace ne {
         }
     }
 
-    void ShaderCpuWriteResourceBindingManager::destroyResource(ShaderCpuWriteResourceBinding* pResourceToDestroy) {
+    void
+    ShaderCpuWriteResourceBindingManager::destroyResource(ShaderCpuWriteResourceBinding* pResourceToDestroy) {
         PROFILE_FUNC;
 
         std::scoped_lock guard(mtxShaderCpuWriteResources.first);

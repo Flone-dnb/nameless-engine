@@ -4,10 +4,10 @@
 #include "io/Logger.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "shader/hlsl/resources/HlslShaderTextureResourceBinding.h"
+#include "shader/hlsl/resources/binding/texture/HlslShaderTextureResourceBinding.h"
 #endif
 #include "render/vulkan/VulkanRenderer.h"
-#include "shader/glsl/resources/GlslShaderTextureResourceBinding.h"
+#include "shader/glsl/resources/binding/texture/GlslShaderTextureResourceBinding.h"
 
 namespace ne {
 
@@ -57,7 +57,8 @@ namespace ne {
         return ShaderTextureResourceBindingUniquePtr(this, pRawResource);
     }
 
-    void ShaderTextureResourceBindingManager::destroyResource(ShaderTextureResourceBinding* pResourceToDestroy) {
+    void
+    ShaderTextureResourceBindingManager::destroyResource(ShaderTextureResourceBinding* pResourceToDestroy) {
         std::scoped_lock guard(mtxShaderTextureResources.first);
 
         // Find this resource.

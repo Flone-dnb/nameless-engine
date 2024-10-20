@@ -8,7 +8,7 @@
 #include <mutex>
 
 // Custom.
-#include "shader/general/resources/ShaderResourceBinding.h"
+#include "shader/general/resources/binding/ShaderResourceBinding.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
 #include "render/directx/resources/DirectXResource.h"

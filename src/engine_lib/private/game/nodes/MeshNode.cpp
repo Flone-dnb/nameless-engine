@@ -8,8 +8,8 @@
 #include "game/Window.h"
 #include "render/Renderer.h"
 #include "render/general/resources/GpuResourceManager.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingManager.h"
 #include "shader/general/EngineShaderNames.hpp"
 #include "misc/PrimitiveMeshGenerator.h"
 
@@ -580,7 +580,8 @@ namespace ne {
         // keep spawn locked
 
         // Make sure there is no resource with this name.
-        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(sShaderResourceName);
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(sShaderResourceName);
         if (it != mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.end()) [[unlikely]] {
             Error error(std::format(
                 "mesh node \"{}\" already has a shader CPU write resource with the name \"{}\"",
@@ -735,7 +736,8 @@ namespace ne {
         // keep spawn locked
 
         // Make sure there is a resource with this name.
-        auto it = mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(sShaderResourceName);
+        auto it =
+            mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(sShaderResourceName);
         if (it == mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.end()) {
             return; // silently exit, this is not an error
         }
@@ -859,8 +861,9 @@ namespace ne {
             }
 
             // Find mesh data shader resource.
-            const auto meshDataIt = mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(
-                sMeshShaderConstantBufferName);
+            const auto meshDataIt =
+                mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.find(
+                    sMeshShaderConstantBufferName);
             if (meshDataIt == mtxGpuResources.second.shaderResources.shaderCpuWriteResourceBindings.end())
                 [[unlikely]] {
                 Error error(

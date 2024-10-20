@@ -19,9 +19,9 @@
 #include "render/general/resources/GpuResourceManager.h"
 #include "shader/general/resources/LightingShaderResourceManager.h"
 #include "shader/general/resources/ShaderLightsInFrustumSingleType.hpp"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
-#include "shader/general/resources/texture/ShaderTextureResourceBindingManager.h"
-#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
+#include "shader/general/resources/binding/texture/ShaderTextureResourceBindingManager.h"
+#include "shader/general/resources/binding/global/GlobalShaderResourceBindingManager.h"
 #include "shader/general/ShaderMacro.h"
 #include "shader/ShaderManager.h"
 #include "game/nodes/MeshNode.h"
@@ -880,8 +880,8 @@ namespace ne {
             new ShaderCpuWriteResourceBindingManager(this));
 
         // Create shader texture resource manager.
-        pShaderTextureResourceManager =
-            std::unique_ptr<ShaderTextureResourceBindingManager>(new ShaderTextureResourceBindingManager(this));
+        pShaderTextureResourceManager = std::unique_ptr<ShaderTextureResourceBindingManager>(
+            new ShaderTextureResourceBindingManager(this));
 
         // Create lighting shader resource manager.
         pLightingShaderResourceManager = LightingShaderResourceManager::create(this);

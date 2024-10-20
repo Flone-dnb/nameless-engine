@@ -12,7 +12,8 @@
 
 namespace ne {
 
-    std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> GlslShaderTextureResourceBinding::create(
+    std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error>
+    GlslShaderTextureResourceBinding::create(
         const std::string& sShaderResourceName,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
         std::unique_ptr<TextureHandle> pTextureToUse) {
@@ -270,8 +271,8 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error>
-    GlslShaderTextureResourceBinding::changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) {
+    std::optional<Error> GlslShaderTextureResourceBinding::changeUsedPipelines(
+        const std::unordered_set<Pipeline*>& pipelinesToUse) {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
 
         // Make sure at least one pipeline is specified.

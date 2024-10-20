@@ -9,8 +9,8 @@
 #include <unordered_set>
 
 // Custom.
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBinding.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBindingUniquePtr.h"
 #include "render/general/resources/frame/FrameResourceManager.h"
 
 namespace ne {
@@ -34,7 +34,8 @@ namespace ne {
              * @remark Storing pairs of "raw pointer" - "unique pointer" to quickly find needed resources
              * when need to destroy some resource given a raw pointer.
              */
-            std::unordered_map<ShaderCpuWriteResourceBinding*, std::unique_ptr<ShaderCpuWriteResourceBinding>> all;
+            std::unordered_map<ShaderCpuWriteResourceBinding*, std::unique_ptr<ShaderCpuWriteResourceBinding>>
+                all;
 
             /** Shader CPU write resources that needs to be updated. */
             std::array<

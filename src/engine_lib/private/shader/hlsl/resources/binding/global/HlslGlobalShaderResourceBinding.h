@@ -4,7 +4,7 @@
 #include <optional>
 
 // Custom.
-#include "shader/general/resources/GlobalShaderResourceBinding.h"
+#include "shader/general/resources/binding/global/GlobalShaderResourceBinding.h"
 
 // External.
 #include "vulkan/vulkan_core.h"

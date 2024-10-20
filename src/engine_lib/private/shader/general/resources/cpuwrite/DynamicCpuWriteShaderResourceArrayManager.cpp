@@ -3,7 +3,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
-#include "shader/general/resources/cpuwrite/ShaderCpuWriteResourceBinding.h"
+#include "shader/general/resources/binding/cpuwrite/ShaderCpuWriteResourceBinding.h"
 #include "misc/Profiler.hpp"
 
 namespace ne {
@@ -13,7 +13,8 @@ namespace ne {
         : pResourceManager(pResourceManager) {}
 
     std::variant<std::unique_ptr<DynamicCpuWriteShaderResourceArraySlot>, Error>
-    DynamicCpuWriteShaderResourceArrayManager::reserveSlotsInArray(ShaderCpuWriteResourceBinding* pShaderResource) {
+    DynamicCpuWriteShaderResourceArrayManager::reserveSlotsInArray(
+        ShaderCpuWriteResourceBinding* pShaderResource) {
         std::scoped_lock guard(mtxCpuWriteShaderResourceArrays.first);
 
         // Check if we already have an array for resources with this name.

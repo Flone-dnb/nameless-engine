@@ -2,11 +2,11 @@
 
 // Custom.
 #include "render/vulkan/VulkanRenderer.h"
-#include "shader/glsl/resources/GlslGlobalShaderResourceBinding.h"
-#include "shader/general/resources/GlobalShaderResourceBindingManager.h"
+#include "shader/glsl/resources/binding/global/GlslGlobalShaderResourceBinding.h"
+#include "shader/general/resources/binding/global/GlobalShaderResourceBindingManager.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "shader/hlsl/resources/HlslGlobalShaderResourceBinding.h"
+#include "shader/hlsl/resources/binding/global/HlslGlobalShaderResourceBinding.h"
 #endif
 
 namespace ne {

@@ -11,7 +11,7 @@
 #include "render/general/resources/frame/FrameResourceManager.h"
 #include "shader/general/resources/cpuwrite/DynamicCpuWriteShaderResourceArray.h"
 #include "render/general/pipeline/PipelineShaderConstantsManager.hpp"
-#include "shader/general/resources/ShaderResourceBinding.h"
+#include "shader/general/resources/binding/ShaderResourceBinding.h"
 #include "misc/Error.h"
 
 namespace ne {

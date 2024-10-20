@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "shader/glsl/formats/GlslVertexFormatDescription.h"
+#include "shader/glsl/format/GlslVertexFormatDescription.h"
 
 namespace ne {
     /** Describes vertex format used by MeshNode. */

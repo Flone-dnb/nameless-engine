@@ -5,7 +5,7 @@
 #include <string>
 
 // Custom.
-#include "shader/general/formats/VertexFormat.h"
+#include "shader/general/format/VertexFormat.h"
 
 // External.
 #include "vulkan/vulkan.h"

@@ -12,7 +12,7 @@
 #include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "render/vulkan/resource/VulkanResourceManager.h"
 #include "shader/glsl/DescriptorSetLayoutGenerator.h"
-#include "shader/glsl/formats/GlslVertexFormatDescription.h"
+#include "shader/glsl/format/GlslVertexFormatDescription.h"
 
 // External.
 #include "vulkan/vk_enum_string_helper.h"

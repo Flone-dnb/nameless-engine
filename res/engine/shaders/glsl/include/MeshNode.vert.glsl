@@ -7,7 +7,7 @@
 #endif
 
 #define LAYOUT_VERTEX_SHADER
-#include "../formats/MeshNodeVertexLayout.glsl"
+#include "../format/MeshNodeVertexLayout.glsl"
 
 /** Vertex shader. */
 void vsMeshNode() {

@@ -8,7 +8,7 @@
 #include "shader/general/Shader.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
 #include "render/Renderer.h"
-#include "shader/glsl/formats/GlslVertexFormatDescription.h"
+#include "shader/glsl/format/GlslVertexFormatDescription.h"
 #include "render/vulkan/VulkanRenderer.h"
 
 namespace ne {

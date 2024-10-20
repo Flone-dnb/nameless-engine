@@ -4,7 +4,7 @@
 #include "../../include/constants/ShadowPassConstants.glsl"
 
 #define LAYOUT_FRAGMENT_SHADER
-#include "../formats/MeshNodeVertexLayout.glsl"
+#include "../format/MeshNodeVertexLayout.glsl"
 
 layout(location = 0) out float outputValue;
 

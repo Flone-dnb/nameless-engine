@@ -44,10 +44,10 @@ set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/resource/binding/global/HlslGlobalShaderResourceBinding.h
     private/shader/hlsl/HlslComputeShaderInterface.cpp
     private/shader/hlsl/HlslComputeShaderInterface.h
-    private/shader/hlsl/formats/HlslVertexFormatDescription.h
-    private/shader/hlsl/formats/HlslVertexFormatDescription.cpp
-    private/shader/hlsl/formats/MeshNodeHlslVertexFormatDescription.h
-    private/shader/hlsl/formats/MeshNodeHlslVertexFormatDescription.cpp
+    private/shader/hlsl/format/HlslVertexFormatDescription.h
+    private/shader/hlsl/format/HlslVertexFormatDescription.cpp
+    private/shader/hlsl/format/MeshNodeHlslVertexFormatDescription.h
+    private/shader/hlsl/format/MeshNodeHlslVertexFormatDescription.cpp
     private/render/directx/DirectXRenderer.h
     private/render/directx/DirectXRenderer.cpp
     private/render/directx/pipeline/DirectXPso.cpp
@@ -152,8 +152,8 @@ set(PROJECT_SOURCES
     public/input/MouseButton.hpp
     public/shader/ShaderManager.h
     private/shader/general/ShaderManager.cpp
-    private/shader/general/formats/VertexFormat.h
-    private/shader/general/formats/VertexFormat.cpp
+    private/shader/general/format/VertexFormat.h
+    private/shader/general/format/VertexFormat.cpp
     private/shader/general/cache/ShaderCacheManager.cpp
     private/shader/general/cache/ShaderCacheManager.h
     private/shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArray.cpp
@@ -166,10 +166,10 @@ set(PROJECT_SOURCES
     private/shader/general/resource/binding/global/GlobalShaderResourceBinding.h
     private/shader/general/resource/binding/global/GlobalShaderResourceBindingManager.cpp
     private/shader/general/resource/binding/global/GlobalShaderResourceBindingManager.h
-    private/shader/glsl/formats/GlslVertexFormatDescription.h
-    private/shader/glsl/formats/GlslVertexFormatDescription.cpp
-    private/shader/glsl/formats/MeshNodeGlslVertexFormatDescription.cpp
-    private/shader/glsl/formats/MeshNodeGlslVertexFormatDescription.h
+    private/shader/glsl/format/GlslVertexFormatDescription.h
+    private/shader/glsl/format/GlslVertexFormatDescription.cpp
+    private/shader/glsl/format/MeshNodeGlslVertexFormatDescription.cpp
+    private/shader/glsl/format/MeshNodeGlslVertexFormatDescription.h
     private/shader/glsl/cache/GlslShaderCacheManager.cpp
     private/shader/glsl/cache/GlslShaderCacheManager.h
     private/shader/general/DescriptorConstants.hpp

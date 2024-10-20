@@ -6,10 +6,10 @@
 // Custom.
 #include "misc/Error.h"
 #include "render/vulkan/VulkanRenderer.h"
-#include "shader/glsl/formats/GlslVertexFormatDescription.h"
+#include "shader/glsl/format/GlslVertexFormatDescription.h"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
-#include "shader/hlsl/formats/HlslVertexFormatDescription.h"
+#include "shader/hlsl/format/HlslVertexFormatDescription.h"
 #endif
 
 namespace ne {

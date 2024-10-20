@@ -3,7 +3,7 @@
 #include "../../include/constants/MeshNodeConstants.glsl" // include to make root constants layout as in vertex
 #include "../../include/constants/ShadowPassConstants.glsl"
 
-#include "../formats/MeshNodeVertex.hlsl"
+#include "../format/MeshNodeVertex.hlsl"
 
 [earlydepthstencil]
 /**

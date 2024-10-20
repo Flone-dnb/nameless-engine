@@ -6,7 +6,7 @@
 #include "shader/hlsl/RootSignatureGenerator.h"
 #include "io/Logger.h"
 #include "render/RenderSettings.h"
-#include "shader/hlsl/formats/HlslVertexFormatDescription.h"
+#include "shader/hlsl/format/HlslVertexFormatDescription.h"
 #include "render/general/resource/shadow/ShadowMapManager.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 

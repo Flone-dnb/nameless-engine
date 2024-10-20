@@ -6,7 +6,7 @@
     #include "../../include/constants/ShadowPassConstants.glsl"
 #endif
 
-#include "../formats/MeshNodeVertex.hlsl"
+#include "../format/MeshNodeVertex.hlsl"
 
 /**
  * Vertex shader.

@@ -5,7 +5,7 @@
 
 // Custom.
 #include "io/ConfigManager.h"
-#include "shader/general/formats/VertexFormat.h"
+#include "shader/general/format/VertexFormat.h"
 
 namespace ne {
     /**

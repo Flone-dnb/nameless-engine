@@ -6,7 +6,7 @@
 #define READ_ONLY_LIGHT_GRID
 #include "../../include/Lighting.glsl"
 
-#include "../formats/MeshNodeVertex.hlsl"
+#include "../format/MeshNodeVertex.hlsl"
 
 // Not using ifdefs on this static texture sampler because the user may want to use custom textures.
 SamplerState textureSampler : register(s0, space5);

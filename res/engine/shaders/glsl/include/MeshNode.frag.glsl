@@ -7,7 +7,7 @@
 #include "../../include/Lighting.glsl"
 
 #define LAYOUT_FRAGMENT_SHADER
-#include "../formats/MeshNodeVertexLayout.glsl"
+#include "../format/MeshNodeVertexLayout.glsl"
 
 /** Output parameters. */
 layout(location = 0) out vec4 outputColor;

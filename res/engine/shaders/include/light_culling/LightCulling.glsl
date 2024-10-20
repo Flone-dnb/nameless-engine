@@ -27,7 +27,7 @@
 #glsl layout(binding = 9) uniform #hlsl struct #both ThreadGroupCount {
     /** Total number of thread groups dispatched in the X direction. */
     uint iThreadGroupCountX;
-    
+
     /** Total number of thread groups dispatched in the Y direction. */
     uint iThreadGroupCountY;
 } #glsl threadGroupCount; #hlsl ; ConstantBuffer<ThreadGroupCount> threadGroupCount : register(b0, space6);
@@ -36,10 +36,10 @@
 #glsl layout(binding = 10) uniform #hlsl struct #both ScreenToViewData {
     /** Inverse of the projection matrix. */
     mat4 inverseProjectionMatrix;
-    
+
     /** Width of the viewport (might be smaller that the actual screen size). */
     uint iRenderTargetWidth;
-    
+
     /** Height of the viewport (might be smaller that the actual screen size). */
     uint iRenderTargetHeight;
 } #glsl screenToViewData; #hlsl ; ConstantBuffer<ScreenToViewData> screenToViewData : register(b1, space6);
@@ -131,22 +131,22 @@ void initializeGroupSharedVariables(uint iThreadGroupXIdInDispatch, uint iThread
     // Initialize depth values.
     iTileMinDepth = 0xffffffffu; // uint max
     iTileMaxDepth = 0;
-    
+
     // Initialize counters.
     iOpaquePointLightCountIntersectingTileFrustum = 0;
     iOpaqueSpotLightCountIntersectingTileFrustum = 0;
     iTransparentPointLightCountIntersectingTileFrustum = 0;
     iTransparentSpotLightCountIntersectingTileFrustum = 0;
-    
+
     // Initialize offsets.
     iOpaquePointLightIndexListStartOffset = 0;
     iOpaqueSpotLightIndexListStartOffset = 0;
     iTransparentPointLightIndexListStartOffset = 0;
     iTransparentSpotLightIndexListStartOffset = 0;
-    
+
     // Prepare index to get tile frustum.
     const uint iFrustumIndex = (iThreadGroupYIdInDispatch * threadGroupCount.iThreadGroupCountX) + iThreadGroupXIdInDispatch;
-    
+
     // Initialize tile frustum.
     tileFrustum =
     #hlsl calculatedFrustums[iFrustumIndex];
@@ -167,11 +167,11 @@ void calculateTileMinMaxDepth(float pixelDepth) {
     // Since our depth is in range [0..1] (we don't have negative depth values) doing `asuint` is enough
     // and we don't need to change float sign bit and we don't need to invert negative bits and etc.
     uint iDepth = floatBitsToUint(pixelDepth);
-    
+
     // Store min/max depth.
     atomicMin(iTileMinDepth, iDepth);
     atomicMax(iTileMaxDepth, iDepth);
-    
+
     // Wait for all threads from group to finish finding min/max depth.
     GroupMemoryBarrierWithGroupSync();
 }
@@ -189,39 +189,39 @@ void reserveSpaceForNonCulledTileLightsInLightGridAndList(uint iThreadGroupXIdIn
     // Prepare some constants.
     #hlsl const uint2 lightGridIndex = uint2(iThreadGroupXIdInDispatch, iThreadGroupYIdInDispatch);
     #glsl const ivec2 lightGridIndex = ivec2(iThreadGroupXIdInDispatch, iThreadGroupYIdInDispatch);
-    
+
     // Start with opaque geometry.
-    
+
     // Get offset into the global light index list with point lights.
     #hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iPointLightListOpaque, iOpaquePointLightCountIntersectingTileFrustum, iOpaquePointLightIndexListStartOffset);
     #glsl iOpaquePointLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iPointLightListOpaque, iOpaquePointLightCountIntersectingTileFrustum);
-    
+
     // Write lights into the light grid.
     #hlsl opaquePointLightGrid[lightGridIndex] = uint2(iOpaquePointLightIndexListStartOffset, iOpaquePointLightCountIntersectingTileFrustum);
     #glsl imageStore(opaquePointLightGrid, lightGridIndex, uvec4(iOpaquePointLightIndexListStartOffset, iOpaquePointLightCountIntersectingTileFrustum, 0.0F, 0.0F));
-    
+
     // Get offset into the global light index list with spot lights.
     #hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iSpotlightListOpaque, iOpaqueSpotLightCountIntersectingTileFrustum, iOpaqueSpotLightIndexListStartOffset);
     #glsl iOpaqueSpotLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iSpotlightListOpaque, iOpaqueSpotLightCountIntersectingTileFrustum);
-    
+
     // Write lights into the light grid.
     #hlsl opaqueSpotLightGrid[lightGridIndex] = uint2(iOpaqueSpotLightIndexListStartOffset, iOpaqueSpotLightCountIntersectingTileFrustum);
     #glsl imageStore(opaqueSpotLightGrid, lightGridIndex, uvec4(iOpaqueSpotLightIndexListStartOffset, iOpaqueSpotLightCountIntersectingTileFrustum, 0.0F, 0.0F));
-    
+
     // Now set lights for transparent geometry.
-    
+
     // Get offset into the global light index list with point lights.
     #hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iPointLightListTransparent, iTransparentPointLightCountIntersectingTileFrustum, iTransparentPointLightIndexListStartOffset);
     #glsl iTransparentPointLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iPointLightListTransparent, iTransparentPointLightCountIntersectingTileFrustum);
-    
+
     // Write lights into the light grid.
     #hlsl transparentPointLightGrid[lightGridIndex] = uint2(iTransparentPointLightIndexListStartOffset, iTransparentPointLightCountIntersectingTileFrustum);
     #glsl imageStore(transparentPointLightGrid, lightGridIndex, uvec4(iTransparentPointLightIndexListStartOffset, iTransparentPointLightCountIntersectingTileFrustum, 0.0F, 0.0F));
-    
+
     // Get offset into the global light index list with spot lights.
     #hlsl InterlockedAdd(globalCountersIntoLightIndexList[0].iSpotlightListTransparent, iTransparentSpotLightCountIntersectingTileFrustum, iTransparentSpotLightIndexListStartOffset);
     #glsl iTransparentSpotLightIndexListStartOffset = atomicAdd(globalCountersIntoLightIndexList.iSpotlightListTransparent, iTransparentSpotLightCountIntersectingTileFrustum);
-    
+
     // Write lights into the light grid.
     #hlsl transparentSpotLightGrid[lightGridIndex] = uint2(iTransparentSpotLightIndexListStartOffset, iTransparentSpotLightCountIntersectingTileFrustum);
     #glsl imageStore(transparentSpotLightGrid, lightGridIndex, uvec4(iTransparentSpotLightIndexListStartOffset, iTransparentSpotLightCountIntersectingTileFrustum, 0.0F, 0.0F));
@@ -240,11 +240,11 @@ void reserveSpaceForNonCulledTileLightsInLightGridAndList(uint iThreadGroupXIdIn
 void addPointLightToTileOpaqueLightIndexList(uint iPointLightIndex) {
     // Prepare index to light list.
     uint iIndexToPointLightList = 0;
-    
+
     // Atomically increment counter of point lights in tile.
     #hlsl InterlockedAdd(iOpaquePointLightCountIntersectingTileFrustum, 1, iIndexToPointLightList);
     #glsl iIndexToPointLightList = atomicAdd(iOpaquePointLightCountIntersectingTileFrustum, 1);
-    
+
     // Make sure we won't access out of bound.
     if (iIndexToPointLightList < TILE_POINT_LIGHT_INDEX_LIST_SIZE) {
         tileOpaquePointLightIndexList[iIndexToPointLightList] = iPointLightIndex;
@@ -260,11 +260,11 @@ void addPointLightToTileOpaqueLightIndexList(uint iPointLightIndex) {
 void addSpotLightToTileOpaqueLightIndexList(uint iSpotLightIndex) {
     // Prepare index to light list.
     uint iIndexToSpotLightList = 0;
-    
+
     // Atomically increment counter of spot lights in tile.
     #hlsl InterlockedAdd(iOpaqueSpotLightCountIntersectingTileFrustum, 1, iIndexToSpotLightList);
     #glsl iIndexToSpotLightList = atomicAdd(iOpaqueSpotLightCountIntersectingTileFrustum, 1);
-    
+
     // Make sure we won't access out of bound.
     if (iIndexToSpotLightList < TILE_SPOT_LIGHT_INDEX_LIST_SIZE) {
         tileOpaqueSpotLightIndexList[iIndexToSpotLightList] = iSpotLightIndex;
@@ -282,11 +282,11 @@ void addSpotLightToTileOpaqueLightIndexList(uint iSpotLightIndex) {
 void addPointLightToTileTransparentLightIndexList(uint iPointLightIndex) {
     // Prepare index to light list.
     uint iIndexToPointLightList = 0;
-    
+
     // Atomically increment counter of point lights in tile.
     #hlsl InterlockedAdd(iTransparentPointLightCountIntersectingTileFrustum, 1, iIndexToPointLightList);
     #glsl iIndexToPointLightList = atomicAdd(iTransparentPointLightCountIntersectingTileFrustum, 1);
-    
+
     // Make sure we won't access out of bound.
     if (iIndexToPointLightList < TILE_POINT_LIGHT_INDEX_LIST_SIZE) {
         tileTransparentPointLightIndexList[iIndexToPointLightList] = iPointLightIndex;
@@ -302,11 +302,11 @@ void addPointLightToTileTransparentLightIndexList(uint iPointLightIndex) {
 void addSpotLightToTileTransparentLightIndexList(uint iSpotLightIndex) {
     // Prepare index to light list.
     uint iIndexToSpotLightList = 0;
-    
+
     // Atomically increment counter of spot lights in tile.
     #hlsl InterlockedAdd(iTransparentSpotLightCountIntersectingTileFrustum, 1, iIndexToSpotLightList);
     #glsl iIndexToSpotLightList = atomicAdd(iTransparentSpotLightCountIntersectingTileFrustum, 1);
-    
+
     // Make sure we won't access out of bound.
     if (iIndexToSpotLightList < TILE_SPOT_LIGHT_INDEX_LIST_SIZE) {
         tileTransparentSpotLightIndexList[iIndexToSpotLightList] = iSpotLightIndex;
@@ -336,174 +336,174 @@ void cullLightsForTile(
     // - Presentation "DirectX 11 Rendering in Battlefield 3" (2011) by Johan Andersson, DICE.
     // - "Forward+: A Step Toward Film-Style Shading in Real Time", Takahiro Harada (2012).
     // - https://www.3dgep.com/forward-plus/
-    
+
     // Prepare variable to store depth.
     float pixelDepth = 1.0F;
-    
+
     // Avoid reading depth and running calculations out of bounds because if width/height is not evenly divisible
     // by the thread group size, in C++ we will `ceil` the result and dispatch slightly more threads.
     // So some thread groups can have some threads that will be out of bounds.
     if (iThreadIdXInDispatch >= screenToViewData.iRenderTargetWidth || iThreadIdYInDispatch >= screenToViewData.iRenderTargetHeight) {
         return;
     }
-    
+
     // Get depth of this pixel.
     pixelDepth =
     #hlsl depthTexture.Load(int3(iThreadIdXInDispatch, iThreadIdYInDispatch, 0)).r;
     #glsl texelFetch(depthTexture, ivec2(iThreadIdXInDispatch, iThreadIdYInDispatch), 0).r;
-    
+
     if (iThreadIdInGroup == 0) {
         // Only one thread in the group should initialize group shared variables.
         initializeGroupSharedVariables(iThreadGroupXIdInDispatch, iThreadGroupYIdInDispatch);
     }
-    
+
     // Make sure all group shared writes were finished and all threads from the group reached this line.
     GroupMemoryBarrierWithGroupSync();
-    
+
     // Calculate min/max depth for tile.
     calculateTileMinMaxDepth(pixelDepth); // waits inside of the function
-    
+
     // Get tile min/max depth.
     const float tileMinDepth = uintBitsToFloat(iTileMinDepth);
     const float tileMaxDepth = uintBitsToFloat(iTileMaxDepth);
-    
+
     // Convert depth values to view space.
     float tileMinDepthViewSpace
         = convertNdcSpaceToViewSpace(vec3(0.0F, 0.0F, tileMinDepth), screenToViewData.inverseProjectionMatrix).z;
     float tileMaxDepthViewSpace
         = convertNdcSpaceToViewSpace(vec3(0.0F, 0.0F, tileMaxDepth), screenToViewData.inverseProjectionMatrix).z;
-    
+
     // Calculate near clip plane distance for culling lights for transparent geometry.
     float nearClipPlaneViewSpace
         = convertNdcSpaceToViewSpace(vec3(0.0F, 0.0F, 0.0F), screenToViewData.inverseProjectionMatrix).z;
-    
+
     // Prepare a plane to cull lights for opaque geometry.
     Plane minDepthPlaneViewSpace;
     minDepthPlaneViewSpace.normal = vec3(0.0F, 0.0F, 1.0F);
     minDepthPlaneViewSpace.distanceFromOrigin = tileMinDepthViewSpace;
-    
+
     // Each iteration will now process `LIGHT_GRID_TILE_SIZE_IN_PIXELS^2` lights in parallel for the tile:
     // thread 0 processes lights: 0, LIGHT_GRID_TILE_SIZE_IN_PIXELS^2, (LIGHT_GRID_TILE_SIZE_IN_PIXELS^2) * 2, etc.
     // thread 1 processes lights: 1, LIGHT_GRID_TILE_SIZE_IN_PIXELS^2 + 1, etc.
-    
+
     // Cull point lights.
     for (uint i = iThreadIdInGroup; i < generalLightingData.iPointLightCountsInCameraFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS) {
         // Get point light index.
         const uint iPointLightIndex =
         #hlsl pointLightsInCameraFrustumIndices[i];
         #glsl pointLightsInCameraFrustumIndices.array[i];
-        
+
         // Get point light.
         PointLight pointLight =
         #hlsl pointLights[iPointLightIndex];
         #glsl pointLights.array[iPointLightIndex];
-        
+
         // Calculate light view space position.
         vec3 lightViewSpacePosition = mul(frameData.viewMatrix, vec4(pointLight.position.xyz, 1.0F)).xyz;
-        
+
         // Construct a sphere according to point light's radius for sphere/frustum test.
         Sphere pointLightSphereViewSpace;
         pointLightSphereViewSpace.center = lightViewSpacePosition;
         pointLightSphereViewSpace.radius = pointLight.distance;
-        
+
         // First test for transparent geometry since frustum for transparent objects has more Z space.
         if (!isSphereInsideFrustum(pointLightSphereViewSpace, tileFrustum, nearClipPlaneViewSpace, tileMaxDepthViewSpace)) {
             continue;
         }
-        
+
         // Append this light to transparent geometry.
         addPointLightToTileTransparentLightIndexList(iPointLightIndex);
-        
+
         // Now we know that the light is inside frustum for transparent objects, frustum for opaque objects is
         // the same except it has a smaller Z range so it's enough to just test sphere/plane.
         if (isSphereBehindPlane(pointLightSphereViewSpace, minDepthPlaneViewSpace)) {
             continue;
         }
-        
+
         // Append this light to opaque geometry.
         addPointLightToTileOpaqueLightIndexList(iPointLightIndex);
     }
-    
+
     // Cull spot lights.
     for (uint i = iThreadIdInGroup; i < generalLightingData.iSpotlightCountsInCameraFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS) {
         // Get spotlight index.
         const uint iSpotlightIndex =
         #hlsl spotlightsInCameraFrustumIndices[i];
         #glsl spotlightsInCameraFrustumIndices.array[i];
-        
+
         // Get spotlight.
         Spotlight spotlight =
         #hlsl spotlights[iSpotlightIndex];
         #glsl spotlights.array[iSpotlightIndex];
-        
+
         // Calculate light view space position.
         vec3 lightViewSpacePosition = mul(frameData.viewMatrix, vec4(spotlight.position.xyz, 1.0F)).xyz;
-        
+
         // Calculate light view space direction.
         vec3 lightViewSpaceDirection = mul(frameData.viewMatrix, vec4(spotlight.direction.xyz, 0.0F)).xyz;
-        
+
         // Construct a cone according to spotlight data for cone/frustum test.
         Cone spotlightConeViewSpace;
         spotlightConeViewSpace.location = lightViewSpacePosition;
         spotlightConeViewSpace.height = spotlight.distance;
         spotlightConeViewSpace.direction = lightViewSpaceDirection;
         spotlightConeViewSpace.bottomRadius = spotlight.coneBottomRadius;
-        
+
         // First test for transparent geometry since frustum for transparent objects has more Z space.
         if (!isConeInsideFrustum(spotlightConeViewSpace, tileFrustum, nearClipPlaneViewSpace, tileMaxDepthViewSpace)) {
             continue;
         }
-        
+
         // Append this light to transparent geometry.
         addSpotLightToTileTransparentLightIndexList(iSpotlightIndex);
-        
+
         // Now we know that the light is inside frustum for transparent objects, frustum for opaque objects is
         // the same except it has a smaller Z range so it's enough to just test cone/plane.
         if (isConeBehindPlane(spotlightConeViewSpace, minDepthPlaneViewSpace)) {
             continue;
         }
-        
+
         // Append this light to opaque geometry.
         addSpotLightToTileOpaqueLightIndexList(iSpotlightIndex);
     }
-    
+
     // Wait for all group threads to cull lights and finish writing to groupshared memory.
     GroupMemoryBarrierWithGroupSync();
-    
+
     if (iThreadIdInGroup == 0) {
         // Write non-culled lights to light grid and reserve space in global light list.
         reserveSpaceForNonCulledTileLightsInLightGridAndList(iThreadGroupXIdInDispatch, iThreadGroupYIdInDispatch);
     }
-    
+
     // Wait for all group threads before updating global light index list.
     GroupMemoryBarrierWithGroupSync();
-    
+
     // Write local light index list into the global light index list.
     // Start with opaque geometry.
-    
+
     // Write point lights.
     for (uint i = iThreadIdInGroup; i < iOpaquePointLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS) {
         #hlsl opaquePointLightIndexList
         #glsl opaquePointLightIndexList.array
         [iOpaquePointLightIndexListStartOffset + i] = tileOpaquePointLightIndexList[i];
     }
-    
+
     // Write spot lights.
     for (uint i = iThreadIdInGroup; i < iOpaqueSpotLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS) {
         #hlsl opaqueSpotLightIndexList
         #glsl opaqueSpotLightIndexList.array
         [iOpaqueSpotLightIndexListStartOffset + i] = tileOpaqueSpotLightIndexList[i];
     }
-    
+
     // Now write lights for transparent geometry.
-    
+
     // Write point lights.
     for (uint i = iThreadIdInGroup; i < iTransparentPointLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS) {
         #hlsl transparentPointLightIndexList
         #glsl transparentPointLightIndexList.array
         [iTransparentPointLightIndexListStartOffset + i] = tileTransparentPointLightIndexList[i];
     }
-    
+
     // Write spot lights.
     for (uint i = iThreadIdInGroup; i < iTransparentSpotLightCountIntersectingTileFrustum; i += LIGHT_GRID_TILE_SIZE_IN_PIXELS * LIGHT_GRID_TILE_SIZE_IN_PIXELS) {
         #hlsl transparentSpotLightIndexList

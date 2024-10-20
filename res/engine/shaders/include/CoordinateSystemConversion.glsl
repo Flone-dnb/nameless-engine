@@ -10,10 +10,10 @@ vec4 convertNdcSpaceToViewSpace(vec3 ndcSpaceCoordinates, mat4 inverseProjection
     // Undo projection
     // (NDC `w` is always 1 because after perspective divide).
     vec4 viewSpaceCoordinates = mul(inverseProjectionMatrix, vec4(ndcSpaceCoordinates, 1.0F));
-    
+
     // Undo perspective divide.
     viewSpaceCoordinates = viewSpaceCoordinates / viewSpaceCoordinates.w;
-    
+
     return viewSpaceCoordinates;
 }
 
@@ -34,7 +34,7 @@ vec4 convertScreenSpaceToViewSpace(
     mat4 inverseProjectionMatrix) {
     // Convert screen coordinates to normalized coordinates in range [0..1; 0..1].
     vec2 screenNormalized = vec2(screenSpaceCoordinates.x / iRenderResolutionWidth, screenSpaceCoordinates.y / iRenderResolutionHeight);
-    
+
     // Calculate coordinates in NDC space.
     vec3 ndcSpaceCoordinates = vec3(
         // converts from [0..1] to [-1..1]
@@ -44,6 +44,6 @@ vec4 convertScreenSpaceToViewSpace(
         -2.0F * screenNormalized.y + 1.0F,
         // copy z
         screenSpaceCoordinates.z);
-    
+
     return convertNdcSpaceToViewSpace(ndcSpaceCoordinates, inverseProjectionMatrix);
 }

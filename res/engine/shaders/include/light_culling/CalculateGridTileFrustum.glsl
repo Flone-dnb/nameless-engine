@@ -5,13 +5,13 @@
 #glsl layout(binding = 0) uniform #hlsl struct #both ComputeInfo {
     /** Total number of thread groups dispatched in the X direction. */
     uint iThreadGroupCountX;
-    
+
     /** Total number of thread groups dispatched in the Y direction. */
     uint iThreadGroupCountY;
-    
+
     /** Total number of tiles in the X direction. */
     uint iTileCountX;
-    
+
     /** Total number of tiles in the Y direction. */
     uint iTileCountY;
 } #glsl computeInfo; #hlsl ; ConstantBuffer<ComputeInfo> computeInfo : register(b0, space5);
@@ -20,10 +20,10 @@
 #glsl layout(binding = 1) uniform #hlsl struct #both ScreenToViewData {
     /** Inverse of the projection matrix. */
     mat4 inverseProjectionMatrix;
-    
+
     /** Width of the underlying render image (might be smaller that the actual screen size). */
     uint iRenderTargetWidth;
-    
+
     /** Height of the underlying render image (might be smaller that the actual screen size). */
     uint iRenderTargetHeight;
 } #glsl screenToViewData; #hlsl ; ConstantBuffer<ScreenToViewData> screenToViewData : register(b1, space5);
@@ -58,25 +58,25 @@ Frustum calculateFrustumInViewSpaceForGridTileInScreenSpace(
     mat4 inverseProjectionMatrix) {
     // Prepare constants.
     const float tileZ = 1.0F; // Z coordinate for tile in NDC space (since there's really no Z in screen space).
-    
+
     // Calculate 4 corner points of frustum's far clip plane.
     vec3 farClipPlaneCornersScreenSpace[4];
-    
+
     // Points that we will now calculate will be in screen space because we know the size of one grid tile in pixels,
     // these coordinates will be in range [0..SCREEN_WIDTH; 0..SCREEN_HEIGHT; Z].
-    
+
     // Calculate top-left point.
     farClipPlaneCornersScreenSpace[0] = vec3(vec2(iTileXPosition, iTileYPosition) * iTileSizeInPixels, tileZ);
-    
+
     // Calculate top-right point.
     farClipPlaneCornersScreenSpace[1] = vec3(vec2(iTileXPosition + 1, iTileYPosition) * iTileSizeInPixels, tileZ);
-    
+
     // Calculate bottom-left point.
     farClipPlaneCornersScreenSpace[2] = vec3(vec2(iTileXPosition, iTileYPosition + 1) * iTileSizeInPixels, tileZ);
-    
+
     // Calculate bottom-right point.
     farClipPlaneCornersScreenSpace[3] = vec3(vec2(iTileXPosition + 1, iTileYPosition + 1) * iTileSizeInPixels, tileZ);
-    
+
     // Now we need to transform these points from screen space to view space
     // because later we would want our frustums to be in view space.
     vec3 farClipPlaneCornersViewSpace[4];
@@ -88,16 +88,16 @@ Frustum calculateFrustumInViewSpaceForGridTileInScreenSpace(
             iRenderTargetHeight,
             inverseProjectionMatrix).xyz;
     }
-    
+
     // Prepare camera location constant.
     const vec3 cameraLocationViewSpace = vec3(0.0F, 0.0F, 0.0F);
-    
+
     // Now build frustum.
     Frustum frustum;
     frustum.planes[0] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[0], farClipPlaneCornersViewSpace[2]);
     frustum.planes[1] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[3], farClipPlaneCornersViewSpace[1]);
     frustum.planes[2] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[1], farClipPlaneCornersViewSpace[0]);
     frustum.planes[3] = calculatePlaneFromTriangle(cameraLocationViewSpace, farClipPlaneCornersViewSpace[2], farClipPlaneCornersViewSpace[3]);
-    
+
     return frustum;
 }

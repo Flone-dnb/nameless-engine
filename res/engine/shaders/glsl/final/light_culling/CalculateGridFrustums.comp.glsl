@@ -18,10 +18,10 @@ void main() {
     if (gl_GlobalInvocationID.x >= computeInfo.iTileCountX || gl_GlobalInvocationID.y >= computeInfo.iTileCountY) {
         return;
     }
-    
+
     // Calculate index into the resulting buffer to write the calculated frustum.
     const uint iFrustumIndex = (gl_GlobalInvocationID.y * computeInfo.iTileCountX) + gl_GlobalInvocationID.x;
-    
+
     // Calculate tile frustum and write it to the resulting buffer.
     calculatedFrustums.array[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(
         gl_GlobalInvocationID.x, // tile X

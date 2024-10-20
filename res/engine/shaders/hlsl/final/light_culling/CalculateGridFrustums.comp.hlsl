@@ -16,10 +16,10 @@ void main(uint3 dispatchThreadId : SV_DispatchThreadID) {
     if (dispatchThreadId.x >= computeInfo.iTileCountX || dispatchThreadId.y >= computeInfo.iTileCountY) {
         return;
     }
-    
+
     // Calculate index into the resulting buffer to write the calculated frustum.
     const uint iFrustumIndex = (dispatchThreadId.y * computeInfo.iTileCountX) + dispatchThreadId.x;
-    
+
     // Calculate tile frustum and write it to the resulting buffer.
     calculatedFrustums[iFrustumIndex] = calculateFrustumInViewSpaceForGridTileInScreenSpace(
         dispatchThreadId.x, // tile X

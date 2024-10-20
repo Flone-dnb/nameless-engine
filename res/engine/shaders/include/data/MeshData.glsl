@@ -2,7 +2,7 @@
 struct MeshData {
     /** Matrix that transforms positions from model space to world space. */
     mat4 worldMatrix; 
-    
+
     /** 3x3 matrix (using 4x4 for shader alignment/packing simpicity) that transforms normals from model space to world space. */ 
     mat4 normalMatrix;
 };

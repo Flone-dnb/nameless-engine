@@ -2,13 +2,13 @@
 struct MaterialData {
     /** Fill color. 4th component stores opacity (when material transparency is used). */
     vec4 diffuseColor;
-    
+
     /** Reflected color. 4th component is not used. */
     vec4 specularColor;
-    
+
     /** Defines how much specular light will be reflected (value in range [0.0F; 1.0F]). */
     float roughness;
-    
+
     /** Explicit padding for clarity. */
     /** `vec3` does not work here because GLSL requires 16 bytes of alignment of `vec3`s but we have 4 byte alignment here. */
     float pad1;

@@ -1,0 +1,6 @@
+var structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ShaderResources =
+[
+    [ "pCalculatedFrustums", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ShaderResources.html#a5536318e578d675cc9c73621204a098e", null ],
+    [ "pComputeInfo", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ShaderResources.html#a91d32e644202638395469ad82f644080", null ],
+    [ "pScreenToViewData", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ShaderResources.html#ae4b835c7074d35b4be05fc42835ad62b", null ]
+];

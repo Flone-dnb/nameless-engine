@@ -137,7 +137,7 @@ namespace ne {
             // Spawn directional light.
             const auto pDirectionalLightNode = sgc::makeGc<DirectionalLightNode>();
             getWorldRootNode()->addChildNode(pDirectionalLightNode);
-            pDirectionalLightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
+            pDirectionalLightNode->setWorldRotation(MathHelpers::convertNormalizedDirectionToRollPitchYaw(
                 glm::normalize(glm::vec3(1.0F, -0.5F, -1.0F)))); // NOLINT
             pDirectionalLightNode->setLightIntensity(0.1F);      // NOLINT
             pDirectionalLightNode->setLightColor(glm::vec3(0.0F, 0.0F, 1.0F));
@@ -161,7 +161,7 @@ namespace ne {
             getWorldRootNode()->addChildNode(pSpotlightNode);
             pSpotlightNode->setLightColor(glm::vec3(0.0F, 1.0F, 0.0F));
             pSpotlightNode->setWorldLocation(glm::vec3(12.0F, 4.0F, 2.5F)); // NOLINT
-            pSpotlightNode->setWorldRotation(MathHelpers::convertDirectionToRollPitchYaw(
+            pSpotlightNode->setWorldRotation(MathHelpers::convertNormalizedDirectionToRollPitchYaw(
                 glm::normalize(glm::vec3(-0.5F, -1.0F, -1.0F)))); // NOLINT
             pSpotlightNode->setLightInnerConeAngle(10.0F);        // NOLINT
             pSpotlightNode->setLightInnerConeAngle(20.0F);        // NOLINT

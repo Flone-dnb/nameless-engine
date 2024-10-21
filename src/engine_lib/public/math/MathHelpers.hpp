@@ -27,7 +27,7 @@ namespace ne {
          *
          * @return Roll (as X), pitch (as Y) and yaw (as Z) in degrees.
          */
-        static inline glm::vec3 convertDirectionToRollPitchYaw(const glm::vec3& direction);
+        static inline glm::vec3 convertNormalizedDirectionToRollPitchYaw(const glm::vec3& direction);
 
         /**
          * Converts rotation angles to a direction.
@@ -83,9 +83,9 @@ namespace ne {
          *
          * Example:
          * @code
-         * normalizeValue(370.0F, -360.0F, 360.0F); // result is `-350`
+         * normalizeToRange(370.0F, -360.0F, 360.0F); // result is `-350`
          *
-         * normalizeValue(-730, -360, 360); // result is `-10`
+         * normalizeToRange(-730, -360, 360); // result is `-10`
          * @endcode
          *
          * @param value Value to normalize.
@@ -94,7 +94,7 @@ namespace ne {
          *
          * @return Normalized value.
          */
-        static inline float normalizeValue(float value, float min, float max);
+        static inline float normalizeToRange(float value, float min, float max);
 
         /**
          * Normalizes the specified vector while checking for zero division (to avoid NaNs in
@@ -111,7 +111,7 @@ namespace ne {
         static inline const float smallFloatEpsilon = 0.0000001F; // NOLINT: not a very small number
     };
 
-    glm::vec3 MathHelpers::convertDirectionToRollPitchYaw(const glm::vec3& direction) {
+    glm::vec3 MathHelpers::convertNormalizedDirectionToRollPitchYaw(const glm::vec3& direction) {
         PROFILE_FUNC;
 
         // Ignore zero vectors.
@@ -226,7 +226,7 @@ namespace ne {
                glm::rotate(glm::radians(rotation.x), glm::vec3(1.0F, 0.0F, 0.0F));
     }
 
-    float MathHelpers::normalizeValue(float value, float min, float max) {
+    float MathHelpers::normalizeToRange(float value, float min, float max) {
         const auto width = max - min;
         const auto offsetValue = value - min;
 

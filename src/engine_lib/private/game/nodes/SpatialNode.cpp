@@ -33,9 +33,9 @@ namespace ne {
 
         std::scoped_lock guard(mtxWorldMatrix.first);
 
-        relativeRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
-        relativeRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
-        relativeRotation.z = MathHelpers::normalizeValue(rotation.z, -360.0F, 360.0F); // NOLINT
+        relativeRotation.x = MathHelpers::normalizeToRange(rotation.x, -360.0F, 360.0F); // NOLINT
+        relativeRotation.y = MathHelpers::normalizeToRange(rotation.y, -360.0F, 360.0F); // NOLINT
+        relativeRotation.z = MathHelpers::normalizeToRange(rotation.z, -360.0F, 360.0F); // NOLINT
 
         recalculateLocalMatrix();
         recalculateWorldMatrix();
@@ -125,9 +125,9 @@ namespace ne {
         PROFILE_FUNC;
 
         glm::vec3 targetWorldRotation;
-        targetWorldRotation.x = MathHelpers::normalizeValue(rotation.x, -360.0F, 360.0F); // NOLINT
-        targetWorldRotation.y = MathHelpers::normalizeValue(rotation.y, -360.0F, 360.0F); // NOLINT
-        targetWorldRotation.z = MathHelpers::normalizeValue(rotation.z, -360.0F, 360.0F); // NOLINT
+        targetWorldRotation.x = MathHelpers::normalizeToRange(rotation.x, -360.0F, 360.0F); // NOLINT
+        targetWorldRotation.y = MathHelpers::normalizeToRange(rotation.y, -360.0F, 360.0F); // NOLINT
+        targetWorldRotation.z = MathHelpers::normalizeToRange(rotation.z, -360.0F, 360.0F); // NOLINT
 
         std::scoped_lock guard(mtxWorldMatrix.first, mtxSpatialParent.first);
 

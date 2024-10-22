@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['nearclipplanedistance_0',['nearClipPlaneDistance',['../structne_1_1CameraProperties_1_1Data_1_1ProjectionData.html#a618597a171de8adfa110494a43250d18',1,'ne::CameraProperties::Data::ProjectionData']]],
+  ['nearclipplaneheight_1',['nearClipPlaneHeight',['../structne_1_1CameraProperties_1_1Data_1_1ProjectionData.html#a10015aa6b9050ef7082c34219b5d0b14',1,'ne::CameraProperties::Data::ProjectionData']]],
+  ['nearface_2',['nearFace',['../structne_1_1Frustum.html#a4e9d9f6af438342db734b836561e42a9',1,'ne::Frustum']]],
+  ['node_3',['Node',['../classne_1_1Node.html',1,'ne::Node'],['../classne_1_1Node.html#a869b03190702ccef1f85bad536bf1a4b',1,'ne::Node::Node()'],['../classne_1_1Node.html#a21e8ff8b016048cb83b9bbfbe822a7e7',1,'ne::Node::Node(const std::string &amp;sName)']]],
+  ['nodefunction_4',['NodeFunction',['../classne_1_1NodeFunction.html',1,'ne::NodeFunction&lt; FunctionReturnType, FunctionArgs &gt;'],['../classne_1_1NodeFunction_3_01FunctionReturnType_07FunctionArgs_8_8_8_08_4.html#a87be6ed619ef19fc70ffc839032a0f4b',1,'ne::NodeFunction&lt; FunctionReturnType(FunctionArgs...)&gt;::NodeFunction(size_t iNodeId, const std::function&lt; FunctionReturnType(FunctionArgs...)&gt; &amp;callback)'],['../classne_1_1NodeFunction_3_01FunctionReturnType_07FunctionArgs_8_8_8_08_4.html#a0b583d1cffcec3340d969eab61cd2aaa',1,'ne::NodeFunction&lt; FunctionReturnType(FunctionArgs...)&gt;::NodeFunction(const NodeFunction &amp;other)=default'],['../classne_1_1NodeFunction_3_01FunctionReturnType_07FunctionArgs_8_8_8_08_4.html#ac0d22b7a67c10fd9a1cea9cfa2677bc9',1,'ne::NodeFunction&lt; FunctionReturnType(FunctionArgs...)&gt;::NodeFunction(NodeFunction &amp;&amp;other) noexcept=default']]],
+  ['nodefunction_3c_20functionreturntype_28functionargs_2e_2e_2e_29_3e_5',['NodeFunction&lt; FunctionReturnType(FunctionArgs...)&gt;',['../classne_1_1NodeFunction_3_01FunctionReturnType_07FunctionArgs_8_8_8_08_4.html',1,'ne']]],
+  ['nodenotificationbroadcaster_6',['NodeNotificationBroadcaster',['../classne_1_1NodeNotificationBroadcaster.html',1,'ne']]],
+  ['nodenotificationbroadcaster_3c_20functionreturntype_28functionargs_2e_2e_2e_29_3e_7',['NodeNotificationBroadcaster&lt; FunctionReturnType(FunctionArgs...)&gt;',['../classne_1_1NodeNotificationBroadcaster_3_01FunctionReturnType_07FunctionArgs_8_8_8_08_4.html',1,'ne']]],
+  ['nodenotificationbroadcasterbase_8',['NodeNotificationBroadcasterBase',['../classne_1_1NodeNotificationBroadcasterBase.html',1,'ne']]],
+  ['nolongerusedarrayindices_9',['noLongerUsedArrayIndices',['../structne_1_1DynamicCpuWriteShaderResourceArray_1_1InternalResources.html#ab18686fe27601abdce1d7828288028ac',1,'ne::DynamicCpuWriteShaderResourceArray::InternalResources']]],
+  ['nolongeruseddescriptorindices_10',['noLongerUsedDescriptorIndices',['../structne_1_1ContinuousDirectXDescriptorRange_1_1InternalData.html#a6aec94b8685f66832c39811146cccb0b',1,'ne::ContinuousDirectXDescriptorRange::InternalData']]],
+  ['nolongerusedindices_11',['noLongerUsedIndices',['../structne_1_1ShaderArrayIndexManager_1_1InternalData.html#a1519589d2b693c484268701737964b2b',1,'ne::ShaderArrayIndexManager::InternalData']]],
+  ['nolongerusedsingledescriptorindices_12',['noLongerUsedSingleDescriptorIndices',['../structne_1_1DirectXDescriptorHeap_1_1InternalData.html#a259415752a9e21d5dad959b15ddbab2b',1,'ne::DirectXDescriptorHeap::InternalData']]],
+  ['normal_13',['normal',['../structne_1_1MeshVertex.html#a3cb4ef9b868401205f185f9bbaf56783',1,'ne::MeshVertex::normal()'],['../structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1Plane.html#ad0597c15418c0152a2d50c68be5f3b5f',1,'ne::LightingShaderResourceManager::ComputeShaderData::Plane::normal()'],['../structne_1_1Plane.html#a9e3dae347c4cc72d2e14089bdad100a3',1,'ne::Plane::normal()']]],
+  ['normalizesafely_14',['normalizeSafely',['../classne_1_1MathHelpers.html#aaff69b1d4a3834f7a4a5df8fd3565510',1,'ne::MathHelpers']]],
+  ['normalizetorange_15',['normalizeToRange',['../classne_1_1MathHelpers.html#a06d07fd83bd99152af1b1dbdce97f43e',1,'ne::MathHelpers']]],
+  ['normalmatrix_16',['normalMatrix',['../structne_1_1MeshNode_1_1MeshShaderConstants.html#af4f40275001b0c5eddbaa8a1f4b9416d',1,'ne::MeshNode::MeshShaderConstants']]],
+  ['notifyaboutattachedtonewparent_17',['notifyAboutAttachedToNewParent',['../classne_1_1Node.html#a8472729af29f2e90d0a4ee334953e783',1,'ne::Node']]],
+  ['notifyaboutdetachingfromparent_18',['notifyAboutDetachingFromParent',['../classne_1_1Node.html#a9854b81a46b4c0063a0447a8a42dac0c',1,'ne::Node']]],
+  ['notifyrendereraboutchangedsettings_19',['notifyRendererAboutChangedSettings',['../classne_1_1RenderSettings.html#a1ef3a5f77f2b71b60fdfc97c886479ca',1,'ne::RenderSettings']]],
+  ['notifyshaderbytecodeloadedintomemory_20',['notifyShaderBytecodeLoadedIntoMemory',['../classne_1_1Shader.html#ad1f2db6459f9b9c7adf6a2b09938d7e9',1,'ne::Shader']]],
+  ['notifyshaderbytecodereleasedfrommemory_21',['notifyShaderBytecodeReleasedFromMemory',['../classne_1_1Shader.html#a7919d112571cf03c409fa713a741192a',1,'ne::Shader']]]
+];

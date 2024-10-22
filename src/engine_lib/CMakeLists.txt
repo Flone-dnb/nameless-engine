@@ -506,6 +506,7 @@ add_dependencies(${PROJECT_NAME} tinygltf)
 
 # External: sgc
 message(STATUS "${PROJECT_NAME}: adding external dependency \"sgc\"...")
+set(SGC_GENERATE_DOCS OFF CACHE BOOL "" FORCE)
 set(SGC_ENABLE_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(${RELATIVE_EXT_PATH}/sgc ${DEPENDENCY_BUILD_DIR_NAME}/sgc SYSTEM)
 target_link_libraries(${PROJECT_NAME} PUBLIC sgc_lib)

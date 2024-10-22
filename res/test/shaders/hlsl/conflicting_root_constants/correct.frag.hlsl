@@ -1,5 +1,5 @@
 #include "../../../../engine/shaders/include/Base.glsl"
-#include "../../../../engine/shaders/hlsl/formats/MeshNodeVertex.hlsl"
+#include "../../../../engine/shaders/hlsl/format/MeshNodeVertex.hlsl"
 
 #additional_shader_constants{
     uint test1;

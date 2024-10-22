@@ -1,6 +1,6 @@
 #include "../../../../engine/shaders/include/Base.glsl"
 #define LAYOUT_FRAGMENT_SHADER
-#include "../../../../engine/shaders/glsl/formats/MeshNodeVertexLayout.glsl"
+#include "../../../../engine/shaders/glsl/format/MeshNodeVertexLayout.glsl"
 
 #additional_shader_constants{
     uint test1;

@@ -38,7 +38,10 @@ namespace ne {
         operator=(const DynamicCpuWriteShaderResourceArrayManager&) = delete;
 
         /**
-         * Requests a new slot in the array to be reserved for use by the specified shader resource.
+         * Requests a new slot in the array to be reserved. If an array for the shader resource (that
+         * the binding references) was never requested previously it will be created by this manager
+         * and the array will be binded to all pipelines that use this shader resource as a global
+         * shader resource binding.
          *
          * @remark There is no `erase` function because slot destruction automatically
          * uses internal `erase`, see documentation on the returned slot object.

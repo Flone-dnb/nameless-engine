@@ -93,8 +93,8 @@ namespace ne {
     };
 
     /**
-     * Manages an array (defined in shaders) related to lighting and allows modifying array data
-     * from CPU side.
+     * Manages arrays (defined in shaders) related to lighting and allows modifying the array data
+     * from the CPU side.
      */
     class ShaderLightArray {
         // Frees the slot in its destructor.

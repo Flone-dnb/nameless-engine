@@ -97,7 +97,7 @@ namespace ne {
             std::chrono::steady_clock::time_point frameStartTime;
 
             /** Not empty if FPS limit is set, defines time in nanoseconds that one frame should take. */
-            std::optional<double> optionalTargetTimeToRenderFrameInNs = {};
+            std::optional<double> optionalTargetTimeToRenderFrameInNs;
         };
 
         /** Groups info related to measuring time for specific tasks. */

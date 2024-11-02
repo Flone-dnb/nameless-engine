@@ -42,7 +42,7 @@ namespace ne {
     protected:
         /**
          * Creates a new render-specific binding and registers it in the manager.
-         * Also assigs this new binding to the specified GPU resource so that the binding will be
+         * Also assigns this new binding to the specified GPU resource so that the binding will be
          * removed once the resources are destroyed.
          *
          * @param pRenderer            Renderer.

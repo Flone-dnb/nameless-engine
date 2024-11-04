@@ -80,16 +80,6 @@ namespace ne {
             std::string_view sComputeShaderName = "");
 
         /**
-         * Returns a shader configuration of the currently used shader.
-         *
-         * @param shaderType Shader type to get configuration of.
-         *
-         * @return Empty if a shader of this type is not used by this Pipeline, otherwise shader
-         * configuration.
-         */
-        std::optional<std::set<ShaderMacro>> getCurrentShaderConfiguration(ShaderType shaderType);
-
-        /**
          * Looks for an offset of a `uint` field in root/push constants of the specified name.
          *
          * @param sConstantName Name of the push/root constant.
@@ -151,16 +141,6 @@ namespace ne {
             Renderer* pRenderer,
             PipelineManager* pPipelineManager,
             std::unique_ptr<PipelineConfiguration> pPipelineConfiguration);
-
-        /**
-         * Saves shader configuration of the currently used shader.
-         *
-         * @remark This should be called by derived classes when they start to use some shader.
-         *
-         * @param shaderType        Type of the shader being currently used.
-         * @param fullConfiguration Shader's full (might include renderer's configuration) configuration.
-         */
-        void saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration);
 
         /**
          * Releases internal resources such as root signature or descriptor layout, internal pipeline object
@@ -289,11 +269,6 @@ namespace ne {
 
         /** Not empty if push/root constants are used. */
         std::pair<std::mutex, std::optional<ShaderConstantsData>> mtxShaderConstantsData;
-
-        /**
-         * Full shader configuration (might include renderer's configuration) of a currently used shader(s).
-         */
-        std::unordered_map<ShaderType, std::set<ShaderMacro>> usedShaderConfiguration;
 
         /** Usage details of this pipeline. */
         const std::unique_ptr<PipelineConfiguration> pPipelineConfiguration;

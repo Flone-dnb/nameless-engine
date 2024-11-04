@@ -149,7 +149,7 @@ namespace ne {
 
     std::optional<Error> DirectXPso::generateGraphicsPso() {
         // Prepare pipeline type.
-        const auto bDepthOnlyPipeline = getConfiguration()->getPixelShaderName().empty();
+        const auto bDepthOnlyPipeline = getConfiguration()->getFragmentShaderName().empty();
 
         // Make sure pixel shader is specified when blending is enabled.
         if (getConfiguration()->isPixelBlendingEnabled() && bDepthOnlyPipeline) [[unlikely]] {
@@ -183,17 +183,17 @@ namespace ne {
 
         // Assign pixel shader.
         if (!bDepthOnlyPipeline) {
-            if (addShader(std::string(getConfiguration()->getPixelShaderName()))) [[unlikely]] {
+            if (addShader(std::string(getConfiguration()->getFragmentShaderName()))) [[unlikely]] {
                 return Error(std::format(
-                    "unable to find a shader named \"{}\"", getConfiguration()->getPixelShaderName()));
+                    "unable to find a shader named \"{}\"", getConfiguration()->getFragmentShaderName()));
             }
         }
 
         // Get assigned vertex shader.
         const auto pVertexShaderPack = findShader(ShaderType::VERTEX_SHADER);
         std::set<ShaderMacro> fullVertexShaderConfiguration;
-        auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(pVertexShaderPack->getShader(
-            getConfiguration()->getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
+        auto pVertexShader = std::dynamic_pointer_cast<HlslShader>(
+            pVertexShaderPack->getShader(getConfiguration()->getRequiredVertexShaderMacros()));
 
         // Get vertex shader bytecode.
         auto shaderBytecode = pVertexShader->getCompiledBlob();
@@ -211,8 +211,8 @@ namespace ne {
         if (!bDepthOnlyPipeline) {
             // Get assigned pixel shader.
             const auto pPixelShaderPack = findShader(ShaderType::FRAGMENT_SHADER);
-            pPixelShader = std::dynamic_pointer_cast<HlslShader>(pPixelShaderPack->getShader(
-                getConfiguration()->getAdditionalPixelShaderMacros(), fullPixelShaderConfiguration));
+            pPixelShader = std::dynamic_pointer_cast<HlslShader>(
+                pPixelShaderPack->getShader(getConfiguration()->getRequiredFragmentShaderMacros()));
 
             // Get pixel shader bytecode and generate its root signature.
             shaderBytecode = pPixelShader->getCompiledBlob();
@@ -362,10 +362,6 @@ namespace ne {
 
         // Done.
         mtxInternalResources.second.bIsReadyForUsage = true;
-        saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
-        if (!bDepthOnlyPipeline) {
-            saveUsedShaderConfiguration(ShaderType::FRAGMENT_SHADER, std::move(fullPixelShaderConfiguration));
-        }
 
         return {};
     }
@@ -394,8 +390,7 @@ namespace ne {
 
         // Get shader.
         std::set<ShaderMacro> fullComputeShaderConfiguration;
-        auto pComputeShader = std::dynamic_pointer_cast<HlslShader>(
-            pComputeShaderPack->getShader({}, fullComputeShaderConfiguration));
+        auto pComputeShader = std::dynamic_pointer_cast<HlslShader>(pComputeShaderPack->getShader({}));
 
         // Get DirectX renderer.
         auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());

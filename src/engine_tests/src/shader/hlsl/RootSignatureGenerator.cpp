@@ -13,20 +13,6 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-// Template magic to access a private function for testing purposes.
-template <typename Tag, typename Tag::pfn_t pfn> struct tag_bind_pfn {
-    friend typename Tag::pfn_t pfn_of(Tag) { return pfn; }
-};
-struct tag_ShaderPack_setRendererConfiguration {
-    using pfn_t = void (ne::ShaderPack::*)(const std::set<ne::ShaderMacro>&);
-    friend typename pfn_t pfn_of(tag_ShaderPack_setRendererConfiguration);
-};
-template struct tag_bind_pfn<
-    tag_ShaderPack_setRendererConfiguration,
-    &ne::ShaderPack::setRendererConfiguration>;
-inline static const auto c_pfn_ShaderPack_setRendererConfiguration =
-    pfn_of(tag_ShaderPack_setRendererConfiguration{});
-
 TEST_CASE("root signature merge is correct") {
     using namespace ne;
 
@@ -172,21 +158,11 @@ TEST_CASE("root signature merge fails if vertex/pixel shaders have conflicting r
                 auto pConflictingFragmentShaderPack =
                     std::get<std::shared_ptr<ShaderPack>>(std::move(result));
 
-                // Set configuration (only for this test, in reality it will be set by the renderer).
-                ((*pVertexShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
-                ((*pCorrectFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
-                ((*pConflictingFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
-                // pVertexShaderPack->setRendererConfiguration({});
-                // pCorrectFragmentShaderPack->setRendererConfiguration({});
-                // pConflictingFragmentShaderPack->setRendererConfiguration({});
-
                 // Get shaders.
                 std::set<ShaderMacro> fullShaderConfiguration;
-                const auto pVertexShader = pVertexShaderPack->getShader({}, fullShaderConfiguration);
-                const auto pCorrectFragmentShader =
-                    pCorrectFragmentShaderPack->getShader({}, fullShaderConfiguration);
-                const auto pConflictingFragmentShader =
-                    pConflictingFragmentShaderPack->getShader({}, fullShaderConfiguration);
+                const auto pVertexShader = pVertexShaderPack->getShader({});
+                const auto pCorrectFragmentShader = pCorrectFragmentShaderPack->getShader({});
+                const auto pConflictingFragmentShader = pConflictingFragmentShaderPack->getShader({});
 
                 // Load reflection.
                 dynamic_cast<HlslShader*>(pVertexShader.get())->getCompiledBlob();

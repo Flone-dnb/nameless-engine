@@ -10,7 +10,6 @@
 #include "io/Logger.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
 #include "misc/MessageBox.h"
-#include "shader/general/ShaderMacro.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "misc/Profiler.hpp"
@@ -64,7 +63,6 @@ namespace ne {
 
         // Create some objects.
         pPipelineManager = std::make_unique<PipelineManager>(this);
-        mtxShaderConfiguration.second = std::make_unique<ShaderConfiguration>(this);
         pGlobalShaderResourceBindingManager = std::unique_ptr<GlobalShaderResourceBindingManager>(
             new GlobalShaderResourceBindingManager(pPipelineManager.get()));
     }
@@ -406,8 +404,8 @@ namespace ne {
         std::scoped_lock guard(*getRenderResourcesMutex());
         waitForGpuToFinishWorkUpToThisPoint();
 
-        // Update target FPS.
-        updateTargetTimeToRenderFrame();
+        // Update FPS limit.
+        recalculateTargetFrameTimeFromFpsLimitSetting();
 
         if (bShadowMapSizeChanged) {
             // Notify shadow map manager.
@@ -599,7 +597,7 @@ namespace ne {
         return VulkanRenderer::create(pGameManager, vBlacklistedGpuNames);
     }
 
-    void Renderer::updateTargetTimeToRenderFrame() {
+    void Renderer::recalculateTargetFrameTimeFromFpsLimitSetting() {
         // Get render setting.
         const auto mtxRenderSettings = getRenderSettings();
         std::scoped_lock guard(*mtxRenderSettings.first);
@@ -700,11 +698,6 @@ namespace ne {
 
     size_t Renderer::getUsedVideoMemoryInMb() const { return getResourceManager()->getUsedVideoMemoryInMb(); }
 
-    std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>*
-    Renderer::getShaderConfiguration() {
-        return &mtxShaderConfiguration;
-    }
-
     Window* Renderer::getWindow() const { return pGameManager->getWindow(); }
 
     GameManager* Renderer::getGameManager() const { return pGameManager; }
@@ -734,33 +727,6 @@ namespace ne {
     }
 
     std::recursive_mutex* Renderer::getRenderResourcesMutex() { return &mtxRwRenderResources; }
-
-    void Renderer::updateShaderConfiguration() {
-        if (isInitialized()) {
-            const auto pipelineGuard =
-                pPipelineManager->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
-
-            {
-                std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
-
-                // Update shaders.
-                pShaderManager->setRendererConfigurationForShaders(
-                    mtxShaderConfiguration.second->currentVertexShaderConfiguration,
-                    ShaderType::VERTEX_SHADER);
-                pShaderManager->setRendererConfigurationForShaders(
-                    mtxShaderConfiguration.second->currentPixelShaderConfiguration,
-                    ShaderType::FRAGMENT_SHADER);
-            }
-        } else {
-            std::scoped_lock shaderParametersGuard(mtxShaderConfiguration.first);
-
-            // Update shaders.
-            pShaderManager->setRendererConfigurationForShaders(
-                mtxShaderConfiguration.second->currentVertexShaderConfiguration, ShaderType::VERTEX_SHADER);
-            pShaderManager->setRendererConfigurationForShaders(
-                mtxShaderConfiguration.second->currentPixelShaderConfiguration, ShaderType::FRAGMENT_SHADER);
-        }
-    }
 
     void Renderer::setupRenderStats() {
         renderStats.fpsInfo.timeAtLastFpsUpdate = std::chrono::steady_clock::now();
@@ -840,7 +806,7 @@ namespace ne {
         mtxRenderSettings.second->notifyRendererAboutChangedSettings();
 
         // Apply initial FPS limit setting.
-        updateTargetTimeToRenderFrame();
+        recalculateTargetFrameTimeFromFpsLimitSetting();
 
         return {};
     }

@@ -327,7 +327,7 @@ namespace ne {
 
     std::optional<Error> VulkanPipeline::generateGraphicsPipeline() {
         // Prepare pipeline type.
-        const auto bDepthOnlyPipeline = getConfiguration()->getPixelShaderName().empty();
+        const auto bDepthOnlyPipeline = getConfiguration()->getFragmentShaderName().empty();
 
         // Make sure pixel shader is specified when blending is enabled.
         if (getConfiguration()->isPixelBlendingEnabled() && bDepthOnlyPipeline) [[unlikely]] {
@@ -354,26 +354,22 @@ namespace ne {
         }
 
         if (!bDepthOnlyPipeline) {
-            if (addShader(std::string(getConfiguration()->getPixelShaderName()))) {
+            if (addShader(std::string(getConfiguration()->getFragmentShaderName()))) {
                 return Error(std::format(
-                    "unable to find a shader named \"{}\"", getConfiguration()->getPixelShaderName()));
+                    "unable to find a shader named \"{}\"", getConfiguration()->getFragmentShaderName()));
             }
         }
 
-        // Prepare full configuration to be filled.
-        std::set<ShaderMacro> fullVertexShaderConfiguration;
-        std::set<ShaderMacro> fullFragmentShaderConfiguration;
-
         // Get vertex shader.
         const auto pVertexShaderPack = findShader(ShaderType::VERTEX_SHADER);
-        auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader(
-            getConfiguration()->getAdditionalVertexShaderMacros(), fullVertexShaderConfiguration));
+        auto pVertexShader = std::dynamic_pointer_cast<GlslShader>(
+            pVertexShaderPack->getShader(getConfiguration()->getRequiredVertexShaderMacros()));
 
         std::shared_ptr<GlslShader> pFragmentShader;
         if (!bDepthOnlyPipeline) {
             const auto pFragmentShaderPack = findShader(ShaderType::FRAGMENT_SHADER);
-            pFragmentShader = std::dynamic_pointer_cast<GlslShader>(pFragmentShaderPack->getShader(
-                getConfiguration()->getAdditionalPixelShaderMacros(), fullFragmentShaderConfiguration));
+            pFragmentShader = std::dynamic_pointer_cast<GlslShader>(
+                pFragmentShaderPack->getShader(getConfiguration()->getRequiredFragmentShaderMacros()));
         }
 
         // Get Vulkan renderer.
@@ -392,13 +388,6 @@ namespace ne {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();
             return error;
-        }
-
-        // Done generating pipeline.
-        saveUsedShaderConfiguration(ShaderType::VERTEX_SHADER, std::move(fullVertexShaderConfiguration));
-        if (!bDepthOnlyPipeline) {
-            saveUsedShaderConfiguration(
-                ShaderType::FRAGMENT_SHADER, std::move(fullFragmentShaderConfiguration));
         }
 
         // Bind "frameData" descriptors to frame uniform buffer.
@@ -436,9 +425,7 @@ namespace ne {
         const auto pComputeShaderPack = findShader(ShaderType::COMPUTE_SHADER);
 
         // Get shader.
-        std::set<ShaderMacro> fullComputeShaderConfiguration;
-        auto pComputeShader = std::dynamic_pointer_cast<GlslShader>(
-            pComputeShaderPack->getShader({}, fullComputeShaderConfiguration));
+        auto pComputeShader = std::dynamic_pointer_cast<GlslShader>(pComputeShaderPack->getShader({}));
 
         // Get Vulkan renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());

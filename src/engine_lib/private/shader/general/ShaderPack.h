@@ -28,12 +28,6 @@ namespace ne {
         struct InternalResources {
             InternalResources() = default;
 
-            /** Whether @ref renderConfiguration was set or not. */
-            bool bIsRenderConfigurationSet = false;
-
-            /** Last set renderer's configuration. */
-            std::set<ShaderMacro> renderConfiguration;
-
             /** Stores shaders of this pack (pairs of "shader configuration" - "shader"). */
             std::unordered_map<std::set<ShaderMacro>, std::shared_ptr<Shader>, ShaderMacroSetHash>
                 shadersInPack;
@@ -86,33 +80,16 @@ namespace ne {
         bool releaseShaderPackDataFromMemoryIfLoaded();
 
         /**
-         * Returns a shader that matches the current renderer's shader configuration and the specified
-         * additional configuration.
-         *
-         * @remark Since renderer's shader configuration usually does not contain all needed macros for a
-         * shader, you should specify an additional configuration that will be considered together with the
-         * renderer's configuration to find a matching shader that has uses this configuration (macros).
-         *
-         * @remark Some macros that the renderer defines in the current renderer shader configuration
-         * will not be appended to the specified configuration if they are not applicable
-         * (i.e. if the renderer defines texture filtering macro but your configuration does not
-         * have a diffuse texture macro - adding texture filtering macro is useless)
-         * see ShaderMacro::isMacroShouldBeConsideredInConfiguration.
+         * Returns a shader that matches the the specified shader configuration.
          *
          * @remark If the a shader that matches the target configuration is not found an error
          * will be shown and an exception will be thrown.
          *
-         * @param additionalConfiguration Macros that the renderer does not define but that are
-         * needed by the current configuration for the shader. If this array contains a macro that
-         * the renderer already defines an error will be shown and an exception will be thrown.
-         * @param fullShaderConfiguration Output. Full shader configuration (might include renderer's
-         * configuration) of the found shader.
+         * @param shaderConfiguration Macros that must be defined for the shader.
          *
          * @return Found shader.
          */
-        std::shared_ptr<Shader> getShader(
-            const std::set<ShaderMacro>& additionalConfiguration,
-            std::set<ShaderMacro>& fullShaderConfiguration);
+        std::shared_ptr<Shader> getShader(const std::set<ShaderMacro>& shaderConfiguration);
 
         /**
          * Returns unique name of this shader.
@@ -155,18 +132,6 @@ namespace ne {
          * @param shaderType  Type of shaders this pack stores.
          */
         ShaderPack(const std::string& sShaderName, ShaderType shaderType);
-
-        /**
-         * Sets renderer's shader configuration, it will be considered in the further calls to @ref getShader.
-         *
-         * @warning If the configuration is changed we will try to release
-         * old shader's resources from the memory.
-         * Make sure no object is holding shared pointers to old shader (old configuration),
-         * otherwise there would be an error printed in the logs.
-         *
-         * @param renderConfiguration New renderer configuration.
-         */
-        void setRendererConfiguration(const std::set<ShaderMacro>& renderConfiguration);
 
         /** Used data. */
         std::pair<std::mutex, InternalResources> mtxInternalResources;

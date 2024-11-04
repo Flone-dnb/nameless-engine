@@ -1,8 +1,5 @@
 ﻿#include "ShaderMacro.h"
 
-// Custom.
-#include "render/Renderer.h"
-
 // External.
 #include "xxHash/xxhash.h"
 
@@ -135,7 +132,5 @@ namespace ne {
 
         return sOutput;
     }
-
-    void ShaderConfiguration::updateShaderConfiguration() { pRenderer->updateShaderConfiguration(); }
 
 } // namespace ne

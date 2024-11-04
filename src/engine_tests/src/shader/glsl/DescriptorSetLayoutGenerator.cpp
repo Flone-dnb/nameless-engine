@@ -15,20 +15,6 @@ const inline std::filesystem::path shaderPath = shaderPathDir / "test_shader.gls
 const inline auto pTestVertexShaderName = "test vertex shader";
 const inline auto pTestPixelShaderName = "test pixel shader";
 
-// Template magic to access a private function for testing purposes.
-template <typename Tag, typename Tag::pfn_t pfn> struct tag_bind_pfn {
-    friend typename Tag::pfn_t pfn_of(Tag) { return pfn; }
-};
-struct tag_ShaderPack_setRendererConfiguration {
-    using pfn_t = void (ne::ShaderPack::*)(const std::set<ne::ShaderMacro>&);
-    friend typename pfn_t pfn_of(tag_ShaderPack_setRendererConfiguration);
-};
-template struct tag_bind_pfn<
-    tag_ShaderPack_setRendererConfiguration,
-    &ne::ShaderPack::setRendererConfiguration>;
-inline static const auto c_pfn_ShaderPack_setRendererConfiguration =
-    pfn_of(tag_ShaderPack_setRendererConfiguration{});
-
 TEST_CASE("2 resources with the same name but different bindings cause error") {
     using namespace ne;
 
@@ -122,19 +108,15 @@ TEST_CASE("2 resources with the same name but different bindings cause error") {
                 const auto pFragmentShaderPack =
                     std::get<std::shared_ptr<ShaderPack>>(std::move(compileResult));
 
-                // Set dummy configuration.
-                pVertexShaderPack->getInternalResources()->second.bIsRenderConfigurationSet = true;
-                pFragmentShaderPack->getInternalResources()->second.bIsRenderConfigurationSet = true;
-
                 // Get vertex shader.
                 std::set<ShaderMacro> fullConfig;
                 const auto pVertexShader =
-                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
+                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}));
                 REQUIRE(pVertexShader != nullptr);
 
                 // Get fragment shader.
                 const auto pFragmentShader =
-                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
+                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}));
                 REQUIRE(pFragmentShader != nullptr);
 
                 // Make sure vertex shader bytecode is generated without errors.
@@ -288,19 +270,15 @@ TEST_CASE("2 resources with the same name/bindings but different types cause err
                 const auto pFragmentShaderPack =
                     std::get<std::shared_ptr<ShaderPack>>(std::move(compileResult));
 
-                // Set dummy configuration.
-                pVertexShaderPack->getInternalResources()->second.bIsRenderConfigurationSet = true;
-                pFragmentShaderPack->getInternalResources()->second.bIsRenderConfigurationSet = true;
-
                 // Get vertex shader.
                 std::set<ShaderMacro> fullConfig;
                 const auto pVertexShader =
-                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
+                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}));
                 REQUIRE(pVertexShader != nullptr);
 
                 // Get fragment shader.
                 const auto pFragmentShader =
-                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
+                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}));
                 REQUIRE(pFragmentShader != nullptr);
 
                 // Make sure vertex shader bytecode is generated without errors.
@@ -454,19 +432,15 @@ TEST_CASE("2 resources with different names but same type/binding cause error") 
                 const auto pFragmentShaderPack =
                     std::get<std::shared_ptr<ShaderPack>>(std::move(compileResult));
 
-                // Set dummy configuration.
-                pVertexShaderPack->getInternalResources()->second.bIsRenderConfigurationSet = true;
-                pFragmentShaderPack->getInternalResources()->second.bIsRenderConfigurationSet = true;
-
                 // Get vertex shader.
                 std::set<ShaderMacro> fullConfig;
                 const auto pVertexShader =
-                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
+                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}));
                 REQUIRE(pVertexShader != nullptr);
 
                 // Get fragment shader.
                 const auto pFragmentShader =
-                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}, fullConfig));
+                    std::dynamic_pointer_cast<GlslShader>(pVertexShaderPack->getShader({}));
                 REQUIRE(pFragmentShader != nullptr);
 
                 // Make sure vertex shader bytecode is generated without errors.
@@ -593,21 +567,11 @@ TEST_CASE("descriptor layout merge fails if vertex/fragment shaders have conflic
                 auto pConflictingFragmentShaderPack =
                     std::get<std::shared_ptr<ShaderPack>>(std::move(result));
 
-                // Set configuration (only for this test, in reality it will be set by the renderer).
-                ((*pVertexShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
-                ((*pCorrectFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
-                ((*pConflictingFragmentShaderPack).*(c_pfn_ShaderPack_setRendererConfiguration))({});
-                // pVertexShaderPack->setRendererConfiguration({});
-                // pCorrectFragmentShaderPack->setRendererConfiguration({});
-                // pConflictingFragmentShaderPack->setRendererConfiguration({});
-
                 // Get shaders.
                 std::set<ShaderMacro> fullShaderConfiguration;
-                const auto pVertexShader = pVertexShaderPack->getShader({}, fullShaderConfiguration);
-                const auto pCorrectFragmentShader =
-                    pCorrectFragmentShaderPack->getShader({}, fullShaderConfiguration);
-                const auto pConflictingFragmentShader =
-                    pConflictingFragmentShaderPack->getShader({}, fullShaderConfiguration);
+                const auto pVertexShader = pVertexShaderPack->getShader({});
+                const auto pCorrectFragmentShader = pCorrectFragmentShaderPack->getShader({});
+                const auto pConflictingFragmentShader = pConflictingFragmentShaderPack->getShader({});
 
                 // Load reflection.
                 dynamic_cast<GlslShader*>(pVertexShader.get())->getCompiledBytecode();

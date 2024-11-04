@@ -22,11 +22,6 @@ namespace ne {
           pPipelineConfiguration(std::move(pPipelineConfiguration)), pPipelineManager(pPipelineManager),
           pRenderer(pRenderer) {}
 
-    void
-    Pipeline::saveUsedShaderConfiguration(ShaderType shaderType, std::set<ShaderMacro>&& fullConfiguration) {
-        usedShaderConfiguration[shaderType] = std::move(fullConfiguration);
-    }
-
     void Pipeline::setShaderConstants(const std::unordered_map<std::string, size_t>& uintConstantsOffsets) {
         std::scoped_lock guard(mtxShaderConstantsData.first);
 
@@ -59,15 +54,6 @@ namespace ne {
         }
 
         return std::format("{} / {}", sVertexShaderName, sPixelShaderName);
-    }
-
-    std::optional<std::set<ShaderMacro>> Pipeline::getCurrentShaderConfiguration(ShaderType shaderType) {
-        auto it = usedShaderConfiguration.find(shaderType);
-        if (it == usedShaderConfiguration.end()) {
-            return {};
-        }
-
-        return it->second;
     }
 
     std::variant<size_t, Error> Pipeline::getUintConstantOffset(const std::string& sConstantName) {
@@ -189,7 +175,7 @@ namespace ne {
     std::string Pipeline::getPipelineIdentifier() const {
         return combineShaderNames(
             pPipelineConfiguration->getVertexShaderName(),
-            pPipelineConfiguration->getPixelShaderName(),
+            pPipelineConfiguration->getFragmentShaderName(),
             pPipelineConfiguration->getComputeShaderName());
     }
 

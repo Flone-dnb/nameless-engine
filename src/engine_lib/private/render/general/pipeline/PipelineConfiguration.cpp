@@ -8,12 +8,12 @@ namespace ne {
     ColorPipelineConfiguration::ColorPipelineConfiguration(
         const std::string& sVertexShaderName,
         const std::set<ShaderMacro>& additionalVertexShaderMacros,
-        const std::string& sPixelShaderName,
-        std::set<ShaderMacro> additionalPixelShaderMacros,
+        const std::string& sFragmentShaderName,
+        const std::set<ShaderMacro>& requiredFragmentShaderMacros,
         bool bUsePixelBlending)
         : PipelineConfiguration(sVertexShaderName, additionalVertexShaderMacros),
-          additionalPixelShaderMacros(std::move(additionalPixelShaderMacros)),
-          sPixelShaderName(sPixelShaderName), bUsePixelBlending(bUsePixelBlending) {}
+          requiredFragmentShaderMacros(requiredFragmentShaderMacros),
+          sFragmentShaderName(sFragmentShaderName), bUsePixelBlending(bUsePixelBlending) {}
 
     std::optional<GraphicsPipelineType> ColorPipelineConfiguration::getGraphicsType() const {
         if (bUsePixelBlending) {
@@ -23,11 +23,11 @@ namespace ne {
         return GraphicsPipelineType::PT_OPAQUE;
     }
 
-    std::set<ShaderMacro> ColorPipelineConfiguration::getAdditionalPixelShaderMacros() const {
-        return additionalPixelShaderMacros;
+    std::set<ShaderMacro> ColorPipelineConfiguration::getRequiredFragmentShaderMacros() const {
+        return requiredFragmentShaderMacros;
     }
 
-    std::string_view ColorPipelineConfiguration::getPixelShaderName() const { return sPixelShaderName; }
+    std::string_view ColorPipelineConfiguration::getFragmentShaderName() const { return sFragmentShaderName; }
 
     bool ColorPipelineConfiguration::isPixelBlendingEnabled() const { return bUsePixelBlending; }
 
@@ -39,7 +39,7 @@ namespace ne {
           shadowMappingUsage(shadowMappingUsage) {
         // Add shadow mapping macro if enabled.
         if (shadowMappingUsage.has_value()) {
-            this->additionalVertexShaderMacros.insert(ShaderMacro::VS_SHADOW_MAPPING_PASS);
+            this->requiredVertexShaderMacros.insert(ShaderMacro::VS_SHADOW_MAPPING_PASS);
         }
     }
 
@@ -57,7 +57,7 @@ namespace ne {
 
     bool DepthPipelineConfiguration::isDepthBiasEnabled() const { return shadowMappingUsage.has_value(); }
 
-    std::string_view DepthPipelineConfiguration::getPixelShaderName() const {
+    std::string_view DepthPipelineConfiguration::getFragmentShaderName() const {
         if (shadowMappingUsage.has_value() &&
             shadowMappingUsage.value() == PipelineShadowMappingUsage::POINT_LIGHTS) {
             // Use a special fragment shader for shadow passes.
@@ -72,8 +72,8 @@ namespace ne {
     }
 
     PipelineConfiguration::PipelineConfiguration(
-        const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros)
-        : additionalVertexShaderMacros(additionalVertexShaderMacros), sVertexShaderName(sVertexShaderName) {}
+        const std::string& sVertexShaderName, const std::set<ShaderMacro>& requiredVertexShaderMacros)
+        : requiredVertexShaderMacros(requiredVertexShaderMacros), sVertexShaderName(sVertexShaderName) {}
 
     ComputePipelineConfiguration::ComputePipelineConfiguration(const std::string& sComputeShaderName)
         : PipelineConfiguration("", {}), sComputeShaderName(sComputeShaderName) {}

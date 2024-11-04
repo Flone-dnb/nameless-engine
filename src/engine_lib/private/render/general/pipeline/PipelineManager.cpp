@@ -122,38 +122,38 @@ namespace ne {
             return Error("settings cannot be `nullptr`");
         }
 
-        const auto additionalVertexShaderMacros = pPipelineConfiguration->getAdditionalVertexShaderMacros();
-        const auto additionalPixelShaderMacros = pPipelineConfiguration->getAdditionalPixelShaderMacros();
+        const auto requiredVertexShaderMacros = pPipelineConfiguration->getRequiredVertexShaderMacros();
+        const auto requiredFragmentShaderMacros = pPipelineConfiguration->getRequiredFragmentShaderMacros();
         {
-            // Self check: make sure vertex macros have "VS_" prefix and pixel macros "PS_" prefix.
-            const auto vVertexMacros = convertShaderMacrosToText(additionalVertexShaderMacros);
-            const auto vPixelMacros = convertShaderMacrosToText(additionalPixelShaderMacros);
+            // Self check: make sure vertex macros have "VS_" prefix and fragment macros "PS_" prefix.
+            const auto vVertexMacros = convertShaderMacrosToText(requiredVertexShaderMacros);
+            const auto vFragmentMacros = convertShaderMacrosToText(requiredFragmentShaderMacros);
             for (const auto& sVertexMacro : vVertexMacros) {
                 if (!sVertexMacro.starts_with("VS_")) [[unlikely]] {
                     return Error(std::format(
                         "vertex shader macro \"{}\" that should start with \"VS_\" prefix", sVertexMacro));
                 }
             }
-            for (const auto& sPixelMacro : vPixelMacros) {
+            for (const auto& sPixelMacro : vFragmentMacros) {
                 if (!sPixelMacro.starts_with("PS_")) [[unlikely]] {
                     return Error(std::format(
-                        "pixel/fragment shader macro \"{}\" that should start with \"PS_\" prefix",
+                        "fragment/pixel shader macro \"{}\" that should start with \"PS_\" prefix",
                         sPixelMacro));
                 }
             }
         }
 
-        // Combine vertex/pixel macros of material into one set.
-        std::set<ShaderMacro> additionalVertexAndPixelShaderMacros = additionalVertexShaderMacros;
-        for (const auto& macro : additionalPixelShaderMacros) {
-            additionalVertexAndPixelShaderMacros.insert(macro);
+        // Combine vertex/fragment macros of material into one set.
+        std::set<ShaderMacro> requiredVertexAndFragmentShaderMacros = requiredVertexShaderMacros;
+        for (const auto& macro : requiredFragmentShaderMacros) {
+            requiredVertexAndFragmentShaderMacros.insert(macro);
         }
 
         // Prepare to find or create a pipeline.
         std::scoped_lock guard(mtxGraphicsPipelines.first);
 
         const auto sKeyToLookFor = Pipeline::combineShaderNames(
-            pPipelineConfiguration->getVertexShaderName(), pPipelineConfiguration->getPixelShaderName());
+            pPipelineConfiguration->getVertexShaderName(), pPipelineConfiguration->getFragmentShaderName());
 
         auto optionalGraphicsType = pPipelineConfiguration->getGraphicsType();
         if (!optionalGraphicsType.has_value()) [[unlikely]] {
@@ -165,7 +165,7 @@ namespace ne {
         return findOrCreatePipeline(
             mtxGraphicsPipelines.second.vPipelineTypes[iPipelineTypeIndex],
             sKeyToLookFor,
-            additionalVertexAndPixelShaderMacros,
+            requiredVertexAndFragmentShaderMacros,
             std::move(pPipelineConfiguration),
             pMaterial);
     }

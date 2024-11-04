@@ -10,7 +10,7 @@
 
 namespace ne {
     /** Defines which light sources will be used with the pipeline in shadow mapping. */
-    enum class PipelineShadowMappingUsage {
+    enum class PipelineShadowMappingUsage : unsigned char {
         DIRECTIONAL_AND_SPOT_LIGHTS,
         POINT_LIGHTS,
     };
@@ -27,20 +27,30 @@ namespace ne {
         virtual ~PipelineConfiguration() = default;
 
         /**
-         * Returns additional macros to enable for vertex shader configuration.
+         * Returns shader macros that required to be defined for a vertex shader.
+         *
+         * @remark These macros are used to request the required shader variant from a shader pack.
          *
          * @return Additional vertex shader macros to enable.
          */
-        inline std::set<ShaderMacro> getAdditionalVertexShaderMacros() const {
-            return additionalVertexShaderMacros;
-        }
+        std::set<ShaderMacro> getRequiredVertexShaderMacros() const { return requiredVertexShaderMacros; }
+
+        /**
+         * Returns shader macros that required to be defined for a fragment/pixel shader.
+         *
+         * @remark These macros are used to request the required shader variant from a shader pack.
+         *
+         * @return Empty set if pixel/fragment shader is not used or no additional pixel/fragment shader
+         * macros to enable.
+         */
+        virtual std::set<ShaderMacro> getRequiredFragmentShaderMacros() const { return {}; }
 
         /**
          * Returns name of the vertex shader that should be used.
          *
          * @return Name of the compiled shader.
          */
-        inline std::string_view getVertexShaderName() const { return sVertexShaderName; }
+        std::string_view getVertexShaderName() const { return sVertexShaderName; }
 
         /**
          * Returns type of the pipeline that the object describes.
@@ -50,20 +60,11 @@ namespace ne {
         virtual std::optional<GraphicsPipelineType> getGraphicsType() const = 0;
 
         /**
-         * Returns additional macros to enable for pixel/fragment shader configuration (if pixel/fragment
-         * shader is used).
-         *
-         * @return Empty set if pixel/fragment shader is not used or no additional pixel/fragment shader
-         * macros to enable.
-         */
-        virtual std::set<ShaderMacro> getAdditionalPixelShaderMacros() const { return {}; }
-
-        /**
          * Returns name of the pixel/fragment shader that should be used.
          *
          * @return Empty string if pixel/fragment shader is not used, otherwise name of the compiled shader.
          */
-        virtual std::string_view getPixelShaderName() const { return ""; }
+        virtual std::string_view getFragmentShaderName() const { return ""; }
 
         /**
          * Returns name of the compute shader that should be used.
@@ -98,14 +99,19 @@ namespace ne {
         /**
          * Initializes options.
          *
-         * @param sVertexShaderName            Name of the compiled vertex shader to use (empty if not used).
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
+         * @param sVertexShaderName          Name of the compiled vertex shader to use (empty if not used).
+         * @param requiredVertexShaderMacros Macros required to be defined for a vertex shader. These macros
+         * are used to request the required shader variant from a shader pack.
          */
         PipelineConfiguration(
-            const std::string& sVertexShaderName, const std::set<ShaderMacro>& additionalVertexShaderMacros);
+            const std::string& sVertexShaderName, const std::set<ShaderMacro>& requiredVertexShaderMacros);
 
-        /** Additional macros to enable for vertex shader configuration. */
-        std::set<ShaderMacro> additionalVertexShaderMacros;
+        /**
+         * Macros required to be defined for a vertex shader.
+         *
+         * @remark These macros are used to request the required shader variant from a shader pack.
+         */
+        std::set<ShaderMacro> requiredVertexShaderMacros;
 
         /** Name of the compiled vertex shader to use. */
         const std::string sVertexShaderName;
@@ -120,17 +126,19 @@ namespace ne {
         /**
          * Initializes options.
          *
-         * @param sVertexShaderName            Name of the compiled vertex shader to use.
-         * @param additionalVertexShaderMacros Additional macros to enable for vertex shader configuration.
-         * @param sPixelShaderName             Name of the compiled pixel shader to use.
-         * @param additionalPixelShaderMacros  Additional macros to enable for pixel shader configuration.
-         * @param bUsePixelBlending            `true` to enable transparency, `false` to disable.
+         * @param sVertexShaderName              Name of the compiled vertex shader to use.
+         * @param requiredVertexShaderMacros     Macros required to be defined for a vertex shader. These
+         * macros are used to request the required shader variant from a shader pack.
+         * @param sFragmentShaderName            Name of the compiled fragment/pixel shader to use.
+         * @param requiredFragmentShaderMacros   Macros required to be defined for a fragment/pixel shader.
+         * These macros are used to request the required shader variant from a shader pack.
+         * @param bUsePixelBlending             `true` to enable transparency, `false` to disable.
          */
         ColorPipelineConfiguration(
             const std::string& sVertexShaderName,
-            const std::set<ShaderMacro>& additionalVertexShaderMacros,
-            const std::string& sPixelShaderName,
-            std::set<ShaderMacro> additionalPixelShaderMacros,
+            const std::set<ShaderMacro>& requiredVertexShaderMacros,
+            const std::string& sFragmentShaderName,
+            const std::set<ShaderMacro>& requiredFragmentShaderMacros,
             bool bUsePixelBlending);
 
         /**
@@ -146,14 +154,14 @@ namespace ne {
          *
          * @return Macros.
          */
-        virtual std::set<ShaderMacro> getAdditionalPixelShaderMacros() const override;
+        virtual std::set<ShaderMacro> getRequiredFragmentShaderMacros() const override;
 
         /**
          * Returns name of the pixel/fragment shader that should be used.
          *
          * @return Empty string if pixel/fragment shader is not used, otherwise name of the compiled shader.
          */
-        virtual std::string_view getPixelShaderName() const override;
+        virtual std::string_view getFragmentShaderName() const override;
 
         /**
          * Tells whether pixel blending should be enabled or not.
@@ -163,11 +171,15 @@ namespace ne {
         virtual bool isPixelBlendingEnabled() const override;
 
     protected:
-        /** Additional macros to enable for pixel shader configuration. */
-        std::set<ShaderMacro> additionalPixelShaderMacros;
+        /**
+         * Macros required to be defined for a fragment shader.
+         *
+         * @remark These macros are used to request the required shader variant from a shader pack.
+         */
+        std::set<ShaderMacro> requiredFragmentShaderMacros;
 
-        /** Name of the compiled pixel shader to use. */
-        const std::string sPixelShaderName;
+        /** Name of the compiled fragment/pixel shader to use. */
+        const std::string sFragmentShaderName;
 
         /** `true` to enable transparency, `false` to disable. */
         const bool bUsePixelBlending;
@@ -212,7 +224,7 @@ namespace ne {
          *
          * @return Empty string if pixel/fragment shader is not used, otherwise name of the compiled shader.
          */
-        virtual std::string_view getPixelShaderName() const override;
+        virtual std::string_view getFragmentShaderName() const override;
 
         /**
          * Tells if this pipeline is used in shadow mapping.

@@ -20,7 +20,6 @@ namespace ne {
     class GameManager;
     class Window;
     class PipelineManager;
-    class ShaderConfiguration;
     class RenderSettings;
     class EnvironmentNode;
     class MeshNode;
@@ -44,9 +43,6 @@ namespace ne {
     class Renderer {
         // Only window should be able to request new frames to be drawn.
         friend class Window;
-
-        // Can update shader configuration.
-        friend class ShaderConfiguration;
 
         // Settings will modify renderer's state.
         friend class RenderSettings;
@@ -188,16 +184,6 @@ namespace ne {
          * @remark Typically used while @ref getRenderResourcesMutex is locked.
          */
         virtual void waitForGpuToFinishWorkUpToThisPoint() = 0;
-
-        /**
-         * Returns the current shader configuration (shader settings,
-         * represented by a bunch of predefined macros).
-         *
-         * Must be used with mutex.
-         *
-         * @return Do not delete (free) returned pointer. Shader configuration.
-         */
-        std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>>* getShaderConfiguration();
 
         /**
          * Returns size of the render target (size of the underlying render image).
@@ -817,16 +803,7 @@ namespace ne {
          * Looks for FPS limit setting in RenderSettings and updates renderer's target time to render a
          * frame.
          */
-        void updateTargetTimeToRenderFrame();
-
-        /**
-         * Updates the current shader configuration (settings) based on the current value
-         * from @ref getShaderConfiguration.
-         *
-         * @remark Flushes the command queue and recreates pipelines' internal resources so that they
-         * will use new shader configuration.
-         */
-        void updateShaderConfiguration();
+        void recalculateTargetFrameTimeFromFpsLimitSetting();
 
         /** Initializes @ref renderStats to be used. */
         void setupRenderStats();
@@ -867,12 +844,6 @@ namespace ne {
 
         /** Manages all global bindings. */
         std::unique_ptr<GlobalShaderResourceBindingManager> pGlobalShaderResourceBindingManager;
-
-        /**
-         * A bunch of shader macros that match renderer's configuration (render settings).
-         * Must be used with mutex.
-         */
-        std::pair<std::recursive_mutex, std::unique_ptr<ShaderConfiguration>> mtxShaderConfiguration;
 
         /**
          * Render setting object that configures the renderer.

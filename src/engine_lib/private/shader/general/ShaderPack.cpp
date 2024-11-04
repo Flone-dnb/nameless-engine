@@ -151,23 +151,6 @@ namespace ne {
         return pShaderPack;
     }
 
-    void ShaderPack::setRendererConfiguration(const std::set<ShaderMacro>& renderConfiguration) {
-        std::scoped_lock configurationGuard(mtxInternalResources.first);
-
-        mtxInternalResources.second.bIsRenderConfigurationSet = true;
-
-        if (mtxInternalResources.second.renderConfiguration == renderConfiguration) {
-            return; // do nothing
-        }
-
-        // Try to release previously used (old) shaders.
-        for (const auto& [macros, pShader] : mtxInternalResources.second.shadersInPack) {
-            pShader->releaseShaderDataFromMemoryIfLoaded();
-        }
-
-        mtxInternalResources.second.renderConfiguration = renderConfiguration;
-    }
-
     bool ShaderPack::releaseShaderPackDataFromMemoryIfLoaded() {
         std::scoped_lock guard(mtxInternalResources.first);
 
@@ -181,59 +164,22 @@ namespace ne {
         return !bAtLeastOneWasReleased;
     }
 
-    std::shared_ptr<Shader> ShaderPack::getShader(
-        const std::set<ShaderMacro>& additionalConfiguration,
-        std::set<ShaderMacro>& fullShaderConfiguration) {
+    std::shared_ptr<Shader> ShaderPack::getShader(const std::set<ShaderMacro>& shaderConfiguration) {
         std::scoped_lock guard(mtxInternalResources.first);
 
-        // Make sure the renderer's configuration was previously set.
-        if (!mtxInternalResources.second.bIsRenderConfigurationSet) [[unlikely]] {
-            Error error(std::format(
-                "render configuration for the shader \"{}\" was not set yet but the shader was already "
-                "requested",
-                sShaderName));
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-
-        // Combine renderer's shader configuration and the specified one.
-        auto targetShaderConfiguration = additionalConfiguration;
-        for (const auto& macro : mtxInternalResources.second.renderConfiguration) {
-            // Check if something is wrong and additional configuration has macros that renderer defines.
-            auto it = additionalConfiguration.find(macro);
-            if (it != additionalConfiguration.end()) [[unlikely]] {
-                // Unexpected, potential error somewhere else.
-                Error error(std::format(
-                    "shader macro \"{}\" of the specified additional shader configuration "
-                    "is already defined by the renderer",
-                    convertShaderMacrosToText({macro})[0]));
-                error.showError();
-                throw std::runtime_error(error.getFullErrorMessage());
-            }
-
-            // See if this macro should be considered (valid) in this configuration.
-            if (!ShaderMacroConfigurations::isMacroShouldBeConsideredInConfiguration(
-                    macro, additionalConfiguration)) {
-                continue;
-            }
-
-            targetShaderConfiguration.insert(macro);
-        }
-
         // Find a shader which configuration is equal to the configuration we are looking for.
-        auto it = mtxInternalResources.second.shadersInPack.find(targetShaderConfiguration);
+        auto it = mtxInternalResources.second.shadersInPack.find(shaderConfiguration);
         if (it == mtxInternalResources.second.shadersInPack.end()) [[unlikely]] {
             // Nothing found.
             Error error(std::format(
                 "unable to find a shader in shader pack \"{}\" that matches the specified shader "
                 "configuration: {}",
                 sShaderName,
-                formatShaderMacros(convertShaderMacrosToText(targetShaderConfiguration))));
+                formatShaderMacros(convertShaderMacrosToText(shaderConfiguration))));
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());
         }
 
-        fullShaderConfiguration = targetShaderConfiguration;
         return it->second;
     }
 

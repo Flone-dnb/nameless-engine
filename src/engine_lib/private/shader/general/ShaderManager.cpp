@@ -8,8 +8,8 @@
 // Custom.
 #include "game/GameManager.h"
 #include "io/Logger.h"
-#include "shader/general/Shader.h"
 #include "render/Renderer.h"
+#include "shader/general/Shader.h"
 #include "shader/general/ShaderFilesystemPaths.hpp"
 #if defined(WIN32)
 #include "render/directx/DirectXRenderer.h"
@@ -229,17 +229,6 @@ namespace ne {
         }
     }
 
-    void ShaderManager::setRendererConfigurationForShaders(
-        const std::set<ShaderMacro>& configuration, ShaderType shaderType) {
-        std::scoped_lock guard(mtxShaderData.first);
-
-        for (const auto& [sShaderName, pShader] : mtxShaderData.second.compiledShaders) {
-            if (pShader->getShaderType() == shaderType) {
-                pShader->setRendererConfiguration(configuration);
-            }
-        }
-    }
-
     std::optional<Error> ShaderManager::compileShaders(
         std::vector<ShaderDescription> vShadersToCompile,
         const std::function<void(size_t iCompiledShaderCount, size_t iTotalShadersToCompile)>& onProgress,
@@ -410,27 +399,6 @@ namespace ne {
                     onError(std::move(shaderDescription), err);
                 });
             } else {
-                // Set initial shader configuration.
-                const auto pShaderConfiguration = pRenderer->getShaderConfiguration();
-                std::scoped_lock shaderConfigurationGuard(pShaderConfiguration->first);
-
-                switch (pShaderPack->getShaderType()) {
-                case (ShaderType::VERTEX_SHADER): {
-                    pShaderPack->setRendererConfiguration(
-                        pShaderConfiguration->second->currentVertexShaderConfiguration);
-                    break;
-                }
-                case (ShaderType::FRAGMENT_SHADER): {
-                    pShaderPack->setRendererConfiguration(
-                        pShaderConfiguration->second->currentPixelShaderConfiguration);
-                    break;
-                }
-                case (ShaderType::COMPUTE_SHADER): {
-                    pShaderPack->setRendererConfiguration({});
-                    break;
-                }
-                }
-
                 // Save shader to shader registry.
                 mtxShaderData.second.compiledShaders[shaderDescription.sShaderName] = std::move(pShaderPack);
             }

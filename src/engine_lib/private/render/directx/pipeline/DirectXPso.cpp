@@ -82,8 +82,8 @@ namespace ne {
         return it->second;
     }
 
-    std::optional<Error> DirectXPso::releaseInternalResources() {
-        std::scoped_lock resourcesGuard(mtxInternalResources.first);
+    std::optional<Error> DirectXPso::recreateInternalResources() {
+        std::scoped_lock guard(mtxInternalResources.first);
 
         if (!mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
             Logger::get().warn(
@@ -127,14 +127,8 @@ namespace ne {
             "release new resources here");
 #endif
 
-        // Done.
+        // Done releasing resources.
         mtxInternalResources.second.bIsReadyForUsage = false;
-
-        return {};
-    }
-
-    std::optional<Error> DirectXPso::restoreInternalResources() {
-        std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
         // Recreate internal PSO and root signature.
         auto optionalError = generateGraphicsPso();

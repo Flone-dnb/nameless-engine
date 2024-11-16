@@ -134,30 +134,22 @@ namespace ne {
 
     protected:
         /**
-         * Releases internal resources such as root signature or descriptor layout, internal pipeline object
-         * and etc.
+         * Releases all internal resources from this graphics pipeline and then recreates
+         * them to reference new resources/parameters from the renderer.
          *
-         * @warning Expects that the GPU is not referencing this Pipeline (command queue is empty) and
-         * that no drawing will occur until @ref restoreInternalResources is called.
+         * @warning Expects that the GPU is not processing any frames and the rendering is paused
+         * (new frames are not submitted) while this function is being called.
          *
-         * @remark Typically used before (!) changing something in the pipeline. Often it's a shader
-         * configuration change due to a change in some settings, for example when a material that uses this
-         * pipeline requested to use a diffuse texture, thus we need to define a "use diffuse texture" shader
-         * macro and for that we change the shader variant.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] virtual std::optional<Error> releaseInternalResources() override;
-
-        /**
-         * Creates internal resources using the current shader configuration.
-         *
-         * @remark Called after @ref releaseInternalResources to create resources that will now reference
-         * changed (new) resources.
+         * @remark This function is used when all graphics pipelines reference old render
+         * resources/parameters to reference the new (changed) render resources/parameters. The typical
+         * workflow goes like this: pause the rendering, change renderer's resource/parameter that all
+         * graphics pipelines reference (like render target type (MSAA or not) or MSAA sample count), then
+         * call this function (all graphics pipelines will now query up-to-date rendering
+         * resources/parameters) and then you can continue rendering.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] virtual std::optional<Error> restoreInternalResources() override;
+        [[nodiscard]] virtual std::optional<Error> recreateInternalResources() override;
 
     private:
         /**

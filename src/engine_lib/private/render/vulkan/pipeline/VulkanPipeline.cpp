@@ -8,7 +8,6 @@
 #include "io/Logger.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "shader/glsl/GlslShader.h"
-#include "shader/general/EngineShaderNames.hpp"
 #include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
 #include "render/vulkan/resource/VulkanResourceManager.h"
 #include "shader/glsl/DescriptorSetLayoutGenerator.h"
@@ -54,7 +53,7 @@ namespace ne {
         pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Release all resources.
-        auto optionalError = VulkanPipeline::releaseInternalResources();
+        auto optionalError = releaseInternalResources();
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
             error.addCurrentLocationToErrorStack();
@@ -280,11 +279,19 @@ namespace ne {
         return {};
     }
 
-    std::optional<Error> VulkanPipeline::restoreInternalResources() {
+    std::optional<Error> VulkanPipeline::recreateInternalResources() {
         std::scoped_lock resourcesGuard(mtxInternalResources.first);
 
-        // Recreate internal pipeline and other resources.
-        auto optionalError = generateGraphicsPipeline();
+        // Release resources.
+        auto optionalError = releaseInternalResources();
+        if (optionalError.has_value()) {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Recreate resources.
+        optionalError = generateGraphicsPipeline();
         if (optionalError.has_value()) {
             auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();

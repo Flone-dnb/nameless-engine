@@ -84,11 +84,6 @@ namespace ne {
         return {};
     }
 
-    DelayedPipelineResourcesCreation
-    PipelineManager::clearGraphicsPipelinesInternalResourcesAndDelayRestoring() {
-        return DelayedPipelineResourcesCreation(this);
-    }
-
     std::variant<PipelineSharedPtr, Error> PipelineManager::findOrCreatePipeline(
         std::unordered_map<std::string, ShaderPipelines>& pipelines,
         const std::string& sKeyToLookFor,
@@ -320,8 +315,8 @@ namespace ne {
 
     Renderer* PipelineManager::getRenderer() const { return pRenderer; }
 
-    std::optional<Error> PipelineManager::releaseInternalGraphicsPipelinesResources() {
-        mtxGraphicsPipelines.first.lock(); // lock until resources where not restored
+    std::optional<Error> PipelineManager::recreateGraphicsPipelinesResources() {
+        std::scoped_lock guard(mtxGraphicsPipelines.first);
 
         for (auto& pipelinesOfSpecificType : mtxGraphicsPipelines.second.vPipelineTypes) {
 
@@ -331,29 +326,7 @@ namespace ne {
                 // Iterate over all active material macros combinations.
                 for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
                     // Release resources.
-                    auto optionalError = pPipeline->releaseInternalResources();
-                    if (optionalError.has_value()) [[unlikely]] {
-                        auto error = std::move(optionalError.value());
-                        error.addCurrentLocationToErrorStack();
-                        return error;
-                    }
-                }
-            }
-        }
-
-        return {};
-    }
-
-    std::optional<Error> PipelineManager::restoreInternalGraphicsPipelinesResources() {
-        for (auto& pipelinesOfSpecificType : mtxGraphicsPipelines.second.vPipelineTypes) {
-
-            // Iterate over all active shader combinations.
-            for (const auto& [sShaderNames, pipelines] : pipelinesOfSpecificType) {
-
-                // Iterate over all active material macros combinations.
-                for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
-                    // Restore resources.
-                    auto optionalError = pPipeline->restoreInternalResources();
+                    auto optionalError = pPipeline->recreateInternalResources();
                     if (optionalError.has_value()) [[unlikely]] {
                         auto error = std::move(optionalError.value());
                         error.addCurrentLocationToErrorStack();
@@ -429,12 +402,8 @@ namespace ne {
         Logger::get().info("finished notifying all renderer's subsystems about refreshed pipeline resources");
         Logger::get().flushToDisk();
 
-        // Unlock the mutex because all pipeline resources were re-created.
-        mtxGraphicsPipelines.first.unlock();
-
         return {};
     }
-
     void PipelineManager::onPipelineNoLongerUsedByMaterial(const std::string& sPipelineIdentifier) {
         // Iterate over all types of pipelines (opaque, transparent).
         bool bFound = false;
@@ -471,38 +440,6 @@ namespace ne {
             sComputeShaderName, pComputeShaderInterface);
         if (optionalError.has_value()) [[unlikely]] {
             auto error = std::move(optionalError.value());
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-    }
-
-    void DelayedPipelineResourcesCreation::initialize() {
-        const auto pRenderer = pPipelineManager->getRenderer();
-
-        // Make sure no drawing is happening and the GPU is not referencing any resources.
-        std::scoped_lock guard(
-            *pRenderer->getRenderResourcesMutex()); // we don't need to hold this lock until destroyed since
-                                                    // pipeline manager will hold its lock until all resources
-                                                    // are not restored (which will not allow new frames to be
-                                                    // rendered)
-        pRenderer->waitForGpuToFinishWorkUpToThisPoint();
-
-        // Release resources.
-        auto optionalError = pPipelineManager->releaseInternalGraphicsPipelinesResources();
-        if (optionalError.has_value()) {
-            auto error = optionalError.value();
-            error.addCurrentLocationToErrorStack();
-            error.showError();
-            throw std::runtime_error(error.getFullErrorMessage());
-        }
-    }
-
-    void DelayedPipelineResourcesCreation::destroy() {
-        // Restore resources.
-        auto optionalError = pPipelineManager->restoreInternalGraphicsPipelinesResources();
-        if (optionalError.has_value()) {
-            auto error = optionalError.value();
             error.addCurrentLocationToErrorStack();
             error.showError();
             throw std::runtime_error(error.getFullErrorMessage());

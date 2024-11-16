@@ -2258,9 +2258,10 @@ namespace ne {
         scissorRect.bottom = static_cast<LONG>(renderResolution.second);
 
         // Recreate all pipelines' internal resources so they will now use new multisampling settings.
-        {
-            const auto psoGuard =
-                getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
+        optionalError = getPipelineManager()->recreateGraphicsPipelinesResources();
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
         }
 
         // Update light culling resources.

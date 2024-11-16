@@ -5,7 +5,6 @@
 #include <mutex>
 #include <unordered_map>
 #include <memory>
-#include <atomic>
 #include <unordered_set>
 
 // Custom.
@@ -13,7 +12,6 @@
 #include "shader/general/ShaderMacro.h"
 #include "render/general/pipeline/PipelineSharedPtr.h"
 #include "shader/ComputeShaderInterface.h"
-#include "render/general/pipeline/PipelineType.hpp"
 #include "render/general/pipeline/PipelineConfiguration.h"
 #include "render/general/pipeline/PipelineRegistry.hpp"
 #include "render/general/resource/frame/FrameResourceManager.h"
@@ -26,48 +24,6 @@ namespace ne {
     class Material;
     class MeshNode;
     class ComputeShaderInterface;
-
-    /**
-     * RAII class that once acquired waits for the GPU to finish work up to this point, pauses the rendering,
-     * releases all internal resources from all graphics pipelines, then in destructor restores them.
-     *
-     * @remark This can be useful when some render resource (like MSAA state or sample count) has changed or
-     * about to be changed so that we can make sure all pipelines are refreshed to use the new/changed
-     * resource.
-     */
-    class DelayedPipelineResourcesCreation {
-    public:
-        DelayedPipelineResourcesCreation() = delete;
-
-        DelayedPipelineResourcesCreation(const DelayedPipelineResourcesCreation&) = delete;
-        DelayedPipelineResourcesCreation& operator=(const DelayedPipelineResourcesCreation&) = delete;
-
-        DelayedPipelineResourcesCreation(DelayedPipelineResourcesCreation&& other) noexcept = delete;
-        DelayedPipelineResourcesCreation&
-        operator=(DelayedPipelineResourcesCreation&& other) noexcept = delete;
-
-        /**
-         * Constructor.
-         *
-         * @param pPipelineManager Pipeline manager to use.
-         */
-        DelayedPipelineResourcesCreation(PipelineManager* pPipelineManager) {
-            this->pPipelineManager = pPipelineManager;
-            initialize();
-        }
-
-        ~DelayedPipelineResourcesCreation() { destroy(); }
-
-    private:
-        /** Does initialization logic. */
-        void initialize();
-
-        /** Does destruction logic. */
-        void destroy();
-
-        /** Do not delete (free) this pointer. Non-owning reference to pipeline manager. */
-        PipelineManager* pPipelineManager = nullptr;
-    };
 
     /**
      * Groups pointers to compute shader interfaces that were queued for execution and pipelines that they
@@ -155,14 +111,22 @@ namespace ne {
             VkSampler pSampler);
 
         /**
-         * Returns a RAII object that once acquired waits for the GPU to finish work up to this point,
-         * pauses the rendering, releases all internal resources from all graphics pipelines,
-         * then in destructor restores them.
+         * Releases all internal resources from all graphics graphics pipelines and then recreates
+         * them to reference new resources/parameters from the renderer.
          *
-         * @return RAII object.
+         * @warning Expects that the GPU is not processing any frames and the rendering is paused
+         * (new frames are not submitted) while this function is being called.
+         *
+         * @remark This function is used when all graphics pipelines reference old render
+         * resources/parameters to reference the new (changed) render resources/parameters. The typical
+         * workflow goes like this: pause the rendering, change renderer's resource/parameter that all
+         * graphics pipelines reference (like render target type (MSAA or not) or MSAA sample count), then
+         * call this function (all graphics pipelines will now query up-to-date rendering
+         * resources/parameters) and then you can continue rendering.
+         *
+         * @return Error if something went wrong.
          */
-        [[nodiscard]] DelayedPipelineResourcesCreation
-        clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
+        [[nodiscard]] std::optional<Error> recreateGraphicsPipelinesResources();
 
         /**
          * Look for already created pipeline that uses the specified shaders and settings and returns it,
@@ -188,7 +152,7 @@ namespace ne {
          *
          * @return Shaders and pipelines.
          */
-        inline std::pair<std::recursive_mutex*, QueuedForExecutionComputeShaders*>
+        std::pair<std::recursive_mutex*, QueuedForExecutionComputeShaders*>
         getComputeShadersForGraphicsQueueExecution() {
             return computePipelines.getComputeShadersForGraphicsQueueExecution();
         }
@@ -202,7 +166,7 @@ namespace ne {
          *
          * @return Shaders and pipelines.
          */
-        inline std::pair<std::recursive_mutex, GraphicsPipelineRegistry>* getGraphicsPipelines() {
+        std::pair<std::recursive_mutex, GraphicsPipelineRegistry>* getGraphicsPipelines() {
             return &mtxGraphicsPipelines;
         }
 
@@ -305,7 +269,7 @@ namespace ne {
              *
              * @return Shaders and pipelines.
              */
-            inline std::pair<std::recursive_mutex*, QueuedForExecutionComputeShaders*>
+            std::pair<std::recursive_mutex*, QueuedForExecutionComputeShaders*>
             getComputeShadersForGraphicsQueueExecution() {
                 return std::make_pair(&mtxResources.first, &mtxResources.second.queuedComputeShaders);
             }
@@ -328,35 +292,6 @@ namespace ne {
             /** Pipeline data. */
             std::pair<std::recursive_mutex, Resources> mtxResources;
         };
-
-        /**
-         * Releases internal resources (such as root signature, internal pipeline, etc.) from all
-         * created graphics pipelines.
-         *
-         * @warning Expects that the GPU is not referencing graphics pipelines and
-         * that no drawing will occur until @ref restoreInternalGraphicsPipelinesResources is called.
-         *
-         * @remark Causes the mutex that guards graphics pipelines to be locked until
-         * @ref restoreInternalGraphicsPipelinesResources is not called and finished.
-         *
-         * @remark Typically used before changing something (for ex. shader configuration), so that no
-         * pipeline will reference old resources, to later call
-         * @ref restoreInternalGraphicsPipelinesResources.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> releaseInternalGraphicsPipelinesResources();
-
-        /**
-         * Creates internal resources for all created graphics pipelines using their current
-         * configuration.
-         *
-         * @remark Called after @ref releaseInternalGraphicsPipelinesResources to create resources that
-         * will now reference changed (new) resources.
-         *
-         * @return Error if something went wrong.
-         */
-        [[nodiscard]] std::optional<Error> restoreInternalGraphicsPipelinesResources();
 
         /**
          * Assigns vertex and pixel shaders to create a render specific graphics pipeline (for usual

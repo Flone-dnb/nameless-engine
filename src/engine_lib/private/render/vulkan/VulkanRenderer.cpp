@@ -2255,10 +2255,8 @@ namespace ne {
                 std::format("failed to wait for device to be idle, error: {}", string_VkResult(result)));
         }
 
+        // Using a new scope to visually mark where pipelines reference old/deleted resources.
         {
-            auto pipelineGuard =
-                getPipelineManager()->clearGraphicsPipelinesInternalResourcesAndDelayRestoring();
-
             // Destroy swap chain and dependent resources.
             destroySwapChainAndDependentResources(false);
 
@@ -2269,7 +2267,15 @@ namespace ne {
                 return optionalError;
             }
 
-            optionalError = createRenderPasses(false); // depend on the format of the swap chain images
+            // Recreate render passes as they depend on the format of the swap chain images.
+            optionalError = createRenderPasses(false);
+            if (optionalError.has_value()) [[unlikely]] {
+                optionalError->addCurrentLocationToErrorStack();
+                return optionalError;
+            }
+
+            // Recreate pipeline resources to reference the new one.
+            optionalError = getPipelineManager()->recreateGraphicsPipelinesResources();
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError;

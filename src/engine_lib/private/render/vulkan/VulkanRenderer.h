@@ -152,7 +152,7 @@ namespace ne {
         /**
          * Blocks the current thread until the GPU finishes executing all queued commands up to this point.
          *
-         * @remark Typically used with @ref getRenderResourcesMutex.
+         * @remark Typically used while @ref getRenderResourcesMutex is locked.
          */
         virtual void waitForGpuToFinishWorkUpToThisPoint() override;
 

@@ -17,7 +17,7 @@ namespace ne {
      * one shader has different configurations.
      * A group of different shader configurations is stored in a shader pack.
      *
-     * @warning Each macro has a prefix "PS" for pixel(fragment) shader or "VS" for vertex shader
+     * @warning Each macro has a short prefix "pixel/fragment shader" or "vertex shader"
      * that tells for which shader stage this macro is valid. If you need to have a macro
      * for both stages create 2 macros with different prefixes. Prefixes are required for
      * proper work of pipeline manager because it groups all material macros (both vertex and
@@ -27,9 +27,9 @@ namespace ne {
      * `FOO` for vertex shader which, because of storing all macros in one `std::set`, will
      * make the manager to think that those materials use the same shaders with the same macros.
      */
-    enum class ShaderMacro : int {
-        PS_USE_DIFFUSE_TEXTURE,
-        PS_USE_MATERIAL_TRANSPARENCY,
+    enum class ShaderMacro : std::uint8_t {
+        FS_USE_DIFFUSE_TEXTURE,
+        FS_USE_MATERIAL_TRANSPARENCY,
         VS_SHADOW_MAPPING_PASS,
 
         // ... add new entries here...
@@ -183,9 +183,9 @@ namespace ne {
          */
         static inline const std::set<std::set<ShaderMacro>> validPixelShaderMacroConfigurations =
             combineConfigurations(
-                {{ShaderMacro::PS_USE_DIFFUSE_TEXTURE},
-                 {ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY},
-                 {ShaderMacro::PS_USE_DIFFUSE_TEXTURE, ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY}},
+                {{ShaderMacro::FS_USE_DIFFUSE_TEXTURE},
+                 {ShaderMacro::FS_USE_MATERIAL_TRANSPARENCY},
+                 {ShaderMacro::FS_USE_DIFFUSE_TEXTURE, ShaderMacro::FS_USE_MATERIAL_TRANSPARENCY}},
                 {},
                 {},
                 true);

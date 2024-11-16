@@ -1,25 +1,37 @@
 ﻿#include "ShaderMacro.h"
 
+// Standard.
+#include <stdexcept>
+
+// Custom.
+#include "misc/Error.h"
+
 // External.
 #include "xxHash/xxhash.h"
 
 namespace ne {
     std::vector<std::string> convertShaderMacrosToText(const std::set<ShaderMacro>& macros) {
+        // Just in case your compiler setup is messed up so that you will instantly notice it.
         static_assert(sizeof(size_t) == sizeof(unsigned long long), "we don't support 32 bit systems");
 
         std::vector<std::string> vMacroNames;
+        vMacroNames.reserve(macros.size());
 
         for (const auto& macro : macros) {
             switch (macro) {
-            case (ShaderMacro::PS_USE_DIFFUSE_TEXTURE):
-                vMacroNames.push_back("PS_USE_DIFFUSE_TEXTURE");
+            case (ShaderMacro::FS_USE_DIFFUSE_TEXTURE):
+                vMacroNames.push_back("FS_USE_DIFFUSE_TEXTURE");
                 break;
-            case (ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY):
-                vMacroNames.push_back("PS_USE_MATERIAL_TRANSPARENCY");
+            case (ShaderMacro::FS_USE_MATERIAL_TRANSPARENCY):
+                vMacroNames.push_back("FS_USE_MATERIAL_TRANSPARENCY");
                 break;
             case (ShaderMacro::VS_SHADOW_MAPPING_PASS):
                 vMacroNames.push_back("VS_SHADOW_MAPPING_PASS");
                 break;
+            default:
+                Error error("unhandled case");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
             }
         }
 

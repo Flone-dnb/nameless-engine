@@ -11,7 +11,7 @@
 // Not using ifdefs on this static texture sampler because the user may want to use custom textures.
 SamplerState textureSampler : register(s0, space5);
 
-#ifdef PS_USE_DIFFUSE_TEXTURE
+#ifdef FS_USE_DIFFUSE_TEXTURE
     Texture2D diffuseTextures[] : register(t2, space5); // "bindless binding", stores all diffuse textures
 #endif
 
@@ -32,7 +32,7 @@ float4 psMeshNode(VertexOut pin) {
 
     // Prepare diffuse color.
     float3 pixelDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
-    #ifdef PS_USE_DIFFUSE_TEXTURE
+    #ifdef FS_USE_DIFFUSE_TEXTURE
         float4 diffuseTextureSample = diffuseTextures[constants.diffuseTextures].Sample(textureSampler, pin.uv);
         pixelDiffuseColor *= diffuseTextureSample.rgb;
     #endif
@@ -56,9 +56,9 @@ float4 psMeshNode(VertexOut pin) {
         pixelSpecularColor,
         materialRoughness);
 
-    #ifdef PS_USE_MATERIAL_TRANSPARENCY
+    #ifdef FS_USE_MATERIAL_TRANSPARENCY
         // Apply transparency.
-        #ifdef PS_USE_DIFFUSE_TEXTURE
+        #ifdef FS_USE_DIFFUSE_TEXTURE
             outputColor.a = diffuseTextureSample.a;
         #endif
         outputColor.a *= MATERIAL_DATA.diffuseColor.a;

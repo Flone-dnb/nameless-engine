@@ -12,7 +12,7 @@
 /** Output parameters. */
 layout(location = 0) out vec4 outputColor;
 
-#ifdef PS_USE_DIFFUSE_TEXTURE
+#ifdef FS_USE_DIFFUSE_TEXTURE
     layout(binding = 7) uniform sampler2D diffuseTextures[]; // "bindless binding", stores all diffuse textures
 #endif
 
@@ -28,7 +28,7 @@ void fsMeshNode() {
 
     // Prepare diffuse color.
     vec3 fragmentDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
-    #ifdef PS_USE_DIFFUSE_TEXTURE
+    #ifdef FS_USE_DIFFUSE_TEXTURE
         vec4 diffuseTextureSample = texture(diffuseTextures[constants.diffuseTextures], fragmentUv);
         fragmentDiffuseColor *= diffuseTextureSample.rgb;
     #endif
@@ -52,9 +52,9 @@ void fsMeshNode() {
         fragmentSpecularColor,
         materialRoughness);
 
-    #ifdef PS_USE_MATERIAL_TRANSPARENCY
+    #ifdef FS_USE_MATERIAL_TRANSPARENCY
         // Apply opacity.
-        #ifdef PS_USE_DIFFUSE_TEXTURE
+        #ifdef FS_USE_DIFFUSE_TEXTURE
             // Get opacity from diffuse texture.
             outputColor.a = diffuseTextureSample.a;
         #endif

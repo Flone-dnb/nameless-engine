@@ -621,7 +621,7 @@ TEST_CASE("make sure there are no transparency macros in opaque pipelines") {
                     // Make sure opaque pipelines don't have transparency macro defined.
                     for (const auto& [sShaderNames, pipelines] : mtxOpaquePipelines) {
                         for (const auto& [materialMacros, pPipeline] : pipelines.shaderPipelines) {
-                            const auto it = materialMacros.find(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
+                            const auto it = materialMacros.find(ShaderMacro::FS_USE_MATERIAL_TRANSPARENCY);
                             REQUIRE(it == materialMacros.end());
                         }
                     }

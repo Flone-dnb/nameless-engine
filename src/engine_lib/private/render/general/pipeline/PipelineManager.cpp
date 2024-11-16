@@ -125,20 +125,27 @@ namespace ne {
         const auto requiredVertexShaderMacros = pPipelineConfiguration->getRequiredVertexShaderMacros();
         const auto requiredFragmentShaderMacros = pPipelineConfiguration->getRequiredFragmentShaderMacros();
         {
-            // Self check: make sure vertex macros have "VS_" prefix and fragment macros "PS_" prefix.
+            // Self check: make sure macros start with an appropriate prefix.
             const auto vVertexMacros = convertShaderMacrosToText(requiredVertexShaderMacros);
             const auto vFragmentMacros = convertShaderMacrosToText(requiredFragmentShaderMacros);
+
+            constexpr std::string_view sVertexMacroPrefix = "VS_";
             for (const auto& sVertexMacro : vVertexMacros) {
-                if (!sVertexMacro.starts_with("VS_")) [[unlikely]] {
+                if (!sVertexMacro.starts_with(sVertexMacroPrefix)) [[unlikely]] {
                     return Error(std::format(
-                        "vertex shader macro \"{}\" that should start with \"VS_\" prefix", sVertexMacro));
+                        "vertex shader macro \"{}\" that should start with \"{}\" prefix",
+                        sVertexMacro,
+                        sVertexMacroPrefix));
                 }
             }
+
+            constexpr std::string_view sFragmentMacroPrefix = "FS_";
             for (const auto& sPixelMacro : vFragmentMacros) {
-                if (!sPixelMacro.starts_with("PS_")) [[unlikely]] {
+                if (!sPixelMacro.starts_with(sFragmentMacroPrefix)) [[unlikely]] {
                     return Error(std::format(
-                        "fragment/pixel shader macro \"{}\" that should start with \"PS_\" prefix",
-                        sPixelMacro));
+                        "fragment/pixel shader macro \"{}\" that should start with \"{}\" prefix",
+                        sPixelMacro,
+                        sFragmentMacroPrefix));
                 }
             }
         }

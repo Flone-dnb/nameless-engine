@@ -803,7 +803,7 @@ namespace ne {
                                                       ->getConfiguration()
                                                       ->getRequiredFragmentShaderMacros();
         const auto bPipelineDefinedDiffuseTextureMacro =
-            currentAdditionalPixelMacros.find(ShaderMacro::PS_USE_DIFFUSE_TEXTURE) !=
+            currentAdditionalPixelMacros.find(ShaderMacro::FS_USE_DIFFUSE_TEXTURE) !=
             currentAdditionalPixelMacros.end();
 
         if (!sTextureResourcePathRelativeRes.empty() && !bPipelineDefinedDiffuseTextureMacro) {
@@ -1050,12 +1050,12 @@ namespace ne {
 
         // Define diffuse texture macro (if texture is set).
         if (!sDiffuseTexturePathRelativeRes.empty()) {
-            pixelMacros.insert(ShaderMacro::PS_USE_DIFFUSE_TEXTURE);
+            pixelMacros.insert(ShaderMacro::FS_USE_DIFFUSE_TEXTURE);
         }
 
         // Define transparency macro (if enabled).
         if (bUseTransparency) {
-            pixelMacros.insert(ShaderMacro::PS_USE_MATERIAL_TRANSPARENCY);
+            pixelMacros.insert(ShaderMacro::FS_USE_MATERIAL_TRANSPARENCY);
         }
 
         return pixelMacros;

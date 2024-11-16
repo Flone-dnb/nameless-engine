@@ -1,5 +1,5 @@
 #ifdef INCLUDE_LIGHTING_FUNCTIONS // define this macro before including to have pixel/fragment light calculation functions
-    #ifdef PS_USE_MATERIAL_TRANSPARENCY
+    #ifdef FS_USE_MATERIAL_TRANSPARENCY
         #include "light_culling/TransparentLightGrid.glsl"
     #else
         #include "light_culling/OpaqueLightGrid.glsl"
@@ -527,7 +527,7 @@ struct Spotlight {
             floor(fragmentPositionScreenSpace / LIGHT_GRID_TILE_SIZE_IN_PIXELS));
 
         // Prepare macros to access the right light grid/index list.
-        #ifdef PS_USE_MATERIAL_TRANSPARENCY
+        #ifdef FS_USE_MATERIAL_TRANSPARENCY
             #define POINT_LIGHT_GRID         transparentPointLightGrid
             #define SPOT_LIGHT_GRID          transparentSpotLightGrid
 

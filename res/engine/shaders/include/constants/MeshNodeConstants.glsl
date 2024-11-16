@@ -2,7 +2,7 @@
 #additional_shader_constants {
     uint meshData;            
     uint materialData;
-    #ifdef PS_USE_DIFFUSE_TEXTURE
+    #ifdef FS_USE_DIFFUSE_TEXTURE
         uint diffuseTextures;
     #endif
 }

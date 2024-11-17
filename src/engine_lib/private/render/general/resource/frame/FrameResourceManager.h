@@ -67,7 +67,7 @@ namespace ne {
         FrameResourceManager& operator=(const FrameResourceManager&) = delete;
 
         /**
-         * Returns the number of used frame resources.
+         * Returns the total number of frames in-flight (that the CPU can submit before waiting for the GPU).
          *
          * @return Number of frame resources being used.
          */

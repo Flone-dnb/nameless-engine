@@ -40,7 +40,7 @@ namespace ne {
         pArray->markSlotAsNoLongerBeingUsed(this);
     }
 
-    void DynamicCpuWriteShaderResourceArraySlot::updateData(void* pData) {
+    void DynamicCpuWriteShaderResourceArraySlot::updateDataBecauseGpuUnused(void* pData) {
         pArray->updateSlotData(this, pData);
     }
 
@@ -259,7 +259,9 @@ namespace ne {
         // Get global shader resource binding manager.
         const auto pGlobalBindingManager = pRenderer->getGlobalShaderResourceBindingManager();
 
-        // Bind as global shader resource.
+        // Bind a single resource even though it's a CPU write resource because we have
+        // a warning in the documentation of the slot's update function that it can only be used
+        // while the GPU is not using it.
         auto optionalError = pGlobalBindingManager->createGlobalShaderResourceBindingSingleResource(
             sHandledShaderResourceName, mtxInternalResources.second.pUploadBuffer->getInternalResource());
         if (optionalError.has_value()) [[unlikely]] {

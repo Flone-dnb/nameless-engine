@@ -188,7 +188,7 @@ namespace ne {
         inline void updateResource(size_t iCurrentFrameResourceIndex) {
             void* pDataToCopy = onStartedUpdatingResource();
 
-            vResourceData[iCurrentFrameResourceIndex]->updateData(pDataToCopy);
+            vResourceData[iCurrentFrameResourceIndex]->updateDataBecauseGpuUnused(pDataToCopy);
 
             onFinishedUpdatingResource();
         }

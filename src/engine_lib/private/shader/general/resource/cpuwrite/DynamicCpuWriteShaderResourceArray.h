@@ -45,9 +45,11 @@ namespace ne {
          * @warning Should only be called when shader resource manager tells that it's the time
          * to update shader resource data.
          *
+         * @warning Can only be used when the GPU is not using (processing) this data.
+         *
          * @param pData Data to copy.
          */
-        void updateData(void* pData);
+        void updateDataBecauseGpuUnused(void* pData);
 
         /**
          * Returns index into the array (that owns this slot) to access the slot's data.

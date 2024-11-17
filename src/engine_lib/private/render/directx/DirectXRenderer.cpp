@@ -634,15 +634,6 @@ namespace ne {
             // Bind global shader resources.
             pDirectXPso->bindGlobalShaderResourceViews(pCommandList, iCurrentFrameResourceIndex);
 
-            // Set CBV to frame constant buffer.
-            pCommandList->SetGraphicsRootConstantBufferView(
-                pMtxPsoResources->second
-                    .vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA)],
-                reinterpret_cast<DirectXResource*>(
-                    pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress());
-
             for (const auto& materialInfo : pipelineInfo.vMaterials) {
                 // No need to bind material's shader resources since they are not used in vertex shader
                 // (since we are in depth prepass).
@@ -1395,15 +1386,6 @@ namespace ne {
 
             // Bind global shader resources.
             pDirectXPso->bindGlobalShaderResourceViews(pCommandList, iCurrentFrameResourceIndex);
-
-            // Set CBV to frame constant buffer.
-            pCommandList->SetGraphicsRootConstantBufferView(
-                pipelineData
-                    .vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA)],
-                reinterpret_cast<DirectXResource*>(
-                    pCurrentFrameResource->pFrameConstantBuffer->getInternalResource())
-                    ->getInternalResource()
-                    ->GetGPUVirtualAddress());
 
             // Bind directional shadow maps.
             pCommandList->SetGraphicsRootDescriptorTable(

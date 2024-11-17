@@ -288,39 +288,6 @@ namespace ne {
         vTableRanges.reserve(iMaxRootParameterCount);
         const auto iInitialCapacity = vTableRanges.capacity();
 
-        // Prepare to add "frame data" root parameter.
-        bool bAddedFrameData = false;
-        const auto addFrameDataParameter = [&](RootParameter& rootParameter) {
-            // Add root parameter.
-            const auto iRootParameterIndex = static_cast<unsigned int>(vRootParameters.size());
-            vSpecialRootParameterIndices[static_cast<size_t>(SpecialRootParameterSlot::FRAME_DATA)] =
-                iRootParameterIndex;
-            vRootParameters.push_back(rootParameter.generateSingleDescriptorDescription());
-
-            addedRootParameterNames.insert(Shader::getFrameConstantsShaderResourceName());
-            rootParameterIndices[Shader::getFrameConstantsShaderResourceName()] = iRootParameterIndex;
-
-            bAddedFrameData = true;
-        };
-
-        // Check if vertex shader uses frame data cbuffer.
-        auto frameDataIndexIt =
-            vertexRootSigInfo.rootParameterIndices.find(Shader::getFrameConstantsShaderResourceName());
-        if (frameDataIndexIt != vertexRootSigInfo.rootParameterIndices.end()) {
-            // Add root parameter.
-            addFrameDataParameter(frameDataIndexIt->second.second);
-        }
-
-        if (!bAddedFrameData && pPixelRootSigInfo != nullptr) {
-            // Check for pixel shader.
-            frameDataIndexIt =
-                pPixelRootSigInfo->rootParameterIndices.find(Shader::getFrameConstantsShaderResourceName());
-            if (frameDataIndexIt != pPixelRootSigInfo->rootParameterIndices.end()) {
-                // Add root parameter.
-                addFrameDataParameter(frameDataIndexIt->second.second);
-            }
-        }
-
         // Prepare indices of root parameters used by shaders.
         auto shaderRootParameterIndices = vertexRootSigInfo.rootParameterIndices;
         if (pPixelRootSigInfo != nullptr) {

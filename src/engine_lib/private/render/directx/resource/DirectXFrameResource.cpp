@@ -19,6 +19,26 @@ namespace ne {
             return Error(hResult);
         }
 
+        // Make sure the resource is created.
+        if (pFrameConstantBuffer == nullptr) [[unlikely]] {
+            return Error("expected the resource to be created at this point");
+        }
+
+        // Cast to DirectX resource.
+        const auto pDirectXResource =
+            dynamic_cast<DirectXResource*>(pFrameConstantBuffer->getInternalResource());
+        if (pDirectXResource == nullptr) [[unlikely]] {
+            return Error("expected a DirectX resource");
+        }
+
+        // Bind CBV so that when the base class creates a global shader resource binding
+        // the binding type will be determined as a constant buffer.
+        auto optionalError = pDirectXResource->bindDescriptor(DirectXDescriptorType::CBV);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError;
+        }
+
         return {};
     }
 

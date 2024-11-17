@@ -55,12 +55,25 @@ namespace ne {
                 vSpecialRootParameterIndices;
 
             /**
-             * Global bindings that should be binded as SRVs. Stores pairs of "root parameter index" -
+             * Global bindings that should be bound as CBVs. Stores pairs of "root parameter index" -
              * "resource to bind".
              *
-             * @remark It's safe to store raw pointers here because the SRVs should be valid
-             * while the pipeline exists and has not re-created its internal resources (when internal
-             * resources are re-created these SRVs (resource pointers) are cleared).
+             * @remark It's safe to store raw pointers to resources here because the resources
+             * must be valid white they are used in the pipeline (so when a pipeline is no longer used it's
+             * destroyed and thus this array will be empty) but when the pipeline recreates its internal
+             * resources to apply some changes it clears this array and expects the resources to be
+             * rebound.
+             */
+            std::unordered_map<
+                UINT,
+                std::array<DirectXResource*, FrameResourceManager::getFrameResourceCount()>>
+                globalShaderResourceCbvs;
+
+            /**
+             * Global bindings that should be bound as SRVs. Stores pairs of "root parameter index" -
+             * "resource to bind".
+             *
+             * @remark See @ref globalShaderResourceCbvs on why it's safe to store raw pointers here.
              */
             std::unordered_map<
                 UINT,
@@ -177,6 +190,16 @@ namespace ne {
             const ComPtr<ID3D12GraphicsCommandList>& pCommandList, size_t iCurrentFrameResourceIndex) const {
             // No need to lock internal resources mutex since the caller is expected to lock that mutex
             // because this function is expected to be called inside of the `draw` function.
+
+            // Bind global CBVs.
+            for (const auto& [iRootParameterIndex, vResourcesToBind] :
+                 mtxInternalResources.second.globalShaderResourceCbvs) {
+                pCommandList->SetGraphicsRootConstantBufferView(
+                    iRootParameterIndex,
+                    vResourcesToBind[iCurrentFrameResourceIndex]
+                        ->getInternalResource()
+                        ->GetGPUVirtualAddress());
+            }
 
             // Bind global SRVs.
             for (const auto& [iRootParameterIndex, vResourcesToBind] :

@@ -2,15 +2,20 @@
 
 // Standard.
 #include <optional>
+#include <functional>
 
 // Custom.
 #include "shader/general/resource/binding/global/GlobalShaderResourceBinding.h"
+#include "render/directx/descriptors/DirectXDescriptorType.hpp"
 
 // External.
 #include "vulkan/vulkan_core.h"
 
 namespace ne {
+    class PipelineManager;
     class GpuResource;
+    class Pipeline;
+    class DirectXResource;
 
     /**
      * Used for binding GPU resources as "global" HLSL shader resources (that don't change on a per-object
@@ -50,5 +55,35 @@ namespace ne {
          * @return Error if something went wrong.
          */
         [[nodiscard]] virtual std::optional<Error> bindToPipelines(Pipeline* pSpecificPipeline) override;
+
+    private:
+        /**
+         * Specify a callback that will be called for each graphics pipeline to bind your resource.
+         *
+         * @param pPipelineManager Manager to query graphics pipelines.
+         * @param onBind           Called on each pipeline.
+         *
+         * @return Error if something went wrong.
+         */
+        [[nodiscard]] static std::optional<Error> bindResourceToGraphicsPipelines(
+            PipelineManager* pPipelineManager,
+            const std::function<std::optional<Error>(Pipeline* pPipeline)>& onBind);
+
+        /**
+         * Binds the specified resources to the specified pipeline as a global SRV binding.
+         *
+         * @param vResourcesToBind    Resource per frame to bind.
+         * @param bindingType         Type of the binding to create.
+         * @param pPipeline           Pipeline to bind to.
+         * @param sShaderResourceName Name of the shader resource to bind to.
+         *
+         * @return
+         */
+        [[nodiscard]] static std::optional<Error> bindResourcesToPipeline(
+            const std::array<DirectXResource*, FrameResourceManager::getFrameResourceCount()>&
+                vResourcesToBind,
+            DirectXDescriptorType bindingType,
+            Pipeline* pPipeline,
+            const std::string& sShaderResourceName);
     };
 }

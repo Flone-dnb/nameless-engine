@@ -9,6 +9,8 @@
 #include "render/directx/DirectXRenderer.h"
 #include "render/directx/resource/DirectXFrameResource.h"
 #endif
+#include "shader/general/Shader.h"
+#include "shader/general/resource/binding/global/GlobalShaderResourceBindingManager.h"
 #include "render/general/resource/GpuResourceManager.h"
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resource/VulkanFrameResource.h"
@@ -56,6 +58,8 @@ namespace ne {
     FrameResourceManager::create(Renderer* pRenderer) {
         auto pManager = std::unique_ptr<FrameResourceManager>(new FrameResourceManager(pRenderer));
 
+        std::array<GpuResource*, FrameResourceManager::getFrameResourceCount()> vFrameResources;
+
         for (unsigned int i = 0; i < getFrameResourceCount(); i++) {
             // Create a constant buffer with frame-global data per frame.
             auto result = pRenderer->getResourceManager()->createResourceWithCpuWriteAccess(
@@ -74,6 +78,18 @@ namespace ne {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
             }
+
+            // Save to bind to pipelines later.
+            vFrameResources[i] = pManager->vFrameResources[i]->pFrameConstantBuffer->getInternalResource();
+        }
+
+        // Bind frame data to all pipelines.
+        auto optionalError = pRenderer->getGlobalShaderResourceBindingManager()
+                                 ->createGlobalShaderResourceBindingResourcePerFrame(
+                                     Shader::getFrameConstantsShaderResourceName(), vFrameResources);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return optionalError.value();
         }
 
         return pManager;

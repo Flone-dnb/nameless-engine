@@ -40,13 +40,19 @@ namespace ne {
          * use @ref createGlobalShaderResourceBindingSingleResource that accepts a single GPU resource
          * pointer (preferred) or just pass an array of the same pointers.
          *
+         * @remark The actual type of the binding (cbuffer, uniform, structured buffer, storage buffer or
+         * etc) will be determined from the resource. For example, in DirectX in order to bind a `cbuffer`
+         * shader resource you need to pass a resource that already has a CBV binded and in Vulkan in
+         * order to bind a `uniform` you need to make sure that your resource was created with
+         * the "uniform" hint/flag.
+         *
          * @param sShaderResourceName Name of the shader resource (name from shader code) to bind the
          * resources.
          * @param vResourcesToBind    Resources to bind to pipelines. This function will create a binding
-         * that binds a separate GPU resource per frame (can be used for some CPU-write resources).
-         * If you have a CPU-write GPU buffer that you plan to update without CPU-GPU synchronization (for
-         * example each time the CPU is submitting a new frame) then you need to pass a separate buffer per
-         * frame resource to avoid modifying a buffer that may be used by the GPU.
+         * that binds a separate GPU resource per frame, this is generally used for some CPU-write resources
+         * so in this case you have a CPU-write GPU buffer that you plan to update without CPU-GPU
+         * synchronization (for example each time the CPU is submitting a new frame) then you need to pass a
+         * separate buffer per frame resource to avoid modifying a buffer that may be used by the GPU.
          *
          * @return Error if something went wrong.
          */
@@ -59,14 +65,14 @@ namespace ne {
          * basis) and assigns it to the specified resources. When resources will be destroyed
          * the binding will also be removed.
          *
-         * @remark Also see @ref createGlobalShaderResourceBindingResourcePerFrame.
+         * @remark Also see @ref createGlobalShaderResourceBindingResourcePerFrame for important remarks.
          *
          * @param sShaderResourceName Name of the shader resource (name from shader code) to bind the
          * resource.
          * @param pResourceToBind    Resources to bind to pipelines. This function will create a binding
          * that binds the same GPU resource for all frames in-flight (this can be used for textures
          * or some buffer resources). This is used when you guarantee the CPU-GPU synchronization or
-         * don't plan to update the resource's contents.
+         * don't plan to update the resource's contents from the CPU.
          *
          * @return Error if something went wrong.
          */

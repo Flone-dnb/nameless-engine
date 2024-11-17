@@ -118,12 +118,13 @@ namespace ne {
         //                getUniquePsoIdentifier()));
         //        }
 
+        mtxInternalResources.second.globalShaderResourceCbvs.clear();
         mtxInternalResources.second.globalShaderResourceSrvs.clear();
         mtxInternalResources.second.descriptorTablesToBind.clear();
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 320, // NOLINT: current struct size
+            sizeof(InternalResources) == 400, // NOLINT: current struct size
             "release new resources here");
 #endif
 

@@ -6,8 +6,7 @@ namespace ne {
      * to query indices of root parameters of various non-user specified resources.
      */
     enum class SpecialRootParameterSlot : unsigned int {
-        FRAME_DATA = 0,
-        GENERAL_LIGHTING,
+        GENERAL_LIGHTING = 0,
         POINT_LIGHTS,
         DIRECTIONAL_LIGHTS,
         SPOT_LIGHTS,

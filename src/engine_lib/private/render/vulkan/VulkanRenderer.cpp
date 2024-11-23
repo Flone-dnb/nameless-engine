@@ -1241,6 +1241,13 @@ namespace ne {
         }
         swapChainExtent = std::get<VkExtent2D>(std::move(swapChainExtentResult));
 
+        // Update render resolution in the render settings.
+        {
+            const auto mtxRenderSettings = getRenderSettings();
+            std::scoped_lock guard(*mtxRenderSettings.first);
+            mtxRenderSettings.second->setRenderResolution({swapChainExtent->width, swapChainExtent->height});
+        }
+
         // Prepare swap chain creation info.
         VkSwapchainCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

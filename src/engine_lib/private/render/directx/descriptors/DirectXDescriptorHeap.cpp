@@ -4,7 +4,6 @@
 #include "render/directx/DirectXRenderer.h"
 #include "io/Logger.h"
 #include "render/directx/resource/DirectXResource.h"
-#include "render/RenderSettings.h"
 
 namespace ne {
     std::variant<std::unique_ptr<DirectXDescriptorHeap>, Error>
@@ -21,13 +20,13 @@ namespace ne {
         return pManager;
     }
 
-    std::variant<std::unique_ptr<ContinuousDirectXDescriptorRange>, Error>
+    std::variant<std::shared_ptr<ContinuousDirectXDescriptorRange>, Error>
     DirectXDescriptorHeap::allocateContinuousDescriptorRange(
         const std::string& sRangeName, const std::function<void()>& onRangeIndicesChanged) {
         std::scoped_lock guard(mtxInternalData.first);
 
         // Create a new range.
-        auto pRange = std::unique_ptr<ContinuousDirectXDescriptorRange>(
+        auto pRange = std::shared_ptr<ContinuousDirectXDescriptorRange>(
             new ContinuousDirectXDescriptorRange(this, onRangeIndicesChanged, sRangeName));
 
         // Add to the heap.
@@ -47,7 +46,7 @@ namespace ne {
     std::optional<Error> DirectXDescriptorHeap::assignDescriptor(
         DirectXResource* pResource,
         DirectXDescriptorType descriptorType,
-        ContinuousDirectXDescriptorRange* pRange,
+        const std::shared_ptr<ContinuousDirectXDescriptorRange>& pRange,
         bool bBindDescriptorsToCubemapFaces) {
         // Check if this heap handles the specified descriptor type.
         const auto vHandledDescriptorTypes = getDescriptorTypesHandledByThisHeap();
@@ -78,7 +77,7 @@ namespace ne {
 
             if (pRange != nullptr) {
                 // Make sure the specified range exists.
-                const auto rangeIt = mtxInternalData.second.continuousDescriptorRanges.find(pRange);
+                const auto rangeIt = mtxInternalData.second.continuousDescriptorRanges.find(pRange.get());
                 if (rangeIt == mtxInternalData.second.continuousDescriptorRanges.end()) [[unlikely]] {
                     return Error(std::format(
                         "resource \"{}\" attempted to assign a descriptor in {} heap with "
@@ -101,7 +100,7 @@ namespace ne {
 
                 if (!optionalHeapIndex.has_value()) {
                     // Expand range.
-                    auto optionalError = expandRange(pRange);
+                    auto optionalError = expandRange(pRange.get());
                     if (optionalError.has_value()) [[unlikely]] {
                         optionalError->addCurrentLocationToErrorStack();
                         return optionalError;
@@ -862,16 +861,17 @@ namespace ne {
         // Prepare log message.
         auto sLogMessage = std::format(
             "waiting for the GPU to finish work up to this point to (re)create {} descriptor heap from "
-            "capacity {} to {} (current actual heap size: {})",
+            "capacity {} to {} (current actual heap size: {}) (range count: {})",
             sHeapType,
             mtxInternalData.second.iHeapCapacity,
             iCapacity,
-            mtxInternalData.second.iHeapSize);
+            mtxInternalData.second.iHeapSize,
+            mtxInternalData.second.continuousDescriptorRanges.size());
 
         // Add range info (if specified).
         if (pChangedRange != nullptr) {
             sLogMessage +=
-                std::format(" due to changes in descriptor range \"{}\"", pChangedRange->sRangeName);
+                std::format(" due to changes in a descriptor range \"{}\"", pChangedRange->sRangeName);
         }
 
         // Log message.

@@ -36,8 +36,7 @@ namespace ne {
             return Error("pipeline manager is `nullptr`");
         }
 
-        // Convert type to determine resource type (resources in the array should have the same type just
-        // different data so it's OK to just take the first resource in the array).
+        // Cast type.
         const auto pVulkanResource = dynamic_cast<VulkanResource*>(vResourcesToBind[0]);
         if (pVulkanResource == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource");

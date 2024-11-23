@@ -212,7 +212,7 @@ namespace ne {
 
     std::optional<Error> DirectXResource::bindDescriptor(
         DirectXDescriptorType descriptorType,
-        ContinuousDirectXDescriptorRange* pRange,
+        const std::shared_ptr<ContinuousDirectXDescriptorRange>& pRange,
         bool bBindDescriptorsToCubemapFaces) {
         std::scoped_lock guard(mtxHeapDescriptors.first);
 

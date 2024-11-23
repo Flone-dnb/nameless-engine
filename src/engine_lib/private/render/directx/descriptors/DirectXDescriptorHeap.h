@@ -224,7 +224,12 @@ namespace ne {
             /** Descriptor heap. */
             ComPtr<ID3D12DescriptorHeap> pHeap;
 
-            /** Descriptor ranges that were allocated in this heap. */
+            /**
+             * Descriptor ranges that were allocated in this heap.
+             *
+             * @remark It's safe to store raw pointers here because ranges will notify the heap in their
+             * destructor.
+             */
             std::unordered_set<ContinuousDirectXDescriptorRange*> continuousDescriptorRanges;
 
             /** Current heap capacity. */
@@ -302,7 +307,7 @@ namespace ne {
          *
          * @return Error if something went wrong, otherwise allocated descriptor range.
          */
-        std::variant<std::unique_ptr<ContinuousDirectXDescriptorRange>, Error>
+        std::variant<std::shared_ptr<ContinuousDirectXDescriptorRange>, Error>
         allocateContinuousDescriptorRange(
             const std::string& sRangeName, const std::function<void()>& onRangeIndicesChanged);
 
@@ -338,14 +343,14 @@ namespace ne {
          *
          * @return Descriptor size.
          */
-        inline UINT getDescriptorSize() const { return iDescriptorSize; }
+        UINT getDescriptorSize() const { return iDescriptorSize; }
 
         /**
          * Returns internal DirectX heap.
          *
          * @return DirectX heap.
          */
-        inline ID3D12DescriptorHeap* getInternalHeap() const { return mtxInternalData.second.pHeap.Get(); }
+        ID3D12DescriptorHeap* getInternalHeap() const { return mtxInternalData.second.pHeap.Get(); }
 
         /**
          * Returns internal data of the object.
@@ -485,7 +490,9 @@ namespace ne {
          *
          * @param pResource      Resource to point new descriptor to.
          * @param descriptorType Type of the new descriptor.
-         * @param pRange         Specify in order to allocate a descriptor from this range.
+         * @param pRange         Specify in order to allocate a descriptor from this range. The specified
+         * shared pointer will be copied and saved in the resource so that the range will not be destroyed
+         * while this resource references a descriptor from it.
          * @param bBindDescriptorsToCubemapFaces If this resource is a cubemap, specify `true`
          * to also bind descriptors that reference specific cubemap faces, specify `false` to only bind 1
          * descriptor that references the entire resource.
@@ -495,7 +502,7 @@ namespace ne {
         [[nodiscard]] std::optional<Error> assignDescriptor(
             DirectXResource* pResource,
             DirectXDescriptorType descriptorType,
-            ContinuousDirectXDescriptorRange* pRange = nullptr,
+            const std::shared_ptr<ContinuousDirectXDescriptorRange>& pRange = nullptr,
             bool bBindDescriptorsToCubemapFaces = true);
 
         /**

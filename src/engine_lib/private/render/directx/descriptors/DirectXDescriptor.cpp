@@ -13,7 +13,7 @@ namespace ne {
         pResource = nullptr;
 
         // Notify heap.
-        pHeap->onDescriptorBeingDestroyed(this, pRange);
+        pHeap->onDescriptorBeingDestroyed(this, pRange.get());
     }
 
     DirectXDescriptor::DirectXDescriptor(
@@ -22,7 +22,7 @@ namespace ne {
         DirectXResource* pResource,
         int iDescriptorOffsetInDescriptors,
         std::optional<size_t> referencedCubemapFaceIndex,
-        ContinuousDirectXDescriptorRange* pRange)
+        const std::shared_ptr<ContinuousDirectXDescriptorRange>& pRange)
         : pResource(pResource), pHeap(pHeap), pRange(pRange),
           referencedCubemapFaceIndex(referencedCubemapFaceIndex), descriptorType(descriptorType) {
         // Save index.

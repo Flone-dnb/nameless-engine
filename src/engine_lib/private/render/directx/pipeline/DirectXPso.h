@@ -81,12 +81,12 @@ namespace ne {
                 globalShaderResourceSrvs;
 
             /**
-             * Stores pairs of "root parameter index" - "descriptor table (range) to bind".
+             * Stores pairs of "root parameter index" - "descriptor range to bind".
              *
              * @remark Shader resources modify this map.
              */
-            std::unordered_map<UINT, std::unique_ptr<ContinuousDirectXDescriptorRange>>
-                descriptorTablesToBind;
+            std::unordered_map<UINT, std::shared_ptr<ContinuousDirectXDescriptorRange>>
+                descriptorRangesToBind;
 
             /** Whether fields of this struct are initialized or not. */
             bool bIsReadyForUsage = false;

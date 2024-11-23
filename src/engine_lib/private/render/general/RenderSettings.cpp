@@ -138,13 +138,13 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
 
             Logger::get().error(error.getFullErrorMessage());
-            return {};
+            return AntialiasingQuality::DISABLED;
         }
         auto maxState = std::get<AntialiasingQuality>(std::move(result));
 
         // Make sure AA is supported.
         if (maxState == AntialiasingQuality::DISABLED) {
-            return {};
+            return AntialiasingQuality::DISABLED;
         }
 
         // Self check: make sure current AA sample count is supported (should be because RenderSettings
@@ -176,88 +176,6 @@ namespace ne {
         }
 
         return {};
-    }
-
-    void RenderSettings::onAfterDeserialized() {
-        Serializable::onAfterDeserialized();
-
-        // Make sure that deserialized values are valid/supported.
-
-        // Check anti-aliasing sample count.
-        if (iAntialiasingSampleCount != static_cast<unsigned int>(AntialiasingQuality::DISABLED) &&
-            iAntialiasingSampleCount != static_cast<unsigned int>(AntialiasingQuality::MEDIUM) &&
-            iAntialiasingSampleCount != static_cast<unsigned int>(AntialiasingQuality::HIGH)) {
-            // Set new AA sample count.
-            const auto iNewSampleCount = static_cast<unsigned int>(AntialiasingQuality::HIGH);
-
-            // Log change.
-            Logger::get().warn(std::format(
-                "deserialized AA sample count \"{}\" is not a valid/supported value, changing to \"{}\"",
-                iAntialiasingSampleCount,
-                iNewSampleCount));
-
-            // Correct the value.
-            iAntialiasingSampleCount = iNewSampleCount;
-        }
-
-        // Check texture filtering quality.
-        if (iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::LOW) &&
-            iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::MEDIUM) &&
-            iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::HIGH)) {
-            const auto iNewTextureFilteringQuality = static_cast<unsigned int>(TextureFilteringQuality::HIGH);
-
-            // Log change.
-            Logger::get().warn(std::format(
-                "deserialized texture filtering quality \"{}\" is not a valid parameter, changing to \"{}\"",
-                iTextureFilteringQuality,
-                iNewTextureFilteringQuality));
-
-            // Correct the value.
-            iTextureFilteringQuality = iNewTextureFilteringQuality;
-        }
-
-        // Check shadow map resolution.
-        if (iShadowMapSize != static_cast<unsigned int>(ShadowQuality::LOW) &&
-            iShadowMapSize != static_cast<unsigned int>(ShadowQuality::MEDIUM) &&
-            iShadowMapSize != static_cast<unsigned int>(ShadowQuality::HIGH)) {
-            const auto iNewShadowMapSize = static_cast<unsigned int>(ShadowQuality::HIGH);
-
-            // Log change.
-            Logger::get().warn(std::format(
-                "deserialized shadow map size \"{}\" is not a valid parameter, changing to \"{}\"",
-                iShadowMapSize,
-                iNewShadowMapSize));
-
-            // Correct the value.
-            iShadowMapSize = iNewShadowMapSize;
-        }
-
-        // Check texture quality.
-        if (iTextureQuality != static_cast<unsigned int>(TextureQuality::VERY_HIGH) &&
-            iTextureQuality != static_cast<unsigned int>(TextureQuality::HIGH) &&
-            iTextureQuality != static_cast<unsigned int>(TextureQuality::MEDIUM) &&
-            iTextureQuality != static_cast<unsigned int>(TextureQuality::LOW)) {
-            const auto iNewTextureQuality = static_cast<unsigned int>(TextureQuality::VERY_HIGH);
-
-            // Log change.
-            Logger::get().warn(std::format(
-                "deserialized texture quality \"{}\" is not a valid parameter, changing to \"{}\"",
-                iTextureQuality,
-                iNewTextureQuality));
-
-            // Correct the value.
-            iTextureQuality = iNewTextureQuality;
-        }
-
-#if defined(DEBUG) && defined(WIN32)
-        static_assert(
-            sizeof(RenderSettings) == 200, // NOLINT: current class size
-            "consider updating old / adding new checks here");
-#elif defined(DEBUG)
-        static_assert(
-            sizeof(RenderSettings) == 176, // NOLINT: current class size
-            "consider updating old / adding new checks here");
-#endif
     }
 
     void RenderSettings::setTextureFilteringQuality(TextureFilteringQuality quality) {
@@ -359,11 +277,17 @@ namespace ne {
 
         // Make sure this resolution was found.
         if (!bFound) [[unlikely]] {
+            std::string sSupportedResolutions;
+            for (const auto& supportedResolution : supportedResolutions) {
+                sSupportedResolutions +=
+                    std::format("\n{}x{}", supportedResolution.first, supportedResolution.second);
+            }
             Logger::get().error(std::format(
                 "failed to set render resolution {}x{} because it's not supported (read the docs on how to "
-                "query supported render resolutions)",
+                "query supported render resolutions), supported resolutions are:{}",
                 resolution.first,
-                resolution.second));
+                resolution.second,
+                sSupportedResolutions));
             return;
         }
 
@@ -561,7 +485,89 @@ namespace ne {
         return pRenderer->getMaxSupportedAntialiasingQuality();
     }
 
-    std::optional<Error> RenderSettings::clampSettingsToMaxSupported() {
+    void RenderSettings::onAfterDeserialized() {
+        Serializable::onAfterDeserialized();
+
+        // Make sure that deserialized values are valid/supported.
+
+        // Check anti-aliasing sample count.
+        if (iAntialiasingSampleCount != static_cast<unsigned int>(AntialiasingQuality::DISABLED) &&
+            iAntialiasingSampleCount != static_cast<unsigned int>(AntialiasingQuality::MEDIUM) &&
+            iAntialiasingSampleCount != static_cast<unsigned int>(AntialiasingQuality::HIGH)) {
+            // Set new AA sample count.
+            const auto iNewSampleCount = static_cast<unsigned int>(AntialiasingQuality::HIGH);
+
+            // Log change.
+            Logger::get().warn(std::format(
+                "deserialized AA sample count \"{}\" is not a valid/supported value, changing to \"{}\"",
+                iAntialiasingSampleCount,
+                iNewSampleCount));
+
+            // Correct the value.
+            iAntialiasingSampleCount = iNewSampleCount;
+        }
+
+        // Check texture filtering quality.
+        if (iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::LOW) &&
+            iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::MEDIUM) &&
+            iTextureFilteringQuality != static_cast<unsigned int>(TextureFilteringQuality::HIGH)) {
+            const auto iNewTextureFilteringQuality = static_cast<unsigned int>(TextureFilteringQuality::HIGH);
+
+            // Log change.
+            Logger::get().warn(std::format(
+                "deserialized texture filtering quality \"{}\" is not a valid parameter, changing to \"{}\"",
+                iTextureFilteringQuality,
+                iNewTextureFilteringQuality));
+
+            // Correct the value.
+            iTextureFilteringQuality = iNewTextureFilteringQuality;
+        }
+
+        // Check shadow map resolution.
+        if (iShadowMapSize != static_cast<unsigned int>(ShadowQuality::LOW) &&
+            iShadowMapSize != static_cast<unsigned int>(ShadowQuality::MEDIUM) &&
+            iShadowMapSize != static_cast<unsigned int>(ShadowQuality::HIGH)) {
+            const auto iNewShadowMapSize = static_cast<unsigned int>(ShadowQuality::HIGH);
+
+            // Log change.
+            Logger::get().warn(std::format(
+                "deserialized shadow map size \"{}\" is not a valid parameter, changing to \"{}\"",
+                iShadowMapSize,
+                iNewShadowMapSize));
+
+            // Correct the value.
+            iShadowMapSize = iNewShadowMapSize;
+        }
+
+        // Check texture quality.
+        if (iTextureQuality != static_cast<unsigned int>(TextureQuality::VERY_HIGH) &&
+            iTextureQuality != static_cast<unsigned int>(TextureQuality::HIGH) &&
+            iTextureQuality != static_cast<unsigned int>(TextureQuality::MEDIUM) &&
+            iTextureQuality != static_cast<unsigned int>(TextureQuality::LOW)) {
+            const auto iNewTextureQuality = static_cast<unsigned int>(TextureQuality::VERY_HIGH);
+
+            // Log change.
+            Logger::get().warn(std::format(
+                "deserialized texture quality \"{}\" is not a valid parameter, changing to \"{}\"",
+                iTextureQuality,
+                iNewTextureQuality));
+
+            // Correct the value.
+            iTextureQuality = iNewTextureQuality;
+        }
+
+#if defined(DEBUG) && defined(WIN32)
+        static_assert(
+            sizeof(RenderSettings) == 200, // NOLINT: current class size
+            "consider updating old / adding new checks here");
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(RenderSettings) == 176, // NOLINT: current class size
+            "consider updating old / adding new checks here");
+#endif
+    }
+
+    std::optional<Error> RenderSettings::onRendererInitialized() {
         // Get maximum supported AA sample count.
         auto result = pRenderer->getMaxSupportedAntialiasingQuality();
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
@@ -582,6 +588,18 @@ namespace ne {
 
             iAntialiasingSampleCount = iMaxSampleCount;
         }
+
+#if defined(DEBUG) && defined(WIN32)
+        static_assert(
+            sizeof(RenderSettings) == 200, // NOLINT: current class size
+            "consider updating old / adding new checks here IF you need to check something after the "
+            "renderer is initialized");
+#elif defined(DEBUG)
+        static_assert(
+            sizeof(RenderSettings) == 176, // NOLINT: current class size
+            "consider updating old / adding new checks here IF you need to check something after the "
+            "renderer is initialized");
+#endif
 
         return {};
     }

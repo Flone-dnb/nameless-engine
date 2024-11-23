@@ -120,7 +120,8 @@ namespace ne {
 
         mtxInternalResources.second.globalShaderResourceCbvs.clear();
         mtxInternalResources.second.globalShaderResourceSrvs.clear();
-        mtxInternalResources.second.descriptorTablesToBind.clear();
+        mtxInternalResources.second.descriptorRangesToBind.clear();
+        mtxInternalResources.second.rootParameterIndices.clear();
 
 #if defined(DEBUG)
         static_assert(

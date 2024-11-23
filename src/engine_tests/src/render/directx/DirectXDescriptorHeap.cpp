@@ -822,7 +822,7 @@ TEST_CASE("make descriptor range expand/shrink") {
                 INFO(err.getFullErrorMessage());
                 REQUIRE(false);
             }
-            auto pRange = std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+            auto pRange = std::get<std::shared_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
 
             // Check heap size.
             REQUIRE(
@@ -834,7 +834,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             REQUIRE(pRange->getRangeSize() == 0);
 
             // Bind CBV from range to resource 1.
-            auto optionalError = pResource1->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            auto optionalError = pResource1->bindDescriptor(DirectXDescriptorType::CBV, pRange);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -854,7 +854,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             REQUIRE(pCbvDescriptor1->getDescriptorOffsetInDescriptors() == pRange->getRangeStartInHeap());
 
             // Bind CBV from range to resource 2.
-            optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -891,7 +891,7 @@ TEST_CASE("make descriptor range expand/shrink") {
                 vResources[i] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
                 // Bind CBV.
-                optionalError = vResources[i]->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+                optionalError = vResources[i]->bindDescriptor(DirectXDescriptorType::CBV, pRange);
                 if (optionalError.has_value()) [[unlikely]] {
                     auto error = optionalError.value();
                     error.addCurrentLocationToErrorStack();
@@ -964,7 +964,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             vResources[0] = std::get<std::unique_ptr<DirectXResource>>(std::move(result));
 
             // Bind CBV in the range.
-            optionalError = vResources[0]->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            optionalError = vResources[0]->bindDescriptor(DirectXDescriptorType::CBV, pRange);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -999,7 +999,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             bIsExpencingRangeIndicesToChange = true;
 
             // Bind CBV in the range.
-            optionalError = pExpansionResource->bindDescriptor(DirectXDescriptorType::CBV, pRange.get());
+            optionalError = pExpansionResource->bindDescriptor(DirectXDescriptorType::CBV, pRange);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -1196,7 +1196,7 @@ TEST_CASE("descriptor ranges have correct index offset") {
                 REQUIRE(false);
             }
             auto pRange1 =
-                std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+                std::get<std::shared_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
 
             // Allocate descriptor range 2.
             rangeResult = pCbvHeap->allocateContinuousDescriptorRange("test CBV range 2", []() {});
@@ -1207,7 +1207,7 @@ TEST_CASE("descriptor ranges have correct index offset") {
                 REQUIRE(false);
             }
             auto pRange2 =
-                std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+                std::get<std::shared_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
 
             // Check heap size.
             REQUIRE(
@@ -1221,7 +1221,7 @@ TEST_CASE("descriptor ranges have correct index offset") {
             REQUIRE(pRange2->getRangeSize() == 0);
 
             // Bind CBV resource 1 - range 1.
-            auto optionalError = pResource1->bindDescriptor(DirectXDescriptorType::CBV, pRange1.get());
+            auto optionalError = pResource1->bindDescriptor(DirectXDescriptorType::CBV, pRange1);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();
@@ -1241,7 +1241,7 @@ TEST_CASE("descriptor ranges have correct index offset") {
             REQUIRE(pCbvDescriptor1->getDescriptorOffsetInDescriptors() == pRange1->getRangeStartInHeap());
 
             // Bind CBV resource 2 - range 2.
-            optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange2.get());
+            optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange2);
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = optionalError.value();
                 error.addCurrentLocationToErrorStack();

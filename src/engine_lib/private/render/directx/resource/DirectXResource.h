@@ -48,10 +48,12 @@ namespace ne {
         /**
          * Creates a new descriptor and binds it to this resource.
          *
-         * @remark Does nothing if a descriptor of this type is already binded.
+         * @remark Does nothing if a descriptor of this type is already bound.
          *
          * @param descriptorType Type of descriptor to bind.
          * @param pRange         Specify in order to allocate a descriptor from this range.
+         * The specified shared pointer will be copied and saved in the resource so that the range will not be
+         * destroyed while this resource references a descriptor from it.
          * @param bBindDescriptorsToCubemapFaces If this resource is a cubemap, specify `true`
          * to also bind descriptors that reference specific cubemap faces, specify `false` to only bind 1
          * descriptor that references the entire resource.
@@ -60,7 +62,7 @@ namespace ne {
          */
         [[nodiscard]] std::optional<Error> bindDescriptor(
             DirectXDescriptorType descriptorType,
-            ContinuousDirectXDescriptorRange* pRange = nullptr,
+            const std::shared_ptr<ContinuousDirectXDescriptorRange>& pRange = nullptr,
             bool bBindDescriptorsToCubemapFaces = true);
 
         /**

@@ -858,7 +858,7 @@ namespace ne {
     std::optional<Error> Renderer::clampSettingsToMaxSupported() {
         std::scoped_lock guard(mtxRenderSettings.first);
 
-        auto optionalError = mtxRenderSettings.second->clampSettingsToMaxSupported();
+        auto optionalError = mtxRenderSettings.second->onRendererInitialized();
         if (optionalError.has_value()) {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

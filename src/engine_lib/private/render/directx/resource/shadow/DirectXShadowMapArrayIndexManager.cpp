@@ -53,7 +53,7 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        auto pSrvRange = std::get<std::unique_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
+        auto pSrvRange = std::get<std::shared_ptr<ContinuousDirectXDescriptorRange>>(std::move(rangeResult));
 
         // Save SRV range.
         pIndexManager->pSrvRange = std::move(pSrvRange);
@@ -119,7 +119,7 @@ namespace ne {
         }
 
         // Bind SRV from the range.
-        optionalError = pSrvResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange.get(), false);
+        optionalError = pSrvResource->bindDescriptor(DirectXDescriptorType::SRV, pSrvRange, false);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 // Standard.
+#include <memory>
 #include <optional>
 
 // Custom.
@@ -39,14 +40,14 @@ namespace ne {
          *
          * @return Descriptor offset.
          */
-        inline int getDescriptorOffsetInDescriptors() const { return iDescriptorOffsetInDescriptors; }
+        int getDescriptorOffsetInDescriptors() const { return iDescriptorOffsetInDescriptors; }
 
         /**
          * Returns heap that this descriptor uses.
          *
          * @return Descriptor heap.
          */
-        inline DirectXDescriptorHeap* getDescriptorHeap() const { return pHeap; }
+        DirectXDescriptorHeap* getDescriptorHeap() const { return pHeap; }
 
         /**
          * Returns resource that owns this descriptor.
@@ -67,7 +68,7 @@ namespace ne {
          * @param referencedCubemapFaceIndex     Specify empty if this descriptor does not reference
          * a cubemap, otherwise index of cubemap's face that it references.
          * @param pRange                         Range that this descriptor was allocated from.
-         * `nullptr` if allocated as a single descriptor (not part of some range).
+         * `nullptr` if allocated not from a range.
          */
         DirectXDescriptor(
             DirectXDescriptorHeap* pHeap,
@@ -75,7 +76,7 @@ namespace ne {
             DirectXResource* pResource,
             int iDescriptorOffsetInDescriptors,
             std::optional<size_t> referencedCubemapFaceIndex,
-            ContinuousDirectXDescriptorRange* pRange = nullptr);
+            const std::shared_ptr<ContinuousDirectXDescriptorRange>& pRange = nullptr);
 
     private:
         /**
@@ -90,11 +91,8 @@ namespace ne {
         /** Do not delete. Heap of this descriptor. */
         DirectXDescriptorHeap* const pHeap = nullptr;
 
-        /**
-         * Do not delete. Range that allocated this descriptor (`nullptr` if allocated as a single
-         * descriptor).
-         */
-        ContinuousDirectXDescriptorRange* const pRange = nullptr;
+        /** Range that allocated this descriptor (`nullptr` if allocated not from a range). */
+        std::shared_ptr<ContinuousDirectXDescriptorRange> const pRange = nullptr;
 
         /** Not empty if this descriptor references a cubemap's face. */
         const std::optional<size_t> referencedCubemapFaceIndex;

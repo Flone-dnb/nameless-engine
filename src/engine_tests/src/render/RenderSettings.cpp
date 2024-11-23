@@ -11,20 +11,22 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-TEST_CASE(
-    "change resolution/msaa/vsync while MeshNode is spawned then restart game and check saved settings") {
+TEST_CASE("change resolution/msaa/texture filtering/vsync while MeshNode is spawned then restart game and "
+          "check saved settings") {
     using namespace ne;
-
-    static std::pair<unsigned int, unsigned int> targetResolution;
-    static bool bIsAaEnabled = false;
-    static bool bIsVsyncEnabled = false;
 
     class TestGameInstance : public GameInstance {
     private:
+        std::pair<unsigned int, unsigned int> usedResolution;
+        AntialiasingQuality usedMsaa;
+        bool bIsVsyncEnabled = false;
+        TextureFilteringQuality textureFilteringQuality;
+
         size_t iTickCount = 0;
         bool bChangedResolution = false;
         bool bChangesMsaa = false;
         bool bChangedVsync = false;
+        bool bChangedTextureFiltering = false;
 
     public:
         TestGameInstance(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
@@ -38,6 +40,17 @@ TEST_CASE(
                     REQUIRE(false);
                 }
 
+                // Prepare textures.
+                auto importResult = TestHelpers::prepareDiffuseTextures();
+                if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(importResult));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
+                    REQUIRE(false);
+                }
+                const auto vImportedTexturePaths =
+                    std::get<std::array<std::string, 2>>(std::move(importResult));
+
                 // Create camera.
                 auto pCamera =
                     TestHelpers::createAndSpawnActiveCamera(getWorldRootNode(), getCameraManager());
@@ -47,10 +60,14 @@ TEST_CASE(
                 const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
+                // Set texture (because we will change texture filtering).
+                pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
+
                 // Spawn mesh node.
                 getWorldRootNode()->addChildNode(pMeshNode);
             });
         }
+
         virtual void onBeforeNewFrame(float timeSincePrevCallInSec) override {
             iTickCount += 1;
 
@@ -58,9 +75,7 @@ TEST_CASE(
                 REQUIRE(getTotalSpawnedNodeCount() == 3);
             }
 
-            if (iTickCount == 2) {
-                // Change resolution.
-
+            if (iTickCount == 3) {
                 // Get supported resolutions.
                 auto result = getWindow()->getRenderer()->getSupportedRenderResolutions();
                 if (std::holds_alternative<Error>(result)) {
@@ -73,32 +88,38 @@ TEST_CASE(
                     std::get<std::set<std::pair<unsigned int, unsigned int>>>(std::move(result));
                 REQUIRE(!supportedResolutions.empty());
 
-                // Get some supported resolution.
-                targetResolution = *supportedResolutions.begin();
-
                 const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
                 std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
-                // Make sure it's not the same.
-                REQUIRE(mtxRenderSettings.second->getRenderResolution() != targetResolution);
+                usedResolution = mtxRenderSettings.second->getRenderResolution();
 
-                // Apply.
+                // Get some supported resolution.
+                const auto targetResolution = *supportedResolutions.begin();
+
+                if (getWindow()->getRenderer()->getType() != RendererType::VULKAN) {
+                    // Make sure it's not the same.
+                    // We still haven't implemented window-independent render resolution for Vulkan
+                    // the it will only have 1 available render resolution.
+                    REQUIRE(usedResolution != targetResolution);
+                }
+
+                // Change resolution.
                 mtxRenderSettings.second->setRenderResolution(targetResolution);
 
                 // Done.
                 bChangedResolution = true;
-            } else if (iTickCount == 3) {
-                // Change MSAA.
-
+            } else if (iTickCount == 5) {
                 // Get settings.
                 const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
                 std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
-                // Apply.
-                bIsAaEnabled =
-                    mtxRenderSettings.second->getAntialiasingQuality() != AntialiasingQuality::DISABLED;
-                if (bIsAaEnabled) {
-                    if (mtxRenderSettings.second->getAntialiasingQuality() == AntialiasingQuality::HIGH) {
+                mtxRenderSettings.second->setRenderResolution(usedResolution);
+
+                usedMsaa = mtxRenderSettings.second->getAntialiasingQuality();
+
+                // Change MSAA.
+                if (usedMsaa != AntialiasingQuality::DISABLED) {
+                    if (usedMsaa == AntialiasingQuality::HIGH) {
                         mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
                     } else {
                         mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::HIGH);
@@ -109,19 +130,45 @@ TEST_CASE(
 
                 // Done.
                 bChangesMsaa = true;
-            } else if (iTickCount == 4) {
-                // Change VSync.
-
+            } else if (iTickCount == 7) {
                 // Get settings.
                 const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
                 std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
 
-                // Apply.
-                bIsVsyncEnabled = !mtxRenderSettings.second->isVsyncEnabled();
-                mtxRenderSettings.second->setVsyncEnabled(bIsVsyncEnabled);
+                // Restore MSAA.
+                mtxRenderSettings.second->setAntialiasingQuality(usedMsaa);
+
+                // Change VSync.
+                bIsVsyncEnabled = mtxRenderSettings.second->isVsyncEnabled();
+                mtxRenderSettings.second->setVsyncEnabled(!bIsVsyncEnabled);
 
                 bChangedVsync = true;
-            } else if (iTickCount == 5) {
+            } else if (iTickCount == 9) {
+                // Get settings.
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
+
+                // Restore VSync.
+                mtxRenderSettings.second->setVsyncEnabled(bIsVsyncEnabled);
+
+                textureFilteringQuality = mtxRenderSettings.second->getTextureFilteringQuality();
+
+                // Change texture filtering.
+                if (textureFilteringQuality == TextureFilteringQuality::HIGH) {
+                    mtxRenderSettings.second->setTextureFilteringQuality(TextureFilteringQuality::LOW);
+                } else {
+                    mtxRenderSettings.second->setTextureFilteringQuality(TextureFilteringQuality::HIGH);
+                }
+
+                bChangedTextureFiltering = true;
+            } else if (iTickCount == 11) {
+                // Get settings.
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock renderSettingsGuard(*mtxRenderSettings.first);
+
+                // Restore texture filtering.
+                mtxRenderSettings.second->setTextureFilteringQuality(textureFilteringQuality);
+
                 getWindow()->close();
             }
         }
@@ -129,6 +176,7 @@ TEST_CASE(
             REQUIRE(bChangedResolution);
             REQUIRE(bChangesMsaa);
             REQUIRE(bChangedVsync);
+            REQUIRE(bChangedTextureFiltering);
         }
         virtual ~TestGameInstance() override {}
     };
@@ -143,30 +191,6 @@ TEST_CASE(
 
     const std::unique_ptr<Window> pMainWindow = std::get<std::unique_ptr<Window>>(std::move(result));
     pMainWindow->processEvents<TestGameInstance>();
-
-    REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
-
-    class TestGameInstance2 : public GameInstance {
-    public:
-        TestGameInstance2(Window* pGameWindow, GameManager* pGame, InputManager* pInputManager)
-            : GameInstance(pGameWindow, pGame, pInputManager) {}
-        virtual void onGameStarted() override {
-            const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
-            std::scoped_lock guard(*mtxRenderSettings.first);
-
-            REQUIRE(mtxRenderSettings.second->getRenderResolution() == targetResolution);
-            if (bIsAaEnabled) {
-                REQUIRE(mtxRenderSettings.second->getAntialiasingQuality() != AntialiasingQuality::DISABLED);
-            } else {
-                REQUIRE(mtxRenderSettings.second->getAntialiasingQuality() == AntialiasingQuality::DISABLED);
-            }
-            REQUIRE(mtxRenderSettings.second->isVsyncEnabled() == bIsVsyncEnabled);
-
-            getWindow()->close();
-        }
-    };
-
-    pMainWindow->processEvents<TestGameInstance2>();
 
     REQUIRE(sgc::GarbageCollector::get().getAliveAllocationCount() == 0);
 }

@@ -23,60 +23,6 @@
 // External.
 #include "catch2/catch_test_macros.hpp"
 
-static constexpr auto pImportedTexture1DirectoryName = "imported1";
-static constexpr auto pImportedTexture2DirectoryName = "imported2";
-static const std::string sImportedTexture1PathRelativeRes =
-    std::string("test/temp/") + pImportedTexture1DirectoryName;
-static const std::string sImportedTexture2PathRelativeRes =
-    std::string("test/temp/") + pImportedTexture2DirectoryName;
-
-/** Returns `true` if successful, `false` if failed. */
-bool prepareDiffuseTextures() {
-    using namespace ne;
-
-    // Prepare some paths.
-
-    const auto pathToImportexTexture1Dir = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
-                                           "test" / "temp" / pImportedTexture1DirectoryName;
-    const auto pathToImportexTexture2Dir = ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) /
-                                           "test" / "temp" / pImportedTexture2DirectoryName;
-
-    // Delete previously imported texture (if exists).
-    if (std::filesystem::exists(pathToImportexTexture1Dir)) {
-        std::filesystem::remove_all(pathToImportexTexture1Dir);
-    }
-    if (std::filesystem::exists(pathToImportexTexture2Dir)) {
-        std::filesystem::remove_all(pathToImportexTexture2Dir);
-    }
-
-    // Import sample texture.
-    auto optionalError = TextureImporter::importTexture(
-        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "texture.png",
-        TextureImportFormat::RGB,
-        "test/temp",
-        pImportedTexture1DirectoryName);
-    if (optionalError.has_value()) [[unlikely]] {
-        optionalError->addCurrentLocationToErrorStack();
-        INFO(optionalError->getFullErrorMessage());
-        REQUIRE(false);
-        return false;
-    }
-
-    optionalError = TextureImporter::importTexture(
-        ProjectPaths::getPathToResDirectory(ResourceDirectory::ROOT) / "test" / "texture.png",
-        TextureImportFormat::RGB,
-        "test/temp",
-        pImportedTexture2DirectoryName);
-    if (optionalError.has_value()) [[unlikely]] {
-        optionalError->addCurrentLocationToErrorStack();
-        INFO(optionalError->getFullErrorMessage());
-        REQUIRE(false);
-        return false;
-    }
-
-    return true;
-}
-
 TEST_CASE("create engine default materials") {
     using namespace ne;
 
@@ -468,9 +414,15 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 }
 
                 // Prepare textures.
-                if (!prepareDiffuseTextures()) {
+                auto importResult = TestHelpers::prepareDiffuseTextures();
+                if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(importResult));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                const auto vImportedTexturePaths =
+                    std::get<std::array<std::string, 2>>(std::move(importResult));
 
                 // Prepare pipeline manager.
                 const auto pPipelineManager = getWindow()->getRenderer()->getPipelineManager();
@@ -487,14 +439,14 @@ TEST_CASE("2 meshes with 2 materials (different diffuse textures no transparency
                 pMeshNode1->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
                 // Set texture after spawning.
-                pMeshNode1->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+                pMeshNode1->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                 // Spawn sample mesh 2.
                 const auto pMeshNode2 = sgc::makeGc<MeshNode>();
                 pMeshNode2->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
-                pMeshNode2->getMaterial()->setDiffuseTexture(sImportedTexture2PathRelativeRes);
+                pMeshNode2->getMaterial()->setDiffuseTexture(vImportedTexturePaths[1]);
 
                 getWorldRootNode()->addChildNode(
                     pMeshNode2, Node::AttachmentRule::KEEP_RELATIVE, Node::AttachmentRule::KEEP_RELATIVE);
@@ -673,16 +625,21 @@ TEST_CASE("change texture while spawned") {
                 getCameraManager()->setActiveCamera(pCamera);
 
                 // Prepare textures.
-                if (!prepareDiffuseTextures()) {
+                auto importResult = TestHelpers::prepareDiffuseTextures();
+                if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(importResult));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                vImportedTexturePaths = std::get<std::array<std::string, 2>>(std::move(importResult));
 
                 // Create a sample mesh.
                 pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
-                pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+                pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                 getWorldRootNode()->addChildNode(pMeshNode);
                 pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
@@ -707,7 +664,7 @@ TEST_CASE("change texture while spawned") {
 
                 if (!bChangedTexture) {
                     // Change texture.
-                    pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture2PathRelativeRes);
+                    pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[1]);
 
                     // Now wait for a few frames to be drawn.
                     iFramesSpentWaiting = 0;
@@ -721,6 +678,7 @@ TEST_CASE("change texture while spawned") {
         virtual ~TestGameInstance() override {}
 
     private:
+        std::array<std::string, 2> vImportedTexturePaths;
         sgc::GcPtr<MeshNode> pMeshNode;
         bool bChangedTexture = false;
         size_t iFramesSpentWaiting = 0;
@@ -759,16 +717,22 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                 }
 
                 // Prepare textures.
-                if (!prepareDiffuseTextures()) {
+                auto importResult = TestHelpers::prepareDiffuseTextures();
+                if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(importResult));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                const auto vImportedTexturePaths =
+                    std::get<std::array<std::string, 2>>(std::move(importResult));
 
                 // Prepare parent mesh.
                 const auto pMeshNodeParent = sgc::makeGc<MeshNode>();
                 pMeshNodeParent->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
-                pMeshNodeParent->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+                pMeshNodeParent->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                 // Spawn parent mesh.
                 getWorldRootNode()->addChildNode(pMeshNodeParent);
@@ -779,7 +743,7 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                 pMeshNodeChild->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
-                pMeshNodeChild->getMaterial()->setDiffuseTexture(sImportedTexture2PathRelativeRes);
+                pMeshNodeChild->getMaterial()->setDiffuseTexture(vImportedTexturePaths[1]);
 
                 // Spawn child mesh.
                 pMeshNodeParent->addChildNode(pMeshNodeChild);
@@ -807,7 +771,8 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                 }
 
                 // Create a new world.
-                createWorld([this, pathToNodeTree](const std::optional<Error>& optionalWorldError1) {
+                createWorld([vImportedTexturePaths, this, pathToNodeTree](
+                                const std::optional<Error>& optionalWorldError1) {
                     if (optionalWorldError1.has_value()) {
                         auto error = optionalWorldError1.value();
                         error.addCurrentLocationToErrorStack();
@@ -844,10 +809,10 @@ TEST_CASE("serialize and deserialize a node tree with materials") {
                     // Make sure texture paths are correct.
                     REQUIRE(
                         pMeshNodeParent->getMaterial()->getPathToDiffuseTextureResource() ==
-                        sImportedTexture1PathRelativeRes);
+                        vImportedTexturePaths[0]);
                     REQUIRE(
                         pMeshNodeChild->getMaterial()->getPathToDiffuseTextureResource() ==
-                        sImportedTexture2PathRelativeRes);
+                        vImportedTexturePaths[1]);
 
                     // Spawn nodes.
                     getWorldRootNode()->addChildNode(pMeshNodeParent);
@@ -909,21 +874,27 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                 getCameraManager()->setActiveCamera(pCamera);
 
                 // Prepare textures.
-                if (!prepareDiffuseTextures()) {
+                auto importResult = TestHelpers::prepareDiffuseTextures();
+                if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(importResult));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                const auto vImportedTexturePaths =
+                    std::get<std::array<std::string, 2>>(std::move(importResult));
 
                 // Spawn sample mesh.
                 const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                 // Set texture before spawning.
-                pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+                pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                 getWorldRootNode()->addChildNode(pMeshNode);
                 pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
 
-                addTaskToThreadPool([this, pRawMeshNode = &*pMeshNode]() {
+                addTaskToThreadPool([vImportedTexturePaths, this, pRawMeshNode = &*pMeshNode]() {
                     const auto iFramesBefore = iFramesRendered;
 
                     do {
@@ -931,11 +902,9 @@ TEST_CASE("changing diffuse texture from non-main thread should not cause deadlo
                         constexpr size_t iTryCont = 1000;
                         for (size_t i = 0; i < iTryCont; i++) {
                             if (i % 2 == 0) {
-                                pRawMeshNode->getMaterial()->setDiffuseTexture(
-                                    sImportedTexture2PathRelativeRes);
+                                pRawMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[1]);
                             } else {
-                                pRawMeshNode->getMaterial()->setDiffuseTexture(
-                                    sImportedTexture1PathRelativeRes);
+                                pRawMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
                             }
 
                             if (i % (iTryCont / 10) == 0) {
@@ -994,9 +963,15 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
                 }
 
                 // Prepare textures.
-                if (!prepareDiffuseTextures()) {
+                auto importResult = TestHelpers::prepareDiffuseTextures();
+                if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
+                    auto error = std::get<Error>(std::move(importResult));
+                    error.addCurrentLocationToErrorStack();
+                    INFO(error.getFullErrorMessage());
                     REQUIRE(false);
                 }
+                const auto vImportedTexturePaths =
+                    std::get<std::array<std::string, 2>>(std::move(importResult));
 
                 {
                     // Spawn sample mesh.
@@ -1004,7 +979,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
                     pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
                     // Set texture before spawning.
-                    pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+                    pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                     getWorldRootNode()->addChildNode(pMeshNode);
                     pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));
@@ -1017,7 +992,7 @@ TEST_CASE("using 1 texture in 2 material has only 1 texture in memory") {
 
                     // Set texture before spawning.
                     // Use the same texture.
-                    pMeshNode->getMaterial()->setDiffuseTexture(sImportedTexture1PathRelativeRes);
+                    pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                     getWorldRootNode()->addChildNode(pMeshNode);
                     pMeshNode->setWorldLocation(glm::vec3(1.0F, 0.0F, 0.0F));

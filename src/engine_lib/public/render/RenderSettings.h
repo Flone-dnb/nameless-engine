@@ -155,8 +155,8 @@ namespace ne RNAMESPACE() {
         /**
          * Returns current anti-aliasing (AA) quality.
          *
-         * @return Returns `DISABLED` if AA is not supported (see @ref getMaxSupportedAntialiasingQuality),
-         * otherwise current AA quality.
+         * @return Returns `DISABLED` if AA is disabled or not supported (see @ref
+         * getMaxSupportedAntialiasingQuality), otherwise current AA quality.
          */
         AntialiasingQuality getAntialiasingQuality() const;
 
@@ -255,11 +255,12 @@ namespace ne RNAMESPACE() {
 
         /**
          * Called by the renderer when it has finished initializing its essential entities so
-         * that RenderSettings can query maximum supported settings and clamp the current values (if needed).
+         * that the settings can query maximum supported settings and clamp the current values (if needed)
+         * and do other post-initialization checks.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> clampSettingsToMaxSupported();
+        [[nodiscard]] std::optional<Error> onRendererInitialized();
 
         /**
          * Saves the current configuration to disk.

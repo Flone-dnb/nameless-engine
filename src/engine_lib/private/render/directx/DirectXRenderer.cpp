@@ -1423,7 +1423,7 @@ namespace ne {
             }
 
             // Bind pipeline's descriptor tables.
-            for (const auto& [iRootParameterIndex, pDescriptorRange] : pipelineData.descriptorTablesToBind) {
+            for (const auto& [iRootParameterIndex, pDescriptorRange] : pipelineData.descriptorRangesToBind) {
                 pCommandList->SetGraphicsRootDescriptorTable(
                     iRootParameterIndex, pDescriptorRange->getGpuDescriptorHandleToRangeStart());
             }
@@ -2012,19 +2012,21 @@ namespace ne {
             }
 
             if (vFilteredModes.empty()) {
-                Logger::get().info(std::format(
+                Logger::get().warn(std::format(
                     "video mode with resolution {}x{} and refresh rate "
                     "{}/{} is not supported, using default video mode",
                     preferredRenderResolution.first,
                     preferredRenderResolution.second,
                     preferredRefreshRate.first,
                     preferredRefreshRate.second));
-                // use last display mode
+
+                // Use the last (most suitable) display mode.
                 pickedDisplayMode = vVideoModes.back();
             } else if (vFilteredModes.size() == 1) {
-                // found specified display mode
+                // Found the specified display mode.
                 pickedDisplayMode = vFilteredModes[0];
             } else {
+                // Found multiple matches.
                 std::string sErrorMessage = std::format(
                     "video mode with resolution {}x{} and refresh rate "
                     "{}/{} matched multiple supported modes:\n",
@@ -2044,8 +2046,9 @@ namespace ne {
                         static_cast<int>(mode.ScanlineOrdering),
                         static_cast<int>(mode.Scaling));
                 }
-                Logger::get().info(std::format("{}\nusing default video mode", sErrorMessage));
-                // use the last display mode
+                Logger::get().warn(std::format("{}\nusing default video mode", sErrorMessage));
+
+                // Use the last (most suitable) display mode.
                 pickedDisplayMode = vVideoModes.back();
             }
         } else {

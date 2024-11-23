@@ -127,8 +127,9 @@ namespace ne {
         HlslShaderTextureResourceBinding(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
-            std::unordered_map<DirectXPso*, std::pair<ContinuousDirectXDescriptorRange*, size_t>>&&
-                usedDescriptorRanges);
+            std::unordered_map<
+                DirectXPso*,
+                std::pair<std::shared_ptr<ContinuousDirectXDescriptorRange>, size_t>>&& usedDescriptorRanges);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -167,11 +168,11 @@ namespace ne {
          * @return Error if something went wrong, otherwise a pointer to descriptor range from the pipeline
          * and an index of the root constant that is used to index into our shader resource.
          */
-        static std::variant<std::pair<ContinuousDirectXDescriptorRange*, size_t>, Error>
+        static std::variant<std::pair<std::shared_ptr<ContinuousDirectXDescriptorRange>, size_t>, Error>
         getSrvDescriptorRangeAndRootConstantIndex(
             DirectXPso* pPipeline, const std::string& sShaderResourceName);
 
-        /** Texture to which a descriptor should be binded. */
+        /** Texture to which a descriptor should be bound. */
         std::pair<std::mutex, std::unique_ptr<TextureHandle>> mtxUsedTexture;
 
         /**
@@ -185,7 +186,9 @@ namespace ne {
          */
         std::pair<
             std::recursive_mutex,
-            std::unordered_map<DirectXPso*, std::pair<ContinuousDirectXDescriptorRange*, size_t>>>
+            std::unordered_map<
+                DirectXPso*,
+                std::pair<std::shared_ptr<ContinuousDirectXDescriptorRange>, size_t>>>
             mtxUsedPipelineDescriptorRanges;
 
         /**

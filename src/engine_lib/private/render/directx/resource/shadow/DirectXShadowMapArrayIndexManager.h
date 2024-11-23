@@ -109,7 +109,7 @@ namespace ne {
          *
          * @remark Always valid, never changing pointer.
          */
-        std::unique_ptr<ContinuousDirectXDescriptorRange> pSrvRange;
+        std::shared_ptr<ContinuousDirectXDescriptorRange> pSrvRange;
 
         /** Info about shadows maps that take place in this array. */
         std::pair<std::recursive_mutex, std::unordered_set<ShadowMapHandle*>> mtxRegisteredShadowMaps;

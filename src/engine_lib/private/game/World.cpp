@@ -347,12 +347,6 @@ namespace ne {
         std::scoped_lock guard(mtxReceivingInputNodes.first);
 
         mtxReceivingInputNodes.second.insert(pNode);
-
-        // Log this event since the node is changing this while spawned (might be important to see/debug).
-        Logger::get().info(std::format(
-            "spawned node \"{}\" is now receiving input (nodes receiving input now: {})",
-            pNode->getNodeName(),
-            mtxReceivingInputNodes.second.size()));
     }
 
     void World::addNodeToCalledEveryFrameArrays(Node* pNode) {
@@ -367,12 +361,6 @@ namespace ne {
         std::scoped_lock guard(pMtxTickGroup->first);
 
         pMtxTickGroup->second.insert(pNode);
-
-        // Log this event since the node is changing this while spawned (might be important to see/debug).
-        Logger::get().info(std::format(
-            "spawned node \"{}\" is now called every frame (nodes called every frame now: {})",
-            pNode->getNodeName(),
-            pMtxTickGroup->second.size()));
     }
 
     void World::removeNodeFromCalledEveryFrameArrays(Node* pNode) {

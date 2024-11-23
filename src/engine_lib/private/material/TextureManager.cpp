@@ -111,9 +111,10 @@ namespace ne {
             // Log event.
             Logger::get().info(std::format(
                 "released texture resource for path \"{}\" from the memory because it's no longer used, "
-                "textures in memory now: {}",
+                "textures in memory now: {}, total used VRAM now: {}",
                 sPathToResourceRelativeRes,
-                getTextureInMemoryCount()));
+                getTextureInMemoryCount(),
+                pResourceManager->getUsedVideoMemoryInMb()));
         }
     }
 
@@ -193,9 +194,11 @@ namespace ne {
 
         // Log event.
         Logger::get().info(std::format(
-            "texture \"{}\" was loaded from disk into memory, textures in memory now: {}",
+            "texture \"{}\" was loaded from disk into memory, textures in memory now: {}, total used VRAM "
+            "now: {} MB",
             sPathToResourceRelativeRes,
-            getTextureInMemoryCount()));
+            getTextureInMemoryCount(),
+            pResourceManager->getUsedVideoMemoryInMb()));
 
         return createNewTextureHandle(sPathToResourceRelativeRes);
     }

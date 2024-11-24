@@ -68,19 +68,6 @@ namespace ne {
         static constexpr INT getRangeGrowSize() { return iRangeGrowSize; }
 
         /**
-         * Calculates an offset of the descriptor (of the specified resource) from the start of this
-         * range.
-         *
-         * @param pResource      Resource with already binded descriptor within this range.
-         * @param descriptorType Type of the descriptor to look for.
-         *
-         * @return Error if something went wrong, otherwise offset (in descriptors) of the descriptor from
-         * range start.
-         */
-        std::variant<unsigned int, Error> getResourceDescriptorOffsetFromRangeStart(
-            DirectXResource* pResource, DirectXDescriptorType descriptorType);
-
-        /**
          * Returns the number of active (currently in-use) descriptors that were allocated from this range.
          *
          * @return Active descriptors.
@@ -110,6 +97,13 @@ namespace ne {
          * @return GPU descriptor handle to range start.
          */
         D3D12_GPU_DESCRIPTOR_HANDLE getGpuDescriptorHandleToRangeStart() const;
+
+        /**
+         * Returns name of this range (used for logging).
+         *
+         * @return Name of the range.
+         */
+        std::string getRangeName() const { return sRangeName; }
 
     private:
         /** Groups mutex guarded data. */

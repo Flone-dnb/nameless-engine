@@ -1044,49 +1044,6 @@ namespace ne {
         const std::string& sRangeName)
         : onRangeIndicesChanged(onRangeIndicesChanged), sRangeName(sRangeName), pHeap(pHeap) {}
 
-    std::variant<unsigned int, Error>
-    ContinuousDirectXDescriptorRange::getResourceDescriptorOffsetFromRangeStart(
-        DirectXResource* pResource, DirectXDescriptorType descriptorType) {
-        // Get descriptor.
-        const auto pDescriptor = pResource->getDescriptor(descriptorType);
-        if (pDescriptor == nullptr) [[unlikely]] {
-            return Error(std::format(
-                "expected the resource \"{}\" to have a descriptor already binded in the descriptor range "
-                "\"{}\"",
-                pResource->getResourceName(),
-                sRangeName));
-        }
-
-        std::scoped_lock guard(mtxInternalData.first);
-
-        const int iDescriptorOffsetFromHeapStart = pDescriptor->getDescriptorOffsetInDescriptors();
-        const int iRangeOffsetFromHeapStart = mtxInternalData.second.iRangeStartInHeap;
-
-        // Check our offset in the heap.
-        if (iRangeOffsetFromHeapStart < 0) [[unlikely]] {
-            return Error(
-                std::format("descriptor range \"{}\" has a negative start index in the heap", sRangeName));
-        }
-
-        // Calculate offset from range start.
-        const int iDescriptorOffsetFromRangeStart =
-            iDescriptorOffsetFromHeapStart - iRangeOffsetFromHeapStart;
-
-        // Self check: make sure resulting value is non-negative.
-        if (iDescriptorOffsetFromRangeStart < 0) [[unlikely]] {
-            return Error(std::format(
-                "descriptor range \"{}\" failed to calculate descriptor offset from range start (descriptor "
-                "offset from heap: {}, range offset from heap: {}) because resulting descriptor offset from "
-                "range start is negative: {})",
-                sRangeName,
-                iDescriptorOffsetFromHeapStart,
-                iRangeOffsetFromHeapStart,
-                iDescriptorOffsetFromRangeStart));
-        }
-
-        return static_cast<unsigned int>(iDescriptorOffsetFromRangeStart);
-    }
-
     size_t ContinuousDirectXDescriptorRange::getRangeSize() {
         std::scoped_lock guard(mtxInternalData.first);
         return mtxInternalData.second.allocatedDescriptors.size();

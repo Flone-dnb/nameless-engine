@@ -113,7 +113,7 @@ namespace ne {
         if (pSrvResource->getDescriptor(DirectXDescriptorType::SRV) != nullptr) [[unlikely]] {
             return Error(std::format(
                 "\"{}\" was requested to register a shadow map handle \"{}\" but the GPU resource of this "
-                "shadow map handle already has an SRV binded to it which is unexpected",
+                "shadow map handle already has an SRV bound to it which is unexpected",
                 getShaderArrayResourceName(),
                 pSrvResource->getResourceName()));
         }
@@ -125,15 +125,20 @@ namespace ne {
             return optionalError;
         }
 
+        // Get bound SRV.
+        const auto pSrvDescriptor = pSrvResource->getDescriptor(DirectXDescriptorType::SRV);
+        if (pSrvDescriptor == nullptr) [[unlikely]] {
+            return Error("expected an SRV to be bound");
+        }
+
         // Get descriptor offset from range start.
-        auto descriptorOffsetResult = pSrvRange->getResourceDescriptorOffsetFromRangeStart(
-            reinterpret_cast<DirectXResource*>(pSrvResource), DirectXDescriptorType::SRV);
-        if (std::holds_alternative<Error>(descriptorOffsetResult)) [[unlikely]] {
-            auto error = std::get<Error>(std::move(descriptorOffsetResult));
+        auto result = pSrvDescriptor->getDescriptorOffsetFromRangeStart();
+        if (std::holds_alternative<Error>(result)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        const auto iDescriptorOffsetFromRangeStart = std::get<unsigned int>(descriptorOffsetResult);
+        const auto iDescriptorOffsetFromRangeStart = std::get<unsigned int>(result);
 
         // Save resource to internal array.
         mtxRegisteredShadowMaps.second.insert(pShadowMapHandle);
@@ -184,21 +189,36 @@ namespace ne {
             const auto pMtxResources = pShadowMapHandle->getResources();
 
             // Determine which resource to use to bind SRV.
-            auto pSrvResource = pMtxResources->second.pDepthTexture;
+            auto pResource = pMtxResources->second.pDepthTexture;
             if (pMtxResources->second.pColorTexture != nullptr) {
-                pSrvResource = pMtxResources->second.pColorTexture;
+                pResource = pMtxResources->second.pColorTexture;
+            }
+
+            // Cast type.
+            const auto pSrvResource = dynamic_cast<DirectXResource*>(pResource);
+            if (pSrvResource == nullptr) [[unlikely]] {
+                Error error("expected a DirectX resource");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+
+            // Get bound SRV.
+            const auto pSrvDescriptor = pSrvResource->getDescriptor(DirectXDescriptorType::SRV);
+            if (pSrvDescriptor == nullptr) [[unlikely]] {
+                Error error("expected an SRV to be bound");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
             }
 
             // Get descriptor offset from range start.
-            auto descriptorOffsetResult = pSrvRange->getResourceDescriptorOffsetFromRangeStart(
-                reinterpret_cast<DirectXResource*>(pSrvResource), DirectXDescriptorType::SRV);
-            if (std::holds_alternative<Error>(descriptorOffsetResult)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(descriptorOffsetResult));
+            auto result = pSrvDescriptor->getDescriptorOffsetFromRangeStart();
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-            const auto iDescriptorOffsetFromRangeStart = std::get<unsigned int>(descriptorOffsetResult);
+            const auto iDescriptorOffsetFromRangeStart = std::get<unsigned int>(result);
 
             // Notify shadow map user about array index initialized.
             changeShadowMapArrayIndex(pShadowMapHandle, iDescriptorOffsetFromRangeStart);

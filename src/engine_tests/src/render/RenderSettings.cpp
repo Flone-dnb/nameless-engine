@@ -40,7 +40,7 @@ TEST_CASE("change resolution/msaa/texture filtering/vsync while MeshNode is spaw
                     REQUIRE(false);
                 }
 
-                // Prepare textures.
+                // Prepare textures(because we will change texture filtering).
                 auto importResult = TestHelpers::prepareDiffuseTextures();
                 if (std::holds_alternative<Error>(importResult)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(importResult));
@@ -60,7 +60,7 @@ TEST_CASE("change resolution/msaa/texture filtering/vsync while MeshNode is spaw
                 const auto pMeshNode = sgc::makeGc<MeshNode>();
                 pMeshNode->setMeshData(PrimitiveMeshGenerator::createCube(1.0F));
 
-                // Set texture (because we will change texture filtering).
+                // Set texture.
                 pMeshNode->getMaterial()->setDiffuseTexture(vImportedTexturePaths[0]);
 
                 // Spawn mesh node.

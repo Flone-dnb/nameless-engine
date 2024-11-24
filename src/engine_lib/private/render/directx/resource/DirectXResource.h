@@ -109,7 +109,7 @@ namespace ne {
          *
          * @return Internal resource.
          */
-        inline ID3D12Resource* getInternalResource() const { return pInternalResource; }
+        ID3D12Resource* getInternalResource() const { return pInternalResource; }
 
         /**
          * Returns a raw (non-owning) pointer to a binded descriptor.

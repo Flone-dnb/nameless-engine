@@ -3,9 +3,11 @@
 // Standard.
 #include <memory>
 #include <optional>
+#include <variant>
 
 // Custom.
 #include "DirectXDescriptorType.hpp"
+#include "misc/Error.h"
 
 namespace ne {
     class DirectXDescriptorHeap;
@@ -35,12 +37,35 @@ namespace ne {
         DirectXDescriptor& operator=(DirectXDescriptor&& other) noexcept = delete;
 
         /**
-         * Returns offset of this descriptor from the heap start
-         * (offset is specified in descriptors, not an actual index).
+         * Returns offset of this descriptor from the heap start (offset is specified in descriptors, not an
+         * actual index).
+         *
+         * @warning Returned value is only valid until the descriptor heap has not resized, so it's only safe
+         * to call this function when you know that the descriptor heap will not resize. This function
+         * is generally used during rendering when we know that the descriptor heap will not resize.
+         *
+         * @warning You shouldn't store returned offset for more that 1 frame as it might change after a frame
+         * is submitted (because the descriptor heap may resize).
          *
          * @return Descriptor offset.
          */
         int getDescriptorOffsetInDescriptors() const { return iDescriptorOffsetInDescriptors; }
+
+        /**
+         * Calculates an offset of the descriptor from the start of the range (see @ref getDescriptorRange)
+         * that this descriptor was allocated from.
+         *
+         * @warning Returned value is only valid until the descriptor heap has not resized, so it's only safe
+         * to call this function when you know that the descriptor heap will not resize. This function
+         * is generally used during rendering when we know that the descriptor heap will not resize.
+         *
+         * @warning You shouldn't store returned offset for more that 1 frame as it might change after a frame
+         * is submitted (because the descriptor heap may resize).
+         *
+         * @return Error if this descriptor was not allocated from a range or something went wrong, otherwise
+         * offset (in descriptors) of the descriptor from range start.
+         */
+        std::variant<unsigned int, Error> getDescriptorOffsetFromRangeStart();
 
         /**
          * Returns heap that this descriptor uses.
@@ -50,9 +75,16 @@ namespace ne {
         DirectXDescriptorHeap* getDescriptorHeap() const { return pHeap; }
 
         /**
+         * Returns descriptor range that this descriptor was allocated from.
+         *
+         * @return `nullptr` if this descriptor was not allocated from a range, otherwise a valid pointer.
+         */
+        std::shared_ptr<ContinuousDirectXDescriptorRange> getDescriptorRange() const { return pRange; }
+
+        /**
          * Returns resource that owns this descriptor.
          *
-         * @return Owner resource.
+         * @return `nullptr` if this descriptor is being destroyed, otherwise owner resource.
          */
         DirectXResource* getOwnerResource() const;
 
@@ -85,7 +117,7 @@ namespace ne {
          */
         int iDescriptorOffsetInDescriptors;
 
-        /** Do not delete. Owner resource of this descriptor. */
+        /** Do not delete. Always valid unless we are in the destructor. Owner resource of this descriptor. */
         DirectXResource* pResource = nullptr;
 
         /** Do not delete. Heap of this descriptor. */

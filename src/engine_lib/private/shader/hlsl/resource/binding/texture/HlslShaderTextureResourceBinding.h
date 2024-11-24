@@ -37,20 +37,18 @@ namespace ne {
             // Since pipelines won't change here (because we are inside of the `draw` function)
             // we don't need to lock the mutex here.
 
-            // Find root constant index for this pipeline.
-            const auto it = mtxUsedPipelineDescriptorRanges.second.find(pUsedPipeline);
-            if (it == mtxUsedPipelineDescriptorRanges.second.end()) [[unlikely]] {
+            // Find shader constant offset.
+            const auto it = mtxShaderConstantOffsetPerPipeline.second.find(pUsedPipeline);
+            if (it == mtxShaderConstantOffsetPerPipeline.second.end()) [[unlikely]] {
                 Error error(std::format(
                     "shader resource \"{}\" was requested to set its root constant "
                     "index but this shader resource does not reference the specified pipeline",
                     getShaderResourceName(),
-                    mtxUsedPipelineDescriptorRanges.second.size()));
+                    mtxShaderConstantOffsetPerPipeline.second.size()));
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-
-            const auto& [pSrvDescriptorRange, iShaderConstantIndex] =
-                mtxUsedPipelineDescriptorRanges.second.begin()->second;
+            const auto& iShaderConstantIndex = mtxShaderConstantOffsetPerPipeline.second.begin()->second;
 
             // Query texture's SRV descriptor offset in the descriptor range.
             unsigned int iRootConstantValue = 0;
@@ -60,11 +58,22 @@ namespace ne {
                 const auto pDirectXTexture =
                     reinterpret_cast<DirectXResource*>(mtxUsedTexture.second->getResource());
 
+                // Get SRV.
+                const auto pSrvDescriptor = pDirectXTexture->getDescriptor(DirectXDescriptorType::SRV);
+                if (pSrvDescriptor == nullptr) [[unlikely]] {
+                    Error error(std::format(
+                        "shader resource \"{}\" was requested to set its root constant "
+                        "index but used texture \"{}\" does not seem to have an SRV bound",
+                        getShaderResourceName(),
+                        pDirectXTexture->getResourceName()));
+                    error.showError();
+                    throw std::runtime_error(error.getFullErrorMessage());
+                }
+
                 // Calculate descriptor offset. This may not be as fast as we want but this is the price we
                 // pay for having a simple approach. We could have cached the offset but we would need to keep
                 // the cached offset updated after the range resizes which seems like a complicated thing.
-                auto result = pSrvDescriptorRange->getResourceDescriptorOffsetFromRangeStart(
-                    pDirectXTexture, DirectXDescriptorType::SRV);
+                auto result = pSrvDescriptor->getDescriptorOffsetFromRangeStart();
                 if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();
@@ -120,16 +129,14 @@ namespace ne {
          *
          * @param sResourceName        Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param pTextureToUse        Texture to which a descriptor should be binded.
-         * @param usedDescriptorRanges Descriptor ranges that have an SRV binded to the specified texture
-         * and a shader constant index for our shader resource.
+         * @param pTextureToUse        Texture with an SRV already bound from an SRV range.
+         * @param shaderConstantOffsetPerPipeline A shader constant index for our shader resource (per
+         * pipeline).
          */
         HlslShaderTextureResourceBinding(
             const std::string& sResourceName,
             std::unique_ptr<TextureHandle> pTextureToUse,
-            std::unordered_map<
-                DirectXPso*,
-                std::pair<std::shared_ptr<ContinuousDirectXDescriptorRange>, size_t>>&& usedDescriptorRanges);
+            std::unordered_map<DirectXPso*, size_t>&& shaderConstantOffsetPerPipeline);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -165,31 +172,17 @@ namespace ne {
          * @param pPipeline           Pipeline to look in.
          * @param sShaderResourceName Shader resource to look for.
          *
-         * @return Error if something went wrong, otherwise a pointer to descriptor range from the pipeline
-         * and an index of the root constant that is used to index into our shader resource.
+         * @return Error if something went wrong, otherwise a pointer to descriptor range from the pipeline.
          */
-        static std::variant<std::pair<std::shared_ptr<ContinuousDirectXDescriptorRange>, size_t>, Error>
-        getSrvDescriptorRangeAndRootConstantIndex(
-            DirectXPso* pPipeline, const std::string& sShaderResourceName);
+        static std::variant<std::shared_ptr<ContinuousDirectXDescriptorRange>, Error>
+        getSrvDescriptorRange(DirectXPso* pPipeline, const std::string& sShaderResourceName);
 
         /** Texture to which a descriptor should be bound. */
         std::pair<std::mutex, std::unique_ptr<TextureHandle>> mtxUsedTexture;
 
-        /**
-         * Stores a raw pointer (per-pipeline) to a descriptor range (from the pipeline) that was used
-         * to bind an SRV to @ref mtxUsedTexture and an offset of the shader constant for our shader resource.
-         *
-         * @remark Storing raw pointers to descriptor ranges here is safe because before a PSO releases
-         * its internal resources (and destroys descriptor ranges) it will pause the rendering then destroy
-         * its descriptor tables, then we will be notified through @ref onAfterAllPipelinesRefreshedResources
-         * to reference new descriptor ranges.
-         */
-        std::pair<
-            std::recursive_mutex,
-            std::unordered_map<
-                DirectXPso*,
-                std::pair<std::shared_ptr<ContinuousDirectXDescriptorRange>, size_t>>>
-            mtxUsedPipelineDescriptorRanges;
+        /** Stores an offset of the shader constant to copy @ref mtxUsedTexture SRV descriptor offset to. */
+        std::pair<std::recursive_mutex, std::unordered_map<DirectXPso*, size_t>>
+            mtxShaderConstantOffsetPerPipeline;
 
         /**
          * `false` to avoid binding descriptors to cubemap faces - I don't see any point

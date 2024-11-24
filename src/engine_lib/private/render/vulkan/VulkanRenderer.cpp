@@ -94,7 +94,8 @@ namespace ne {
             "if you are implementing a reversed depth buffer you need to change depth resolve mode to min");
     }
 
-    std::variant<AntialiasingQuality, Error> VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
+    std::variant<std::optional<AntialiasingQuality>, Error>
+    VulkanRenderer::getMaxSupportedAntialiasingQuality() const {
         // Make sure physical device is valid.
         if (pPhysicalDevice == nullptr) [[unlikely]] {
             return Error("expected physical device to be valid at this point");
@@ -114,7 +115,7 @@ namespace ne {
             return AntialiasingQuality::MEDIUM;
         }
 
-        return AntialiasingQuality::DISABLED;
+        return std::optional<AntialiasingQuality>{};
     }
 
     VulkanRenderer::~VulkanRenderer() {
@@ -3906,22 +3907,26 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
-        const auto maxSampleCount = std::get<AntialiasingQuality>(result);
+        const auto maxSampleCount = std::get<std::optional<AntialiasingQuality>>(result);
 
         // First check if AA is supported at all.
-        if (maxSampleCount == AntialiasingQuality::DISABLED) {
+        if (!maxSampleCount.has_value()) {
             // AA is not supported.
             msaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
             return {};
         }
-        const auto iMaxSampleCount = static_cast<unsigned int>(maxSampleCount);
+        const auto iMaxSampleCount = static_cast<unsigned int>(*maxSampleCount);
 
         // Get render setting.
         const auto mtxRenderSettings = getRenderSettings();
         std::scoped_lock guard(*mtxRenderSettings.first);
 
         // Get current AA sample count.
-        const auto sampleCount = mtxRenderSettings.second->getAntialiasingQuality();
+        const auto sampleQuality = mtxRenderSettings.second->getAntialiasingQuality();
+        if (!sampleQuality.has_value()) [[unlikely]] {
+            return Error("expected antialiasing to be supported");
+        }
+        const auto sampleCount = sampleQuality.value();
         const auto iSampleCount = static_cast<unsigned int>(sampleCount);
 
         // Make sure this sample count is supported.

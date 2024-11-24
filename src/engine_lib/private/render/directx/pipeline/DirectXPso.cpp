@@ -161,7 +161,6 @@ namespace ne {
 
         // Get AA setting.
         const auto antialiasingQuality = mtxRenderSettings.second->getAntialiasingQuality();
-        const auto iMsaaSampleCount = static_cast<unsigned int>(antialiasingQuality);
 
         // Make sure the pipeline is not initialized yet.
         if (mtxInternalResources.second.bIsReadyForUsage) [[unlikely]] {
@@ -320,10 +319,15 @@ namespace ne {
         } else {
             psoDesc.RasterizerState.MultisampleEnable =
                 static_cast<int>(antialiasingQuality != AntialiasingQuality::DISABLED);
-            psoDesc.SampleDesc.Count = iMsaaSampleCount;
-            psoDesc.SampleDesc.Quality = antialiasingQuality != AntialiasingQuality::DISABLED
-                                             ? (pDirectXRenderer->getMsaaQualityLevel() - 1)
-                                             : 0;
+
+            psoDesc.SampleDesc.Count =
+                antialiasingQuality.has_value() ? static_cast<unsigned int>(*antialiasingQuality) : 1;
+
+            if (!antialiasingQuality.has_value() || *antialiasingQuality == AntialiasingQuality::DISABLED) {
+                psoDesc.SampleDesc.Quality = 0;
+            } else {
+                psoDesc.SampleDesc.Quality = pDirectXRenderer->getMsaaQualityLevel() - 1;
+            }
         }
 
         // DSV format.

@@ -115,7 +115,9 @@ TEST_CASE("change resolution/msaa/texture filtering/vsync while MeshNode is spaw
 
                 mtxRenderSettings.second->setRenderResolution(usedResolution);
 
-                usedMsaa = mtxRenderSettings.second->getAntialiasingQuality();
+                const auto antialiasingQuality = mtxRenderSettings.second->getAntialiasingQuality();
+                REQUIRE(antialiasingQuality.has_value());
+                usedMsaa = *antialiasingQuality;
 
                 // Change MSAA.
                 if (usedMsaa != AntialiasingQuality::DISABLED) {

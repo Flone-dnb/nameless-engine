@@ -89,14 +89,14 @@ namespace ne {
             Logger::get().error(error.getFullErrorMessage());
             return;
         }
-        auto maxState = std::get<AntialiasingQuality>(std::move(result));
+        auto maxState = std::get<std::optional<AntialiasingQuality>>(std::move(result));
 
         // Make sure AA is supported.
-        if (maxState == AntialiasingQuality::DISABLED) {
+        if (!maxState.has_value()) {
             Logger::get().error("failed to set anti-aliasing quality because anti-aliasing is not supported");
             return;
         }
-        const auto iMaxSampleCount = static_cast<unsigned int>(maxState);
+        const auto iMaxSampleCount = static_cast<unsigned int>(maxState.value());
 
         // Make sure this quality is supported.
         if (iNewSampleCount > iMaxSampleCount) [[unlikely]] {
@@ -130,7 +130,7 @@ namespace ne {
         }
     }
 
-    AntialiasingQuality RenderSettings::getAntialiasingQuality() const {
+    std::optional<AntialiasingQuality> RenderSettings::getAntialiasingQuality() const {
         // Get max AA quality.
         auto result = pRenderer->getMaxSupportedAntialiasingQuality();
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
@@ -138,18 +138,18 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
 
             Logger::get().error(error.getFullErrorMessage());
-            return AntialiasingQuality::DISABLED;
+            return std::optional<AntialiasingQuality>{};
         }
-        auto maxState = std::get<AntialiasingQuality>(std::move(result));
+        auto maxState = std::get<std::optional<AntialiasingQuality>>(std::move(result));
 
         // Make sure AA is supported.
-        if (maxState == AntialiasingQuality::DISABLED) {
-            return AntialiasingQuality::DISABLED;
+        if (!maxState.has_value()) {
+            return std::optional<AntialiasingQuality>{};
         }
 
         // Self check: make sure current AA sample count is supported (should be because RenderSettings
         // are expected to store valid AA sample count).
-        if (static_cast<unsigned int>(iAntialiasingSampleCount) > static_cast<unsigned int>(maxState))
+        if (static_cast<unsigned int>(iAntialiasingSampleCount) > static_cast<unsigned int>(maxState.value()))
             [[unlikely]] {
             Logger::get().error(std::format(
                 "expected the current AA sample count {} to be supported",
@@ -481,7 +481,8 @@ namespace ne {
 
     std::string RenderSettings::getGpuToUse() const { return sGpuToUse; }
 
-    std::variant<AntialiasingQuality, Error> RenderSettings::getMaxSupportedAntialiasingQuality() const {
+    std::variant<std::optional<AntialiasingQuality>, Error>
+    RenderSettings::getMaxSupportedAntialiasingQuality() const {
         return pRenderer->getMaxSupportedAntialiasingQuality();
     }
 
@@ -575,18 +576,23 @@ namespace ne {
             error.addCurrentLocationToErrorStack();
             return error;
         }
+        const auto maxAntialiasingQuality = std::get<std::optional<AntialiasingQuality>>(result);
 
-        const auto iMaxSampleCount = static_cast<unsigned int>(std::get<AntialiasingQuality>(result));
+        if (maxAntialiasingQuality.has_value()) {
+            const auto iMaxSampleCount = static_cast<unsigned int>(maxAntialiasingQuality.value());
 
-        // Clamp sample count to max value.
-        if (iAntialiasingSampleCount > iMaxSampleCount) {
-            // Log change.
-            Logger::get().info(std::format(
-                "AA sample count \"{}\" is not supported, changing to \"{}\"",
-                iAntialiasingSampleCount,
-                iMaxSampleCount));
+            // Clamp sample count to max value.
+            if (iAntialiasingSampleCount > iMaxSampleCount) {
+                // Log change.
+                Logger::get().info(std::format(
+                    "AA sample count \"{}\" is not supported, changing to \"{}\"",
+                    iAntialiasingSampleCount,
+                    iMaxSampleCount));
 
-            iAntialiasingSampleCount = iMaxSampleCount;
+                iAntialiasingSampleCount = iMaxSampleCount;
+            }
+        } else {
+            iAntialiasingSampleCount = static_cast<unsigned int>(AntialiasingQuality::DISABLED);
         }
 
 #if defined(DEBUG) && defined(WIN32)

@@ -155,10 +155,10 @@ namespace ne RNAMESPACE() {
         /**
          * Returns current anti-aliasing (AA) quality.
          *
-         * @return Returns `DISABLED` if AA is disabled or not supported (see @ref
+         * @return Returns empty if AA is not supported (see @ref
          * getMaxSupportedAntialiasingQuality), otherwise current AA quality.
          */
-        AntialiasingQuality getAntialiasingQuality() const;
+        std::optional<AntialiasingQuality> getAntialiasingQuality() const;
 
         /**
          * Returns current shadow quality.
@@ -173,10 +173,9 @@ namespace ne RNAMESPACE() {
          *
          * @remark Note that the maximum supported AA quality can differ depending on the used GPU/renderer.
          *
-         * @return Error if something went wrong,
-         * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
+         * @return Error if something went wrong, otherwise empty if AA is not supported.
          */
-        std::variant<AntialiasingQuality, Error> getMaxSupportedAntialiasingQuality() const;
+        std::variant<std::optional<AntialiasingQuality>, Error> getMaxSupportedAntialiasingQuality() const;
 
         /**
          * Returns currently used texture filtering quality.

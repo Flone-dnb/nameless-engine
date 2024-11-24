@@ -331,10 +331,10 @@ namespace ne {
          *
          * @remark Note that the maximum supported AA quality can differ depending on the used GPU/renderer.
          *
-         * @return Error if something went wrong,
-         * otherwise `DISABLED` if AA is not supported or the maximum supported AA quality.
+         * @return Error if something went wrong, otherwise empty if AA is not supported.
          */
-        virtual std::variant<AntialiasingQuality, Error> getMaxSupportedAntialiasingQuality() const override;
+        virtual std::variant<std::optional<AntialiasingQuality>, Error>
+        getMaxSupportedAntialiasingQuality() const override;
 
         /**
          * Called when the framebuffer size was changed.

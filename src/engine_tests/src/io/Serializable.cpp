@@ -4,7 +4,7 @@
 // Custom.
 #include "misc/ProjectPaths.h"
 #include "io/Serializable.h"
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "io/ConfigManager.h"
 #include "ReflectionTest.h"
 #include "io/serializers/PrimitiveFieldSerializer.h"

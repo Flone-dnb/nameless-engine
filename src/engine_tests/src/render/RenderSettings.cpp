@@ -1,11 +1,11 @@
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "game/camera/CameraManager.h"
 #include "render/RenderSettings.h"
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 #include "TestHelpers.hpp"
 
 // External.

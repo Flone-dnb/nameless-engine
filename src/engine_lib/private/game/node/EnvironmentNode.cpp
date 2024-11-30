@@ -1,4 +1,4 @@
-#include "game/nodes/EnvironmentNode.h"
+#include "game/node/EnvironmentNode.h"
 
 // Custom.
 #include "render/Renderer.h"

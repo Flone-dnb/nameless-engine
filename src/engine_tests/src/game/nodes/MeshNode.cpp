@@ -1,9 +1,9 @@
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/camera/CameraManager.h"
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 #include "material/Material.h"
 #include "shader/general/EngineShaderNames.hpp"
 #include "io/ReflectionTest.h"

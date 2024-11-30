@@ -1,4 +1,4 @@
-#include "game/nodes/light/PointLightNode.h"
+#include "game/node/light/PointLightNode.h"
 
 // Custom.
 #include "game/Window.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 #include "game/camera/CameraProperties.h"
 
 #include "CameraNode.generated.h"

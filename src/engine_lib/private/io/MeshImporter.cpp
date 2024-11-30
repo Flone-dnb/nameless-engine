@@ -5,7 +5,7 @@
 
 // Custom.
 #include "misc/ProjectPaths.h"
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "material/Material.h"
 #include "io/TextureImporter.h"
 

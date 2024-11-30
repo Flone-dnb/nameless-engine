@@ -15,7 +15,7 @@
 #include "game/camera/CameraManager.h"
 #include "game/camera/CameraProperties.h"
 #include "render/vulkan/pipeline/VulkanPipeline.h"
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBinding.h"
 #include "shader/glsl/resource/binding/texture/GlslShaderTextureResourceBinding.h"
 #include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"

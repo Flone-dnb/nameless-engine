@@ -1,4 +1,4 @@
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 
 // Custom.
 #include "game/GameInstance.h"

@@ -1,7 +1,7 @@
 // Custom.
 #include "game/GameInstance.h"
 #include "game/Window.h"
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "misc/ProjectPaths.h"
 #include "../io/ReflectionTest.h"
 

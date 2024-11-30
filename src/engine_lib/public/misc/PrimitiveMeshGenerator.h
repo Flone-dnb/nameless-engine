@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 
 namespace ne {
     /** Provides static functions */

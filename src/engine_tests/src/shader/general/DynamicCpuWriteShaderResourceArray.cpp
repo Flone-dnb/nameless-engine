@@ -5,7 +5,7 @@
 #include "render/vulkan/VulkanRenderer.h"
 #include "render/vulkan/resource/VulkanResourceManager.h"
 #include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "render/general/resource/frame/FrameResourceManager.h"
 

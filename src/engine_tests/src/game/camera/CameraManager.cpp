@@ -1,5 +1,5 @@
 // Custom.
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "game/camera/CameraManager.h"

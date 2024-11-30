@@ -7,7 +7,7 @@
 #include "game/GameManager.h"
 #include "game/Window.h"
 #include "io/Logger.h"
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "render/general/resource/GpuResourceManager.h"
 #include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBindingManager.h"
 #include "shader/general/resource/binding/texture/ShaderTextureResourceBindingManager.h"

@@ -16,7 +16,7 @@
 #include "io/FieldSerializerManager.h"
 #include "game/camera/CameraManager.h"
 #include "shader/ShaderManager.h"
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "misc/Profiler.hpp"
 #include "GcInfoCallbacks.hpp"
 

@@ -2,7 +2,7 @@
 #include "material/Material.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "render/general/pipeline/Pipeline.h"
 #include "render/general/pipeline/PipelineManager.h"
 

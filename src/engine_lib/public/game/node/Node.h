@@ -11,7 +11,7 @@
 #include "io/Serializable.h"
 #include "input/KeyboardKey.hpp"
 #include "gccontainers/GcVector.hpp"
-#include "game/callbacks/NodeNotificationBroadcaster.hpp"
+#include "game/node/callback/NodeNotificationBroadcaster.hpp"
 
 // External.
 #include "GcPtr.h"

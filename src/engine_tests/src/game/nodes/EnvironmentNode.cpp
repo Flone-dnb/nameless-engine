@@ -1,9 +1,9 @@
 // Custom.
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/Globals.h"
-#include "game/nodes/EnvironmentNode.h"
+#include "game/node/EnvironmentNode.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

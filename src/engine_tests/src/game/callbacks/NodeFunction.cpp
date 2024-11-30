@@ -1,8 +1,8 @@
 // Custom.
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
-#include "game/callbacks/NodeFunction.hpp"
+#include "game/node/callback/NodeFunction.hpp"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

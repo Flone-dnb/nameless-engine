@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 
 namespace ne {
     /** Camera used in the editor. */

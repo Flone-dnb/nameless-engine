@@ -1,7 +1,7 @@
 #include "MeshNodeGlslVertexFormatDescription.h"
 
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 
 namespace ne {
 

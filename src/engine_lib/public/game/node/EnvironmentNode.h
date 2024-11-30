@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "math/GLMath.hpp"
 
 #include "EnvironmentNode.generated.h"

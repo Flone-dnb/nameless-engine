@@ -1,4 +1,4 @@
-#include "game/nodes/light/DirectionalLightNode.h"
+#include "game/node/light/DirectionalLightNode.h"
 
 // Custom.
 #include "game/Window.h"

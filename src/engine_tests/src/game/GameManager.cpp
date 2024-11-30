@@ -2,7 +2,7 @@
 #include "game/GameManager.h"
 #include "game/Window.h"
 #include "game/GameInstance.h"
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 
 // External.
 #include "catch2/catch_test_macros.hpp"

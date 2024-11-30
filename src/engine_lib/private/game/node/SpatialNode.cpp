@@ -1,4 +1,4 @@
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 
 // Standard.
 #include <format>

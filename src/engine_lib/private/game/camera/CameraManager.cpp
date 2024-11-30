@@ -5,7 +5,7 @@
 
 // Custom.
 #include "io/Logger.h"
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 #include "misc/Profiler.hpp"
 #include "render/Renderer.h"
 

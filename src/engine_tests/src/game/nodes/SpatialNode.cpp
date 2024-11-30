@@ -1,5 +1,5 @@
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 #include "game/GameInstance.h"
 #include "math/MathHelpers.hpp"
 #include "game/Window.h"
@@ -1027,7 +1027,8 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                     glm::epsilonEqual(childWorldRight, -Globals::WorldDirection::forward, floatEpsilon)));
 
                 // Make child node look at -Y.
-                targetRotation = MathHelpers::convertNormalizedDirectionToRollPitchYaw(-Globals::WorldDirection::right);
+                targetRotation =
+                    MathHelpers::convertNormalizedDirectionToRollPitchYaw(-Globals::WorldDirection::right);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Check child forward/right.
@@ -1060,7 +1061,8 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                     glm::epsilonEqual(childWorldRight, -Globals::WorldDirection::right, floatEpsilon)));
 
                 // Make child node look at +Z.
-                targetRotation = MathHelpers::convertNormalizedDirectionToRollPitchYaw(Globals::WorldDirection::up);
+                targetRotation =
+                    MathHelpers::convertNormalizedDirectionToRollPitchYaw(Globals::WorldDirection::up);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Check child forward/right.
@@ -1072,7 +1074,8 @@ TEST_CASE("make spatial node look at world location with parent rotation") {
                 REQUIRE(glm::all(glm::epsilonEqual(childWorldRight, childWorldRight, floatEpsilon)));
 
                 // Make child node look at -Z.
-                targetRotation = MathHelpers::convertNormalizedDirectionToRollPitchYaw(-Globals::WorldDirection::up);
+                targetRotation =
+                    MathHelpers::convertNormalizedDirectionToRollPitchYaw(-Globals::WorldDirection::up);
                 pChildSpatialNode->setWorldRotation(targetRotation);
 
                 // Check child forward/right.

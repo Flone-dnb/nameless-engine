@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resource/LightingShaderResourceManager.h"

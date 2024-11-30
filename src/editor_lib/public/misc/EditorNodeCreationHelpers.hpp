@@ -1,7 +1,7 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 
 namespace ne {
     /** Helper tools for creation nodes in the editor. */

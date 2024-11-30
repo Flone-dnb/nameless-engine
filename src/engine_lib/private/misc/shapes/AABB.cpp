@@ -4,7 +4,7 @@
 #include <limits>
 
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 
 #undef max
 #undef min

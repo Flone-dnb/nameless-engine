@@ -3,7 +3,7 @@
 
 // Custom.
 #include "misc/Timer.h"
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "io/Logger.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"

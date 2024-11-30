@@ -1,5 +1,5 @@
 // Custom.
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 #include "game/GameInstance.h"
 #include "game/Window.h"
 #include "misc/Timer.h"

@@ -15,7 +15,7 @@
 #include "render/general/resource/shadow/ShadowMapHandle.h"
 #include "render/directx/resource/DirectXResource.h"
 #include "material/Material.h"
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "shader/hlsl/RootSignatureGenerator.h"
 #include "shader/general/resource/binding/cpuwrite/ShaderCpuWriteResourceBinding.h"
 #include "render/general/resource/frame/FrameResourceManager.h"

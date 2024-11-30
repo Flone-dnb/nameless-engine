@@ -5,7 +5,7 @@
 #include <limits>
 
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "io/serializers/SerializableObjectFieldSerializer.h"
 
 namespace ne {

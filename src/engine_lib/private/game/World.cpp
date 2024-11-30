@@ -6,7 +6,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "game/GameManager.h"
-#include "game/nodes/Node.h"
+#include "game/node/Node.h"
 
 namespace ne {
 

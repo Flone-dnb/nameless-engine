@@ -256,24 +256,24 @@ set(PROJECT_SOURCES
     private/game/camera/CameraProperties.cpp
     public/game/camera/CameraManager.h
     private/game/camera/CameraManager.cpp
-    public/game/callbacks/NodeFunction.hpp
-    public/game/callbacks/NodeNotificationBroadcaster.hpp
-    private/game/nodes/Node.cpp
-    public/game/nodes/Node.h
-    private/game/nodes/SpatialNode.cpp
-    public/game/nodes/SpatialNode.h
-    private/game/nodes/MeshNode.cpp
-    public/game/nodes/MeshNode.h
-    private/game/nodes/CameraNode.cpp
-    public/game/nodes/CameraNode.h
-    private/game/nodes/EnvironmentNode.cpp
-    public/game/nodes/EnvironmentNode.h
-    private/game/nodes/light/PointLightNode.cpp
-    public/game/nodes/light/PointLightNode.h
-    private/game/nodes/light/DirectionalLightNode.cpp
-    public/game/nodes/light/DirectionalLightNode.h
-    private/game/nodes/light/SpotlightNode.cpp
-    public/game/nodes/light/SpotlightNode.h
+    public/game/node/callback/NodeFunction.hpp
+    public/game/node/callback/NodeNotificationBroadcaster.hpp
+    private/game/node/Node.cpp
+    public/game/node/Node.h
+    private/game/node/SpatialNode.cpp
+    public/game/node/SpatialNode.h
+    private/game/node/MeshNode.cpp
+    public/game/node/MeshNode.h
+    private/game/node/CameraNode.cpp
+    public/game/node/CameraNode.h
+    private/game/node/EnvironmentNode.cpp
+    public/game/node/EnvironmentNode.h
+    private/game/node/light/PointLightNode.cpp
+    public/game/node/light/PointLightNode.h
+    private/game/node/light/DirectionalLightNode.cpp
+    public/game/node/light/DirectionalLightNode.h
+    private/game/node/light/SpotlightNode.cpp
+    public/game/node/light/SpotlightNode.h
     public/io/properties/SerializeProperty.h
     private/io/properties/SerializeProperty.cpp
     private/io/properties/GuidProperty.cpp

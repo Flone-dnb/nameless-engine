@@ -588,7 +588,7 @@ Now let's see how we can create a world in `onGameStarted`:
 #include "MyGameInstance.h"
 
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 
 MyGameInstance::MyGameInstance(
@@ -627,7 +627,7 @@ If you instead want to load some level/map as your new world you need to use `lo
 #include "MyGameInstance.h"
 
 // Custom.
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 
 MyGameInstance::MyGameInstance(
@@ -657,10 +657,10 @@ void MyGameInstance::onGameStarted(){
 
 ## Lighting
 
-Light source nodes (such as point/spot/directional) are stored in `game/nodes/light`. Just spawn one of these nodes and configure their setting using `setLight...` functions and `setWorldLocation`/`setWorldRotation`. Here is an example:
+Light source nodes (such as point/spot/directional) are stored in `game/node/light`. Just spawn one of these nodes and configure their setting using `setLight...` functions and `setWorldLocation`/`setWorldRotation`. Here is an example:
 
 ```Cpp
-#include "game/nodes/light/PointLightNode.h"
+#include "game/node/light/PointLightNode.h"
 
 void MyGameInstance::onGameStarted(){
     // Create world.
@@ -698,7 +698,7 @@ void MyGameInstance::onGameStarted(){
 Using `EnvironmentNode` you can configure environment settings such as ambient light, skybox, etc. Here is an example:
 
 ```Cpp
-#include "game/nodes/EnvironmentNode.h"
+#include "game/node/EnvironmentNode.h"
 
 void MyGameInstance::onGameStarted(){
     // Create world.
@@ -737,7 +737,7 @@ Note that your world can only have 1 active environment node. If you will spawn 
 
 In this section we will start with the most simplest character node: a node that has a camera and can fly around using WASD and mouse movement.
 
-Let's create new files `FlyingCharacter.h` and `FlyingCharacter.cpp` inside of our new directory named `private/nodes` to our library target (we pick our library target since generally library targets will contain all functionality (so that it can be used in multiple executable targets such as `tests`) while executable targets generally will only contain `main.cpp`). Open `CMakeLists.txt` of your library target and add new files to `PROJECT_SOURCES`:
+Let's create new files `FlyingCharacter.h` and `FlyingCharacter.cpp` inside of our new directory named `private/node` to our library target (we pick our library target since generally library targets will contain all functionality (so that it can be used in multiple executable targets such as `tests`) while executable targets generally will only contain `main.cpp`). Open `CMakeLists.txt` of your library target and add new files to `PROJECT_SOURCES`:
 
 ```
 ## `CMakeLists.txt`
@@ -746,8 +746,8 @@ Let's create new files `FlyingCharacter.h` and `FlyingCharacter.cpp` inside of o
 ## Specify project sources.
 set(PROJECT_SOURCES
     ## ... some files here ...
-    private/nodes/FlyingCharacter.h
-    private/nodes/FlyingCharacter.cpp
+    private/node/FlyingCharacter.h
+    private/node/FlyingCharacter.cpp
     ## add your .h/.cpp files here
 )
 
@@ -769,7 +769,7 @@ We will start with the most basic node header file:
 #pragma once
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 
 // Using engine namespace.
 using namespace ne;
@@ -810,7 +810,7 @@ Now let's add reflection to our node so that the editor will be able to recogniz
 #pragma once
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 
 #include "FlyingCharacter.generated.h"
 
@@ -862,7 +862,7 @@ Now before moving to handling user input let's add a camera node. There are seve
 #pragma once
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 
 #include "FlyingCharacter.generated.h"
 
@@ -900,7 +900,7 @@ Now let's create a camera node in our constructor:
 #include "FlyingCharacter.h"
 
 // Custom.
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 
 #include "FlyingCharacter.generated_impl.h"
 
@@ -921,7 +921,7 @@ Now let's compile our program and make sure we have a world, in our `GameInstanc
 // MyGameInstance.cpp
 #include "MyGameInstance.h"
 
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "nodes/FlyingCharacter.h"
 
@@ -989,10 +989,10 @@ Now compile and run your project. There should be no errors but still black scre
 // MyGameInstance.cpp
 #include "MyGameInstance.h"
 
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 #include "misc/PrimitiveMeshGenerator.h"
 #include "nodes/FlyingCharacter.h"
-#include "game/nodes/light/DirectionalLightNode.h" // <- new include
+#include "game/node/light/DirectionalLightNode.h" // <- new include
 #include "math/MathHelpers.hpp"                    // <- new include
 
 void MyGameInstance::onGameStarted() {
@@ -1256,7 +1256,7 @@ Now in our node's constructor let's bind to input events. We don't need to care 
 #include "FlyingCharacter.h"
 
 // Custom.
-#include "game/nodes/CameraNode.h"
+#include "game/node/CameraNode.h"
 #include "GameInputEventIds.hpp"
 
 #include "FlyingCharacter.generated_impl.h"
@@ -2368,7 +2368,7 @@ Once such function is called it will trigger register input bindings in your gam
 
 There are also other `on...` function in `Window` that you might find handy in simulating user input.
 
-For more examples see `src/engine_tests/game/nodes/Node.cpp`, there are some tests that simulate user input.
+For more examples see `src/engine_tests/game/node/Node.cpp`, there are some tests that simulate user input.
 
 ## Exporting your game
 

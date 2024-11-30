@@ -1,4 +1,4 @@
-#include "game/nodes/MeshNode.h"
+#include "game/node/MeshNode.h"
 
 // Standard.
 #include <format>

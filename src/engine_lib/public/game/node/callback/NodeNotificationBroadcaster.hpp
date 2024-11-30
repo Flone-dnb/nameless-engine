@@ -6,7 +6,7 @@
 #include <vector>
 
 // Custom.
-#include "game/callbacks/NodeFunction.hpp"
+#include "game/node/callback/NodeFunction.hpp"
 #include "io/Logger.h"
 
 namespace ne {

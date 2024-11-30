@@ -4,7 +4,7 @@
 #include <atomic>
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 #include "math/GLMath.hpp"
 #include "render/general/resource/GpuResource.h"
 #include "shader/general/resource/binding/ShaderResourceBinding.h"

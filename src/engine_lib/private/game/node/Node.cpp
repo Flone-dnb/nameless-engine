@@ -1,4 +1,4 @@
-﻿#include "game/nodes/Node.h"
+﻿#include "game/node/Node.h"
 
 // Standard.
 #include <format>
@@ -9,7 +9,7 @@
 #include "game/World.h"
 #include "game/GameManager.h"
 #include "misc/Timer.h"
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 #include "misc/Profiler.hpp"
 
 #include "Node.generated_impl.h"

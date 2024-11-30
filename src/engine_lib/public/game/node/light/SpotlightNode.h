@@ -1,32 +1,39 @@
 #pragma once
 
 // Custom.
-#include "game/nodes/SpatialNode.h"
+#include "game/node/SpatialNode.h"
 #include "math/GLMath.hpp"
 #include "shader/VulkanAlignmentConstants.hpp"
 #include "shader/general/resource/LightingShaderResourceManager.h"
-#include "misc/shapes/Sphere.h"
+#include "misc/shapes/Cone.h"
 #include "render/general/resource/shadow/ShadowMapHandle.h"
 
-#include "PointLightNode.generated.h"
+#include "SpotlightNode.generated.h"
 
 namespace ne RNAMESPACE() {
-    /** Represents a point light source in world. */
-    class RCLASS(Guid("7890ed17-6efb-43d1-a7ef-aa5a0589921a")) PointLightNode : public SpatialNode {
+    /** Represents a spotlight in world. */
+    class RCLASS(Guid("e7b203dc-0f47-43f2-b26d-3b09a5ec1661")) SpotlightNode : public SpatialNode {
         // Renderer reads shadow map handle and index into viewProjection matrix array.
         friend class Renderer;
 
     public:
-        PointLightNode();
+        SpotlightNode();
 
         /**
          * Creates a new node with the specified name.
          *
          * @param sNodeName Name of this node.
          */
-        PointLightNode(const std::string& sNodeName);
+        SpotlightNode(const std::string& sNodeName);
 
-        virtual ~PointLightNode() override = default;
+        virtual ~SpotlightNode() override = default;
+
+        /**
+         * Returns the maximum angle for @ref getLightInnerConeAngle and @ref getLightOuterConeAngle.
+         *
+         * @return Maximum cone angle (in degrees).
+         */
+        static constexpr float getMaxLightConeAngle() { return maxConeAngle; }
 
         /**
          * Sets light's color.
@@ -43,11 +50,29 @@ namespace ne RNAMESPACE() {
         void setLightIntensity(float intensity);
 
         /**
-         * Sets lit distance (i.e. attenuation radius).
+         * Sets lit distance (i.e. attenuation distance).
          *
          * @param distance Lit distance.
          */
         void setLightDistance(float distance);
+
+        /**
+         * Sets angle of spotlight's inner cone (cone that will have hard light edges),
+         * see @ref setLightOuterConeAngle for configuring soft light edges.
+         *
+         * @param innerConeAngle Angle in degrees in range [0.0; @ref getMaxLightConeAngle] (will be clamped
+         * if outside of the range).
+         */
+        void setLightInnerConeAngle(float innerConeAngle);
+
+        /**
+         * Sets angle of spotlight's inner cone (cone that will have hard light edges),
+         * see @ref setLightOuterConeAngle for configuring soft light edges.
+         *
+         * @param outerConeAngle Angle in degrees in range [@ref getLightInnerConeAngle; @ref
+         * getMaxLightConeAngle] (will be clamped if outside of the range).
+         */
+        void setLightOuterConeAngle(float outerConeAngle);
 
         /**
          * Returns color of this light source.
@@ -71,6 +96,20 @@ namespace ne RNAMESPACE() {
         float getLightDistance() const;
 
         /**
+         * Returns light cutoff angle of the inner cone (hard light edge).
+         *
+         * @return Angle in degrees in range [0.0; @ref getMaxLightConeAngle].
+         */
+        float getLightInnerConeAngle() const;
+
+        /**
+         * Returns light cutoff angle of the outer cone (soft light edge).
+         *
+         * @return Angle in degrees in range [@ref getLightInnerConeAngle; @ref getMaxLightConeAngle].
+         */
+        float getLightOuterConeAngle() const;
+
+        /**
          * Returns shape of this light source in world space.
          *
          * @warning Only valid while spawned.
@@ -81,7 +120,7 @@ namespace ne RNAMESPACE() {
          *
          * @return Shape.
          */
-        std::pair<std::mutex, Sphere>* getShape();
+        std::pair<std::mutex, Cone>* getShape();
 
     protected:
         /**
@@ -131,11 +170,20 @@ namespace ne RNAMESPACE() {
 
     private:
         /** Data that will be directly copied into shaders. */
-        struct PointLightShaderData {
-            PointLightShaderData() = default;
+        struct SpotlightShaderData {
+            SpotlightShaderData() = default;
+
+            /**
+             * Matrix that transforms data (such as positions) to clip (projection) space of the light
+             * source (used for shadow mapping).
+             */
+            alignas(iVkMat4Alignment) glm::mat4 viewProjectionMatrix = glm::identity<glm::mat4>();
 
             /** Light position in world space. 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 position = glm::vec4(0.0F, 0.0F, 0.0F, 1.0F);
+
+            /** Light forward unit vector (direction). 4th component is not used. */
+            alignas(iVkVec4Alignment) glm::vec4 direction = glm::vec4(0.0F, 0.0F, 0.0F, 0.0F);
 
             /** Light color. 4th component is not used. */
             alignas(iVkVec4Alignment) glm::vec4 color = glm::vec4(1.0F, 1.0F, 1.0F, 1.0F);
@@ -146,7 +194,26 @@ namespace ne RNAMESPACE() {
             /** Lit distance. */
             alignas(iVkScalarAlignment) float distance = 1.0F;
 
-            /** Index in the point cube shadow map array where shadow map of this light source is stored. */
+            /**
+             * Cosine of the spotlight's inner cone angle (cutoff).
+             *
+             * @remark Represents cosine of the cutoff angle on one side from the light direction
+             * (not both sides), i.e. this is a cosine of value [0-90] degrees.
+             */
+            alignas(iVkScalarAlignment) float cosInnerConeAngle = 0.0F;
+
+            /**
+             * Cosine of the spotlight's outer cone angle (cutoff).
+             *
+             * @remark Represents cosine of the cutoff angle on one side from the light direction
+             * (not both sides), i.e. this is a cosine of value [0-90] degrees.
+             */
+            alignas(iVkScalarAlignment) float cosOuterConeAngle = 0.0F;
+
+            /** Radius of cone's bottom part. */
+            alignas(iVkScalarAlignment) float coneBottomRadius = 0.0F;
+
+            /** Index in the spot shadow map array where shadow map of this light source is stored. */
             alignas(iVkScalarAlignment) unsigned int iShadowMapIndex = 0;
         };
 
@@ -165,14 +232,14 @@ namespace ne RNAMESPACE() {
                 ShadowPassLightShaderInfo shaderData;
             };
 
-            /** Slot in the array with data of all spawned point lights. */
-            std::unique_ptr<ShaderLightArraySlot> pPointLightArraySlot;
+            /** Slot in the array with data of all spawned spotlights. */
+            std::unique_ptr<ShaderLightArraySlot> pSpotlightArraySlot;
 
-            /** Data used in shadow pass. */
-            std::array<ShadowPassDataGroup, 6> vShadowPassDataGroup;
+            /** Groups data used in shadow pass. */
+            ShadowPassDataGroup shadowPassData;
 
             /** Groups data that will be directly copied to the GPU resource. */
-            PointLightShaderData shaderData;
+            SpotlightShaderData shaderData;
         };
 
         /**
@@ -186,13 +253,18 @@ namespace ne RNAMESPACE() {
 
         /**
          * Used by renderer and returns the current index (because it may change later) into the shader array
-         * that stores shadow pass info of spawned lights.
-         *
-         * @param iCubemapFaceIndex Index of the cubemap face to get info for.
+         * that stores shadow pass info of spawned light sources.
          *
          * @return Index into array.
          */
-        unsigned int getIndexIntoShadowPassInfoShaderArray(size_t iCubemapFaceIndex = 0);
+        unsigned int getIndexIntoShadowPassInfoShaderArray();
+
+        /**
+         * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
+         *
+         * @param iNewIndexIntoArray New index to use.
+         */
+        void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
@@ -210,13 +282,11 @@ namespace ne RNAMESPACE() {
 
         /**
          * Callback that will be called by the renderer when it's ready to copy new (updated)
-         * shadow pass data of the light source to the GPU resource.
+         * `viewProjectionMatrix` of the light source to the GPU resource.
          *
-         * @param iCubemapFaceIndex Index of the cubemap face to copy the data.
-         *
-         * @return Pointer to shadow pass data at @ref mtxShaderData.
+         * @return Pointer to the `viewProjectionMatrix` at @ref mtxShaderData.
          */
-        void* onStartedUpdatingShadowPassData(size_t iCubemapFaceIndex);
+        void* onStartedUpdatingShadowPassData();
 
         /**
          * Called after @ref onStartedUpdatingShadowPassData to notify this node that the renderer has
@@ -225,34 +295,27 @@ namespace ne RNAMESPACE() {
         void onFinishedUpdatingShadowPassData();
 
         /**
+         * (Re)calculates data used for shadow pass and shadow mapping mapping.
+         *
+         * @remark Does not call @ref markShaderDataToBeCopiedToGpu.
+         */
+        void recalculateShadowMappingShaderData();
+
+        /**
+         * Recalculates shader data according to the current spotlight data and calls @ref
+         * markShaderDataToBeCopiedToGpu.
+         *
+         * @remark Does nothing if the slot is `nullptr`.
+         */
+        void recalculateAndMarkShaderDataToBeCopiedToGpu();
+
+        /**
          * Marks array slot at @ref mtxShaderData as "needs update" (if the slot is created)
          * to later be copied to the GPU resource.
          *
          * @remark Does nothing if the slot is `nullptr`.
          */
         void markShaderDataToBeCopiedToGpu();
-
-        /**
-         * Marks array slots at @ref mtxShaderData for shadow pass data as "needs
-         * update" (if the slots were created) to later be copied to the GPU resource.
-         *
-         * @remark Does nothing if the slot is `nullptr`.
-         */
-        void markShadowPassDataToBeCopiedToGpu();
-
-        /**
-         * Called after the index into a descriptor array of @ref pShadowMapHandle was initialized/changed.
-         *
-         * @param iNewIndexIntoArray New index to use.
-         */
-        void onShadowMapArrayIndexChanged(unsigned int iNewIndexIntoArray);
-
-        /**
-         * (Re)calculates data used in shadow pass.
-         *
-         * @remark Does not call @ref markShadowPassDataToBeCopiedToGpu.
-         */
-        void recalculateShadowPassShaderData();
 
         /**
          * Recalculates @ref mtxShaderData according to the current parameters (state).
@@ -265,11 +328,11 @@ namespace ne RNAMESPACE() {
         std::pair<std::recursive_mutex, ShaderData> mtxShaderData;
 
         /**
-         * Stores up-to-date sphere shape (in world space)  that represents the point light.
+         * Stores up-to-date cone shape (in world space) that represents the spotlight.
          *
          * @remark Only valid while spawned.
          */
-        std::pair<std::mutex, Sphere> mtxShape;
+        std::pair<std::mutex, Cone> mtxShape;
 
         /**
          * References shadow map of the light source.
@@ -288,10 +351,27 @@ namespace ne RNAMESPACE() {
 
         /** Lit distance. */
         RPROPERTY(Serialize)
-        float distance = 10.0F; // NOLINT: seems like a pretty good default value
+        float distance = 15.0F; // NOLINT: seems like a pretty good default value
 
-        ne_PointLightNode_GENERATED
+        /**
+         * Light cutoff angle (in degrees) of the inner cone (hard light edge).
+         * Valid values range is [0.0F, @ref maxConeAngle].
+         */
+        RPROPERTY(Serialize)
+        float innerConeAngle = 25.0F;
+
+        /**
+         * Light cutoff angle (in degrees) of the outer cone (soft light edge).
+         * Valid values range is [@ref innerConeAngle, @ref maxConeAngle].
+         */
+        RPROPERTY(Serialize)
+        float outerConeAngle = 45.0F;
+
+        /** Maximum value for @ref innerConeAngle and @ref outerConeAngle. */
+        static constexpr float maxConeAngle = 80.0F; // NOLINT: max angle that won't cause any visual issues
+
+        ne_SpotlightNode_GENERATED
     };
 }
 
-File_PointLightNode_GENERATED
+File_SpotlightNode_GENERATED

@@ -1648,7 +1648,7 @@ You can find renderer's config file at:
 Note
 > You can change values in the specified config files to quicky change settings for testing purposes. Note that changes made in the config files will only be applied locally (only for your computer).
 
-Note that some render settings might not be supported depending on the OS/renderer/hardware, as we shown above some `set` functions would have a special remark in their documentation saying about what function to use to query supported values. Let's consider another example, this one uses anti-aliasing:
+Note that some render settings might not be supported depending on the OS/renderer/hardware. Let's consider another example, this one uses anti-aliasing:
 
 ```Cpp
 void MyGameInstance::foo(){
@@ -1664,7 +1664,7 @@ void MyGameInstance::foo(){
     if (std::holds_alternative<Error>(result)){
         // ... handle error ...
     }
-    const auto maxQuality = std::get<AntialiasingQuality>(result);
+    const auto maxQuality = std::get<std::optional<AntialiasingQuality>>(result); // empty if AA is not supported
 
     // ... display all `AntialiasingQuality` values on the screen but don't exceed `maxQuality` ...
 

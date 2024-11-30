@@ -49,7 +49,7 @@ namespace ne {
          *
          * @return Descriptor offset.
          */
-        int getDescriptorOffsetInDescriptors() const { return iDescriptorOffsetInDescriptors; }
+        int getOffsetInDescriptorsOnCurrentFrame() const { return iDescriptorOffsetInDescriptors; }
 
         /**
          * Calculates an offset of the descriptor from the start of the range (see @ref getDescriptorRange)
@@ -65,7 +65,7 @@ namespace ne {
          * @return Error if this descriptor was not allocated from a range or something went wrong, otherwise
          * offset (in descriptors) of the descriptor from range start.
          */
-        std::variant<unsigned int, Error> getDescriptorOffsetFromRangeStart();
+        std::variant<unsigned int, Error> getOffsetFromRangeStartOnCurrentFrame();
 
         /**
          * Returns heap that this descriptor uses.

@@ -84,7 +84,7 @@ namespace ne {
                     iRootParameterIndex,
                     D3D12_GPU_DESCRIPTOR_HANDLE{
                         pCbvSrvUavHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart().ptr +
-                        pDescriptor->getDescriptorOffsetInDescriptors() * iCbvSrvUavDescriptorSize});
+                        pDescriptor->getOffsetInDescriptorsOnCurrentFrame() * iCbvSrvUavDescriptorSize});
             }
 
             // Add a dispatch command.

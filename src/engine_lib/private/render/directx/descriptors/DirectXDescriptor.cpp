@@ -29,7 +29,7 @@ namespace ne {
         this->iDescriptorOffsetInDescriptors = iDescriptorOffsetInDescriptors;
     }
 
-    std::variant<unsigned int, Error> DirectXDescriptor::getDescriptorOffsetFromRangeStart() {
+    std::variant<unsigned int, Error> DirectXDescriptor::getOffsetFromRangeStartOnCurrentFrame() {
         // Make sure this descriptor was allocated from a range.
         if (pRange == nullptr) [[unlikely]] {
             return Error("expected the descriptor to be allocated from a range");

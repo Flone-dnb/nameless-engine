@@ -1099,7 +1099,7 @@ namespace ne {
 
         // Mark index as unused.
         mtxInternalData.second.noLongerUsedDescriptorIndices.push(
-            pDescriptor->getDescriptorOffsetInDescriptors());
+            pDescriptor->getOffsetInDescriptorsOnCurrentFrame());
 
         // Nothing else needs to be done (the heap will check the shrinking condition).
         return {};

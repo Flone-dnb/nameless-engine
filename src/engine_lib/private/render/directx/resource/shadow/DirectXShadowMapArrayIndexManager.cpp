@@ -132,7 +132,7 @@ namespace ne {
         }
 
         // Get descriptor offset from range start.
-        auto result = pSrvDescriptor->getDescriptorOffsetFromRangeStart();
+        auto result = pSrvDescriptor->getOffsetFromRangeStartOnCurrentFrame();
         if (std::holds_alternative<Error>(result)) [[unlikely]] {
             auto error = std::get<Error>(std::move(result));
             error.addCurrentLocationToErrorStack();
@@ -211,7 +211,7 @@ namespace ne {
             }
 
             // Get descriptor offset from range start.
-            auto result = pSrvDescriptor->getDescriptorOffsetFromRangeStart();
+            auto result = pSrvDescriptor->getOffsetFromRangeStartOnCurrentFrame();
             if (std::holds_alternative<Error>(result)) [[unlikely]] {
                 auto error = std::get<Error>(std::move(result));
                 error.addCurrentLocationToErrorStack();

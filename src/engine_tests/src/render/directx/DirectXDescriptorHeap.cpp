@@ -851,7 +851,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             REQUIRE(pCbvDescriptor1 != nullptr);
 
             // Make sure descriptor index actually uses range space.
-            REQUIRE(pCbvDescriptor1->getDescriptorOffsetInDescriptors() == pRange->getRangeStartInHeap());
+            REQUIRE(pCbvDescriptor1->getOffsetInDescriptorsOnCurrentFrame() == pRange->getRangeStartInHeap());
 
             // Bind CBV from range to resource 2.
             optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange);
@@ -871,7 +871,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             REQUIRE(pCbvDescriptor2 != nullptr);
 
             // Make sure descriptor index actually uses range space.
-            REQUIRE(pCbvDescriptor2->getDescriptorOffsetInDescriptors() == pRange->getRangeStartInHeap() + 1);
+            REQUIRE(pCbvDescriptor2->getOffsetInDescriptorsOnCurrentFrame() == pRange->getRangeStartInHeap() + 1);
 
             // Fill range so that there's no free space.
             constexpr auto iAdditionalResourceCount =
@@ -909,7 +909,7 @@ TEST_CASE("make descriptor range expand/shrink") {
 
                 // Make sure descriptor index actually uses range space.
                 REQUIRE(
-                    pCbvDescriptor->getDescriptorOffsetInDescriptors() ==
+                    pCbvDescriptor->getOffsetInDescriptorsOnCurrentFrame() ==
                     pRange->getRangeStartInHeap() + 2 + i);
             }
 
@@ -943,7 +943,7 @@ TEST_CASE("make descriptor range expand/shrink") {
 
             // Prepare to delete one resource and remember its descriptor index.
             const auto iDeletedDescriptorIndexInHeap =
-                vResources[0]->getDescriptor(DirectXDescriptorType::CBV)->getDescriptorOffsetInDescriptors();
+                vResources[0]->getDescriptor(DirectXDescriptorType::CBV)->getOffsetInDescriptorsOnCurrentFrame();
 
             // Now delete one resource.
             vResources[0] = nullptr;
@@ -980,7 +980,7 @@ TEST_CASE("make descriptor range expand/shrink") {
             REQUIRE(
                 vResources[0]
                     ->getDescriptor(DirectXDescriptorType::CBV)
-                    ->getDescriptorOffsetInDescriptors() == iDeletedDescriptorIndexInHeap);
+                    ->getOffsetInDescriptorsOnCurrentFrame() == iDeletedDescriptorIndexInHeap);
 
             // Create resource.
             result = pResourceManager->createResource(
@@ -1238,7 +1238,7 @@ TEST_CASE("descriptor ranges have correct index offset") {
             REQUIRE(pCbvDescriptor1 != nullptr);
 
             // Make sure descriptor index actually uses range space.
-            REQUIRE(pCbvDescriptor1->getDescriptorOffsetInDescriptors() == pRange1->getRangeStartInHeap());
+            REQUIRE(pCbvDescriptor1->getOffsetInDescriptorsOnCurrentFrame() == pRange1->getRangeStartInHeap());
 
             // Bind CBV resource 2 - range 2.
             optionalError = pResource2->bindDescriptor(DirectXDescriptorType::CBV, pRange2);
@@ -1258,18 +1258,18 @@ TEST_CASE("descriptor ranges have correct index offset") {
             REQUIRE(pCbvDescriptor2 != nullptr);
 
             // Make sure descriptor index actually uses range space.
-            REQUIRE(pCbvDescriptor2->getDescriptorOffsetInDescriptors() == pRange2->getRangeStartInHeap());
+            REQUIRE(pCbvDescriptor2->getOffsetInDescriptorsOnCurrentFrame() == pRange2->getRangeStartInHeap());
 
             // Make sure distance (offset) between range starts is correct.
             INT iLowRangeStart = 0;
             INT iHighRangeStart = 0;
-            if (pCbvDescriptor1->getDescriptorOffsetInDescriptors() <
-                pCbvDescriptor2->getDescriptorOffsetInDescriptors()) {
-                iLowRangeStart = pCbvDescriptor1->getDescriptorOffsetInDescriptors();
-                iHighRangeStart = pCbvDescriptor2->getDescriptorOffsetInDescriptors();
+            if (pCbvDescriptor1->getOffsetInDescriptorsOnCurrentFrame() <
+                pCbvDescriptor2->getOffsetInDescriptorsOnCurrentFrame()) {
+                iLowRangeStart = pCbvDescriptor1->getOffsetInDescriptorsOnCurrentFrame();
+                iHighRangeStart = pCbvDescriptor2->getOffsetInDescriptorsOnCurrentFrame();
             } else {
-                iLowRangeStart = pCbvDescriptor2->getDescriptorOffsetInDescriptors();
-                iHighRangeStart = pCbvDescriptor1->getDescriptorOffsetInDescriptors();
+                iLowRangeStart = pCbvDescriptor2->getOffsetInDescriptorsOnCurrentFrame();
+                iHighRangeStart = pCbvDescriptor1->getOffsetInDescriptorsOnCurrentFrame();
             }
 
             {

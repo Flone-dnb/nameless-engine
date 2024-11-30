@@ -73,7 +73,7 @@ namespace ne {
                 // Calculate descriptor offset. This may not be as fast as we want but this is the price we
                 // pay for having a simple approach. We could have cached the offset but we would need to keep
                 // the cached offset updated after the range resizes which seems like a complicated thing.
-                auto result = pSrvDescriptor->getDescriptorOffsetFromRangeStart();
+                auto result = pSrvDescriptor->getOffsetFromRangeStartOnCurrentFrame();
                 if (std::holds_alternative<Error>(result)) [[unlikely]] {
                     auto error = std::get<Error>(std::move(result));
                     error.addCurrentLocationToErrorStack();

@@ -116,7 +116,7 @@ namespace ne {
         // Construct descriptor handle.
         return CD3DX12_CPU_DESCRIPTOR_HANDLE(
             pHeap->getInternalHeap()->GetCPUDescriptorHandleForHeapStart(),
-            pDescriptor->getDescriptorOffsetInDescriptors(),
+            pDescriptor->getOffsetInDescriptorsOnCurrentFrame(),
             pHeap->getDescriptorSize());
     }
 
@@ -150,7 +150,7 @@ namespace ne {
         // Construct descriptor handle.
         return CD3DX12_CPU_DESCRIPTOR_HANDLE(
             pHeap->getInternalHeap()->GetCPUDescriptorHandleForHeapStart(),
-            pDescriptor->getDescriptorOffsetInDescriptors(),
+            pDescriptor->getOffsetInDescriptorsOnCurrentFrame(),
             pHeap->getDescriptorSize());
     }
 
@@ -175,7 +175,7 @@ namespace ne {
         // Construct descriptor handle.
         return CD3DX12_GPU_DESCRIPTOR_HANDLE(
             pHeap->getInternalHeap()->GetGPUDescriptorHandleForHeapStart(),
-            pDescriptor->getDescriptorOffsetInDescriptors(),
+            pDescriptor->getOffsetInDescriptorsOnCurrentFrame(),
             pHeap->getDescriptorSize());
     }
 

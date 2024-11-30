@@ -137,7 +137,7 @@ TEST_CASE("spawn mesh and then light sources") {
     pMainWindow->processEvents<TestGameInstance>();
 }
 
-TEST_CASE("change render settings with lights spawned") {
+TEST_CASE("change some render settings with lights spawned") {
     using namespace ne;
 
     class TestGameInstance : public GameInstance {
@@ -187,11 +187,13 @@ TEST_CASE("change render settings with lights spawned") {
                 std::scoped_lock guard(*mtxRenderSettings.first);
 
                 // Change MSAA.
-                const auto msaaState = mtxRenderSettings.second->getAntialiasingQuality();
-                if (msaaState != AntialiasingQuality::HIGH) {
-                    mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::HIGH);
-                } else {
-                    mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
+                usedAaQuality = mtxRenderSettings.second->getAntialiasingQuality();
+                if (usedAaQuality.has_value()) {
+                    if (*usedAaQuality != AntialiasingQuality::HIGH) {
+                        mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::HIGH);
+                    } else {
+                        mtxRenderSettings.second->setAntialiasingQuality(AntialiasingQuality::MEDIUM);
+                    }
                 }
 
                 return;
@@ -205,9 +207,14 @@ TEST_CASE("change render settings with lights spawned") {
                 const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
                 std::scoped_lock guard(*mtxRenderSettings.first);
 
+                // Restore AA.
+                if (usedAaQuality.has_value()) {
+                    mtxRenderSettings.second->setAntialiasingQuality(*usedAaQuality);
+                }
+
                 // Change shadow quality.
-                const auto shadowQuality = mtxRenderSettings.second->getShadowQuality();
-                if (shadowQuality != ShadowQuality::HIGH) {
+                usedShadowQuality = mtxRenderSettings.second->getShadowQuality();
+                if (usedShadowQuality != ShadowQuality::HIGH) {
                     mtxRenderSettings.second->setShadowQuality(ShadowQuality::HIGH);
                 } else {
                     mtxRenderSettings.second->setShadowQuality(ShadowQuality::MEDIUM);
@@ -218,6 +225,13 @@ TEST_CASE("change render settings with lights spawned") {
             }
 
             if (iFrameCount == 6) {
+                // Get render settings.
+                const auto mtxRenderSettings = getWindow()->getRenderer()->getRenderSettings();
+                std::scoped_lock guard(*mtxRenderSettings.first);
+
+                // Restore shadow quality.
+                mtxRenderSettings.second->setShadowQuality(usedShadowQuality);
+
                 // Make sure something was rendered (in case we forgot the camera).
                 REQUIRE(getWindow()->getRenderer()->getRenderStatistics()->getLastFrameDrawCallCount() > 0);
 
@@ -226,6 +240,8 @@ TEST_CASE("change render settings with lights spawned") {
         }
 
     private:
+        std::optional<AntialiasingQuality> usedAaQuality;
+        ShadowQuality usedShadowQuality;
         size_t iFrameCount = 0;
     };
 

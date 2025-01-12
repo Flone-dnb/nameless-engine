@@ -90,11 +90,16 @@ namespace ne {
             Renderer* pRenderer, void* pObject, VkObjectType objectType, const std::string& sResourceName);
 
         /**
-         * Returns sampler for textures.
+         * Returns a texture sampler the specified texture filtering option.
+         *
+         * @remark Returned pointer will always be valid (after the sampler was created) until the renderer is
+         * destroyed.
+         *
+         * @param filtering Texture filtering mode.
          *
          * @return `nullptr` if not created yet, otherwise valid pointer.
          */
-        VkSampler getTextureSampler();
+        VkSampler getTextureSampler(TextureFilteringQuality filtering);
 
         /**
          * Looks for video adapters (GPUs) that support this renderer.
@@ -734,13 +739,13 @@ namespace ne {
         void destroySwapChainAndDependentResources(bool bDestroyPipelineManager);
 
         /**
-         * Creates @ref pTextureSampler using the current texture filtering mode from the render settings.
+         * Creates texture samplers that will never be recreated (destroyed during renderer's destruction).
          *
          * @warning Expects that @ref pLogicalDevice is valid.
          *
          * @return Error if something went wrong.
          */
-        [[nodiscard]] std::optional<Error> createTextureSampler();
+        [[nodiscard]] std::optional<Error> createTextureSamplers();
 
         /**
          * Creates @ref pComputeTextureSampler.
@@ -965,7 +970,7 @@ namespace ne {
         std::unique_ptr<VulkanResource> pDepthImage = nullptr;
 
         /**
-         * Depth buffer without multisampling (for light culing compute shader).
+         * Depth buffer without multisampling (for light culling compute shader).
          *
          * @warning When @ref pDepthImage does not use multisampling this buffer is not used
          * and does not store contents of @ref pDepthImage.
@@ -992,8 +997,26 @@ namespace ne {
         /** Used to create command buffers. */
         VkCommandPool pCommandPool = nullptr;
 
-        /** Texture sampler. */
-        VkSampler pTextureSampler = nullptr;
+        /**
+         * Texture sampler with point filtering.
+         *
+         * @remark Will never be recreated (destroyed during renderer's destruction).
+         */
+        VkSampler pTextureSamplerPointFiltering = nullptr;
+
+        /**
+         * Texture sampler with linear filtering.
+         *
+         * @remark Will never be recreated (destroyed during renderer's destruction).
+         */
+        VkSampler pTextureSamplerLinearFiltering = nullptr;
+
+        /**
+         * Texture sampler with anisotropic filtering.
+         *
+         * @remark Will never be recreated (destroyed during renderer's destruction).
+         */
+        VkSampler pTextureSamplerAnisotropicFiltering = nullptr;
 
         /**
          * Texture sampler with nearest filtering and mipmapping for fetching texels in compute shader.

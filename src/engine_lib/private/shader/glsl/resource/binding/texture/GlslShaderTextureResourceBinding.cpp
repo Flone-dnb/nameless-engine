@@ -153,8 +153,18 @@ namespace ne {
             return Error("logical device is `nullptr`");
         }
 
+        TextureFilteringQuality filteringMode = TextureFilteringQuality::HIGH;
+        {
+            // Get render settings.
+            const auto mtxRenderSettings = pRenderer->getRenderSettings();
+            std::scoped_lock settingsGuard(*mtxRenderSettings.first);
+
+            // Get current texture filtering mode.
+            filteringMode = mtxRenderSettings.second->getTextureFilteringQuality();
+        }
+
         // Get texture sampler.
-        const auto pTextureSampler = pRenderer->getTextureSampler();
+        const auto pTextureSampler = pRenderer->getTextureSampler(filteringMode);
         if (pTextureSampler == nullptr) [[unlikely]] {
             return Error("texture sampler is `nullptr`");
         }

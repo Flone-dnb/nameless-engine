@@ -143,18 +143,27 @@ namespace ne {
         // Destroy pipeline manager and other draw resources.
         destroySwapChainAndDependentResources(true);
 
-        if (pTextureSampler != nullptr) {
-            // Destroy sampler.
-            vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
-            pTextureSampler = nullptr;
+        // Destroy texture samplers.
+        if (pTextureSamplerPointFiltering != nullptr || pTextureSamplerLinearFiltering != nullptr ||
+            pTextureSamplerAnisotropicFiltering != nullptr) {
+            // They're all should be valid.
+            if (pTextureSamplerPointFiltering == nullptr || pTextureSamplerLinearFiltering == nullptr ||
+                pTextureSamplerAnisotropicFiltering == nullptr) [[unlikely]] {
+                Logger::get().error(std::format("expected all fixed texture samplers to be valid"));
+                return;
+            }
+            vkDestroySampler(pLogicalDevice, pTextureSamplerPointFiltering, nullptr);
+            vkDestroySampler(pLogicalDevice, pTextureSamplerLinearFiltering, nullptr);
+            vkDestroySampler(pLogicalDevice, pTextureSamplerAnisotropicFiltering, nullptr);
+            pTextureSamplerPointFiltering = nullptr;
+            pTextureSamplerLinearFiltering = nullptr;
+            pTextureSamplerAnisotropicFiltering = nullptr;
         }
         if (pComputeTextureSampler != nullptr) {
-            // Destroy sampler.
             vkDestroySampler(pLogicalDevice, pComputeTextureSampler, nullptr);
             pComputeTextureSampler = nullptr;
         }
         if (pShadowTextureSampler != nullptr) {
-            // Destroy sampler.
             vkDestroySampler(pLogicalDevice, pShadowTextureSampler, nullptr);
             pShadowTextureSampler = nullptr;
         }
@@ -225,70 +234,70 @@ namespace ne {
     VulkanRenderer::initializeVulkan(const std::vector<std::string>& vBlacklistedGpuNames) {
         // Create Vulkan instance.
         auto optionalError = createVulkanInstance();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create window surface.
         optionalError = createWindowSurface();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Pick physical device.
         optionalError = pickPhysicalDevice(vBlacklistedGpuNames);
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Update render settings.
         optionalError = clampSettingsToMaxSupported();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Update MSAA sample count using render settings.
         optionalError = updateMsaaSampleCount();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create logical device.
         optionalError = createLogicalDevice();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create swap chain.
         optionalError = createSwapChain();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create render pass.
         optionalError = createRenderPasses(true);
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create command pool.
         optionalError = createCommandPool();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Initialize resource managers.
         optionalError = initializeResourceManagers();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
@@ -311,28 +320,28 @@ namespace ne {
         // Now that GPU resource manager is created:
         // Create depth image.
         optionalError = createDepthImage();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create sampler for compute shaders.
         optionalError = createComputeTextureSampler();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
         // Create sampler for shadow maps.
         optionalError = createShadowTextureSampler();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
 
-        // Create texture sampler.
-        optionalError = createTextureSampler();
-        if (optionalError.has_value()) {
+        // Create texture samplers.
+        optionalError = createTextureSamplers();
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
@@ -346,7 +355,7 @@ namespace ne {
 
         // Create framebuffers.
         optionalError = createSwapChainFramebuffers();
-        if (optionalError.has_value()) {
+        if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;
         }
@@ -1939,85 +1948,76 @@ namespace ne {
         iCurrentImageSemaphore = 0;
     }
 
-    std::optional<Error> VulkanRenderer::createTextureSampler() {
+    std::optional<Error> VulkanRenderer::createTextureSamplers() {
         // Make sure logical device is valid.
         if (pLogicalDevice == nullptr) [[unlikely]] {
             return Error("expected logical device to be valid");
         }
 
-        // Make sure texture sampler is not created yet.
-        if (pTextureSampler != nullptr) [[unlikely]] {
-            return Error("texture sampler is already created");
+        // Make sure samplers are not created yet
+        if (pTextureSamplerPointFiltering != nullptr || pTextureSamplerLinearFiltering != nullptr ||
+            pTextureSamplerAnisotropicFiltering != nullptr) [[unlikely]] {
+            return Error("texture samplers are already created");
         }
-
-        // Get render settings.
-        const auto mtxRenderSettings = getRenderSettings();
-        std::scoped_lock guard(*mtxRenderSettings.first);
-
-        // Get current texture filtering mode.
-        const auto textureFilteringQuality = mtxRenderSettings.second->getTextureFilteringQuality();
 
         // Setup Vulkan parameters depending on the texture filtering mode.
-        VkFilter vkFilter = VK_FILTER_NEAREST;
-        VkSamplerMipmapMode vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        switch (textureFilteringQuality) {
-        case (TextureFilteringQuality::LOW): {
-            vkFilter = VK_FILTER_NEAREST;
-            vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            break;
-        }
-        case (TextureFilteringQuality::MEDIUM): {
-            vkFilter = VK_FILTER_LINEAR;
-            vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            break;
-        }
-        case (TextureFilteringQuality::HIGH): {
-            vkFilter = VK_FILTER_LINEAR;
-            vkMipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            break;
-        }
-        }
+        struct SamplerCreationInfo {
+            VkFilter filter;
+            VkSamplerMipmapMode mipmapMode;
+            bool enableAnisotropy;
+            VkSampler& pSampler;
+        };
+        std::array<SamplerCreationInfo, 3> vSamplerCreationInfos = {
+            SamplerCreationInfo{
+                VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false, pTextureSamplerPointFiltering},
+            SamplerCreationInfo{
+                VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, false, pTextureSamplerLinearFiltering},
+            SamplerCreationInfo{
+                VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true, pTextureSamplerAnisotropicFiltering}};
 
-        // Describe sampler.
-        VkSamplerCreateInfo samplerInfo{};
-        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        // Create samplers.
+        for (const auto& creationInfo : vSamplerCreationInfos) {
+            VkSamplerCreateInfo samplerInfo{};
+            samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-        // Specify how oversampling and undersampling is handed.
-        samplerInfo.magFilter = vkFilter;
-        samplerInfo.minFilter = vkFilter;
+            // Specify how oversampling and undersampling is handed.
+            samplerInfo.magFilter = creationInfo.filter;
+            samplerInfo.minFilter = creationInfo.filter;
 
-        // Specify address mode.
-        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
+            // Specify address mode.
+            samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK; // used when `clamp` address mode
 
-        // Specify whether to use anisotropic filtering or not.
-        if (textureFilteringQuality == TextureFilteringQuality::HIGH) {
-            samplerInfo.anisotropyEnable = VK_TRUE;
-            samplerInfo.maxAnisotropy = 16.0F; // NOLINT: magic number - max anisotropy
-        } else {
-            samplerInfo.anisotropyEnable = VK_FALSE;
-            samplerInfo.maxAnisotropy = 1.0F;
-        }
+            // Specify whether to use anisotropic filtering or not.
+            if (creationInfo.enableAnisotropy) {
+                samplerInfo.anisotropyEnable = VK_TRUE;
+                samplerInfo.maxAnisotropy = 16.0F; // NOLINT: magic number - max anisotropy
+            } else {
+                samplerInfo.anisotropyEnable = VK_FALSE;
+                samplerInfo.maxAnisotropy = 1.0F;
+            }
 
-        // Specify whether to use [0; textureWidth] coordinates or not.
-        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+            // Specify whether to use [0; textureWidth] coordinates or not.
+            samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-        // Specify texel comparison for texture filtering.
-        samplerInfo.compareEnable = VK_FALSE;
-        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+            // Specify texel comparison options.
+            samplerInfo.compareEnable = VK_FALSE;
+            samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-        // Specify mipmapping options.
-        samplerInfo.mipmapMode = vkMipmapMode;
-        samplerInfo.mipLodBias = 0.0F;
-        samplerInfo.minLod = 0.0F;
-        samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+            // Specify mipmapping options.
+            samplerInfo.mipmapMode = creationInfo.mipmapMode;
+            samplerInfo.mipLodBias = 0.0F;
+            samplerInfo.minLod = 0.0F;
+            samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
 
-        // Create sampler.
-        const auto result = vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &pTextureSampler);
-        if (result != VK_SUCCESS) [[unlikely]] {
-            return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
+            // Create sampler.
+            const auto result =
+                vkCreateSampler(pLogicalDevice, &samplerInfo, nullptr, &creationInfo.pSampler);
+            if (result != VK_SUCCESS) [[unlikely]] {
+                return Error(std::format("failed to create sampler, error: {}", string_VkResult(result)));
+            }
         }
 
         return {};
@@ -2691,7 +2691,26 @@ namespace ne {
         return pRenderer;
     }
 
-    VkSampler VulkanRenderer::getTextureSampler() { return pTextureSampler; }
+    VkSampler VulkanRenderer::getTextureSampler(TextureFilteringQuality filtering) {
+        switch (filtering) {
+        case (TextureFilteringQuality::LOW): {
+            return pTextureSamplerPointFiltering;
+            break;
+        }
+        case (TextureFilteringQuality::MEDIUM): {
+            return pTextureSamplerLinearFiltering;
+            break;
+        }
+        case (TextureFilteringQuality::HIGH): {
+            return pTextureSamplerAnisotropicFiltering;
+            break;
+        }
+        default:
+            Error error("unhandled case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+    }
 
     std::vector<std::string> VulkanRenderer::getSupportedGpuNames() const { return vSupportedGpuNames; }
 
@@ -4011,19 +4030,6 @@ namespace ne {
 
         // Update MSAA sample count using render settings.
         auto optionalError = updateMsaaSampleCount();
-        if (optionalError.has_value()) [[unlikely]] {
-            optionalError->addCurrentLocationToErrorStack();
-            return optionalError;
-        }
-
-        if (pTextureSampler != nullptr) {
-            // Destroy sampler to re-create with the current texture filtering setting.
-            vkDestroySampler(pLogicalDevice, pTextureSampler, nullptr);
-            pTextureSampler = nullptr;
-        }
-
-        // Re-create texture sampler with the current texture filtering setting.
-        optionalError = createTextureSampler();
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError;

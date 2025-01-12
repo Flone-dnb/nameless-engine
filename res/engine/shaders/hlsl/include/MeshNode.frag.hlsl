@@ -8,7 +8,7 @@
 
 #include "../format/MeshNodeVertex.hlsl"
 
-// Not using ifdefs on this static texture sampler because the user may want to use custom textures.
+/** Sampler with filtering based on the render settings. */
 SamplerState textureSampler : register(s0, space5);
 
 #ifdef FS_USE_DIFFUSE_TEXTURE

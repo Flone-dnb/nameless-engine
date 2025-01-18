@@ -207,6 +207,8 @@ set(PROJECT_SOURCES
     private/shader/general/ComputeShaderInterface.cpp
     private/material/TextureManager.cpp
     public/material/TextureManager.h
+    public/material/TextureFilteringPreference.h
+    private/material/TextureFilteringPreference.cpp
     private/material/TextureHandle.cpp
     public/material/TextureHandle.h
     private/misc/ThreadPool.h

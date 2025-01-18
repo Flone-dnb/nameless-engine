@@ -173,7 +173,7 @@ namespace ne {
         }
 
         // Construct a path to the file by appending a format.
-        pathToResource /= TextureImporter::getImportedFileName() + sTextureFormatExtension;
+        pathToResource /= std::string(TextureImporter::getImportedFileName()) + sTextureFormatExtension;
 
         // Load texture.
         auto result = pResourceManager->loadTextureFromDisk(

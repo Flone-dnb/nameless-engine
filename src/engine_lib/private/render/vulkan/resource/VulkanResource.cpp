@@ -22,6 +22,7 @@ namespace ne {
         unsigned int iElementSizeInBytes,
         unsigned int iElementCount)
         : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount),
+          textureFilteringPreference(TextureFilteringPreference::FROM_RENDER_SETTINGS),
           isUsedAsStorageResource(isStorageResource) {
         mtxResourceMemory.second = pResourceMemory;
 
@@ -36,8 +37,10 @@ namespace ne {
     VulkanResource::VulkanResource(
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
-        ktxVulkanTexture ktxTexture)
-        : GpuResource(pResourceManager, sResourceName, 0, 0), isUsedAsStorageResource(false) {
+        ktxVulkanTexture ktxTexture,
+        TextureFilteringPreference filteringPreference)
+        : GpuResource(pResourceManager, sResourceName, 0, 0), textureFilteringPreference(filteringPreference),
+          isUsedAsStorageResource(false) {
         mtxResourceMemory.second = nullptr;
 
         // Save resource.
@@ -112,6 +115,54 @@ namespace ne {
     }
 
     bool VulkanResource::isStorageResource() const { return isUsedAsStorageResource; }
+
+    VkSampler VulkanResource::getTextureSampler() const {
+        // Get renderer.
+        const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getResourceManager()->getRenderer());
+        if (pVulkanRenderer == nullptr) [[unlikely]] {
+            Error error("expected a Vulkan renderer");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        // Determine texture sampler.
+        VkSampler pTextureSampler = nullptr;
+        switch (textureFilteringPreference) {
+        case (TextureFilteringPreference::FROM_RENDER_SETTINGS): {
+            const auto mtxRenderSettings = getResourceManager()->getRenderer()->getRenderSettings();
+            std::scoped_lock guard(*mtxRenderSettings.first);
+            const auto textureFilteringQuality = mtxRenderSettings.second->getTextureFilteringQuality();
+
+            pTextureSampler = pVulkanRenderer->getTextureSampler(textureFilteringQuality);
+            break;
+        }
+        case (TextureFilteringPreference::POINT_FILTERING): {
+            pTextureSampler = pVulkanRenderer->getTextureSampler(TextureFilteringQuality::LOW);
+            break;
+        }
+        case (TextureFilteringPreference::ANISOTROPIC_FILTERING): {
+            pTextureSampler = pVulkanRenderer->getTextureSampler(TextureFilteringQuality::HIGH);
+            break;
+        }
+        case (TextureFilteringPreference::LINEAR_FILTERING): {
+            pTextureSampler = pVulkanRenderer->getTextureSampler(TextureFilteringQuality::MEDIUM);
+            break;
+        }
+        default: {
+            Error error("unhandled case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
+        }
+        if (pTextureSampler == nullptr) [[unlikely]] {
+            Error error("expected texture sampler to be valid");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
+        return pTextureSampler;
+    }
 
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
         VulkanResourceManager* pResourceManager,
@@ -292,10 +343,11 @@ namespace ne {
     std::variant<std::unique_ptr<VulkanResource>, Error> VulkanResource::create(
         VulkanResourceManager* pResourceManager,
         const std::string& sResourceName,
-        ktxVulkanTexture ktxTexture) {
+        ktxVulkanTexture ktxTexture,
+        TextureFilteringPreference filteringPreference) {
         // Create resource.
-        auto pCreatedResource =
-            std::unique_ptr<VulkanResource>(new VulkanResource(pResourceManager, sResourceName, ktxTexture));
+        auto pCreatedResource = std::unique_ptr<VulkanResource>(
+            new VulkanResource(pResourceManager, sResourceName, ktxTexture, filteringPreference));
 
         // Set name of this image.
         VulkanRenderer::setObjectDebugOnlyName(

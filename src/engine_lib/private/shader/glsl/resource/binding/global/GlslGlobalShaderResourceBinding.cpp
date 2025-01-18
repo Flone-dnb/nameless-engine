@@ -93,18 +93,8 @@ namespace ne {
                                              ? VK_IMAGE_LAYOUT_GENERAL
                                              : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            // Get render settings.
-            const auto mtxRenderSettings = pPipelineManager->getRenderer()->getRenderSettings();
-            std::scoped_lock guard(*mtxRenderSettings.first);
-
-            // Get current texture filtering.
-            const auto textureFilteringQuality = mtxRenderSettings.second->getTextureFilteringQuality();
-
             // Get texture sampler.
-            const auto pTextureSampler = pVulkanRenderer->getTextureSampler(textureFilteringQuality);
-            if (pTextureSampler == nullptr) [[unlikely]] {
-                return Error("texture sampler is `nullptr`");
-            }
+            const auto pTextureSampler = pVulkanResource->getTextureSampler();
 
             if (pSpecificPipeline == nullptr) {
                 // Bind to all pipelines.

@@ -184,8 +184,8 @@ namespace ne {
          * int port = manager.getValue<int>("server", "port", 0);
          * @endcode
          *
-         * @param sSection       Name of the section (can be empty if the key has no section).
-         * @param sKey           Name of the key.
+         * @param sSection       Name of the section to look for (can be empty if the key has no section).
+         * @param sKey           Name of the key to look for.
          * @param defaultValue   Value that will be returned if the specified key was not found.
          *
          *
@@ -194,6 +194,18 @@ namespace ne {
          */
         template <typename T>
         T getValue(std::string_view sSection, std::string_view sKey, T defaultValue) const;
+
+        /**
+         * Same as @ref getValue but when the specified section or a key is not found or a conversion error
+         * occurred it returns empty.
+         *
+         * @param sSection Name of the section to look for (can be empty if the key has no section).
+         * @param sKey     Name of the key to look for.
+         *
+         * @return Found value or empty.
+         */
+        template <typename T>
+        std::optional<T> getValueOrFail(std::string_view sSection, std::string_view sKey) const;
 
         /**
          * Returns names of all sections.
@@ -377,6 +389,19 @@ namespace ne {
             } else {
                 tomlData[sSection.data()][sKey.data()] = toml::value(value, {sComment.data()});
             }
+        }
+    }
+
+    template <typename T>
+    std::optional<T> ConfigManager::getValueOrFail(std::string_view sSection, std::string_view sKey) const {
+        try {
+            if (sSection.empty()) {
+                return toml::find<T>(tomlData, sKey.data());
+            } else {
+                return toml::find<T>(tomlData, sSection.data(), sKey.data());
+            }
+        } catch (...) {
+            return {};
         }
     }
 } // namespace ne

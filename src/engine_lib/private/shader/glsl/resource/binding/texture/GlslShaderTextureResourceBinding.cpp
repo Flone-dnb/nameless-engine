@@ -23,14 +23,10 @@ namespace ne {
         }
         const auto pRenderer = (*pipelinesToUse.begin())->getRenderer();
 
-        // Get texture image view.
+        // Cast type.
         const auto pTextureResource = dynamic_cast<VulkanResource*>(pTextureToUse->getResource());
         if (pTextureResource == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource");
-        }
-        const auto pImageView = pTextureResource->getInternalImageView();
-        if (pImageView == nullptr) [[unlikely]] {
-            return Error("expected the texture's image view to be valid");
         }
 
         // Make sure no pipeline will re-create its internal resources because we will now reference
@@ -70,7 +66,7 @@ namespace ne {
 
             // Bind image to descriptor.
             auto optionalError = bindTextureToShaderDescriptorArray(
-                sShaderResourceName, pVulkanPipeline, pImageView, pShaderArrayIndex->getActualIndex());
+                sShaderResourceName, pVulkanPipeline, pTextureResource, pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();
@@ -125,7 +121,7 @@ namespace ne {
     std::optional<Error> GlslShaderTextureResourceBinding::bindTextureToShaderDescriptorArray(
         const std::string& sShaderResourceName,
         VulkanPipeline* pPipelineWithDescriptors,
-        VkImageView pTextureView,
+        VulkanResource* pTexture,
         unsigned int iIndexIntoShaderArray) {
         // Get pipeline's internal resources.
         const auto pMtxPipelineResources = pPipelineWithDescriptors->getInternalResources();
@@ -153,28 +149,15 @@ namespace ne {
             return Error("logical device is `nullptr`");
         }
 
-        TextureFilteringQuality filteringMode = TextureFilteringQuality::HIGH;
-        {
-            // Get render settings.
-            const auto mtxRenderSettings = pRenderer->getRenderSettings();
-            std::scoped_lock settingsGuard(*mtxRenderSettings.first);
-
-            // Get current texture filtering mode.
-            filteringMode = mtxRenderSettings.second->getTextureFilteringQuality();
-        }
-
         // Get texture sampler.
-        const auto pTextureSampler = pRenderer->getTextureSampler(filteringMode);
-        if (pTextureSampler == nullptr) [[unlikely]] {
-            return Error("texture sampler is `nullptr`");
-        }
+        const auto pTextureSampler = pTexture->getTextureSampler();
 
         // Update one descriptor in set per frame resource.
         for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {
             // Prepare info to bind an image view to descriptor.
             VkDescriptorImageInfo imageInfo{};
             imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            imageInfo.imageView = pTextureView;
+            imageInfo.imageView = pTexture->getInternalImageView();
             imageInfo.sampler = pTextureSampler;
 
             // Bind reserved space to descriptor.
@@ -199,14 +182,10 @@ namespace ne {
     std::optional<Error> GlslShaderTextureResourceBinding::onAfterAllPipelinesRefreshedResources() {
         std::scoped_lock guard(mtxPushConstantIndices.first, mtxUsedTexture.first);
 
-        // Get texture image view.
+        // Cast type.
         const auto pTextureResource = dynamic_cast<VulkanResource*>(mtxUsedTexture.second->getResource());
         if (pTextureResource == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource");
-        }
-        const auto pImageView = pTextureResource->getInternalImageView();
-        if (pImageView == nullptr) [[unlikely]] {
-            return Error("expected the texture's image view to be valid");
         }
 
         // Update push constant indices of all used pipelines.
@@ -230,7 +209,7 @@ namespace ne {
             auto optionalError = bindTextureToShaderDescriptorArray(
                 getShaderResourceName(),
                 pVulkanPipeline,
-                pImageView,
+                pTextureResource,
                 indices.pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
@@ -255,14 +234,10 @@ namespace ne {
         // Replace used texture.
         mtxUsedTexture.second = std::move(pTextureToUse);
 
-        // Get texture image view.
+        // Cast type.
         const auto pTextureResource = dynamic_cast<VulkanResource*>(mtxUsedTexture.second->getResource());
         if (pTextureResource == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource");
-        }
-        const auto pImageView = pTextureResource->getInternalImageView();
-        if (pImageView == nullptr) [[unlikely]] {
-            return Error("expected the texture's image view to be valid");
         }
 
         // Re-bind descriptors because they were re-created.
@@ -270,7 +245,7 @@ namespace ne {
             auto optionalError = bindTextureToShaderDescriptorArray(
                 getShaderResourceName(),
                 pVulkanPipeline,
-                pImageView,
+                pTextureResource,
                 indices.pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
@@ -290,14 +265,10 @@ namespace ne {
             return Error("expected at least one pipeline to be specified");
         }
 
-        // Get texture image view.
+        // Cast type.
         const auto pTextureResource = dynamic_cast<VulkanResource*>(mtxUsedTexture.second->getResource());
         if (pTextureResource == nullptr) [[unlikely]] {
             return Error("expected a Vulkan resource");
-        }
-        const auto pImageView = pTextureResource->getInternalImageView();
-        if (pImageView == nullptr) [[unlikely]] {
-            return Error("expected the texture's image view to be valid");
         }
 
         // Clear currently used pipelines.
@@ -332,7 +303,10 @@ namespace ne {
 
             // Bind image to descriptor.
             auto optionalError = bindTextureToShaderDescriptorArray(
-                getShaderResourceName(), pVulkanPipeline, pImageView, pShaderArrayIndex->getActualIndex());
+                getShaderResourceName(),
+                pVulkanPipeline,
+                pTextureResource,
+                pShaderArrayIndex->getActualIndex());
             if (optionalError.has_value()) [[unlikely]] {
                 auto error = std::move(optionalError.value());
                 error.addCurrentLocationToErrorStack();

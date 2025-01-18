@@ -10,6 +10,7 @@
 // Custom.
 #include "render/general/resource/GpuResource.h"
 #include "io/Logger.h"
+#include "material/TextureFilteringPreference.h"
 
 // External.
 #include "VulkanMemoryAllocator/include/vk_mem_alloc.h"
@@ -117,6 +118,13 @@ namespace ne {
         bool isStorageResource() const;
 
         /**
+         * Returns sampler that uses preferred texture filtering.
+         *
+         * @return Texture sampler from the renderer, always valid while the renderer is valid.
+         */
+        VkSampler getTextureSampler() const;
+
+        /**
          * Returns memory allocation of the internal resource.
          *
          * @remark Do not delete (free) returned pointer.
@@ -172,11 +180,13 @@ namespace ne {
          * @param sResourceName     Name of the resource.
          * @param ktxTexture        Created KTX texture (already loaded in the GPU memory) that this resource
          * will wrap.
+         * @param filteringPreference Texture filtering to use.
          */
         VulkanResource(
             VulkanResourceManager* pResourceManager,
             const std::string& sResourceName,
-            ktxVulkanTexture ktxTexture);
+            ktxVulkanTexture ktxTexture,
+            TextureFilteringPreference filteringPreference);
 
         /**
          * Creates a new buffer resource.
@@ -226,19 +236,21 @@ namespace ne {
             bool bIsCubeMapView = false);
 
         /**
-         * Creates a new image resource.
+         * Creates a new image resource from the specified KTX texture.
          *
          * @param pResourceManager Owner resource manager.
          * @param sResourceName    Resource name, used for logging.
          * @param ktxTexture       Created KTX texture (already loaded in the GPU memory) that this resource
          * will wrap.
+         * @param filteringPreference Texture filtering to use.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
         static std::variant<std::unique_ptr<VulkanResource>, Error> create(
             VulkanResourceManager* pResourceManager,
             const std::string& sResourceName,
-            ktxVulkanTexture ktxTexture);
+            ktxVulkanTexture ktxTexture,
+            TextureFilteringPreference filteringPreference);
 
         /** Not empty if the object was created as a wrapper around KTX texture. */
         std::optional<ktxVulkanTexture> optionalKtxTexture;
@@ -276,6 +288,9 @@ namespace ne {
          * @remark Using mutex because "access to a VmaAllocation object must be externally synchronized".
          */
         std::pair<std::recursive_mutex, VmaAllocation> mtxResourceMemory;
+
+        /** Texture filtering to use. */
+        const TextureFilteringPreference textureFilteringPreference;
 
         /** Defines if this resource is a storage buffer/image or not. */
         const bool isUsedAsStorageResource = false;

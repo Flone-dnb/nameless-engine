@@ -7,6 +7,8 @@
 // Custom.
 #include "render/vulkan/VulkanRenderer.h"
 #include "io/Logger.h"
+#include "io/TextureImporter.h"
+#include "io/ConfigManager.h"
 #include "render/vulkan/resource/VulkanResource.h"
 #include "render/vulkan/resource/KtxLoadingCallbackManager.h"
 #include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
@@ -623,6 +625,31 @@ namespace ne {
                 pathToTextureFile.string()));
         }
 
+        // Get parent directory.
+        if (!pathToTextureFile.has_parent_path()) [[unlikely]] {
+            return Error(std::format(
+                "expected the path \"{}\" to have a parent directory", pathToTextureFile.string()));
+        }
+        const auto pathToTextureDirectory = pathToTextureFile.parent_path();
+
+        // Read texture settings file.
+        ConfigManager textureConfig;
+        auto optionalError = textureConfig.loadFile(
+            pathToTextureDirectory / TextureImporter::getImportedTextureSettingsFileName());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return *optionalError;
+        }
+
+        // Get texture filtering.
+        auto filteringResult = deserializeTextureFilteringPreference(textureConfig);
+        if (std::holds_alternative<Error>(filteringResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(filteringResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto textureFilteringPreference = std::get<TextureFilteringPreference>(filteringResult);
+
         // Get renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getRenderer());
         if (pVulkanRenderer == nullptr) [[unlikely]] {
@@ -694,7 +721,8 @@ namespace ne {
         pVulkanRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
         // Wrap created texture data.
-        auto createResult = VulkanResource::create(this, sResourceName, textureData);
+        auto createResult =
+            VulkanResource::create(this, sResourceName, textureData, textureFilteringPreference);
         if (std::holds_alternative<Error>(createResult)) [[unlikely]] {
             auto error = std::get<Error>(std::move(createResult));
             error.addCurrentLocationToErrorStack();
@@ -732,7 +760,7 @@ namespace ne {
         auto pTargetTextureResource = std::get<std::unique_ptr<VulkanResource>>(std::move(targetImageResult));
 
         // Transition layout to copy destination.
-        auto optionalError = pVulkanRenderer->transitionImageLayout(
+        optionalError = pVulkanRenderer->transitionImageLayout(
             pTargetTextureResource->getInternalImage(),
             textureData.imageFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,

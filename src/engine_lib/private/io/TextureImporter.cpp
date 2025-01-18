@@ -6,6 +6,7 @@
 // Custom.
 #include "io/Logger.h"
 #include "misc/ProjectPaths.h"
+#include "io/ConfigManager.h"
 
 // External.
 #include "compressonator.h"
@@ -75,7 +76,8 @@ namespace ne {
         const std::filesystem::path& pathToTexture,
         TextureImportFormat textureImportFormat,
         const std::string& sPathToOutputDirRelativeRes,
-        const std::string& sOutputDirectoryName) {
+        const std::string& sOutputDirectoryName,
+        TextureFilteringPreference filteringPreference) {
         // Make sure the specified path to the texture exists.
         if (!std::filesystem::exists(pathToTexture)) [[unlikely]] {
             return Error(std::format("the specified path \"{}\" does not exists", pathToTexture.string()));
@@ -194,9 +196,18 @@ namespace ne {
         // Create output directory.
         std::filesystem::create_directory(pathToOutputDirectory);
 
+        // Save filtering preference.
+        ConfigManager config;
+        serializeTextureFilteringPreference(config, filteringPreference);
+        auto optionalError = config.saveFile(pathToOutputDirectory / sImportedTextureSettingsFileName, false);
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return *optionalError;
+        }
+
         // Build paths to resulting files.
-        const auto pathToDds = pathToOutputDirectory / (std::string(pImportedFileName) + ".dds");
-        const auto pathToKxt = pathToOutputDirectory / (std::string(pImportedFileName) + ".ktx");
+        const auto pathToDds = pathToOutputDirectory / (std::string(sImportedFileName) + ".dds");
+        const auto pathToKxt = pathToOutputDirectory / (std::string(sImportedFileName) + ".ktx");
 
         // Save compressed texture.
         auto ddsSaveResult = CMP_SaveTexture(pathToDds.string().c_str(), &compressedTextureMipSet);

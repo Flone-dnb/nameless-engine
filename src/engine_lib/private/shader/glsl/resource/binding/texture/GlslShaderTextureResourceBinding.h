@@ -18,6 +18,7 @@ namespace ne {
     class TextureHandle;
     class Pipeline;
     class VulkanPipeline;
+    class VulkanResource;
 
     /** References some texture from shader code. */
     class GlslShaderTextureResourceBinding : public ShaderTextureResourceBinding {
@@ -191,7 +192,7 @@ namespace ne {
          *
          * @param sShaderResourceName      Name of the shader resource to get binding index in descriptor set.
          * @param pPipelineWithDescriptors Pipeline which descriptors to use.
-         * @param pTextureView             Texture view to bind.
+         * @param pTexture                 Texture to bind.
          * @param iIndexIntoShaderArray    Index to a descriptor (in the shader texture array) to bind.
          *
          * @return Error if something went wrong.
@@ -199,7 +200,7 @@ namespace ne {
         static std::optional<Error> bindTextureToShaderDescriptorArray(
             const std::string& sShaderResourceName,
             VulkanPipeline* pPipelineWithDescriptors,
-            VkImageView pTextureView,
+            VulkanResource* pTexture,
             unsigned int iIndexIntoShaderArray);
 
         /** Texture that we bind to descriptor. */

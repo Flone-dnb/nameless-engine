@@ -6,6 +6,7 @@
 
 // Custom.
 #include "misc/Error.h"
+#include "material/TextureFilteringPreference.h"
 
 namespace ne {
     enum class TextureImportFormat {
@@ -34,7 +35,17 @@ namespace ne {
          *
          * @return File name.
          */
-        static constexpr const char* getImportedFileName() { return pImportedFileName; }
+        static constexpr std::string_view getImportedFileName() { return sImportedFileName; }
+
+        /**
+         * Returns the name of the file that stores various settings that were specified during the import
+         * process.
+         *
+         * @return File name.
+         */
+        static constexpr std::string_view getImportedTextureSettingsFileName() {
+            return sImportedTextureSettingsFileName;
+        }
 
         /**
          * Blocks the current thread, converts the specified texture into engine-supported formats
@@ -47,6 +58,8 @@ namespace ne {
          * @param sOutputDirectoryName        Name of the new directory that does not exists yet but
          * will be created in the specified directory (relative to the `res`) to store the results
          * (allowed characters A-z and numbers 0-9, maximum length is 10 characters), for example: `diffuse`.
+         * @param filteringPreference         Optionally you can specify a texture filter to be used
+         * with this texture.
          *
          * @return Error if something went wrong.
          */
@@ -54,10 +67,15 @@ namespace ne {
             const std::filesystem::path& pathToTexture,
             TextureImportFormat textureImportFormat,
             const std::string& sPathToOutputDirRelativeRes,
-            const std::string& sOutputDirectoryName);
+            const std::string& sOutputDirectoryName,
+            TextureFilteringPreference filteringPreference =
+                TextureFilteringPreference::FROM_RENDER_SETTINGS);
 
     private:
         /** File name that we add before extension to the imported texture file. */
-        static constexpr auto pImportedFileName = "t";
+        static constexpr std::string_view sImportedFileName = "t";
+
+        /** Name of the file that stores various settings that were specified during the import process. */
+        static constexpr std::string_view sImportedTextureSettingsFileName = "settings";
     };
 }

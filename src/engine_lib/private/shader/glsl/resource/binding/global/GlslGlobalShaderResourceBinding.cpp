@@ -94,7 +94,7 @@ namespace ne {
                                              : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
             // Get texture sampler.
-            const auto pTextureSampler = pVulkanResource->getTextureSampler();
+            const auto pTextureSampler = pVulkanResource->getTextureSamplerForThisImage();
 
             if (pSpecificPipeline == nullptr) {
                 // Bind to all pipelines.

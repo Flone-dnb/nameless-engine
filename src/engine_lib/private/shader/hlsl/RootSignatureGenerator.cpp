@@ -10,6 +10,7 @@
 #include "shader/general/resource/LightingShaderResourceManager.h"
 #include "render/general/resource/shadow/ShadowMapManager.h"
 #include "render/directx/DirectXRenderer.h"
+#include "shader/hlsl/TextureSamplerDescriptions.hpp"
 
 namespace ne {
     std::variant<RootSignatureGenerator::CollectedInfo, Error>
@@ -118,8 +119,20 @@ namespace ne {
                 if (it != staticSamplersToBind.end()) [[unlikely]] {
                     return Error("unexpected to find 2 samplers of the same type");
                 }
+                const auto samplerType = std::get<SamplerType>(result);
 
-                staticSamplersToBind.insert(std::get<SamplerType>(result));
+                staticSamplersToBind.insert(samplerType);
+
+                if (samplerType == SamplerType::BASIC) {
+                    // Add sampler descriptor.
+                    auto optionalError =
+                        addSamplerRootParameter(vRootParameters, rootParameterIndices, resourceDesc);
+                    if (optionalError.has_value()) [[unlikely]] {
+                        auto error = optionalError.value();
+                        error.addCurrentLocationToErrorStack();
+                        return error;
+                    }
+                }
             } else if (resourceDesc.Type == D3D_SIT_TEXTURE) {
                 auto optionalError =
                     addTexture2DRootParameter(vRootParameters, rootParameterIndices, resourceDesc, false);
@@ -326,6 +339,7 @@ namespace ne {
                         // Add descriptor table.
                         vTableRanges.push_back(resourceInfo.second.generateTableRange());
                         CD3DX12_ROOT_PARAMETER newParameter{};
+
                         newParameter.InitAsDescriptorTable(
                             1, &vTableRanges.back(), resourceInfo.second.getVisibility());
                         vRootParameters.push_back(newParameter);
@@ -397,12 +411,11 @@ namespace ne {
         for (const auto& samplerType : staticSamplers) {
             switch (samplerType) {
             case (SamplerType::BASIC): {
-                vStaticSamplersToBind.push_back(HlslShader::getStaticSamplerDescription(
-                    mtxRenderSettings.second->getTextureFilteringQuality()));
+                // We will bind a sampler heap later.
                 break;
             }
             case (SamplerType::COMPARISON): {
-                vStaticSamplersToBind.push_back(HlslShader::getStaticComparisonSamplerDescription());
+                vStaticSamplersToBind.push_back(getStaticComparisonSamplerDescription());
                 break;
             }
             default: {
@@ -583,51 +596,23 @@ namespace ne {
         const D3D12_SHADER_INPUT_BIND_DESC& samplerResourceDescription) {
         const auto sResourceName = std::string(samplerResourceDescription.Name);
 
-        constexpr std::string_view sBasicSamplerName = "textureSampler";
+        constexpr std::string_view sBasicSamplerName = getTextureSamplersShaderArrayName();
         constexpr std::string_view sComparisonSamplerName = "shadowSampler";
 
         SamplerType typeToReturn = SamplerType::BASIC;
         if (sResourceName == sBasicSamplerName) {
             // Make sure shader register is correct.
-            if (samplerResourceDescription.BindPoint != static_cast<UINT>(StaticSamplerShaderRegister::BASIC))
-                [[unlikely]] {
+            if (samplerResourceDescription.BindPoint != 0) [[unlikely]] {
                 return Error(std::format(
                     "expected the sampler \"{}\" to use shader register {} instead of {}",
                     sResourceName,
-                    static_cast<UINT>(StaticSamplerShaderRegister::BASIC),
+                    0,
                     samplerResourceDescription.BindPoint));
             }
 
             typeToReturn = SamplerType::BASIC;
         } else if (sResourceName == sComparisonSamplerName) {
-            // Make sure shader register is correct.
-            if (samplerResourceDescription.BindPoint !=
-                static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON)) [[unlikely]] {
-                return Error(std::format(
-                    "expected the sampler \"{}\" to use shader register {} instead of {}",
-                    sResourceName,
-                    static_cast<UINT>(StaticSamplerShaderRegister::COMPARISON),
-                    samplerResourceDescription.BindPoint));
-            }
-
             typeToReturn = SamplerType::COMPARISON;
-        } else [[unlikely]] {
-            return Error(std::format(
-                "expected sampler \"{}\" to be named either as \"{}\" (for `SamplerState` type) or as "
-                "\"{}\" (for `SamplerComparisonState` type)",
-                sResourceName,
-                sBasicSamplerName,
-                sComparisonSamplerName));
-        }
-
-        // Make sure shader register space is correct.
-        if (samplerResourceDescription.Space != HlslShader::getStaticSamplerShaderRegisterSpace())
-            [[unlikely]] {
-            return Error(std::format(
-                "expected the sampler \"{}\" to use shader register space {} instead of {}",
-                sResourceName,
-                HlslShader::getStaticSamplerShaderRegisterSpace(),
-                samplerResourceDescription.Space));
         }
 
         return typeToReturn;
@@ -799,6 +784,32 @@ namespace ne {
             resourceDescription.Space,
             bIsReadWrite ? RootParameter::Type::UAV : RootParameter::Type::SRV,
             true);
+
+        // Make sure this resource name is unique, save its root index.
+        auto optionalError = addUniquePairResourceNameRootParameterIndex(
+            rootParameterIndices,
+            resourceDescription.Name,
+            static_cast<UINT>(vRootParameters.size()),
+            newRootParameter);
+        if (optionalError.has_value()) [[unlikely]] {
+            auto error = optionalError.value();
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+
+        // Add to root parameters.
+        vRootParameters.push_back(newRootParameter);
+
+        return {};
+    }
+
+    std::optional<Error> RootSignatureGenerator::addSamplerRootParameter(
+        std::vector<RootParameter>& vRootParameters,
+        std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
+        const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription) {
+        // Prepare parameter description.
+        auto newRootParameter = RootParameter(
+            resourceDescription.BindPoint, resourceDescription.Space, RootParameter::Type::SAMPLER, true);
 
         // Make sure this resource name is unique, save its root index.
         auto optionalError = addUniquePairResourceNameRootParameterIndex(
@@ -1010,6 +1021,12 @@ namespace ne {
             rootParameter.InitAsUnorderedAccessView(iBindPoint, iSpace, visibility);
             break;
         }
+        case (RootParameter::Type::SAMPLER): {
+            Error error("unexpected case");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
         default: {
             Error error("unhandled case");
             error.showError();
@@ -1052,6 +1069,10 @@ namespace ne {
         }
         case (RootParameter::Type::UAV): {
             rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+            break;
+        }
+        case (RootParameter::Type::SAMPLER): {
+            rangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
             break;
         }
         default: {

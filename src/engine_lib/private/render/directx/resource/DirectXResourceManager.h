@@ -8,6 +8,7 @@
 #include "misc/Error.h"
 #include "render/directx/descriptors/DirectXDescriptorHeap.h"
 #include "render/general/resource/GpuResourceManager.h"
+#include "material/TextureFilteringPreference.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -237,6 +238,13 @@ namespace ne {
         DirectXDescriptorHeap* getCbvSrvUavHeap() const;
 
         /**
+         * Returns heap that stores texture samplers.
+         *
+         * @return Sampler heap. Do not delete returned pointer.
+         */
+        DirectXDescriptorHeap* getSamplerHeap() const { return pSamplerHeap.get(); }
+
+        /**
          * Dumps internal state of the resource manager in JSON format.
          *
          * @return JSON string.
@@ -252,13 +260,15 @@ namespace ne {
          * @param pRtvHeap         Created RTV heap manager.
          * @param pDsvHeap         Created DSV heap manager.
          * @param pCbvSrvUavHeap   Created CBV/SRV/UAV heap.
+         * @param pSamplerHeap     Created sampler heap.
          */
         DirectXResourceManager(
             DirectXRenderer* pRenderer,
             ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,
             std::unique_ptr<DirectXDescriptorHeap>&& pRtvHeap,
             std::unique_ptr<DirectXDescriptorHeap>&& pDsvHeap,
-            std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap);
+            std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap,
+            std::unique_ptr<DirectXDescriptorHeap>&& pSamplerHeap);
 
         /**
          * Modifies the value to be a multiple of 256.
@@ -314,6 +324,8 @@ namespace ne {
          * texture in pixel shader, `false` if the final resource is not a texture.
          * @param iElementSizeInBytes        Optional size of one buffer element in bytes.
          * @param iElementCount              Optional number of elements in the resulting buffer.
+         * @param filteringPreference        If this resource is an image, optionally specify a filtering
+         * preference.
          *
          * @return Error if something went wrong, otherwise created resource with filled data.
          */
@@ -324,7 +336,9 @@ namespace ne {
             const D3D12_RESOURCE_DESC& uploadResourceDescription,
             bool bIsTextureResource,
             size_t iElementSizeInBytes = 0,
-            size_t iElementCount = 0);
+            size_t iElementCount = 0,
+            TextureFilteringPreference filteringPreference =
+                TextureFilteringPreference::FROM_RENDER_SETTINGS);
 
         /** Allocator for GPU resources. */
         ComPtr<D3D12MA::Allocator> pMemoryAllocator;
@@ -337,5 +351,8 @@ namespace ne {
 
         /** CBV/SRV/UAV heap manager. */
         std::unique_ptr<DirectXDescriptorHeap> pCbvSrvUavHeap;
+
+        /** Sampler heap manager. */
+        std::unique_ptr<DirectXDescriptorHeap> pSamplerHeap;
     };
 } // namespace ne

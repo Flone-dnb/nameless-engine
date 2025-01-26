@@ -118,11 +118,12 @@ namespace ne {
         bool isStorageResource() const;
 
         /**
-         * Returns sampler that uses preferred texture filtering.
+         * If this resource represents an image this function returns a sampler that uses preferred texture
+         * filtering.
          *
          * @return Texture sampler from the renderer, always valid while the renderer is valid.
          */
-        VkSampler getTextureSampler() const;
+        VkSampler getTextureSamplerForThisImage() const;
 
         /**
          * Returns memory allocation of the internal resource.
@@ -289,7 +290,7 @@ namespace ne {
          */
         std::pair<std::recursive_mutex, VmaAllocation> mtxResourceMemory;
 
-        /** Texture filtering to use. */
+        /** Texture filtering to use (if this resource is an image). */
         const TextureFilteringPreference textureFilteringPreference;
 
         /** Defines if this resource is a storage buffer/image or not. */

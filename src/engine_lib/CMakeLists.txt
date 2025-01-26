@@ -36,6 +36,7 @@ include(${RELATIVE_CMAKE_HELPERS_PATH}/utils.cmake)
 set(PROJECT_WIN32_SOURCES
     private/shader/hlsl/HlslShader.h
     private/shader/hlsl/HlslShader.cpp
+    private/shader/hlsl/TextureSamplerDescriptions.hpp
     private/shader/hlsl/RootSignatureGenerator.h
     private/shader/hlsl/RootSignatureGenerator.cpp
     private/shader/hlsl/resource/binding/texture/HlslShaderTextureResourceBinding.h

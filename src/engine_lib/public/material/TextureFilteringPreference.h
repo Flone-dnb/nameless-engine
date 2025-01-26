@@ -11,11 +11,12 @@ namespace ne {
 
     /** Determines texture's filtering setting. */
     enum class TextureFilteringPreference : unsigned char {
+        // DON'T change offsets in this enum, they match sampler offsets in the HLSL sampler heap
+        POINT_FILTERING = 0,
+        LINEAR_FILTERING = 1,
+        ANISOTROPIC_FILTERING = 2,
         FROM_RENDER_SETTINGS, //< Determined according to the texture filtering quality from the render
                               // settings.
-        ANISOTROPIC_FILTERING,
-        LINEAR_FILTERING,
-        POINT_FILTERING
     };
 
     /**

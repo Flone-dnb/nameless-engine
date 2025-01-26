@@ -21,12 +21,6 @@ namespace ne {
 
     class Renderer;
 
-    /** Determines which shader register (in HLSL) should be used by different sampler types. */
-    enum class StaticSamplerShaderRegister : UINT {
-        BASIC = 0,
-        COMPARISON = 1,
-    };
-
     /** Represents a compiled HLSL shader. */
     class HlslShader : public Shader {
     public:
@@ -83,31 +77,6 @@ namespace ne {
          * @return Compiler version.
          */
         static std::variant<std::string, Error> getShaderCompilerVersion();
-
-        /**
-         * Returns a static sampler description depending on the specified texture filtering mode.
-         *
-         * @param textureFilteringQuality Returned sampler description will use the specified texture
-         * filtering.
-         *
-         * @return Static sampler description.
-         */
-        static CD3DX12_STATIC_SAMPLER_DESC
-        getStaticSamplerDescription(TextureFilteringQuality textureFilteringQuality);
-
-        /**
-         * Returns description of a static comparison sampler.
-         *
-         * @return Static sampler description.
-         */
-        static CD3DX12_STATIC_SAMPLER_DESC getStaticComparisonSamplerDescription();
-
-        /**
-         * Returns shader register space (in HLSL) that should be used by different sampler types.
-         *
-         * @return Shader register space.
-         */
-        static UINT getStaticSamplerShaderRegisterSpace();
 
         /**
          * Compiles the specified shader file to bytecode.
@@ -259,9 +228,6 @@ namespace ne {
 
         /** Name of the section used to store HLSL specific metadata. */
         static inline const auto sHlslSectionName = "HLSL";
-
-        /** Determines which shader register space (in HLSL) should be used by different sampler types. */
-        static inline const UINT iStaticSamplerShaderRegisterSpace = 5; // NOLINT
 
         // -------------------------------------------------------------------------
         // ! if adding new shader models add them to cache config in ShaderManager !

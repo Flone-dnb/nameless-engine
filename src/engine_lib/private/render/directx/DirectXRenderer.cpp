@@ -557,10 +557,12 @@ namespace ne {
 
         PROFILE_SCOPE_END;
 
-        // Set CBV/SRV/UAV descriptor heap.
+        // Set descriptor heaps.
         const auto pResourceManager = reinterpret_cast<DirectXResourceManager*>(getResourceManager());
-        ID3D12DescriptorHeap* pDescriptorHeaps[] = {pResourceManager->getCbvSrvUavHeap()->getInternalHeap()};
-        pCommandList->SetDescriptorHeaps(_countof(pDescriptorHeaps), pDescriptorHeaps);
+        std::array<ID3D12DescriptorHeap*, 2> vDescriptorHeaps = {
+            pResourceManager->getCbvSrvUavHeap()->getInternalHeap(),
+            pResourceManager->getSamplerHeap()->getInternalHeap()};
+        pCommandList->SetDescriptorHeaps(static_cast<UINT>(vDescriptorHeaps.size()), vDescriptorHeaps.data());
 
         // Set viewport size and scissor rectangles.
         pCommandList->RSSetViewports(1, &screenViewport);
@@ -1363,6 +1365,10 @@ namespace ne {
         // Prepare draw call counter to be used later.
         const auto pDrawCallCounter = getDrawCallCounter();
 
+        // Get texture sampler heap because we may need it later.
+        const auto pSamplerHeap =
+            reinterpret_cast<DirectXResourceManager*>(getResourceManager())->getSamplerHeap();
+
         for (const auto& pipelineInfo : pipelinesOfSpecificType) {
             // Convert pipeline.
             const auto pDirectXPso = reinterpret_cast<DirectXPso*>(pipelineInfo.pPipeline);
@@ -1411,9 +1417,7 @@ namespace ne {
                 pDirectXPso, pCommandList, iCurrentFrameResourceIndex);
 
             // Bind light grid.
-            if (bIsDrawingTransparentMeshes) { // TODO: this is a const argument which is known at compile
-                                               // time (see how we specify it) so the compiler will probably
-                                               // remove this branch
+            if (bIsDrawingTransparentMeshes) {
                 // Bind transparent light grid and index list.
                 getLightingShaderResourceManager()->setTransparentLightGridResourcesViewToCommandList(
                     pDirectXPso, pCommandList);
@@ -1423,10 +1427,18 @@ namespace ne {
                     pDirectXPso, pCommandList);
             }
 
-            // Bind pipeline's descriptor tables.
+            // Bind pipeline's descriptor tables (ranges).
             for (const auto& [iRootParameterIndex, pDescriptorRange] : pipelineData.descriptorRangesToBind) {
                 pCommandList->SetGraphicsRootDescriptorTable(
                     iRootParameterIndex, pDescriptorRange->getGpuDescriptorHandleToRangeStart());
+            }
+
+            // See if we also need to bind sampler heap.
+            if (pipelineData.samplerHeapRootIndexToBind.has_value()) {
+                D3D12_GPU_DESCRIPTOR_HANDLE heapGpuDescriptorHandle{
+                    pSamplerHeap->getInternalData()->second.pHeap->GetGPUDescriptorHandleForHeapStart().ptr};
+                pCommandList->SetGraphicsRootDescriptorTable(
+                    *pipelineData.samplerHeapRootIndexToBind, heapGpuDescriptorHandle);
             }
 
             for (const auto& materialInfo : pipelineInfo.vMaterials) {

@@ -4,6 +4,7 @@
 #include "render/directx/DirectXRenderer.h"
 #include "io/Logger.h"
 #include "render/directx/resource/DirectXResource.h"
+#include "shader/hlsl/TextureSamplerDescriptions.hpp"
 
 namespace ne {
     std::variant<std::unique_ptr<DirectXDescriptorHeap>, Error>
@@ -11,10 +12,47 @@ namespace ne {
         auto pManager =
             std::unique_ptr<DirectXDescriptorHeap>(new DirectXDescriptorHeap(pRenderer, heapType));
 
-        auto optionalError = pManager->createHeap(iHeapGrowSize, nullptr);
+        int iInitialHeapCapacity = iHeapGrowSize;
+        if (heapType == DescriptorHeapType::SAMPLER) {
+            iInitialHeapCapacity =
+                10; // NOLINT: just use a smaller value since there won't be lots of samplers
+        }
+
+        auto optionalError = pManager->createHeap(iInitialHeapCapacity, nullptr);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
+        }
+
+        if (heapType == DescriptorHeapType::SAMPLER) {
+            std::scoped_lock guard(pManager->mtxInternalData.first);
+
+            // Create point sampler.
+            auto desc = getPointSamplerDescription();
+            pRenderer->getD3dDevice()->CreateSampler(
+                &desc,
+                CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                    pManager->mtxInternalData.second.pHeap->GetCPUDescriptorHandleForHeapStart(),
+                    static_cast<unsigned int>(TextureFilteringPreference::POINT_FILTERING),
+                    pManager->getDescriptorSize()));
+
+            // Create linear sampler.
+            desc = getLinearSamplerDescription();
+            pRenderer->getD3dDevice()->CreateSampler(
+                &desc,
+                CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                    pManager->mtxInternalData.second.pHeap->GetCPUDescriptorHandleForHeapStart(),
+                    static_cast<unsigned int>(TextureFilteringPreference::LINEAR_FILTERING),
+                    pManager->getDescriptorSize()));
+
+            // Create anisotropic sampler.
+            desc = getAnisotropicSamplerDescription();
+            pRenderer->getD3dDevice()->CreateSampler(
+                &desc,
+                CD3DX12_CPU_DESCRIPTOR_HANDLE(
+                    pManager->mtxInternalData.second.pHeap->GetCPUDescriptorHandleForHeapStart(),
+                    static_cast<unsigned int>(TextureFilteringPreference::ANISOTROPIC_FILTERING),
+                    pManager->getDescriptorSize()));
         }
 
         return pManager;
@@ -231,9 +269,11 @@ namespace ne {
             return "DSV";
         case (DescriptorHeapType::CBV_SRV_UAV):
             return "CBV/SRV/UAV";
+        case (DescriptorHeapType::SAMPLER):
+            return "sampler";
         }
 
-        const Error err("not handled heap type");
+        const Error err("unhandled case");
         err.showError();
         throw std::runtime_error(err.getFullErrorMessage());
     }
@@ -261,21 +301,31 @@ namespace ne {
             iDescriptorSize =
                 pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        } break;
+            break;
+        }
         case (DescriptorHeapType::DSV): {
             iDescriptorSize =
                 pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-        } break;
+            break;
+        }
         case (DescriptorHeapType::CBV_SRV_UAV): {
             iDescriptorSize = pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(
                 D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
             d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        } break;
+            break;
+        }
+        case (DescriptorHeapType::SAMPLER): {
+            iDescriptorSize = pRenderer->getD3dDevice()->GetDescriptorHandleIncrementSize(
+                D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+            d3dHeapType = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+            break;
+        }
         default: {
-            const Error err("invalid heap type");
+            const Error err("unhanded case");
             err.showError();
             throw std::runtime_error(err.getFullErrorMessage());
+            break;
         }
         }
 
@@ -846,6 +896,12 @@ namespace ne {
                 pResource->getInternalResource(), nullptr, &uavDesc, heapHandle);
             break;
         }
+        case (DirectXDescriptorType::SAMPLER): {
+            Error error("unable to create a sampler view - this operation is not supported");
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+            break;
+        }
         case (DirectXDescriptorType::END): {
             const Error err("invalid heap type");
             err.showError();
@@ -881,13 +937,15 @@ namespace ne {
         std::scoped_lock drawGuard(*pRenderer->getRenderResourcesMutex());
         pRenderer->waitForGpuToFinishWorkUpToThisPoint();
 
+        const auto isShaderVisibleHeap = d3dHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ||
+                                         d3dHeapType == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+
         // Create heap.
         D3D12_DESCRIPTOR_HEAP_DESC heapDesc;
         heapDesc.NumDescriptors = iCapacity;
         heapDesc.Type = d3dHeapType;
-        heapDesc.Flags = heapDesc.Type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-                             ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
-                             : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        heapDesc.Flags =
+            isShaderVisibleHeap ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         heapDesc.NodeMask = 0;
 
         const HRESULT hResult = pRenderer->getD3dDevice()->CreateDescriptorHeap(
@@ -917,6 +975,8 @@ namespace ne {
             return {DirectXDescriptorType::DSV};
         case (DescriptorHeapType::CBV_SRV_UAV):
             return {DirectXDescriptorType::CBV, DirectXDescriptorType::SRV, DirectXDescriptorType::UAV};
+        case (DescriptorHeapType::SAMPLER):
+            return {DirectXDescriptorType::SAMPLER};
         }
 
         const Error err("not handled heap type");

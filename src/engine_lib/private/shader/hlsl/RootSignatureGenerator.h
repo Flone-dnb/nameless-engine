@@ -44,7 +44,7 @@ namespace ne {
         class RootParameter {
         public:
             /** Describes a root parameter type. */
-            enum class Type { CONSTANTS, CBV, SRV, UAV };
+            enum class Type { CONSTANTS, CBV, SRV, UAV, SAMPLER };
 
             /** Creates uninitialized parameter. */
             RootParameter() = default;
@@ -310,6 +310,20 @@ namespace ne {
             std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
             const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription,
             bool bIsReadWrite);
+
+        /**
+         * Adds a `SamplerState` shader resource to root parameters.
+         *
+         * @param vRootParameters      Parameters to add the new resource to.
+         * @param rootParameterIndices Map to add new parameter to.
+         * @param resourceDescription  Shader resource description.
+         *
+         * @return Error if something went wrong.
+         */
+        static std::optional<Error> addSamplerRootParameter(
+            std::vector<RootParameter>& vRootParameters,
+            std::unordered_map<std::string, std::pair<UINT, RootParameter>>& rootParameterIndices,
+            const D3D12_SHADER_INPUT_BIND_DESC& resourceDescription);
 
         /**
          * Adds a `(RW)StructuredBuffer` shader resource to root parameters.

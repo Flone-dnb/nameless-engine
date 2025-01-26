@@ -17,7 +17,8 @@ namespace ne {
         const D3D12_RESOURCE_STATES& initialResourceState,
         std::optional<D3D12_CLEAR_VALUE> resourceClearValue,
         size_t iElementSizeInBytes,
-        size_t iElementCount) {
+        size_t iElementCount,
+        TextureFilteringPreference filteringPreference) {
         // Make sure element size/count will fit type limit.
         if (iElementSizeInBytes > std::numeric_limits<unsigned int>::max()) [[unlikely]] {
             Error error(std::format(
@@ -40,7 +41,8 @@ namespace ne {
             pResourceManager,
             sResourceName,
             static_cast<UINT>(iElementSizeInBytes),
-            static_cast<UINT>(iElementCount)));
+            static_cast<UINT>(iElementCount),
+            filteringPreference));
 
         // Prepare clear value.
         const D3D12_CLEAR_VALUE* pClearValue = nullptr;
@@ -105,7 +107,7 @@ namespace ne {
         // Get descriptor.
         const auto& pDescriptor = descriptorsSameType.pResource;
 
-        // Quit if no such descriptor was binded.
+        // Quit if no such descriptor was bound.
         if (pDescriptor == nullptr) {
             return {};
         }
@@ -192,8 +194,10 @@ namespace ne {
         DirectXResourceManager* pResourceManager,
         const std::string& sResourceName,
         UINT iElementSizeInBytes,
-        UINT iElementCount)
-        : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount) {
+        UINT iElementCount,
+        TextureFilteringPreference filteringPreference)
+        : GpuResource(pResourceManager, sResourceName, iElementSizeInBytes, iElementCount),
+          textureFilteringPreference(filteringPreference) {
         // Initialize descriptor pointers (just in case).
         for (auto& descriptorsSameType : mtxHeapDescriptors.second) {
             descriptorsSameType.pResource = nullptr;

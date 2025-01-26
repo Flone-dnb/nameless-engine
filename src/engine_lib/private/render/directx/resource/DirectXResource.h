@@ -12,6 +12,7 @@
 #include "render/general/resource/GpuResource.h"
 #include "render/directx/descriptors/DirectXDescriptor.h"
 #include "render/directx/descriptors/DirectXDescriptorType.hpp"
+#include "material/TextureFilteringPreference.h"
 
 // External.
 #include "directx/d3dx12.h"
@@ -112,16 +113,25 @@ namespace ne {
         ID3D12Resource* getInternalResource() const { return pInternalResource; }
 
         /**
-         * Returns a raw (non-owning) pointer to a binded descriptor.
+         * Returns a raw (non-owning) pointer to a bound descriptor.
          *
          * @remark Do not delete (free) returned pointer.
          *
          * @param descriptorType Type of descriptor to query.
          *
-         * @return `nullptr` if a descriptor of this type was not binded to this resource,
+         * @return `nullptr` if a descriptor of this type was not bound to this resource,
          * otherwise valid pointer.
          */
         DirectXDescriptor* getDescriptor(DirectXDescriptorType descriptorType);
+
+        /**
+         * Tells what texture filtering to use (if this resource is a texture).
+         *
+         * @return Texture filtering.
+         */
+        TextureFilteringPreference getTextureFilteringPreference() const {
+            return textureFilteringPreference;
+        }
 
     private:
         /**
@@ -149,12 +159,16 @@ namespace ne {
          * otherwise specify size of the whole resource.
          * @param iElementCount        Resource size information. Total number of elements in the array (if
          * array), otherwise specify 1.
+         * @param filteringPreference  If this resource is an image, optionally specify a filtering
+         * preference.
          */
         DirectXResource(
             DirectXResourceManager* pResourceManager,
             const std::string& sResourceName,
             UINT iElementSizeInBytes,
-            UINT iElementCount);
+            UINT iElementCount,
+            TextureFilteringPreference filteringPreference =
+                TextureFilteringPreference::FROM_RENDER_SETTINGS);
 
         /**
          * Creates a new resource (without binding a descriptor to it).
@@ -171,6 +185,8 @@ namespace ne {
          * an array. Used for SRV creation.
          * @param iElementCount        Optional parameter. Specify if this resource represents
          * an array. Used for SRV creation.
+         * @param filteringPreference  If this resource is an image, optionally specify a filtering
+         * preference.
          *
          * @return Error if something went wrong, otherwise created resource.
          */
@@ -183,7 +199,9 @@ namespace ne {
             const D3D12_RESOURCE_STATES& initialResourceState,
             std::optional<D3D12_CLEAR_VALUE> resourceClearValue,
             size_t iElementSizeInBytes = 0,
-            size_t iElementCount = 0);
+            size_t iElementCount = 0,
+            TextureFilteringPreference filteringPreference =
+                TextureFilteringPreference::FROM_RENDER_SETTINGS);
 
         /**
          * Creates a new resource instance by wrapping existing swap chain buffer,
@@ -229,5 +247,8 @@ namespace ne {
          * to internal resource.
          */
         ID3D12Resource* pInternalResource = nullptr;
+
+        /** Texture filtering to use (if this resource is a texture). */
+        const TextureFilteringPreference textureFilteringPreference;
     };
 } // namespace ne

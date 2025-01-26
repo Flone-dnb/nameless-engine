@@ -116,7 +116,14 @@ namespace ne {
 
     bool VulkanResource::isStorageResource() const { return isUsedAsStorageResource; }
 
-    VkSampler VulkanResource::getTextureSampler() const {
+    VkSampler VulkanResource::getTextureSamplerForThisImage() const {
+        // Self check: make sure this resource is an image.
+        if (pImageResource == nullptr) [[unlikely]] {
+            Error error(std::format("resource \"{}\" is not an image", getResourceName()));
+            error.showError();
+            throw std::runtime_error(error.getFullErrorMessage());
+        }
+
         // Get renderer.
         const auto pVulkanRenderer = dynamic_cast<VulkanRenderer*>(getResourceManager()->getRenderer());
         if (pVulkanRenderer == nullptr) [[unlikely]] {

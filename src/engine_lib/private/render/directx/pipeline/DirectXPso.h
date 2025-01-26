@@ -88,6 +88,9 @@ namespace ne {
             std::unordered_map<UINT, std::shared_ptr<ContinuousDirectXDescriptorRange>>
                 descriptorRangesToBind;
 
+            /** If not empty stores root parameter index of the sampler heap to bind. */
+            std::optional<UINT> samplerHeapRootIndexToBind;
+
             /** Whether fields of this struct are initialized or not. */
             bool bIsReadyForUsage = false;
         };

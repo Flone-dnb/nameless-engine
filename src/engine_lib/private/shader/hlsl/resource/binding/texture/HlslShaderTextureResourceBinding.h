@@ -17,6 +17,7 @@ namespace ne {
     class TextureHandle;
     class Pipeline;
     class DirectXPso;
+    class Renderer;
 
     /** References some texture from shader code. */
     class HlslShaderTextureResourceBinding : public ShaderTextureResourceBinding {
@@ -48,15 +49,18 @@ namespace ne {
                 error.showError();
                 throw std::runtime_error(error.getFullErrorMessage());
             }
-            const auto& iShaderConstantIndex = mtxShaderConstantOffsetPerPipeline.second.begin()->second;
+            const auto& shaderConstantsOffsets = it->second;
 
             // Query texture's SRV descriptor offset in the descriptor range.
             unsigned int iRootConstantValue = 0;
+            unsigned int iSamplerArrayOffset = 0; // also save offset into the array of texture samplers
             {
                 std::scoped_lock textureGuard(mtxUsedTexture.first);
 
+                iSamplerArrayOffset = mtxUsedTexture.second.iTextureSamplerOffset;
+
                 const auto pDirectXTexture =
-                    reinterpret_cast<DirectXResource*>(mtxUsedTexture.second->getResource());
+                    reinterpret_cast<DirectXResource*>(mtxUsedTexture.second.pTexture->getResource());
 
                 // Get SRV.
                 const auto pSrvDescriptor = pDirectXTexture->getDescriptor(DirectXDescriptorType::SRV);
@@ -84,8 +88,13 @@ namespace ne {
                 iRootConstantValue = std::get<unsigned int>(result);
             }
 
-            // Copy value to root constants.
-            pShaderConstantsManager->copyValueToShaderConstant(iShaderConstantIndex, iRootConstantValue);
+            // Copy descriptor range offset to root constants.
+            pShaderConstantsManager->copyValueToShaderConstant(
+                shaderConstantsOffsets.iTextureShaderConstantIndex, iRootConstantValue);
+
+            // Also set offset into the sampler array.
+            pShaderConstantsManager->copyValueToShaderConstant(
+                shaderConstantsOffsets.iSamplerArrayOffsetConstantIndex, iSamplerArrayOffset);
         }
 
         /**
@@ -122,21 +131,41 @@ namespace ne {
         changeUsedPipelines(const std::unordered_set<Pipeline*>& pipelinesToUse) override;
 
     protected:
+        /** Groups offsets of shader constants in a single pipeline. */
+        struct ShaderConstantOffsets {
+            /** Offset of the shader constant used to store index into the texture array. */
+            size_t iTextureShaderConstantIndex = 0;
+
+            /** Offset of the shader constant used to store index into the sampler array. */
+            size_t iSamplerArrayOffsetConstantIndex = 0;
+        };
+
+        /** Groups data used to bind a texture. */
+        struct TextureInfo {
+            /** Texture to bind. */
+            std::unique_ptr<TextureHandle> pTexture;
+
+            /** Offset into the shader array of texture samplers. */
+            unsigned int iTextureSamplerOffset = 0;
+        };
+
         /**
          * Initializes the resource.
          *
          * @remark Used internally, for outside usage prefer to use @ref create.
          *
-         * @param sResourceName        Name of the resource we are referencing (should be exactly the
+         * @param sResourceName       Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param pTextureToUse        Texture with an SRV already bound from an SRV range.
+         * @param textureInfo         Texture to which a descriptor should be bound.
          * @param shaderConstantOffsetPerPipeline A shader constant index for our shader resource (per
          * pipeline).
+         * @param pRenderer           Renderer.
          */
         HlslShaderTextureResourceBinding(
             const std::string& sResourceName,
-            std::unique_ptr<TextureHandle> pTextureToUse,
-            std::unordered_map<DirectXPso*, size_t>&& shaderConstantOffsetPerPipeline);
+            TextureInfo textureInfo,
+            std::unordered_map<DirectXPso*, ShaderConstantOffsets>&& shaderConstantOffsetPerPipeline,
+            Renderer* pRenderer);
 
         /**
          * Called from pipeline manager to notify that all pipelines released their internal resources
@@ -153,17 +182,17 @@ namespace ne {
         /**
          * Creates a new HLSL shader resource.
          *
-         * @param sShaderResourceName  Name of the resource we are referencing (should be exactly the
+         * @param sShaderResourceName Name of the resource we are referencing (should be exactly the
          * same as the resource name written in the shader file we are referencing).
-         * @param pipelinesToUse       Pipelines that use shader/parameters we are referencing.
-         * @param pTextureToUse        Texture to which a descriptor should be binded.
+         * @param pipelinesToUse      Pipelines that use shader/parameters we are referencing.
+         * @param pTexture            Texture to which a descriptor should be bound.
          *
          * @return Error if something went wrong, otherwise created shader resource.
          */
         static std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error> create(
             const std::string& sShaderResourceName,
             const std::unordered_set<Pipeline*>& pipelinesToUse,
-            std::unique_ptr<TextureHandle> pTextureToUse);
+            std::unique_ptr<TextureHandle> pTexture);
 
         /**
          * In the specified pipeline looks for a descriptor range that handles a shader resource
@@ -177,12 +206,29 @@ namespace ne {
         static std::variant<std::shared_ptr<ContinuousDirectXDescriptorRange>, Error>
         getSrvDescriptorRange(DirectXPso* pPipeline, const std::string& sShaderResourceName);
 
+        /**
+         * Returns offset into the array of texture samplers.
+         *
+         * @param pTexture  Texture to pick a sampler for.
+         * @param pRenderer Renderer.
+         *
+         * @return Offset.
+         */
+        static unsigned int getTextureSamplerOffset(DirectXResource* pTexture, Renderer* pRenderer);
+
         /** Texture to which a descriptor should be bound. */
-        std::pair<std::mutex, std::unique_ptr<TextureHandle>> mtxUsedTexture;
+        std::pair<std::mutex, TextureInfo> mtxUsedTexture;
 
         /** Stores an offset of the shader constant to copy @ref mtxUsedTexture SRV descriptor offset to. */
-        std::pair<std::recursive_mutex, std::unordered_map<DirectXPso*, size_t>>
+        std::pair<std::recursive_mutex, std::unordered_map<DirectXPso*, ShaderConstantOffsets>>
             mtxShaderConstantOffsetPerPipeline;
+
+        /** Renderer. */
+        Renderer* const pRenderer = nullptr;
+
+        /** Name of a shader constant used to index into the array of texture samplers. */
+        static constexpr std::string_view sIndexIntoTextureSamplersArrayShaderConstantName =
+            "iIndexIntoTextureSamplersArrayForDiffuse";
 
         /**
          * `false` to avoid binding descriptors to cubemap faces - I don't see any point

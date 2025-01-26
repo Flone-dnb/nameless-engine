@@ -7,7 +7,7 @@
 #endif
 
 /** Sampler for shadow maps. */
-#hlsl SamplerComparisonState shadowSampler : register(s1, space5);
+#hlsl SamplerComparisonState shadowSampler : register(s0, space6);
 
 /** Bias that we use in point light shadow mapping. */
 #define POINT_LIGHT_SHADOW_BIAS         0.03F

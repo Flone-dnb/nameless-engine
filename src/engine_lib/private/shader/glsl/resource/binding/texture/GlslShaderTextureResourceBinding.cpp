@@ -150,7 +150,7 @@ namespace ne {
         }
 
         // Get texture sampler.
-        const auto pTextureSampler = pTexture->getTextureSampler();
+        const auto pTextureSampler = pTexture->getTextureSamplerForThisImage();
 
         // Update one descriptor in set per frame resource.
         for (unsigned int i = 0; i < FrameResourceManager::getFrameResourceCount(); i++) {

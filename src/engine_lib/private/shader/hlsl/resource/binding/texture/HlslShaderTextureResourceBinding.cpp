@@ -10,6 +10,7 @@
 #include "render/directx/resource/DirectXResourceManager.h"
 #include "render/general/pipeline/PipelineManager.h"
 #include "material/TextureHandle.h"
+#include "shader/hlsl/TextureSamplerDescriptions.hpp"
 
 namespace ne {
 
@@ -42,7 +43,7 @@ namespace ne {
 
         std::shared_ptr<ContinuousDirectXDescriptorRange> pSrvDescriptorRange = nullptr;
 
-        // Check if a descriptor table for our shader resource is already created in the pipeline.
+        // Check if a descriptor table (range) for our shader resource is already created in the pipeline.
         auto& descriptorRanges = pMtxPipelineResources->second.descriptorRangesToBind;
         const auto descriptorRangeIt = descriptorRanges.find(iRootParameterIndex);
         if (descriptorRangeIt == descriptorRanges.end()) {
@@ -69,23 +70,69 @@ namespace ne {
             pSrvDescriptorRange = descriptorRangeIt->second;
         }
 
+        // Additionally, check if array of texture samplers is already bound to the pipeline.
+        const auto samplerArrayIndexIt = pMtxPipelineResources->second.rootParameterIndices.find(
+            getTextureSamplersShaderArrayName().data());
+        if (samplerArrayIndexIt != pMtxPipelineResources->second.rootParameterIndices.end()) {
+            const auto iSamplerHeapRootIndex = samplerArrayIndexIt->second;
+
+            // Make sure sampler heap is already bound to this pipeline.
+            const auto samplerHeapRangeIt =
+                pMtxPipelineResources->second.descriptorRangesToBind.find(iSamplerHeapRootIndex);
+            if (samplerHeapRangeIt == pMtxPipelineResources->second.descriptorRangesToBind.end()) {
+                // Bind sampler heap to this pipeline.
+                pMtxPipelineResources->second.samplerHeapRootIndexToBind = iSamplerHeapRootIndex;
+            } // else: already bound, nothing to do
+        }
+
         return pSrvDescriptorRange;
+    }
+
+    unsigned int HlslShaderTextureResourceBinding::getTextureSamplerOffset(
+        DirectXResource* pTexture, Renderer* pRenderer) {
+        const auto textureFilteringPreference = pTexture->getTextureFilteringPreference();
+
+        if (textureFilteringPreference == TextureFilteringPreference::FROM_RENDER_SETTINGS) {
+            const auto mtxRenderSettings = pRenderer->getRenderSettings();
+            std::scoped_lock guard(*mtxRenderSettings.first);
+
+            switch (mtxRenderSettings.second->getTextureFilteringQuality()) {
+            case (TextureFilteringQuality::LOW): {
+                return static_cast<unsigned int>(TextureFilteringPreference::POINT_FILTERING);
+                break;
+            }
+            case (TextureFilteringQuality::MEDIUM): {
+                return static_cast<unsigned int>(TextureFilteringPreference::LINEAR_FILTERING);
+                break;
+            }
+            case (TextureFilteringQuality::HIGH): {
+                return static_cast<unsigned int>(TextureFilteringPreference::ANISOTROPIC_FILTERING);
+                break;
+            }
+            default:
+                Error error("unhandled case");
+                error.showError();
+                throw std::runtime_error(error.getFullErrorMessage());
+            }
+        } else {
+            return static_cast<unsigned int>(textureFilteringPreference);
+        }
     }
 
     std::variant<std::unique_ptr<ShaderTextureResourceBinding>, Error>
     HlslShaderTextureResourceBinding::create(
         const std::string& sShaderResourceName,
         const std::unordered_set<Pipeline*>& pipelinesToUse,
-        std::unique_ptr<TextureHandle> pTextureToUse) {
+        std::unique_ptr<TextureHandle> pTexture) {
         // Make sure at least one pipeline is specified.
         if (pipelinesToUse.empty()) [[unlikely]] {
             return Error("expected at least one pipeline to be specified");
         }
         const auto pRenderer = (*pipelinesToUse.begin())->getRenderer();
 
-        // Convert to DirectX resource.
-        const auto pDirectXResource = dynamic_cast<DirectXResource*>(pTextureToUse->getResource());
-        if (pDirectXResource == nullptr) [[unlikely]] {
+        // Cast type.
+        const auto pDirectXTexture = dynamic_cast<DirectXResource*>(pTexture->getResource());
+        if (pDirectXTexture == nullptr) [[unlikely]] {
             return Error("expected a DirectX resource");
         }
 
@@ -96,7 +143,7 @@ namespace ne {
         const auto pMtxGraphicsPipelines = pRenderer->getPipelineManager()->getGraphicsPipelines();
         std::scoped_lock pipelinesGuard(pMtxGraphicsPipelines->first);
 
-        std::unordered_map<DirectXPso*, size_t> shaderConstantOffsetPerPipeline;
+        std::unordered_map<DirectXPso*, ShaderConstantOffsets> shaderConstantOffsetPerPipeline;
 
         for (const auto& pPipeline : pipelinesToUse) {
             // Convert type.
@@ -104,15 +151,6 @@ namespace ne {
             if (pDirectXPso == nullptr) [[unlikely]] {
                 return Error("expected a DirectX PSO");
             }
-
-            // Get shader constant offset.
-            auto offsetResult = pPipeline->getUintConstantOffset(sShaderResourceName);
-            if (std::holds_alternative<Error>(offsetResult)) [[unlikely]] {
-                auto error = std::get<Error>(std::move(offsetResult));
-                error.addCurrentLocationToErrorStack();
-                return error;
-            }
-            const auto iShaderConstantOffset = std::get<size_t>(offsetResult);
 
             // Get SRV descriptor range.
             auto rangeResult = getSrvDescriptorRange(pDirectXPso, sShaderResourceName);
@@ -125,21 +163,48 @@ namespace ne {
                 std::get<std::shared_ptr<ContinuousDirectXDescriptorRange>>(rangeResult);
 
             // Bind SRV from the range to our texture.
-            auto optionalError = pDirectXResource->bindDescriptor(
+            auto optionalError = pDirectXTexture->bindDescriptor(
                 DirectXDescriptorType::SRV, pSrvDescriptorRange, bBindSrvToCubemapFaces);
             if (optionalError.has_value()) [[unlikely]] {
                 optionalError->addCurrentLocationToErrorStack();
                 return optionalError.value();
             }
 
-            // Save range.
-            shaderConstantOffsetPerPipeline[pDirectXPso] = iShaderConstantOffset;
+            // Get shader constant offset.
+            auto offsetResult = pPipeline->getUintConstantOffset(sShaderResourceName);
+            if (std::holds_alternative<Error>(offsetResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(offsetResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            const auto iTextureShaderConstantOffset = std::get<size_t>(offsetResult);
+
+            // Also get offset for texture samplers array.
+            offsetResult =
+                pPipeline->getUintConstantOffset(sIndexIntoTextureSamplersArrayShaderConstantName.data());
+            if (std::holds_alternative<Error>(offsetResult)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(offsetResult));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            const auto iSamplersArrayShaderConstantOffset = std::get<size_t>(offsetResult);
+
+            // Save.
+            shaderConstantOffsetPerPipeline[pDirectXPso] = {
+                .iTextureShaderConstantIndex = iTextureShaderConstantOffset,
+                .iSamplerArrayOffsetConstantIndex = iSamplersArrayShaderConstantOffset};
         }
+
+        // Get sampler offset.
+        const auto iTextureSamplerOffset = getTextureSamplerOffset(pDirectXTexture, pRenderer);
 
         // Pass data to the binding.
         auto pResourceBinding =
             std::unique_ptr<HlslShaderTextureResourceBinding>(new HlslShaderTextureResourceBinding(
-                sShaderResourceName, std::move(pTextureToUse), std::move(shaderConstantOffsetPerPipeline)));
+                sShaderResourceName,
+                TextureInfo{.pTexture = std::move(pTexture), .iTextureSamplerOffset = iTextureSamplerOffset},
+                std::move(shaderConstantOffsetPerPipeline),
+                pRenderer));
 
         // At this point we can release the pipelines mutex.
 
@@ -148,11 +213,12 @@ namespace ne {
 
     HlslShaderTextureResourceBinding::HlslShaderTextureResourceBinding(
         const std::string& sResourceName,
-        std::unique_ptr<TextureHandle> pTextureToUse,
-        std::unordered_map<DirectXPso*, size_t>&& shaderConstantOffsetPerPipeline)
-        : ShaderTextureResourceBinding(sResourceName) {
+        TextureInfo textureInfo,
+        std::unordered_map<DirectXPso*, ShaderConstantOffsets>&& shaderConstantOffsetPerPipeline,
+        Renderer* pRenderer)
+        : ShaderTextureResourceBinding(sResourceName), pRenderer(pRenderer) {
         // Save parameters.
-        mtxUsedTexture.second = std::move(pTextureToUse);
+        mtxUsedTexture.second = std::move(textureInfo);
         mtxShaderConstantOffsetPerPipeline.second = std::move(shaderConstantOffsetPerPipeline);
 
         // Self check: make sure there is at least one pipeline.
@@ -193,7 +259,7 @@ namespace ne {
         std::shared_ptr<ContinuousDirectXDescriptorRange> pUsedSrvRange = nullptr;
         {
             const auto pOldDirectXTexture =
-                dynamic_cast<DirectXResource*>(mtxUsedTexture.second->getResource());
+                dynamic_cast<DirectXResource*>(mtxUsedTexture.second.pTexture->getResource());
             if (pOldDirectXTexture == nullptr) [[unlikely]] {
                 return Error("expected a DirectX resource");
             }
@@ -209,22 +275,26 @@ namespace ne {
             }
         }
 
-        // Replace used texture.
-        mtxUsedTexture.second = std::move(pTextureToUse);
+        // Replace old texture.
+        mtxUsedTexture.second.pTexture = std::move(pTextureToUse);
 
-        // Convert to DirectX resource.
-        const auto pDirectXResource = dynamic_cast<DirectXResource*>(mtxUsedTexture.second->getResource());
-        if (pDirectXResource == nullptr) [[unlikely]] {
+        // Cast type.
+        const auto pDirectXTexture =
+            dynamic_cast<DirectXResource*>(mtxUsedTexture.second.pTexture->getResource());
+        if (pDirectXTexture == nullptr) [[unlikely]] {
             return Error("expected a DirectX resource");
         }
 
         // Bind an SRV to the new texture.
-        auto optionalError = pDirectXResource->bindDescriptor(
+        auto optionalError = pDirectXTexture->bindDescriptor(
             DirectXDescriptorType::SRV, pUsedSrvRange, bBindSrvToCubemapFaces);
         if (optionalError.has_value()) [[unlikely]] {
             optionalError->addCurrentLocationToErrorStack();
             return optionalError.value();
         }
+
+        // Save sampler offset.
+        mtxUsedTexture.second.iTextureSamplerOffset = getTextureSamplerOffset(pDirectXTexture, pRenderer);
 
         return {};
     }
@@ -238,14 +308,19 @@ namespace ne {
             return Error("expected at least one pipeline to be specified");
         }
 
-        // Convert to DirectX resource.
-        const auto pDirectXResource = dynamic_cast<DirectXResource*>(mtxUsedTexture.second->getResource());
-        if (pDirectXResource == nullptr) [[unlikely]] {
+        // Cast type.
+        const auto pDirectXTexture =
+            dynamic_cast<DirectXResource*>(mtxUsedTexture.second.pTexture->getResource());
+        if (pDirectXTexture == nullptr) [[unlikely]] {
             return Error("expected a DirectX resource");
         }
 
+        // Re-save sampler offset because in case the texture filtering preference is set to use render
+        // settings and texture filtering quality was changed (in this case we will get in this function).
+        mtxUsedTexture.second.iTextureSamplerOffset = getTextureSamplerOffset(pDirectXTexture, pRenderer);
+
         // Get SRV.
-        const auto pSrvDescriptor = pDirectXResource->getDescriptor(DirectXDescriptorType::SRV);
+        const auto pSrvDescriptor = pDirectXTexture->getDescriptor(DirectXDescriptorType::SRV);
         if (pSrvDescriptor == nullptr) [[unlikely]] {
             return Error("expected an SRV to be bound");
         }
@@ -294,10 +369,22 @@ namespace ne {
                 error.addCurrentLocationToErrorStack();
                 return error;
             }
-            const auto iShaderConstantOffset = std::get<size_t>(result);
+            const auto iTextureShaderConstantOffset = std::get<size_t>(result);
+
+            // Also get offset for texture samplers array.
+            result =
+                pPipeline->getUintConstantOffset(sIndexIntoTextureSamplersArrayShaderConstantName.data());
+            if (std::holds_alternative<Error>(result)) [[unlikely]] {
+                auto error = std::get<Error>(std::move(result));
+                error.addCurrentLocationToErrorStack();
+                return error;
+            }
+            const auto iSamplersArrayShaderConstantOffset = std::get<size_t>(result);
 
             // Save.
-            mtxShaderConstantOffsetPerPipeline.second[pDirectXPso] = iShaderConstantOffset;
+            mtxShaderConstantOffsetPerPipeline.second[pDirectXPso] = {
+                .iTextureShaderConstantIndex = iTextureShaderConstantOffset,
+                .iSamplerArrayOffsetConstantIndex = iSamplersArrayShaderConstantOffset};
         }
 
         return {};

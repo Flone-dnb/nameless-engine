@@ -33,6 +33,7 @@ namespace ne {
         RTV = 0,
         DSV,
         CBV_SRV_UAV,
+        SAMPLER,
     };
 
     /**

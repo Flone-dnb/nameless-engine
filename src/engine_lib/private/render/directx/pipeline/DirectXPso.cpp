@@ -125,7 +125,7 @@ namespace ne {
 
 #if defined(DEBUG)
         static_assert(
-            sizeof(InternalResources) == 400, // NOLINT: current struct size
+            sizeof(InternalResources) == 408, // NOLINT: current struct size
             "release new resources here");
 #endif
 

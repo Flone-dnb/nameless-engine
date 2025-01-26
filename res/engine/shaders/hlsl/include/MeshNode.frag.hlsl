@@ -2,14 +2,18 @@
 #include "../../include/data/MaterialData.glsl"
 #include "../../include/constants/MeshNodeConstants.glsl"
 
+#additional_shader_constants {
+    uint iIndexIntoTextureSamplersArrayForDiffuse;
+}
+
 #define INCLUDE_LIGHTING_FUNCTIONS
 #define READ_ONLY_LIGHT_GRID
 #include "../../include/Lighting.glsl"
 
 #include "../format/MeshNodeVertex.hlsl"
 
-/** Sampler with filtering based on the render settings. */
-SamplerState textureSampler : register(s0, space5);
+/** Stores point, linear and anisotropic samplers in this particular order. */
+SamplerState textureSamplers[] : register(s0, space5);
 
 #ifdef FS_USE_DIFFUSE_TEXTURE
     Texture2D diffuseTextures[] : register(t2, space5); // "bindless binding", stores all diffuse textures
@@ -33,7 +37,8 @@ float4 psMeshNode(VertexOut pin) {
     // Prepare diffuse color.
     float3 pixelDiffuseColor = MATERIAL_DATA.diffuseColor.rgb;
     #ifdef FS_USE_DIFFUSE_TEXTURE
-        float4 diffuseTextureSample = diffuseTextures[constants.diffuseTextures].Sample(textureSampler, pin.uv);
+        float4 diffuseTextureSample = diffuseTextures[constants.diffuseTextures].Sample(
+            textureSamplers[constants.iIndexIntoTextureSamplersArrayForDiffuse], pin.uv);
         pixelDiffuseColor *= diffuseTextureSample.rgb;
     #endif
 

@@ -7,6 +7,8 @@
 #include "render/general/resource/UploadBuffer.h"
 #include "render/directx/resource/DirectXFrameResource.h"
 #include "shader/general/resource/cpuwrite/DynamicCpuWriteShaderResourceArrayManager.h"
+#include "io/TextureImporter.h"
+#include "io/ConfigManager.h"
 
 // External.
 #include "DirectXTex/DDSTextureLoader/DDSTextureLoader12.h"
@@ -55,12 +57,22 @@ namespace ne {
         auto pCbvSrvUavHeapManager =
             std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
 
+        // Create sampler heap manager.
+        heapManagerResult = DirectXDescriptorHeap::create(pRenderer, DescriptorHeapType::SAMPLER);
+        if (std::holds_alternative<Error>(heapManagerResult)) {
+            Error err = std::get<Error>(std::move(heapManagerResult));
+            err.addCurrentLocationToErrorStack();
+            return err;
+        }
+        auto pSamplerHeap = std::get<std::unique_ptr<DirectXDescriptorHeap>>(std::move(heapManagerResult));
+
         return std::unique_ptr<DirectXResourceManager>(new DirectXResourceManager(
             pRenderer,
             std::move(pMemoryAllocator),
             std::move(pRtvHeapManager),
             std::move(pDsvHeapManager),
-            std::move(pCbvSrvUavHeapManager)));
+            std::move(pCbvSrvUavHeapManager),
+            std::move(pSamplerHeap)));
     }
 
     std::variant<std::unique_ptr<GpuResource>, Error> DirectXResourceManager::loadTextureFromDisk(
@@ -84,6 +96,31 @@ namespace ne {
                 "non-DDS file",
                 pathToTextureFile.string()));
         }
+
+        // Get parent directory.
+        if (!pathToTextureFile.has_parent_path()) [[unlikely]] {
+            return Error(std::format(
+                "expected the path \"{}\" to have a parent directory", pathToTextureFile.string()));
+        }
+        const auto pathToTextureDirectory = pathToTextureFile.parent_path();
+
+        // Read texture settings file.
+        ConfigManager textureConfig;
+        auto optionalError = textureConfig.loadFile(
+            pathToTextureDirectory / TextureImporter::getImportedTextureSettingsFileName());
+        if (optionalError.has_value()) [[unlikely]] {
+            optionalError->addCurrentLocationToErrorStack();
+            return *optionalError;
+        }
+
+        // Get texture filtering.
+        auto filteringResult = deserializeTextureFilteringPreference(textureConfig);
+        if (std::holds_alternative<Error>(filteringResult)) [[unlikely]] {
+            auto error = std::get<Error>(std::move(filteringResult));
+            error.addCurrentLocationToErrorStack();
+            return error;
+        }
+        const auto textureFilteringPreference = std::get<TextureFilteringPreference>(filteringResult);
 
         // Get renderer.
         const auto pDirectXRenderer = dynamic_cast<DirectXRenderer*>(getRenderer());
@@ -175,7 +212,14 @@ namespace ne {
 
         // Create resource.
         return createResourceWithData(
-            sResourceName, finalResourceDescription, vSubresources, uploadResourceDescription, true);
+            sResourceName,
+            finalResourceDescription,
+            vSubresources,
+            uploadResourceDescription,
+            true,
+            0,
+            0,
+            textureFilteringPreference);
     }
 
     std::variant<std::unique_ptr<UploadBuffer>, Error>
@@ -495,12 +539,14 @@ namespace ne {
         ComPtr<D3D12MA::Allocator>&& pMemoryAllocator,
         std::unique_ptr<DirectXDescriptorHeap>&& pRtvHeap,
         std::unique_ptr<DirectXDescriptorHeap>&& pDsvHeap,
-        std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap)
+        std::unique_ptr<DirectXDescriptorHeap>&& pCbvSrvUavHeap,
+        std::unique_ptr<DirectXDescriptorHeap>&& pSamplerHeap)
         : GpuResourceManager(pRenderer) {
         this->pMemoryAllocator = std::move(pMemoryAllocator);
         this->pRtvHeap = std::move(pRtvHeap);
         this->pDsvHeap = std::move(pDsvHeap);
         this->pCbvSrvUavHeap = std::move(pCbvSrvUavHeap);
+        this->pSamplerHeap = std::move(pSamplerHeap);
     }
 
     DirectXResourceManager::~DirectXResourceManager() {
@@ -559,7 +605,8 @@ namespace ne {
         const D3D12_RESOURCE_DESC& uploadResourceDescription,
         bool bIsTextureResource,
         size_t iElementSizeInBytes,
-        size_t iElementCount) {
+        size_t iElementCount,
+        TextureFilteringPreference filteringPreference) {
         // In order to create a GPU resource with our data from the CPU
         // we have to do a few steps:
         // 1. Create a GPU resource with DEFAULT heap type (CPU read-only heap) AKA resulting resource.
@@ -584,7 +631,8 @@ namespace ne {
                 : initialStateForFinalResource,
             {},
             iElementSizeInBytes,
-            iElementCount);
+            iElementCount,
+            filteringPreference);
         if (std::holds_alternative<Error>(result)) {
             auto err = std::get<Error>(std::move(result));
             err.addCurrentLocationToErrorStack();

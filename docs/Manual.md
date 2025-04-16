@@ -2961,6 +2961,8 @@ This attribute points to a file located in the `res` directory, specifically at 
 
 ### Referencing external node tree
 
-If your node tree uses another (external) node tree that is located in the `res` directory, this external node tree is saved in a special way, that is, only the root node of the external node tree is saved and information about all child nodes is stored as a path to the file that contains this node tree.
+Imagine you had a serialized node tree then you deserialize it and in the engine/editor add it to some node of some other node tree (we'll call it a parent node tree), thus the parent node tree is seeing your previously deserialized node tree (that you attached) as an extrenal node tree.
+
+During the serialization of the node tree that uses an external node tree this external node tree is saved in a special way, that is, only the root node of the external node tree is saved with the parent node tree and the information about external node tree's child nodes is stored as a path to the external node tree file.
 
 This means that when we reference an external node tree, only changes to external node tree's root node will be saved.

@@ -1,0 +1,6 @@
+var structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ScreenToViewData =
+[
+    [ "inverseProjectionMatrix", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ScreenToViewData.html#a88def20a7e59c121c0f7fdad58dce9e9", null ],
+    [ "iRenderTargetHeight", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ScreenToViewData.html#af52eb3cc02fcded33a0473dc03bd2f01", null ],
+    [ "iRenderTargetWidth", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1FrustumGridComputeShader_1_1ScreenToViewData.html#a2ffabdd059823afe05ef13e0c7794b82", null ]
+];

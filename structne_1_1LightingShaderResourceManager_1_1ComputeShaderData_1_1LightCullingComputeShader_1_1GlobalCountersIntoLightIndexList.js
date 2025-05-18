@@ -1,0 +1,7 @@
+var structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1GlobalCountersIntoLightIndexList =
+[
+    [ "iPointLightListOpaque", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1GlobalCountersIntoLightIndexList.html#a3085cf9001ee4d35cb29510f3c893e43", null ],
+    [ "iPointLightListTransparent", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1GlobalCountersIntoLightIndexList.html#ae64ac29ce4429d934bfdbe02560b9830", null ],
+    [ "iSpotlightListOpaque", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1GlobalCountersIntoLightIndexList.html#ac7c1184551bbd5edd0919677fdc9fec6", null ],
+    [ "iSpotlightListTransparent", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1GlobalCountersIntoLightIndexList.html#a90cec22c32e27aac02c517fed7e3c303", null ]
+];

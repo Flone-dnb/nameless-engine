@@ -1,0 +1,5 @@
+var structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1ThreadGroupCount =
+[
+    [ "iThreadGroupCountX", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1ThreadGroupCount.html#ae59b42d87754c9cd787badbf8074a0f7", null ],
+    [ "iThreadGroupCountY", "structne_1_1LightingShaderResourceManager_1_1ComputeShaderData_1_1LightCullingComputeShader_1_1ThreadGroupCount.html#a74ae3fce8beb05bbbce933fe3ce0092b", null ]
+];

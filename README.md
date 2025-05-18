@@ -98,7 +98,7 @@ Generated documentation will be located at `docs/gen/html`, open the `index.html
 
 Prerequisites:
 
-- compiler that supports C++23 (latest MSVC/Clang)
+- compiler that supports C++23
 - [CMake](https://cmake.org/download/)
 - [Doxygen](https://doxygen.nl/download.html)
 - [LLVM](https://github.com/llvm/llvm-project/releases/latest)
